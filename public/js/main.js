@@ -5,7 +5,7 @@
 
 // Configuración global
 const APP = {
-    apiUrl: '/truper_platform/public/api',
+    apiUrl: '/api',
     timeout: 5000
 };
 
@@ -210,7 +210,7 @@ async function handleFormSubmit(e) {
             if (form.id === 'registerForm' || form.id === 'loginForm') {
                 form.reset();
                 setTimeout(() => {
-                    window.location.href = result.redirect || '/truper_platform/public/dashboard.php';
+                    window.location.href = result.redirect || '/dashboard.php';
                 }, 1500);
             } else {
                 form.reset();

@@ -1,7 +1,7 @@
 <?php
 require_once '../config/config.php';
 if (is_logged_in()) {
-    header('Location: /truper_platform/public/dashboard.php');
+    header('Location: /dashboard.php');
     exit;
 }
 ?>

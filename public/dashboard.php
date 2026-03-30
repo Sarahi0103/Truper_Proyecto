@@ -132,8 +132,8 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
             </div>
             <div class="footer-section">
                 <h4>Enlaces</h4>
-                <a href="/truper_platform/public/dashboard.php">Dashboard</a>
-                <a href="/truper_platform/public/analytics.php">Estadísticas</a>
+                <a href="/dashboard.php">Dashboard</a>
+                <a href="/analytics.php">Estadísticas</a>
             </div>
         </div>
         <div class="footer-bottom">

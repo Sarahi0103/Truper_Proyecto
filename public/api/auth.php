@@ -32,7 +32,7 @@ try {
             ]);
 
             if ($response['success']) {
-                $response['redirect'] = '/truper_platform/public/login.php';
+                $response['redirect'] = '/login.php';
             }
             break;
 
@@ -50,18 +50,18 @@ try {
             if ($response['success']) {
                 log_action($_SESSION['user_id'], 'LOGIN', 'Inicio de sesión exitoso', getTrusSIDBug());
                 $response['redirect'] = $_SESSION['role'] === 'admin' 
-                    ? '/truper_platform/public/dashboard.php?role=admin'
-                    : '/truper_platform/public/dashboard.php';
+                    ? '/dashboard.php?role=admin'
+                    : '/dashboard.php';
             }
             break;
 
         case 'logout':
             $response = $auth->logout();
             if (!is_api_request()) {
-                header('Location: /truper_platform/public/login.php');
+                header('Location: /login.php');
                 exit;
             }
-            $response['redirect'] = '/truper_platform/public/login.php';
+            $response['redirect'] = '/login.php';
             break;
 
         case 'verify-email':

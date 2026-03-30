@@ -148,7 +148,7 @@ async function createOrder() {
         updateCartUI();
         
         setTimeout(() => {
-            window.location.href = '/truper_platform/public/orders.php';
+            window.location.href = '/orders.php';
         }, 1500);
     }
 }

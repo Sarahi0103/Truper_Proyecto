@@ -91,7 +91,7 @@ function deny_unauthorized($code, $message) {
         exit;
     }
 
-    header("Location: /truper_platform/public/login.php?error=unauthorized");
+    header("Location: /login.php?error=unauthorized");
     exit;
 }
 

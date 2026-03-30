@@ -1,6 +1,8 @@
 # Configuración de Apache
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    DirectoryIndex index.php
+    Options -Indexes
     
     # Si la solicitud no es un archivo o carpeta, redirigir a index.php
     RewriteCond %{REQUEST_FILENAME} !-f
