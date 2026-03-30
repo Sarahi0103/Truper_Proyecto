@@ -13,4 +13,4 @@ RUN chown -R www-data:www-data /var/www/html
 
 EXPOSE 80
 
-CMD ["apache2-foreground"]
+CMD ["bash", "-lc", "PORT_VALUE=${PORT:-80}; sed -ri \"s/^Listen 80$/Listen ${PORT_VALUE}/\" /etc/apache2/ports.conf; sed -ri \"s/<VirtualHost \*:80>/<VirtualHost *:${PORT_VALUE}>/\" /etc/apache2/sites-available/000-default.conf; apache2-foreground"]
