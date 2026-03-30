@@ -1,27 +1,27 @@
-# TRUPPER - Sistema de Gestión de Inventario y Ventas
+﻿# Truper - Sistema de GestiÃ³n de Inventario y Ventas
 
-## Descripción General
+## DescripciÃ³n General
 
-TRUPPER es una plataforma web integral diseñada para la gestión de inventario, venta de productos y relación con clientes mayoristas. El sistema incluye:
+Truper es una plataforma web integral diseÃ±ada para la gestiÃ³n de inventario, venta de productos y relaciÃ³n con clientes mayoristas. El sistema incluye:
 
-- **Catálogo Digital**: Visualización rápida de productos con búsqueda y filtrado
-- **Sistema de Órdenes**: Creación y seguimiento de órdenes de compra
-- **Programa de Puntos**: Acumulación de puntos y bonificaciones por cumpleaños
+- **CatÃ¡logo Digital**: VisualizaciÃ³n rÃ¡pida de productos con bÃºsqueda y filtrado
+- **Sistema de Ã“rdenes**: CreaciÃ³n y seguimiento de Ã³rdenes de compra
+- **Programa de Puntos**: AcumulaciÃ³n de puntos y bonificaciones por cumpleaÃ±os
 - **Control de Pagos**: Seguimiento automatizado del estado de pagos
-- **Gestor de Tareas**: Asignación de tareas para empleados
-- **Análisis de Estadísticas**: Analytics basado en compras con predicciones
-- **Ventas Mayoreo**: Cotizaciones y órdenes especiales para mayoristas
-- **Lector de Códigos de Barras**: Integración con lectores de códigos QR/Barras
-- **Seguridad**: Autenticación y autorización por roles
+- **Gestor de Tareas**: AsignaciÃ³n de tareas para empleados
+- **AnÃ¡lisis de EstadÃ­sticas**: Analytics basado en compras con predicciones
+- **Ventas Mayoreo**: Cotizaciones y Ã³rdenes especiales para mayoristas
+- **Lector de CÃ³digos de Barras**: IntegraciÃ³n con lectores de cÃ³digos QR/Barras
+- **Seguridad**: AutenticaciÃ³n y autorizaciÃ³n por roles
 
-## Requisitos Técnicos
+## Requisitos TÃ©cnicos
 
 - **PHP**: 7.4 o superior
 - **MySQL**: 5.7 o superior
 - **Servidor Web**: Apache o Nginx
 - **Navegador**: Moderno (Chrome, Firefox, Safari, Edge)
 
-## Instalación
+## InstalaciÃ³n
 
 ### 1. Configurar la Base de Datos
 
@@ -58,77 +58,77 @@ Acceder a: `http://localhost:8000`
 ## Credenciales de Prueba
 
 **Admin:**
-- Email: `admin@trupper.com`
+- Email: `admin@truper.com`
 - Password: `password123`
 
 **Cliente:**
-- Email: `cliente@trupper.com`
+- Email: `cliente@truper.com`
 - Password: `password123`
 
 ## Estructura del Proyecto
 
 ```
 trupper_web/
-├── assets/
-│   ├── css/
-│   │   ├── style.css          # Estilos principales
-│   │   ├── dashboard.css      # Estilos dashboard
-│   │   ├── products.css       # Estilos de productos
-│   │   └── responsive.css     # Responsive design
-│   ├── js/
-│   │   ├── main.js           # JavaScript principal
-│   │   ├── dashboard.js      # Scripts dashboard
-│   │   └── products.js       # Scripts productos
-│   └── img/                  # Imágenes
-├── backend/
-│   ├── config/
-│   │   ├── database.php      # Configuración DB
-│   │   └── security.php      # Seguridad
-│   ├── controllers/
-│   │   ├── auth_controller.php
-│   │   ├── order_controller.php
-│   │   └── wholesale_controller.php
-│   ├── models/
-│   │   ├── User.php
-│   │   ├── Product.php
-│   │   ├── Order.php
-│   │   ├── Task.php
-│   │   ├── Analytics.php
-│   │   ├── WholesaleSale.php
-│   │   └── BarcodeReader.php
-│   └── utils/
-│       └── Utilities.php
-├── views/
-│   ├── login.php
-│   ├── register.php
-│   ├── dashboard.php
-│   ├── products.php
-│   ├── my_orders.php
-│   ├── profile.php
-│   ├── my_points.php
-│   └── wholesale.php
-├── db/
-│   └── trupper_db.sql
-└── index.php
+â”œâ”€â”€ assets/
+â”‚   â”œâ”€â”€ css/
+â”‚   â”‚   â”œâ”€â”€ style.css          # Estilos principales
+â”‚   â”‚   â”œâ”€â”€ dashboard.css      # Estilos dashboard
+â”‚   â”‚   â”œâ”€â”€ products.css       # Estilos de productos
+â”‚   â”‚   â””â”€â”€ responsive.css     # Responsive design
+â”‚   â”œâ”€â”€ js/
+â”‚   â”‚   â”œâ”€â”€ main.js           # JavaScript principal
+â”‚   â”‚   â”œâ”€â”€ dashboard.js      # Scripts dashboard
+â”‚   â”‚   â””â”€â”€ products.js       # Scripts productos
+â”‚   â””â”€â”€ img/                  # ImÃ¡genes
+â”œâ”€â”€ backend/
+â”‚   â”œâ”€â”€ config/
+â”‚   â”‚   â”œâ”€â”€ database.php      # ConfiguraciÃ³n DB
+â”‚   â”‚   â””â”€â”€ security.php      # Seguridad
+â”‚   â”œâ”€â”€ controllers/
+â”‚   â”‚   â”œâ”€â”€ auth_controller.php
+â”‚   â”‚   â”œâ”€â”€ order_controller.php
+â”‚   â”‚   â””â”€â”€ wholesale_controller.php
+â”‚   â”œâ”€â”€ models/
+â”‚   â”‚   â”œâ”€â”€ User.php
+â”‚   â”‚   â”œâ”€â”€ Product.php
+â”‚   â”‚   â”œâ”€â”€ Order.php
+â”‚   â”‚   â”œâ”€â”€ Task.php
+â”‚   â”‚   â”œâ”€â”€ Analytics.php
+â”‚   â”‚   â”œâ”€â”€ WholesaleSale.php
+â”‚   â”‚   â””â”€â”€ BarcodeReader.php
+â”‚   â””â”€â”€ utils/
+â”‚       â””â”€â”€ Utilities.php
+â”œâ”€â”€ views/
+â”‚   â”œâ”€â”€ login.php
+â”‚   â”œâ”€â”€ register.php
+â”‚   â”œâ”€â”€ dashboard.php
+â”‚   â”œâ”€â”€ products.php
+â”‚   â”œâ”€â”€ my_orders.php
+â”‚   â”œâ”€â”€ profile.php
+â”‚   â”œâ”€â”€ my_points.php
+â”‚   â””â”€â”€ wholesale.php
+â”œâ”€â”€ db/
+â”‚   â””â”€â”€ trupper_db.sql
+â””â”€â”€ index.php
 ```
 
 ## Funcionalidades Principales
 
-### 1. Autenticación y Autorización
+### 1. AutenticaciÃ³n y AutorizaciÃ³n
 
 - Registro de usuarios (Clientes, Empleados, Administradores)
-- Login seguro con contraseñas hasheadas
-- Protección CSRF
-- Gestión de sesiones
+- Login seguro con contraseÃ±as hasheadas
+- ProtecciÃ³n CSRF
+- GestiÃ³n de sesiones
 
-### 2. Gestión de Productos
+### 2. GestiÃ³n de Productos
 
-- Catálogo completo con búsqueda
-- Filtrado por categoría
-- Integración con códigos de barras
+- CatÃ¡logo completo con bÃºsqueda
+- Filtrado por categorÃ­a
+- IntegraciÃ³n con cÃ³digos de barras
 - Seguimiento de costos y precios
 
-### 3. Órdenes y Pedidos
+### 3. Ã“rdenes y Pedidos
 
 ```php
 $order = new Order();
@@ -140,8 +140,8 @@ $order->recordPayment($order_id, $amount, 'credit_card');
 ### 4. Programa de Puntos y Bonificaciones
 
 - 1 punto por cada $10 de compra
-- Acumulación sin límite
-- Bonificación especial en cumpleaños
+- AcumulaciÃ³n sin lÃ­mite
+- BonificaciÃ³n especial en cumpleaÃ±os
 - Dashboard de puntos disponibles
 
 ### 5. Control de Pagos
@@ -168,7 +168,7 @@ $request = $wholesale->createRequest($user_id, $company_name, $email, $phone, $t
 $quote = $wholesale->createQuote($request_id, $user_id, $items, $discount);
 ```
 
-### 8. Lector de Códigos de Barras
+### 8. Lector de CÃ³digos de Barras
 
 ```php
 $barcode = new BarcodeReader();
@@ -186,17 +186,17 @@ $stats = $barcode->getScanStats($days = 30);
 
 ### Implementadas:
 
-- ✅ Hashing de contraseñas (Bcrypt)
-- ✅ Token CSRF
-- ✅ Sanitización de inputs
-- ✅ Validación de email
-- ✅ Headers HTTP de seguridad
-- ✅ Roles y permisos
-- ✅ Logs de actividad
+- âœ… Hashing de contraseÃ±as (Bcrypt)
+- âœ… Token CSRF
+- âœ… SanitizaciÃ³n de inputs
+- âœ… ValidaciÃ³n de email
+- âœ… Headers HTTP de seguridad
+- âœ… Roles y permisos
+- âœ… Logs de actividad
 
 ## APIs y Endpoints
 
-### Autenticación
+### AutenticaciÃ³n
 
 ```
 POST /backend/controllers/auth_controller.php
@@ -205,7 +205,7 @@ POST /backend/controllers/auth_controller.php
   - action=logout
 ```
 
-### Órdenes
+### Ã“rdenes
 
 ```
 POST /backend/controllers/order_controller.php
@@ -220,7 +220,7 @@ POST /backend/controllers/wholesale_controller.php
   - action=create_request
 ```
 
-## Personalización
+## PersonalizaciÃ³n
 
 ### Cambiar Colores
 
@@ -234,11 +234,11 @@ Editar `assets/css/style.css`:
 }
 ```
 
-### Agregar Más Productos
+### Agregar MÃ¡s Productos
 
 ```sql
 INSERT INTO products (name, sku, description, category, cost_price, sell_price)
-VALUES ('Producto', 'SKU001', 'Descripción', 'Categoría', 10.00, 25.00);
+VALUES ('Producto', 'SKU001', 'DescripciÃ³n', 'CategorÃ­a', 10.00, 25.00);
 ```
 
 ## Mantenimiento
@@ -257,22 +257,25 @@ mysqldump -u root -p trupper_db > backup.sql
 
 ## Soporte
 
-Para más información o reportar problemas, contacta a:
-- Email: info@trupper.com
-- Teléfono: +1-234-567-8900
+Para mÃ¡s informaciÃ³n o reportar problemas, contacta a:
+- Email: info@truper.com
+- TelÃ©fono: +1-234-567-8900
 
 ## Licencia
 
-© 2024 TRUPPER. Todos los derechos reservados.
+Â© 2024 Truper. Todos los derechos reservados.
 
 ## Changelog
 
 ### v1.0.0 (2024)
 - Lanzamiento inicial del sistema
 - Funcionalidades principales implementadas
-- Integración de seguridad
+- IntegraciÃ³n de seguridad
 - Sistema de analytics
 
 ---
 
-**Última actualización**: Marzo 2024
+**Ãšltima actualizaciÃ³n**: Marzo 2024
+
+
+

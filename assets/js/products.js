@@ -1,8 +1,8 @@
-/**
- * Products JavaScript - TRUPPER
+﻿/**
+ * Products JavaScript - Truper
  */
 
-// Cargar productos dinámicamente
+// Cargar productos dinÃ¡micamente
 function loadProducts(filters = {}) {
     const formData = new FormData();
     Object.keys(filters).forEach(key => {
@@ -52,3 +52,5 @@ function renderProducts(products) {
 document.addEventListener('DOMContentLoaded', () => {
     // Los productos se cargan desde PHP inicialmente
 });
+
+

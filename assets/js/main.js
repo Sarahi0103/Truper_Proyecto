@@ -1,5 +1,5 @@
-/**
- * Main JavaScript - TRUPPER
+﻿/**
+ * Main JavaScript - Truper
  */
 
 // Shopping Cart
@@ -161,7 +161,7 @@ function validateForm(formId) {
     return isValid;
 }
 
-// AJAX para envío de datos
+// AJAX para envÃ­o de datos
 function submitFormAjax(formSelector, endpoint) {
     const form = document.querySelector(formSelector);
     if (!form) return;
@@ -183,13 +183,13 @@ function submitFormAjax(formSelector, endpoint) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('Operación realizada exitosamente');
+                alert('OperaciÃ³n realizada exitosamente');
                 form.reset();
                 if (data.redirect) {
                     window.location.href = data.redirect;
                 }
             } else {
-                alert(data.message || 'Error en la operación');
+                alert(data.message || 'Error en la operaciÃ³n');
             }
         })
         .catch(error => {
@@ -227,3 +227,5 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+

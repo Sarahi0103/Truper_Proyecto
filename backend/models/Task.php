@@ -1,6 +1,6 @@
-<?php
+﻿<?php
 /**
- * Modelo de Tareas - TRUPPER
+ * Modelo de Tareas - Truper
  */
 
 require_once __DIR__ . '/../config/database.php';
@@ -88,3 +88,5 @@ class Task {
     }
 }
 ?>
+
+

@@ -1,13 +1,13 @@
-/**
- * Dashboard JavaScript - TRUPPER
+﻿/**
+ * Dashboard JavaScript - Truper
  */
 
 // Cargar datos del dashboard
 function loadDashboardData() {
-    // Aquí iría la carga de datos via AJAX
+    // AquÃ­ irÃ­a la carga de datos via AJAX
 }
 
-// Actualizar estado de órdenes
+// Actualizar estado de Ã³rdenes
 function updateOrderStatus(orderId, newStatus) {
     fetch('/backend/controllers/order_controller.php?action=update_status', {
         method: 'POST',
@@ -39,3 +39,5 @@ document.addEventListener('DOMContentLoaded', () => {
     loadDashboardData();
     loadPoints();
 });
+
+

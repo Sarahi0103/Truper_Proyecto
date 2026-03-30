@@ -1,9 +1,9 @@
-<?php
+﻿<?php
 /**
- * Configuración de Seguridad - TRUPPER
+ * ConfiguraciÃ³n de Seguridad - Truper
  */
 
-// Comenzar sesión segura
+// Comenzar sesiÃ³n segura
 session_start();
 
 // Headers de seguridad
@@ -13,7 +13,7 @@ header('X-XSS-Protection: 1; mode=block');
 header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
 header('Content-Security-Policy: default-src \'self\'; script-src \'self\' \'unsafe-inline\'; style-src \'self\' \'unsafe-inline\'');
 
-// Configuración de sesión
+// ConfiguraciÃ³n de sesiÃ³n
 ini_set('session.cookie_secure', true);
 ini_set('session.cookie_httponly', true);
 ini_set('session.cookie_samesite', 'Strict');
@@ -21,7 +21,7 @@ ini_set('session.gc_maxlifetime', SESSION_TIMEOUT);
 
 class Security {
     /**
-     * Verificar si el usuario está autenticado
+     * Verificar si el usuario estÃ¡ autenticado
      */
     public static function isAuthenticated() {
         return isset($_SESSION['user_id']) && !empty($_SESSION['user_id']);
@@ -49,14 +49,14 @@ class Security {
     }
 
     /**
-     * Hash de contraseña
+     * Hash de contraseÃ±a
      */
     public static function hashPassword($password) {
         return password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
     }
 
     /**
-     * Verificar contraseña
+     * Verificar contraseÃ±a
      */
     public static function verifyPassword($password, $hash) {
         return password_verify($password, $hash);
@@ -106,7 +106,7 @@ class Security {
     }
 
     /**
-     * Redirigir si no está autenticado
+     * Redirigir si no estÃ¡ autenticado
      */
     public static function requireAuth() {
         if (!self::isAuthenticated()) {
@@ -126,3 +126,5 @@ class Security {
     }
 }
 ?>
+
+

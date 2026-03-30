@@ -1,4 +1,4 @@
-<!-- TRUPPER - Dashboard Administrativo -->
+﻿<!-- Truper - Dashboard Administrativo -->
 <?php
 require_once __DIR__ . '/../backend/config/security.php';
 require_once __DIR__ . '/../backend/config/database.php';
@@ -21,19 +21,19 @@ $top_products = $analytics->getTopPurchasedProducts(5);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - TRUPPER</title>
+    <title>Admin Dashboard - Truper</title>
     <link rel="stylesheet" href="/assets/css/style.css">
     <link rel="stylesheet" href="/assets/css/dashboard.css">
 </head>
 <body>
     <nav class="navbar">
         <div class="nav-container">
-            <div class="logo">TRUPPER ADMIN</div>
+            <div class="logo">Truper ADMIN</div>
             <ul class="nav-menu">
                 <li><a href="/admin/dashboard.php">Dashboard</a></li>
                 <li><a href="/admin/users.php">Usuarios</a></li>
                 <li><a href="/admin/products.php">Productos</a></li>
-                <li><a href="/admin/orders.php">Órdenes</a></li>
+                <li><a href="/admin/orders.php">Ã“rdenes</a></li>
                 <li><a href="/admin/analytics.php">Analytics</a></li>
                 <li><a href="/backend/controllers/logout.php">Logout</a></li>
             </ul>
@@ -43,14 +43,14 @@ $top_products = $analytics->getTopPurchasedProducts(5);
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="sidebar-header">
-                <h3>Administración</h3>
+                <h3>AdministraciÃ³n</h3>
             </div>
             
             <nav class="sidebar-nav">
                 <a href="/admin/dashboard.php" class="nav-link active">Dashboard</a>
                 <a href="/admin/users.php" class="nav-link">Gestionar Usuarios</a>
                 <a href="/admin/products.php" class="nav-link">Gestionar Productos</a>
-                <a href="/admin/orders.php" class="nav-link">Gestionar Órdenes</a>
+                <a href="/admin/orders.php" class="nav-link">Gestionar Ã“rdenes</a>
                 <a href="/admin/tasks.php" class="nav-link">Tareas</a>
                 <a href="/admin/wholesale.php" class="nav-link">Mayoreo</a>
                 <a href="/admin/analytics.php" class="nav-link">Analytics</a>
@@ -59,12 +59,12 @@ $top_products = $analytics->getTopPurchasedProducts(5);
 
         <main class="dashboard-main">
             <div class="dashboard-header">
-                <h1>Panel Administrativo TRUPPER</h1>
+                <h1>Panel Administrativo Truper</h1>
             </div>
 
             <div class="dashboard-grid">
                 <div class="dashboard-card">
-                    <h3>Órdenes Totales</h3>
+                    <h3>Ã“rdenes Totales</h3>
                     <p class="card-value"><?php echo $summary['total_orders']; ?></p>
                 </div>
 
@@ -85,7 +85,7 @@ $top_products = $analytics->getTopPurchasedProducts(5);
             </div>
 
             <section class="recent-orders" style="margin-top: 2rem;">
-                <h2>Productos Más Comprados</h2>
+                <h2>Productos MÃ¡s Comprados</h2>
                 <table class="table">
                     <thead>
                         <tr>
@@ -115,3 +115,5 @@ $top_products = $analytics->getTopPurchasedProducts(5);
     <script src="/assets/js/dashboard.js"></script>
 </body>
 </html>
+
+

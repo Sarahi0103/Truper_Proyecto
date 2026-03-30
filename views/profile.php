@@ -1,4 +1,4 @@
-<!-- TRUPPER - Mi Perfil -->
+﻿<!-- Truper - Mi Perfil -->
 <?php
 require_once __DIR__ . '/../backend/config/security.php';
 require_once __DIR__ . '/../backend/config/database.php';
@@ -14,14 +14,14 @@ $user = $user_model->getById($_SESSION['user_id']);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mi Perfil - TRUPPER</title>
+    <title>Mi Perfil - Truper</title>
     <link rel="stylesheet" href="/assets/css/style.css">
     <link rel="stylesheet" href="/assets/css/forms.css">
 </head>
 <body>
     <nav class="navbar">
         <div class="nav-container">
-            <div class="logo">TRUPPER</div>
+            <div class="logo">Truper</div>
             <ul class="nav-menu">
                 <li><a href="/views/dashboard.php">Dashboard</a></li>
                 <li><a href="/views/profile.php">Perfil</a></li>
@@ -46,7 +46,7 @@ $user = $user_model->getById($_SESSION['user_id']);
                 </div>
 
                 <div class="form-group">
-                    <label for="phone">Teléfono</label>
+                    <label for="phone">TelÃ©fono</label>
                     <input type="tel" id="phone" name="phone" value="<?php echo htmlspecialchars($user['phone']); ?>" required>
                 </div>
 
@@ -60,27 +60,29 @@ $user = $user_model->getById($_SESSION['user_id']);
 
             <hr style="margin: 2rem 0;">
 
-            <h2>Cambiar Contraseña</h2>
+            <h2>Cambiar ContraseÃ±a</h2>
             
             <form action="/backend/controllers/profile_controller.php" method="POST" class="form">
                 <div class="form-group">
-                    <label for="current_password">Contraseña Actual</label>
+                    <label for="current_password">ContraseÃ±a Actual</label>
                     <input type="password" id="current_password" name="current_password" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="new_password">Nueva Contraseña</label>
+                    <label for="new_password">Nueva ContraseÃ±a</label>
                     <input type="password" id="new_password" name="new_password" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="confirm_password">Confirmar Contraseña</label>
+                    <label for="confirm_password">Confirmar ContraseÃ±a</label>
                     <input type="password" id="confirm_password" name="confirm_password" required>
                 </div>
 
-                <button type="submit" name="action" value="change_password" class="btn-primary">Cambiar Contraseña</button>
+                <button type="submit" name="action" value="change_password" class="btn-primary">Cambiar ContraseÃ±a</button>
             </form>
         </div>
     </div>
 </body>
 </html>
+
+

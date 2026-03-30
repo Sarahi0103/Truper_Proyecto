@@ -1,6 +1,6 @@
-<?php
+﻿<?php
 /**
- * Order Controller - TRUPPER
+ * Order Controller - Truper
  */
 
 require_once __DIR__ . '/../config/security.php';
@@ -74,6 +74,8 @@ elseif ($action === 'track_payment') {
 
 else {
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Action no válida']);
+    echo json_encode(['success' => false, 'message' => 'Action no vÃ¡lida']);
 }
 ?>
+
+

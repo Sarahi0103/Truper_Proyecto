@@ -1,4 +1,4 @@
-<!-- TRUPPER - Mis Órdenes -->
+﻿<!-- Truper - Mis Ã“rdenes -->
 <?php
 require_once __DIR__ . '/../backend/config/security.php';
 require_once __DIR__ . '/../backend/config/database.php';
@@ -14,24 +14,24 @@ $orders = $order_model->getUserOrders($_SESSION['user_id']);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mis Órdenes - TRUPPER</title>
+    <title>Mis Ã“rdenes - Truper</title>
     <link rel="stylesheet" href="/assets/css/style.css">
     <link rel="stylesheet" href="/assets/css/dashboard.css">
 </head>
 <body>
     <nav class="navbar">
         <div class="nav-container">
-            <div class="logo">TRUPPER</div>
+            <div class="logo">Truper</div>
             <ul class="nav-menu">
                 <li><a href="/views/dashboard.php">Dashboard</a></li>
-                <li><a href="/views/my_orders.php">Mis Órdenes</a></li>
+                <li><a href="/views/my_orders.php">Mis Ã“rdenes</a></li>
                 <li><a href="/backend/controllers/logout.php">Logout</a></li>
             </ul>
         </div>
     </nav>
 
     <div class="container">
-        <h1>Mis Órdenes</h1>
+        <h1>Mis Ã“rdenes</h1>
         
         <table class="table">
             <thead>
@@ -62,3 +62,5 @@ $orders = $order_model->getUserOrders($_SESSION['user_id']);
     </div>
 </body>
 </html>
+
+

@@ -1,8 +1,8 @@
-{
-    "name": "TRUPPER - Sistema de Gestión de Inventario",
-    "description": "Plataforma web integral de gestión de inventario y ventas para TRUPPER",
+﻿{
+    "name": "Truper - Sistema de GestiÃ³n de Inventario",
+    "description": "Plataforma web integral de gestiÃ³n de inventario y ventas para Truper",
     "version": "1.0.0",
-    "author": "TRUPPER Development Team",
+    "author": "Truper Development Team",
     "license": "All Rights Reserved",
     "require": {
         "php": ">=7.4.0",
@@ -21,3 +21,6 @@
         "pos"
     ]
 }
+
+
+

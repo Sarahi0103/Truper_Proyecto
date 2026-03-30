@@ -1,4 +1,4 @@
-# Instrucciones para Push a GitHub
+﻿# Instrucciones para Push a GitHub
 
 ## Pasos para Conectar con GitHub
 
@@ -26,7 +26,7 @@ git branch -M main
 git push -u origin main
 ```
 
-Si requiere autenticación:
+Si requiere autenticaciÃ³n:
 - Usar Personal Access Token (recomendado)
 - O usar SSH key
 
@@ -44,7 +44,7 @@ ssh-keygen -t rsa -b 4096 -f "$env:USERPROFILE\.ssh\id_rsa"
 git remote set-url origin git@github.com:TU_USERNAME/Trupper_Proyecto.git
 ```
 
-## Comandos Útiles Después
+## Comandos Ãštiles DespuÃ©s
 
 ```powershell
 # Ver commit history
@@ -53,7 +53,7 @@ git log --oneline
 # Ver estado
 git status
 
-# Hacer cambios después
+# Hacer cambios despuÃ©s
 git add .
 git commit -m "mensaje"
 git push
@@ -66,12 +66,15 @@ git push -u origin develop
 ## Commit Actual
 
 El commit inicial ha sido realizado localmente:
-- Autor: TRUPPER Development
+- Autor: Truper Development
 - Email: info@truper.com
-- Mensaje: TRUPPER v1.0.0: Sistema completo de gestión de inventario y ventas
+- Mensaje: Truper v1.0.0: Sistema completo de gestiÃ³n de inventario y ventas
 - 42 archivos agregados
-- 4658 líneas de código
+- 4658 lÃ­neas de cÃ³digo
 
 ---
 
 **Nota**: Reemplazar `TU_USERNAME` con tu username de GitHub
+
+
+

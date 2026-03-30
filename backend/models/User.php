@@ -1,6 +1,6 @@
-<?php
+﻿<?php
 /**
- * Modelo de Usuario - TRUPPER
+ * Modelo de Usuario - Truper
  */
 
 require_once __DIR__ . '/../config/database.php';
@@ -22,7 +22,7 @@ class User {
         
         // Validar email
         if (!Security::validateEmail($email)) {
-            return ['success' => false, 'message' => 'Email inválido'];
+            return ['success' => false, 'message' => 'Email invÃ¡lido'];
         }
 
         // Verificar si existe
@@ -32,10 +32,10 @@ class User {
         $stmt->execute();
         
         if ($stmt->get_result()->num_rows > 0) {
-            return ['success' => false, 'message' => 'El email ya está registrado'];
+            return ['success' => false, 'message' => 'El email ya estÃ¡ registrado'];
         }
 
-        // Hash de contraseña
+        // Hash de contraseÃ±a
         $hashed_password = Security::hashPassword($password);
         $name = Security::sanitize($name);
         $phone = Security::sanitize($phone);
@@ -66,16 +66,16 @@ class User {
         $result = $stmt->get_result();
 
         if ($result->num_rows === 0) {
-            return ['success' => false, 'message' => 'Email o contraseña incorrectos'];
+            return ['success' => false, 'message' => 'Email o contraseÃ±a incorrectos'];
         }
 
         $user = $result->fetch_assoc();
 
         if (!Security::verifyPassword($password, $user['password'])) {
-            return ['success' => false, 'message' => 'Email o contraseña incorrectos'];
+            return ['success' => false, 'message' => 'Email o contraseÃ±a incorrectos'];
         }
 
-        // Crear sesión
+        // Crear sesiÃ³n
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['user_email'] = $user['email'];
         $_SESSION['user_name'] = $user['name'];
@@ -140,3 +140,5 @@ class User {
     }
 }
 ?>
+
+

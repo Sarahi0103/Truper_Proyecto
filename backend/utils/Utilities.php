@@ -1,6 +1,6 @@
-<?php
+﻿<?php
 /**
- * Utilidades generales - TRUPPER
+ * Utilidades generales - Truper
  */
 
 class Logger {
@@ -29,20 +29,20 @@ class Logger {
 
 class EmailService {
     public static function sendBirthdayBonus($email, $name, $bonus_amount) {
-        $subject = "¡Felicidades! Bonificación de cumpleaños TRUPPER";
+        $subject = "Â¡Felicidades! BonificaciÃ³n de cumpleaÃ±os Truper";
         $message = "
         <html>
             <head>
-                <title>Bonificación de Cumpleaños TRUPPER</title>
+                <title>BonificaciÃ³n de CumpleaÃ±os Truper</title>
             </head>
             <body>
-                <h2>¡Feliz Cumpleaños, $name!</h2>
-                <p>En TRUPPER queremos celebrar tu día especial con un BONO de $bonus_amount puntos.</p>
-                <p>Este bono está disponible en tu cuenta para ser usado en tu próxima compra.</p>
+                <h2>Â¡Feliz CumpleaÃ±os, $name!</h2>
+                <p>En Truper queremos celebrar tu dÃ­a especial con un BONO de $bonus_amount puntos.</p>
+                <p>Este bono estÃ¡ disponible en tu cuenta para ser usado en tu prÃ³xima compra.</p>
                 <br>
-                <p>Accede a tu cuenta en: <a href='https://trupper.com/login'>TRUPPER Portal</a></p>
+                <p>Accede a tu cuenta en: <a href='https://truper.com/login'>Truper Portal</a></p>
                 <br>
-                <p>Saludos,<br>Equipo TRUPPER</p>
+                <p>Saludos,<br>Equipo Truper</p>
             </body>
         </html>";
         
@@ -53,7 +53,7 @@ class EmailService {
     }
 
     public static function sendOrderConfirmation($email, $order_id, $total) {
-        $subject = "Confirmación de Pedido #$order_id - TRUPPER";
+        $subject = "ConfirmaciÃ³n de Pedido #$order_id - Truper";
         $message = "
         <html>
             <head>
@@ -61,11 +61,11 @@ class EmailService {
             </head>
             <body>
                 <h2>Pedido Confirmado</h2>
-                <p>Número de pedido: <strong>$order_id</strong></p>
+                <p>NÃºmero de pedido: <strong>$order_id</strong></p>
                 <p>Total: <strong>\$$total</strong></p>
                 <p>Puedes seguir el estado de tu pedido en tu cuenta.</p>
                 <br>
-                <p>Saludos,<br>Equipo TRUPPER</p>
+                <p>Saludos,<br>Equipo Truper</p>
             </body>
         </html>";
         
@@ -96,7 +96,7 @@ class Invoice {
         $invoice = self::generate($order_id);
         $ticket = "
 ========================================
-        TRUPPER - COMPROBANTE DE VENTA
+        Truper - COMPROBANTE DE VENTA
 ========================================
 Folio: " . $invoice['invoice_number'] . "
 Fecha: " . $invoice['invoice_date'] . "
@@ -135,3 +135,5 @@ class ChartData {
     }
 }
 ?>
+
+

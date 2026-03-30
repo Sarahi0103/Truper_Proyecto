@@ -1,6 +1,6 @@
-<?php
+﻿<?php
 /**
- * Auth Controller - TRUPPER
+ * Auth Controller - Truper
  */
 
 require_once __DIR__ . '/../config/security.php';
@@ -37,7 +37,7 @@ elseif ($action === 'register') {
     $birthday = $_POST['birthday'] ?? '';
     
     if ($password !== $password_confirm) {
-        header("Location: /views/register.php?error=" . urlencode("Las contraseñas no coinciden"));
+        header("Location: /views/register.php?error=" . urlencode("Las contraseÃ±as no coinciden"));
         exit();
     }
     
@@ -45,7 +45,7 @@ elseif ($action === 'register') {
     $result = $user_model->register($email, $password, $name, $phone);
     
     if ($result['success']) {
-        // Guardar fecha de cumpleaños
+        // Guardar fecha de cumpleaÃ±os
         $_SESSION['user_id'] = $result['user_id'];
         $_SESSION['user_email'] = $email;
         $_SESSION['user_name'] = $name;
@@ -54,7 +54,7 @@ elseif ($action === 'register') {
         Logger::info("User registered: " . $email);
         
         // Enviar email de bienvenida
-        EmailService::sendOrderConfirmation($email, "#BIENVENIDA", "¡Registrate exitoso!");
+        EmailService::sendOrderConfirmation($email, "#BIENVENIDA", "Â¡Registrate exitoso!");
         
         header("Location: /views/dashboard.php");
         exit();
@@ -73,3 +73,5 @@ else {
     header("Location: /index.php");
 }
 ?>
+
+

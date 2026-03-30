@@ -1,5 +1,5 @@
--- ============================================
--- BASE DE DATOS TRUPPER - SCRIPT DE INICIALIZACIÓN
+﻿-- ============================================
+-- BASE DE DATOS Truper - SCRIPT DE INICIALIZACIÃ“N
 -- ============================================
 
 CREATE DATABASE IF NOT EXISTS trupper_db;
@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS products (
 );
 
 -- ============================================
--- TABLA: ÓRDENES
+-- TABLA: Ã“RDENES
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 
 -- ============================================
--- TABLA: ITEMS DE ÓRDENES
+-- TABLA: ITEMS DE Ã“RDENES
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS order_items (
@@ -188,7 +188,7 @@ CREATE TABLE IF NOT EXISTS wholesale_quote_items (
 );
 
 -- ============================================
--- TABLA: ESCANEOS DE CÓDIGOS DE BARRAS
+-- TABLA: ESCANEOS DE CÃ“DIGOS DE BARRAS
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS barcode_scans (
@@ -207,20 +207,23 @@ CREATE TABLE IF NOT EXISTS barcode_scans (
 
 -- Usuario Admin
 INSERT INTO users (email, password, name, phone, role) VALUES 
-('admin@trupper.com', '$2y$12$ViZrw8LXZv8Hc.uQj3uKGuC/YqLcPJeYLDhQkK8M7H7iKz7.m1Nrm', 'Administrador', '+1-234-567-8900', 'admin');
+('admin@truper.com', '$2y$12$ViZrw8LXZv8Hc.uQj3uKGuC/YqLcPJeYLDhQkK8M7H7iKz7.m1Nrm', 'Administrador', '+1-234-567-8900', 'admin');
 
 -- Usuario Cliente
 INSERT INTO users (email, password, name, phone, birthday, role, points) VALUES 
-('cliente@trupper.com', '$2y$12$ViZrw8LXZv8Hc.uQj3uKGuC/YqLcPJeYLDhQkK8M7H7iKz7.m1Nrm', 'Cliente Demo', '+1-987-654-3210', '1990-05-15', 'client', 100);
+('cliente@truper.com', '$2y$12$ViZrw8LXZv8Hc.uQj3uKGuC/YqLcPJeYLDhQkK8M7H7iKz7.m1Nrm', 'Cliente Demo', '+1-987-654-3210', '1990-05-15', 'client', 100);
 
 -- Productos de ejemplo
 INSERT INTO products (name, sku, description, category, unit, cost_price, sell_price) VALUES 
-('Martillo de Peña', 'HAM001', 'Martillo profesional de peña de 500g', 'Herramientas', 'pieza', 15.00, 35.00),
-('Destornillador Phillips', 'SCR001', 'Set de destornilladores Phillips de precisión', 'Herramientas', 'set', 8.00, 22.00),
+('Martillo de PeÃ±a', 'HAM001', 'Martillo profesional de peÃ±a de 500g', 'Herramientas', 'pieza', 15.00, 35.00),
+('Destornillador Phillips', 'SCR001', 'Set de destornilladores Phillips de precisiÃ³n', 'Herramientas', 'set', 8.00, 22.00),
 ('Llave Inglesa Ajustable', 'WRN001', 'Llave inglesa de 10 pulgadas', 'Herramientas', 'pieza', 12.00, 28.00),
-('Taladro Eléctrico 20V', 'DRL001', 'Taladro con batería y accesorios', 'Herramientas', 'pieza', 75.00, 180.00),
-('Cinta Métrica 25m', 'TAP001', 'Cinta métrica de acero de 25 metros', 'Herramientas', 'pieza', 5.00, 15.00);
+('Taladro ElÃ©ctrico 20V', 'DRL001', 'Taladro con baterÃ­a y accesorios', 'Herramientas', 'pieza', 75.00, 180.00),
+('Cinta MÃ©trica 25m', 'TAP001', 'Cinta mÃ©trica de acero de 25 metros', 'Herramientas', 'pieza', 5.00, 15.00);
 
 -- Permiso para crear tablas
 GRANT ALL PRIVILEGES ON trupper_db.* TO 'trupper_user'@'localhost' IDENTIFIED BY 'trupper_password';
 FLUSH PRIVILEGES;
+
+
+

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 ?>
 <!DOCTYPE html>
@@ -6,14 +6,14 @@ session_start();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro - TRUPPER</title>
+    <title>Registro - Truper</title>
     <link rel="stylesheet" href="/assets/css/style.css">
     <link rel="stylesheet" href="/assets/css/auth.css">
 </head>
 <body class="auth-body">
     <div class="auth-container">
         <div class="auth-box">
-            <h1 class="auth-title">TRUPPER</h1>
+            <h1 class="auth-title">Truper</h1>
             <h2>Crear Cuenta</h2>
             
             <?php if (isset($_GET['error'])): ?>
@@ -32,7 +32,7 @@ session_start();
                 </div>
                 
                 <div class="form-group">
-                    <label for="phone">Teléfono</label>
+                    <label for="phone">TelÃ©fono</label>
                     <input type="tel" id="phone" name="phone" required placeholder="+1-234-567-8900">
                 </div>
                 
@@ -42,22 +42,24 @@ session_start();
                 </div>
                 
                 <div class="form-group">
-                    <label for="password">Contraseña</label>
-                    <input type="password" id="password" name="password" required placeholder="••••••••">
+                    <label for="password">ContraseÃ±a</label>
+                    <input type="password" id="password" name="password" required placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢">
                 </div>
                 
                 <div class="form-group">
-                    <label for="password_confirm">Confirmar Contraseña</label>
-                    <input type="password" id="password_confirm" name="password_confirm" required placeholder="••••••••">
+                    <label for="password_confirm">Confirmar ContraseÃ±a</label>
+                    <input type="password" id="password_confirm" name="password_confirm" required placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢">
                 </div>
                 
                 <button type="submit" name="action" value="register" class="btn-primary btn-block">Registrarse</button>
             </form>
             
             <div class="auth-footer">
-                <p>¿Ya tienes cuenta? <a href="/views/login.php">Inicia sesión</a></p>
+                <p>Â¿Ya tienes cuenta? <a href="/views/login.php">Inicia sesiÃ³n</a></p>
             </div>
         </div>
     </div>
 </body>
 </html>
+
+

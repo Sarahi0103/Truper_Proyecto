@@ -1,6 +1,6 @@
-<?php
+﻿<?php
 /**
- * Modelo de Lector de Códigos de Barras - TRUPPER
+ * Modelo de Lector de CÃ³digos de Barras - Truper
  */
 
 require_once __DIR__ . '/../config/database.php';
@@ -13,13 +13,13 @@ class BarcodeReader {
     }
 
     /**
-     * Registrar escaneo de código de barras
+     * Registrar escaneo de cÃ³digo de barras
      */
     public function scanBarcode($barcode, $transaction_id = null) {
-        // Normalizar código de barras
+        // Normalizar cÃ³digo de barras
         $barcode = trim($barcode);
         
-        // Buscar producto por código de barras
+        // Buscar producto por cÃ³digo de barras
         $query = "SELECT id, name, sku, sell_price FROM products WHERE sku = ? OR barcode = ?";
         $stmt = $this->conn->prepare($query);
         $stmt->bind_param("ss", $barcode, $barcode);
@@ -48,7 +48,7 @@ class BarcodeReader {
     }
 
     /**
-     * Cargar productos por códigos de barras
+     * Cargar productos por cÃ³digos de barras
      */
     public function uploadBarcodes($barcodes_file) {
         // Leer archivo (CSV o TXT)
@@ -69,7 +69,7 @@ class BarcodeReader {
                 $sku = trim($line[0]);
                 $barcode = trim($line[1]);
                 
-                // Actualizar código de barras del producto
+                // Actualizar cÃ³digo de barras del producto
                 $query = "UPDATE products SET barcode = ? WHERE sku = ?";
                 $stmt = $this->conn->prepare($query);
                 $stmt->bind_param("ss", $barcode, $sku);
@@ -94,7 +94,7 @@ class BarcodeReader {
         
         return [
             'success' => true,
-            'message' => 'Códigos importados',
+            'message' => 'CÃ³digos importados',
             'results' => $results,
             'total' => count($results)
         ];
@@ -117,7 +117,7 @@ class BarcodeReader {
     }
 
     /**
-     * Obtener estadísticas de escaneos
+     * Obtener estadÃ­sticas de escaneos
      */
     public function getScanStats($days = 30) {
         $query = "SELECT 
@@ -137,7 +137,7 @@ class BarcodeReader {
 }
 
 /**
- * Modelo de Control de Pagos - TRUPPER
+ * Modelo de Control de Pagos - Truper
  */
 class PaymentTracker {
     private $conn;
@@ -222,7 +222,7 @@ class PaymentTracker {
     }
 
     /**
-     * Obtener órdenes pendientes de pago
+     * Obtener Ã³rdenes pendientes de pago
      */
     public function getPendingPayments() {
         $query = "SELECT o.*, u.name, u.email,
@@ -260,3 +260,5 @@ class PaymentTracker {
     }
 }
 ?>
+
+

@@ -1,7 +1,7 @@
-<?php
+﻿<?php
 /**
- * Configuración de Base de Datos - TRUPPER
- * Sistema de Gestión de Inventario y Ventas
+ * ConfiguraciÃ³n de Base de Datos - Truper
+ * Sistema de GestiÃ³n de Inventario y Ventas
  */
 
 define('DB_HOST', 'localhost');
@@ -19,10 +19,10 @@ define('BASE_PATH', dirname(dirname(dirname(__FILE__))));
 define('VIEWS_PATH', BASE_PATH . '/views');
 define('ASSETS_PATH', BASE_PATH . '/assets');
 
-// Configuración de sesión
+// ConfiguraciÃ³n de sesiÃ³n
 define('SESSION_TIMEOUT', 1800); // 30 minutos
 
-// Colores de TRUPPER
+// Colores de Truper
 define('COLOR_PRIMARY', '#FF8C00'); // Naranja
 define('COLOR_SECONDARY', '#000000'); // Negro
 define('COLOR_LIGHT', '#FFFFFF'); // Blanco
@@ -40,14 +40,14 @@ class Database {
                 $this->connection = new mysqli($this->host, $this->user, $this->pass, $this->db);
                 
                 if ($this->connection->connect_error) {
-                    throw new Exception("Conexión fallida: " . $this->connection->connect_error);
+                    throw new Exception("ConexiÃ³n fallida: " . $this->connection->connect_error);
                 }
                 
                 $this->connection->set_charset("utf8mb4");
             }
             return $this->connection;
         } catch (Exception $e) {
-            die("Error de conexión: " . $e->getMessage());
+            die("Error de conexiÃ³n: " . $e->getMessage());
         }
     }
 
@@ -65,7 +65,10 @@ class Database {
     }
 }
 
-// Crear conexión global
+// Crear conexiÃ³n global
 $db = new Database();
 $GLOBALS['db'] = $db->connect();
 ?>
+
+
+

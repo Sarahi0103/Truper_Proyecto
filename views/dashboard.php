@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../backend/config/security.php';
 require_once __DIR__ . '/../backend/config/database.php';
 require_once __DIR__ . '/../backend/models/User.php';
@@ -17,17 +17,17 @@ $orders = $order_model->getUserOrders($_SESSION['user_id']);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mi Dashboard - TRUPPER</title>
+    <title>Mi Dashboard - Truper</title>
     <link rel="stylesheet" href="/assets/css/style.css">
     <link rel="stylesheet" href="/assets/css/dashboard.css">
 </head>
 <body>
     <nav class="navbar">
         <div class="nav-container">
-            <div class="logo">TRUPPER</div>
+            <div class="logo">Truper</div>
             <ul class="nav-menu">
                 <li><a href="/index.php">Inicio</a></li>
-                <li><a href="/views/products.php">Catálogo</a></li>
+                <li><a href="/views/products.php">CatÃ¡logo</a></li>
                 <li><a href="/views/dashboard.php">Dashboard</a></li>
                 <li><a href="/backend/controllers/logout.php">Logout</a></li>
             </ul>
@@ -52,14 +52,14 @@ $orders = $order_model->getUserOrders($_SESSION['user_id']);
 
         <main class="dashboard-main">
             <div class="dashboard-header">
-                <h1>¡Bienvenido, <?php echo htmlspecialchars($user['name']); ?>!</h1>
+                <h1>Â¡Bienvenido, <?php echo htmlspecialchars($user['name']); ?>!</h1>
             </div>
 
             <div class="dashboard-grid">
                 <div class="dashboard-card">
                     <h3>Puntos Acumulados</h3>
                     <p class="card-value"><?php echo $user['points']; ?></p>
-                    <p class="card-label">Redimibles en tu próxima compra</p>
+                    <p class="card-label">Redimibles en tu prÃ³xima compra</p>
                 </div>
 
                 <div class="dashboard-card">
@@ -108,3 +108,5 @@ $orders = $order_model->getUserOrders($_SESSION['user_id']);
     <script src="/assets/js/dashboard.js"></script>
 </body>
 </html>
+
+

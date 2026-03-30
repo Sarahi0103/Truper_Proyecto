@@ -1,6 +1,6 @@
-<?php
+﻿<?php
 /**
- * Modelo de Productos - TRUPPER
+ * Modelo de Productos - Truper
  */
 
 require_once __DIR__ . '/../config/database.php';
@@ -79,7 +79,7 @@ class Product {
     }
 
     /**
-     * Obtener productos por categoría
+     * Obtener productos por categorÃ­a
      */
     public function getByCategory($category) {
         $query = "SELECT * FROM {$this->table} WHERE category = ? AND active = 1 ORDER BY name ASC";
@@ -101,3 +101,5 @@ class Product {
     }
 }
 ?>
+
+

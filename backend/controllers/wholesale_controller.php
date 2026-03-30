@@ -1,6 +1,6 @@
-<?php
+﻿<?php
 /**
- * Wholesale Controller - TRUPPER
+ * Wholesale Controller - Truper
  */
 
 require_once __DIR__ . '/../config/security.php';
@@ -41,3 +41,5 @@ else {
     header("Location: /index.php");
 }
 ?>
+
+
