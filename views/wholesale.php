@@ -6,6 +6,7 @@ require_once __DIR__ . '/../backend/models/WholesaleSale.php';
 Security::requireAuth();
 
 $wholesale = new WholesaleSale();
+$csrfToken = Security::generateCSRFToken();
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -33,6 +34,7 @@ $wholesale = new WholesaleSale();
             <p class="subtitle">Completa el formulario y nuestro equipo se contactarÃ¡ contigo</p>
 
             <form action="/backend/controllers/wholesale_controller.php" method="POST" class="form">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8'); ?>">
                 <div class="form-group">
                     <label for="company_name">Nombre de la Empresa *</label>
                     <input type="text" id="company_name" name="company_name" required>

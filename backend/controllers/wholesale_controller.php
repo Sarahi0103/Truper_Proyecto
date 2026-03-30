@@ -12,6 +12,12 @@ Security::requireAuth();
 $action = $_POST['action'] ?? null;
 
 if ($action === 'create_request') {
+    Security::requirePost();
+    if (!Security::verifyRequestCSRFToken()) {
+        header("Location: /views/wholesale.php?error=" . urlencode("SesiÃ³n invÃ¡lida, recarga la pÃ¡gina"));
+        exit();
+    }
+
     $company_name = Security::sanitize($_POST['company_name'] ?? '');
     $contact_email = Security::sanitize($_POST['contact_email'] ?? '');
     $contact_phone = Security::sanitize($_POST['contact_phone'] ?? '');

@@ -3,21 +3,40 @@
  * ConfiguraciÃ³n de Seguridad - Truper
  */
 
-// Comenzar sesiÃ³n segura
-session_start();
+// ConfiguraciÃ³n de sesiÃ³n segura (antes de iniciar sesiÃ³n)
+if (session_status() === PHP_SESSION_NONE) {
+    $sessionTimeout = defined('SESSION_TIMEOUT') ? SESSION_TIMEOUT : 1800;
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['SERVER_PORT'] ?? null) == 443);
+
+    ini_set('session.gc_maxlifetime', (string)$sessionTimeout);
+    ini_set('session.cookie_httponly', '1');
+    ini_set('session.cookie_secure', $isHttps ? '1' : '0');
+    ini_set('session.use_strict_mode', '1');
+
+    if (PHP_VERSION_ID >= 70300) {
+        session_set_cookie_params([
+            'lifetime' => 0,
+            'path' => '/',
+            'domain' => '',
+            'secure' => $isHttps,
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
+    }
+
+    session_start();
+}
 
 // Headers de seguridad
 header('X-Frame-Options: SAMEORIGIN');
 header('X-Content-Type-Options: nosniff');
 header('X-XSS-Protection: 1; mode=block');
-header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
-header('Content-Security-Policy: default-src \'self\'; script-src \'self\' \'unsafe-inline\'; style-src \'self\' \'unsafe-inline\'');
-
-// ConfiguraciÃ³n de sesiÃ³n
-ini_set('session.cookie_secure', true);
-ini_set('session.cookie_httponly', true);
-ini_set('session.cookie_samesite', 'Strict');
-ini_set('session.gc_maxlifetime', SESSION_TIMEOUT);
+header('Referrer-Policy: strict-origin-when-cross-origin');
+header('Content-Security-Policy: default-src \'self\'; script-src \'self\' \'unsafe-inline\'; style-src \'self\' \'unsafe-inline\'; img-src \'self\' data:; object-src \'none\'; base-uri \'self\'; frame-ancestors \'self\'');
+if ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['SERVER_PORT'] ?? null) == 443)) {
+    header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+}
 
 class Security {
     /**
@@ -80,6 +99,24 @@ class Security {
     }
 
     /**
+     * Verificar token CSRF desde POST o header
+     */
+    public static function verifyRequestCSRFToken() {
+        $token = $_POST['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+        return self::verifyCSRFToken($token);
+    }
+
+    /**
+     * Exigir mÃ©todo POST
+     */
+    public static function requirePost() {
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+            http_response_code(405);
+            exit('MÃ©todo no permitido');
+        }
+    }
+
+    /**
      * Sanitizar entrada
      */
     public static function sanitize($input) {
@@ -100,6 +137,13 @@ class Security {
      * Logout
      */
     public static function logout() {
+        $_SESSION = [];
+        if (ini_get('session.use_cookies')) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000,
+                $params['path'], $params['domain'], $params['secure'], $params['httponly']
+            );
+        }
         session_destroy();
         header("Location: /index.php");
         exit();

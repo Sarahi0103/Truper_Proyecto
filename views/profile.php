@@ -8,6 +8,7 @@ Security::requireAuth();
 
 $user_model = new User();
 $user = $user_model->getById($_SESSION['user_id']);
+$csrfToken = Security::generateCSRFToken();
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -35,6 +36,7 @@ $user = $user_model->getById($_SESSION['user_id']);
             <h1>Mi Perfil</h1>
             
             <form action="/backend/controllers/profile_controller.php" method="POST" class="form">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8'); ?>">
                 <div class="form-group">
                     <label for="name">Nombre Completo</label>
                     <input type="text" id="name" name="name" value="<?php echo htmlspecialchars($user['name']); ?>" required>
@@ -63,6 +65,7 @@ $user = $user_model->getById($_SESSION['user_id']);
             <h2>Cambiar ContraseÃ±a</h2>
             
             <form action="/backend/controllers/profile_controller.php" method="POST" class="form">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8'); ?>">
                 <div class="form-group">
                     <label for="current_password">ContraseÃ±a Actual</label>
                     <input type="password" id="current_password" name="current_password" required>

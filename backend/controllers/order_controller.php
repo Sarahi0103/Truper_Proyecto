@@ -14,6 +14,14 @@ Security::requireAuth();
 $action = $_POST['action'] ?? $_GET['action'] ?? null;
 
 if ($action === 'create') {
+    Security::requirePost();
+    if (!Security::verifyRequestCSRFToken()) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'CSRF token invÃ¡lido']);
+        exit();
+    }
+
     $order_model = new Order();
     $product_model = new Product();
     $user_model = new User();

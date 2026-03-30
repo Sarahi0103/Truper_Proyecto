@@ -1,5 +1,6 @@
 ﻿<?php
-session_start();
+require_once __DIR__ . '/../backend/config/security.php';
+$csrfToken = Security::generateCSRFToken();
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -21,6 +22,7 @@ session_start();
             <?php endif; ?>
             
             <form action="/backend/controllers/auth_controller.php" method="POST" class="auth-form">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8'); ?>">
                 <div class="form-group">
                     <label for="email">Email</label>
                     <input type="email" id="email" name="email" required placeholder="tu@email.com">

@@ -96,6 +96,18 @@ class User {
     }
 
     /**
+     * Obtener hash de contraseÃ±a por ID
+     */
+    public function getPasswordHashById($id) {
+        $query = "SELECT password FROM {$this->table} WHERE id = ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        return $result['password'] ?? null;
+    }
+
+    /**
      * Actualizar perfil
      */
     public function updateProfile($id, $name, $phone, $birthday) {

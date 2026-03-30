@@ -8,6 +8,12 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../models/User.php';
 
 Security::requireAuth();
+Security::requirePost();
+
+if (!Security::verifyRequestCSRFToken()) {
+    header("Location: /views/profile.php?error=" . urlencode("SesiÃ³n invÃ¡lida, recarga la pÃ¡gina"));
+    exit();
+}
 
 $action = $_POST['action'] ?? null;
 $user_model = new User();
@@ -30,9 +36,9 @@ elseif ($action === 'change_password') {
     $new_password = $_POST['new_password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
     
-    $user = $user_model->getById($_SESSION['user_id']);
-    
-    if (!Security::verifyPassword($current_password, $user['password'])) {
+    $passwordHash = $user_model->getPasswordHashById($_SESSION['user_id']);
+
+    if (!$passwordHash || !Security::verifyPassword($current_password, $passwordHash)) {
         header("Location: /views/profile.php?error=ContraseÃ±a actual incorrecta");
         exit();
     }
@@ -42,8 +48,13 @@ elseif ($action === 'change_password') {
         exit();
     }
     
-    if (strlen($new_password) < 6) {
-        header("Location: /views/profile.php?error=La contraseÃ±a debe tener al menos 6 caracteres");
+    if (strlen($new_password) < 8) {
+        header("Location: /views/profile.php?error=La contraseÃ±a debe tener al menos 8 caracteres");
+        exit();
+    }
+
+    if (!preg_match('/[A-Za-z]/', $new_password) || !preg_match('/\d/', $new_password)) {
+        header("Location: /views/profile.php?error=La contraseÃ±a debe incluir letras y nÃºmeros");
         exit();
     }
     
