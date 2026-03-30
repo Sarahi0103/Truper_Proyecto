@@ -4,15 +4,24 @@
  * Sistema de GestiÃ³n de Inventario y Ventas
  */
 
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_NAME', 'trupper_db');
+function env_or_default($key, $default = null) {
+    $value = getenv($key);
+    if ($value === false || $value === '') {
+        return $default;
+    }
+    return $value;
+}
+
+define('DB_HOST', env_or_default('DB_HOST', 'localhost'));
+define('DB_PORT', (int) env_or_default('DB_PORT', 3306));
+define('DB_USER', env_or_default('DB_USER', 'root'));
+define('DB_PASS', env_or_default('DB_PASS', ''));
+define('DB_NAME', env_or_default('DB_NAME', 'trupper_db'));
 define('DB_TYPE', 'mysql'); // mysql o sqlite
 
 // Para desarrollo
-define('APP_ENV', 'development');
-define('APP_DEBUG', true);
+define('APP_ENV', env_or_default('APP_ENV', 'development'));
+define('APP_DEBUG', env_or_default('APP_DEBUG', 'true') === 'true');
 
 // Rutas importantes
 define('BASE_PATH', dirname(dirname(dirname(__FILE__))));
@@ -30,6 +39,7 @@ define('COLOR_LIGHT', '#FFFFFF'); // Blanco
 class Database {
     private $connection;
     private $host = DB_HOST;
+    private $port = DB_PORT;
     private $user = DB_USER;
     private $pass = DB_PASS;
     private $db = DB_NAME;
@@ -37,7 +47,7 @@ class Database {
     public function connect() {
         try {
             if (DB_TYPE === 'mysql') {
-                $this->connection = new mysqli($this->host, $this->user, $this->pass, $this->db);
+                $this->connection = new mysqli($this->host, $this->user, $this->pass, $this->db, $this->port);
                 
                 if ($this->connection->connect_error) {
                     throw new Exception("ConexiÃ³n fallida: " . $this->connection->connect_error);
@@ -47,7 +57,10 @@ class Database {
             }
             return $this->connection;
         } catch (Exception $e) {
-            die("Error de conexiÃ³n: " . $e->getMessage());
+            if (APP_DEBUG) {
+                die("Error de conexiÃ³n: " . $e->getMessage());
+            }
+            die("Error de conexiÃ³n con la base de datos.");
         }
     }
 

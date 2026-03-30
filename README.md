@@ -55,6 +55,27 @@ php -S localhost:8000
 
 Acceder a: `http://localhost:8000`
 
+## Deploy En Render
+
+El proyecto ya incluye archivos listos para Render:
+
+- `Dockerfile`
+- `render.yaml`
+
+Pasos:
+
+1. En Render, seleccionar New + > Blueprint.
+2. Conectar repo: `https://github.com/Sarahi0103/Truper_Proyecto`
+3. Configurar variables de entorno de MySQL:
+  - `DB_HOST`
+  - `DB_PORT`
+  - `DB_USER`
+  - `DB_PASS`
+  - `DB_NAME`
+4. Desplegar.
+
+Nota: este sistema usa MySQL; debes usar un proveedor MySQL externo si tu plan de Render no incluye MySQL.
+
 ## Credenciales de Prueba
 
 **Admin:**
