@@ -1,4 +1,4 @@
-﻿<!-- Vista de detalle de orden -->
+<!-- Vista de detalle de orden -->
 <?php
 require_once __DIR__ . '/../backend/config/security.php';
 require_once __DIR__ . '/../backend/config/database.php';
@@ -38,7 +38,7 @@ $payment_status = $payment_tracker->getPaymentStatus($order_id);
         <div class="nav-container">
             <div class="logo">Truper</div>
             <ul class="nav-menu">
-                <li><a href="/views/my_orders.php">â† Volver</a></li>
+                <li><a href="/views/my_orders.php">← Volver</a></li>
                 <li><a href="/views/dashboard.php">Dashboard</a></li>
             </ul>
         </div>
@@ -48,7 +48,7 @@ $payment_status = $payment_tracker->getPaymentStatus($order_id);
         <h1>Detalle de Orden #<?php echo $order_id; ?></h1>
         
         <div style="background: white; padding: 2rem; border-radius: 8px; margin: 2rem 0;">
-            <h3>InformaciÃ³n de la Orden</h3>
+            <h3>Información de la Orden</h3>
             <p><strong>Fecha:</strong> <?php echo date('d/m/Y H:i', strtotime($order['created_at'])); ?></p>
             <p><strong>Cliente:</strong> <?php echo htmlspecialchars($order['name']); ?></p>
             <p><strong>Email:</strong> <?php echo htmlspecialchars($order['email']); ?></p>

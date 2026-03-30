@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../backend/config/security.php';
 require_once __DIR__ . '/../backend/config/database.php';
 require_once __DIR__ . '/../backend/models/WholesaleSale.php';
@@ -31,7 +31,7 @@ $csrfToken = Security::generateCSRFToken();
     <div class="container">
         <div class="form-container">
             <h1>Solicitud de Compra Mayoreo</h1>
-            <p class="subtitle">Completa el formulario y nuestro equipo se contactarÃ¡ contigo</p>
+            <p class="subtitle">Completa el formulario y nuestro equipo se contactará contigo</p>
 
             <form action="/backend/controllers/wholesale_controller.php" method="POST" class="form">
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8'); ?>">
@@ -46,7 +46,7 @@ $csrfToken = Security::generateCSRFToken();
                         <input type="email" id="contact_email" name="contact_email" required>
                     </div>
                     <div class="form-group">
-                        <label for="contact_phone">TelÃ©fono *</label>
+                        <label for="contact_phone">Teléfono *</label>
                         <input type="tel" id="contact_phone" name="contact_phone" required>
                     </div>
                 </div>
@@ -55,17 +55,17 @@ $csrfToken = Security::generateCSRFToken();
                     <label for="business_type">Tipo de Negocio *</label>
                     <select id="business_type" name="business_type" required>
                         <option value="">Seleccionar...</option>
-                        <option value="FerreterÃ­a">FerreterÃ­a</option>
+                        <option value="Ferretería">Ferretería</option>
                         <option value="Tienda">Tienda de Herramientas</option>
-                        <option value="ConstrucciÃ³n">Empresa de ConstrucciÃ³n</option>
+                        <option value="Construcción">Empresa de Construcción</option>
                         <option value="Industrial">Distribuidor Industrial</option>
                         <option value="Otro">Otro</option>
                     </select>
                 </div>
 
                 <div class="form-group">
-                    <label for="description">DescripciÃ³n de tu Negocio *</label>
-                    <textarea id="description" name="description" rows="5" required placeholder="CuÃ©ntanos sobre tu negocio y quÃ© productos te interesan..."></textarea>
+                    <label for="description">Descripción de tu Negocio *</label>
+                    <textarea id="description" name="description" rows="5" required placeholder="Cuéntanos sobre tu negocio y qué productos te interesan..."></textarea>
                 </div>
 
                 <button type="submit" name="action" value="create_request" class="btn-primary">Enviar Solicitud</button>

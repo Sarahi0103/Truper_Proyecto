@@ -1,8 +1,8 @@
-﻿/**
+/**
  * Products JavaScript - Truper
  */
 
-// Cargar productos dinÃ¡micamente
+// Cargar productos dinámicamente
 function loadProducts(filters = {}) {
     const formData = new FormData();
     Object.keys(filters).forEach(key => {

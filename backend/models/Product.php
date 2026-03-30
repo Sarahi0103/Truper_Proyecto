@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Modelo de Productos - Truper
  */
@@ -79,7 +79,7 @@ class Product {
     }
 
     /**
-     * Obtener productos por categorÃ­a
+     * Obtener productos por categoría
      */
     public function getByCategory($category) {
         $query = "SELECT * FROM {$this->table} WHERE category = ? AND active = 1 ORDER BY name ASC";

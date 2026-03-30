@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../backend/config/security.php';
 require_once __DIR__ . '/../backend/config/database.php';
 require_once __DIR__ . '/../backend/models/Product.php';
@@ -16,7 +16,7 @@ if ($category_filter) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CatÃ¡logo de Productos - Truper</title>
+    <title>Catálogo de Productos - Truper</title>
     <link rel="stylesheet" href="/assets/css/style.css">
     <link rel="stylesheet" href="/assets/css/products.css">
 </head>
@@ -26,7 +26,7 @@ if ($category_filter) {
             <div class="logo">Truper</div>
             <ul class="nav-menu">
                 <li><a href="/index.php">Inicio</a></li>
-                <li><a href="/views/products.php">CatÃ¡logo</a></li>
+                <li><a href="/views/products.php">Catálogo</a></li>
                 <?php if (isset($_SESSION['user_id'])): ?>
                     <li><a href="/views/dashboard.php">Dashboard</a></li>
                     <li><a href="/backend/controllers/logout.php">Logout</a></li>
@@ -41,17 +41,17 @@ if ($category_filter) {
         <aside class="products-sidebar">
             <h3>Filtrar</h3>
             <div class="filter-group">
-                <label>BÃºsqueda</label>
+                <label>Búsqueda</label>
                 <input type="text" id="search-input" placeholder="Buscar producto..." class="search-input">
             </div>
             
             <div class="filter-group">
-                <label>CategorÃ­a</label>
+                <label>Categoría</label>
                 <select id="category-filter" class="form-control">
                     <option value="">Todas</option>
                     <option value="Herramientas">Herramientas</option>
                     <option value="Hardware">Hardware</option>
-                    <option value="ElectrÃ³nica">ElectrÃ³nica</option>
+                    <option value="Electrónica">Electrónica</option>
                     <option value="Industrial">Industrial</option>
                 </select>
             </div>
@@ -59,8 +59,8 @@ if ($category_filter) {
 
         <main class="products-main">
             <div class="products-header">
-                <h1>CatÃ¡logo de Productos</h1>
-                <p>Amplia selecciÃ³n de herramientas y productos de calidad</p>
+                <h1>Catálogo de Productos</h1>
+                <p>Amplia selección de herramientas y productos de calidad</p>
             </div>
 
             <div class="products-grid" id="products-grid">

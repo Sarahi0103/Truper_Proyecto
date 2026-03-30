@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Order Controller - Truper
  */
@@ -18,7 +18,7 @@ if ($action === 'create') {
     if (!Security::verifyRequestCSRFToken()) {
         http_response_code(403);
         header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'message' => 'CSRF token invÃ¡lido']);
+        echo json_encode(['success' => false, 'message' => 'CSRF token inválido']);
         exit();
     }
 
@@ -82,7 +82,7 @@ elseif ($action === 'track_payment') {
 
 else {
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Action no vÃ¡lida']);
+    echo json_encode(['success' => false, 'message' => 'Action no válida']);
 }
 ?>
 

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Wholesale Controller - Truper
  */
@@ -14,7 +14,7 @@ $action = $_POST['action'] ?? null;
 if ($action === 'create_request') {
     Security::requirePost();
     if (!Security::verifyRequestCSRFToken()) {
-        header("Location: /views/wholesale.php?error=" . urlencode("SesiÃ³n invÃ¡lida, recarga la pÃ¡gina"));
+        header("Location: /views/wholesale.php?error=" . urlencode("Sesión inválida, recarga la página"));
         exit();
     }
 

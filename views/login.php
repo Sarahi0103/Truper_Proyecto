@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../backend/config/security.php';
 $csrfToken = Security::generateCSRFToken();
 ?>
@@ -15,7 +15,7 @@ $csrfToken = Security::generateCSRFToken();
     <div class="auth-container">
         <div class="auth-box">
             <h1 class="auth-title">Truper</h1>
-            <h2>Iniciar SesiÃ³n</h2>
+            <h2>Iniciar Sesión</h2>
             
             <?php if (isset($_GET['error'])): ?>
                 <div class="alert alert-error"><?php echo htmlspecialchars($_GET['error']); ?></div>
@@ -29,13 +29,13 @@ $csrfToken = Security::generateCSRFToken();
                 </div>
                 
                 <div class="form-group">
-                    <label for="password">ContraseÃ±a</label>
-                    <input type="password" id="password" name="password" required placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢">
+                    <label for="password">Contraseña</label>
+                    <input type="password" id="password" name="password" required placeholder="••••••••">
                 </div>
                 
                 <div class="form-group">
                     <label>
-                        <input type="checkbox" name="remember"> RecuÃ©rdame
+                        <input type="checkbox" name="remember"> Recuérdame
                     </label>
                 </div>
                 
@@ -43,8 +43,8 @@ $csrfToken = Security::generateCSRFToken();
             </form>
             
             <div class="auth-footer">
-                <p>Â¿No tienes cuenta? <a href="/views/register.php">RegÃ­strate aquÃ­</a></p>
-                <p><a href="#">Â¿Olvidaste tu contraseÃ±a?</a></p>
+                <p>¿No tienes cuenta? <a href="/views/register.php">Regístrate aquí</a></p>
+                <p><a href="#">¿Olvidaste tu contraseña?</a></p>
             </div>
         </div>
     </div>

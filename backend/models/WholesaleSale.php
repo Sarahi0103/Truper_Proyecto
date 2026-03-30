@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Modelo de Ventas Mayoreo - Truper
  */
@@ -64,7 +64,7 @@ class WholesaleSale {
     }
 
     /**
-     * Crear cotizaciÃ³n wholesale
+     * Crear cotización wholesale
      */
     public function createQuote($request_id, $user_id, $items, $discount_percent = 0) {
         // items es array: [['product_id' => 1, 'quantity' => 100], ...]
@@ -97,7 +97,7 @@ class WholesaleSale {
         if ($stmt->execute()) {
             $quote_id = $stmt->insert_id;
             
-            // Insertar items de la cotizaciÃ³n
+            // Insertar items de la cotización
             foreach ($items as $item) {
                 $this->addQuoteItem($quote_id, $item['product_id'], $item['quantity']);
             }
@@ -109,7 +109,7 @@ class WholesaleSale {
     }
 
     /**
-     * Agregar item a cotizaciÃ³n
+     * Agregar item a cotización
      */
     private function addQuoteItem($quote_id, $product_id, $quantity) {
         $query = "SELECT sell_price FROM products WHERE id = ?";
@@ -154,7 +154,7 @@ class WholesaleSale {
     }
 
     /**
-     * Convertir cotizaciÃ³n a pedido
+     * Convertir cotización a pedido
      */
     public function convertQuoteToOrder($quote_id) {
         $query = "SELECT * FROM wholesale_quotes WHERE id = ?";
@@ -178,7 +178,7 @@ class WholesaleSale {
         
         $order_id = $result['order_id'];
         
-        // Copiar items de la cotizaciÃ³n
+        // Copiar items de la cotización
         $query = "SELECT * FROM wholesale_quote_items WHERE quote_id = ?";
         $stmt = $this->conn->prepare($query);
         $stmt->bind_param("i", $quote_id);
@@ -189,14 +189,14 @@ class WholesaleSale {
             $order->addItem($order_id, $item['product_id'], $item['quantity'], $item['unit_price']);
         }
         
-        // Actualizar estado de cotizaciÃ³n
+        // Actualizar estado de cotización
         $this->updateQuoteStatus($quote_id, 'converted');
         
         return ['success' => true, 'order_id' => $order_id];
     }
 
     /**
-     * Actualizar estado de cotizaciÃ³n
+     * Actualizar estado de cotización
      */
     public function updateQuoteStatus($quote_id, $status) {
         $query = "UPDATE wholesale_quotes SET status = ? WHERE id = ?";

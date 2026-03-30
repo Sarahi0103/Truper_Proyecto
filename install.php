@@ -1,7 +1,7 @@
-﻿<?php
+<?php
 /**
- * Truper - InstalaciÃ³n RÃ¡pida
- * Ejecutar este archivo para configurar la aplicaciÃ³n
+ * Truper - Instalación Rápida
+ * Ejecutar este archivo para configurar la aplicación
  */
 
 // Verificar PHP version
@@ -14,12 +14,12 @@ if (!is_dir('logs')) {
     mkdir('logs', 0755);
 }
 
-// Crear archivo de configuraciÃ³n
+// Crear archivo de configuración
 $config_file = 'backend/config/database.php';
 if (file_exists($config_file)) {
-    echo "âœ“ ConfiguraciÃ³n existente encontrada\n";
+    echo "✓ Configuración existente encontrada\n";
 } else {
-    echo "âš  Ejecutar: php -f backend/config/database.php\n";
+    echo "⚠ Ejecutar: php -f backend/config/database.php\n";
 }
 
 // Verificar base de datos
@@ -29,10 +29,10 @@ $db = new Database();
 $conn = $db->connect();
 
 if ($conn) {
-    echo "âœ“ ConexiÃ³n a base de datos exitosa\n";
+    echo "✓ Conexión a base de datos exitosa\n";
     $conn->close();
 } else {
-    die("âœ— Error de conexiÃ³n a base de datos\n");
+    die("✗ Error de conexión a base de datos\n");
 }
 
 // Crear archivo .env (futuro)
@@ -47,10 +47,10 @@ ENV;
 
 if (!file_exists('.env')) {
     file_put_contents('.env', $env_content);
-    echo "âœ“ Archivo .env creado\n";
+    echo "✓ Archivo .env creado\n";
 }
 
-echo "\nâœ“ La aplicaciÃ³n estÃ¡ lista para usar\n";
+echo "\n✓ La aplicación está lista para usar\n";
 echo "Acceder a: http://localhost:8000\n";
 ?>
 

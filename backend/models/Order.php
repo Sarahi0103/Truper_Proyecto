@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Modelo de Pedidos - Truper
  */
@@ -99,7 +99,7 @@ class Order {
         $stmt->bind_param("idss", $order_id, $amount, $payment_method, $reference);
         
         if ($stmt->execute()) {
-            // Actualizar estado del pedido si estÃ¡ completamente pagado
+            // Actualizar estado del pedido si está completamente pagado
             $this->checkPaymentComplete($order_id);
             return ['success' => true, 'payment_id' => $stmt->insert_id];
         }
@@ -107,7 +107,7 @@ class Order {
     }
 
     /**
-     * Verificar si el pedido estÃ¡ completamente pagado
+     * Verificar si el pedido está completamente pagado
      */
     private function checkPaymentComplete($order_id) {
         $order = $this->getOrderDetail($order_id);
@@ -124,7 +124,7 @@ class Order {
     }
 
     /**
-     * Obtener Ã³rdenes por rango de fechas
+     * Obtener órdenes por rango de fechas
      */
     public function getByDateRange($start_date, $end_date) {
         $query = "SELECT * FROM {$this->table} WHERE DATE(created_at) BETWEEN ? AND ? ORDER BY created_at DESC";

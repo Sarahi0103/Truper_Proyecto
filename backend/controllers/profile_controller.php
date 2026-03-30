@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Profile Controller - Truper
  */
@@ -11,7 +11,7 @@ Security::requireAuth();
 Security::requirePost();
 
 if (!Security::verifyRequestCSRFToken()) {
-    header("Location: /views/profile.php?error=" . urlencode("SesiÃ³n invÃ¡lida, recarga la pÃ¡gina"));
+    header("Location: /views/profile.php?error=" . urlencode("Sesión inválida, recarga la página"));
     exit();
 }
 
@@ -39,35 +39,35 @@ elseif ($action === 'change_password') {
     $passwordHash = $user_model->getPasswordHashById($_SESSION['user_id']);
 
     if (!$passwordHash || !Security::verifyPassword($current_password, $passwordHash)) {
-        header("Location: /views/profile.php?error=ContraseÃ±a actual incorrecta");
+        header("Location: /views/profile.php?error=Contraseña actual incorrecta");
         exit();
     }
     
     if ($new_password !== $confirm_password) {
-        header("Location: /views/profile.php?error=Las contraseÃ±as no coinciden");
+        header("Location: /views/profile.php?error=Las contraseñas no coinciden");
         exit();
     }
     
     if (strlen($new_password) < 8) {
-        header("Location: /views/profile.php?error=La contraseÃ±a debe tener al menos 8 caracteres");
+        header("Location: /views/profile.php?error=La contraseña debe tener al menos 8 caracteres");
         exit();
     }
 
     if (!preg_match('/[A-Za-z]/', $new_password) || !preg_match('/\d/', $new_password)) {
-        header("Location: /views/profile.php?error=La contraseÃ±a debe incluir letras y nÃºmeros");
+        header("Location: /views/profile.php?error=La contraseña debe incluir letras y números");
         exit();
     }
     
-    // Actualizar contraseÃ±a
+    // Actualizar contraseña
     $hashed = Security::hashPassword($new_password);
     $query = "UPDATE users SET password = ? WHERE id = ?";
     $stmt = $GLOBALS['db']->prepare($query);
     $stmt->bind_param("si", $hashed, $_SESSION['user_id']);
     
     if ($stmt->execute()) {
-        header("Location: /views/profile.php?success=ContraseÃ±a actualizada");
+        header("Location: /views/profile.php?success=Contraseña actualizada");
     } else {
-        header("Location: /views/profile.php?error=Error al actualizar contraseÃ±a");
+        header("Location: /views/profile.php?error=Error al actualizar contraseña");
     }
 }
 

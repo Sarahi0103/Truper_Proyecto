@@ -1,82 +1,82 @@
-﻿# ðŸŽ‰ Truper v1.0.0 - Proyecto Completado
+# 🎉 Truper v1.0.0 - Proyecto Completado
 
 ## Resumen Ejecutivo
 
-Se ha desarrollado exitosamente una **plataforma web profesional e integral** para Truper con todas las funcionalidades requeridas, implementado con arquitectura MVC, seguridad avanzada y diseÃ±o responsivo.
+Se ha desarrollado exitosamente una **plataforma web profesional e integral** para Truper con todas las funcionalidades requeridas, implementado con arquitectura MVC, seguridad avanzada y diseño responsivo.
 
 ---
 
-## âœ… Funcionalidades Implementadas
+## ✅ Funcionalidades Implementadas
 
-### 1. **AutenticaciÃ³n y GestiÃ³n de Usuarios** âœ“
-- Registro de clientes con validaciÃ³n de email
-- Login seguro con contraseÃ±as hasheadas (Bcrypt)
+### 1. **Autenticación y Gestión de Usuarios** ✓
+- Registro de clientes con validación de email
+- Login seguro con contraseñas hasheadas (Bcrypt)
 - Perfiles con roles: Admin, Empleado, Cliente
-- ProtecciÃ³n CSRF y validaciÃ³n de sesiones
-- Panel de perfil con cambio de contraseÃ±a
+- Protección CSRF y validación de sesiones
+- Panel de perfil con cambio de contraseña
 
-### 2. **Programa de Puntos y BonificaciÃ³n** âœ“
-- AcumulaciÃ³n automÃ¡tica: 1 punto por cada $10 de compra
+### 2. **Programa de Puntos y Bonificación** ✓
+- Acumulación automática: 1 punto por cada $10 de compra
 - Dashboard de puntos disponibles en perfil de cliente
-- BonificaciÃ³n especial de cumpleaÃ±os
-- Sistema de redenciÃ³n en futuras compras
+- Bonificación especial de cumpleaños
+- Sistema de redención en futuras compras
 - Historial de movimiento de puntos
 
-### 3. **Sistema de Pedidos Avanzado** âœ“
-- CatÃ¡logo digital con bÃºsqueda y filtrado
-- Carrito de compras dinÃ¡mico (LocalStorage)
-- CÃ¡lculo automÃ¡tico de precios con mÃ¡rgenes configurables
-- GeneraciÃ³n de orden con detalles completos
+### 3. **Sistema de Pedidos Avanzado** ✓
+- Catálogo digital con búsqueda y filtrado
+- Carrito de compras dinámico (LocalStorage)
+- Cálculo automático de precios con márgenes configurables
+- Generación de orden con detalles completos
 - Descuentos por puntos y promociones
-- HistÃ³rico de pedidos con estado
+- Histórico de pedidos con estado
 
-### 4. **Control de Pagos Integrado** âœ“
+### 4. **Control de Pagos Integrado** ✓
 - Seguimiento automatizado del estado de pagos
-- MÃºltiples mÃ©todos de pago
-- RegistraciÃ³n de pagos parciales y completos
+- Múltiples métodos de pago
+- Registración de pagos parciales y completos
 - Dashboard de pagos pendientes
 - Historial de transacciones con fechas
 
-### 5. **Gestor de Tareas para Empleados** âœ“
-- AsignaciÃ³n de tareas con prioridades
+### 5. **Gestor de Tareas para Empleados** ✓
+- Asignación de tareas con prioridades
 - Estados: Pendiente, En Progreso, Completada
 - Fechas de vencimiento con alertas
-- VisualizaciÃ³n por empleado
+- Visualización por empleado
 - Audit trail de cambios
 
-### 6. **Analytics y Predicciones** âœ“
-- EstadÃ­sticas de compras por mes (Ãºltimos 12 meses)
-- Productos mÃ¡s comprados con anÃ¡lisis
+### 6. **Analytics y Predicciones** ✓
+- Estadísticas de compras por mes (últimos 12 meses)
+- Productos más comprados con análisis
 - Tendencias estacionales y por temporada
-- PredicciÃ³n de demanda usando promedio mÃ³vil
-- AnÃ¡lisis de rentabilidad: Ingresos vs Costos
-- GrÃ¡ficos y reportes ejecutivos
+- Predicción de demanda usando promedio móvil
+- Análisis de rentabilidad: Ingresos vs Costos
+- Gráficos y reportes ejecutivos
 
-### 7. **MÃ³dulo de Ventas Mayoreo** âœ“
+### 7. **Módulo de Ventas Mayoreo** ✓
 - Solicitudes de empresas mayoristas
 - Cotizaciones automatizadas con descuentos especiales
-- ConversiÃ³n de cotizaciÃ³n a orden
-- GestiÃ³n del estado de solicitudes
+- Conversión de cotización a orden
+- Gestión del estado de solicitudes
 - Portal separado para mayoristas
 
-### 8. **IntegraciÃ³n de CÃ³digos de Barras** âœ“
-- Escaneo de cÃ³digos QR/Barras
-- Carga masiva de cÃ³digos desde archivo CSV
-- VinculaciÃ³n con productos existentes
-- Historial de escaneos con estadÃ­sticas
+### 8. **Integración de Códigos de Barras** ✓
+- Escaneo de códigos QR/Barras
+- Carga masiva de códigos desde archivo CSV
+- Vinculación con productos existentes
+- Historial de escaneos con estadísticas
 - Compatibilidad con lectores hardware
 
-### 9. **Seguridad de Nivel Empresarial** âœ“
-- AutenticaciÃ³n por roles granulares
-- ProtecciÃ³n CSRF en formularios
-- SanitizaciÃ³n de inputs contra XSS
-- ValidaciÃ³n de email
+### 9. **Seguridad de Nivel Empresarial** ✓
+- Autenticación por roles granulares
+- Protección CSRF en formularios
+- Sanitización de inputs contra XSS
+- Validación de email
 - Headers de seguridad HTTP
 - Logs de actividad del sistema
-- ContraseÃ±as hasheadas con Bcrypt (cost 12)
+- Contraseñas hasheadas con Bcrypt (cost 12)
 
-### 10. **Frontend Responsivo** âœ“
-- DiseÃ±o Mobile-First
+### 10. **Frontend Responsivo** ✓
+- Diseño Mobile-First
 - Colores corporativos: Naranja (#FF8C00), Negro, Blanco
 - CSS modular y reutilizable
 - JavaScript vanilla sin dependencias
@@ -85,87 +85,87 @@ Se ha desarrollado exitosamente una **plataforma web profesional e integral** pa
 
 ---
 
-## ðŸ“ Estructura de Archivos
+## 📁 Estructura de Archivos
 
 ```
 trupper_web/
-â”‚
-â”œâ”€â”€ backend/                          # LÃ³gica de servidor
-â”‚   â”œâ”€â”€ config/
-â”‚   â”‚   â”œâ”€â”€ database.php             # ConfiguraciÃ³n DB y conexiÃ³n
-â”‚   â”‚   â””â”€â”€ security.php             # Seguridad, auth, hashing
-â”‚   â”‚
-â”‚   â”œâ”€â”€ controllers/
-â”‚   â”‚   â”œâ”€â”€ auth_controller.php      # Login/Register
-â”‚   â”‚   â”œâ”€â”€ order_controller.php     # Ã“rdenes y pagos
-â”‚   â”‚   â”œâ”€â”€ profile_controller.php   # Perfil de usuario
-â”‚   â”‚   â”œâ”€â”€ logout.php               # Cierre de sesiÃ³n
-â”‚   â”‚   â””â”€â”€ wholesale_controller.php # Mayoreo
-â”‚   â”‚
-â”‚   â”œâ”€â”€ models/
-â”‚   â”‚   â”œâ”€â”€ User.php                 # GestiÃ³n de usuarios
-â”‚   â”‚   â”œâ”€â”€ Product.php              # CatÃ¡logo de productos
-â”‚   â”‚   â”œâ”€â”€ Order.php                # Ã“rdenes y items
-â”‚   â”‚   â”œâ”€â”€ Task.php                 # Tareas empleados
-â”‚   â”‚   â”œâ”€â”€ Analytics.php            # EstadÃ­sticas y ML
-â”‚   â”‚   â”œâ”€â”€ WholesaleSale.php        # Ventas mayoreo
-â”‚   â”‚   â””â”€â”€ BarcodeReader.php        # CÃ³digos de barras
-â”‚   â”‚
-â”‚   â””â”€â”€ utils/
-â”‚       â””â”€â”€ Utilities.php             # Logger, Email, Invoice
-â”‚
-â”œâ”€â”€ views/                            # Vistas Cliente
-â”‚   â”œâ”€â”€ login.php                    # Formulario de login
-â”‚   â”œâ”€â”€ register.php                 # Registro de usuario
-â”‚   â”œâ”€â”€ dashboard.php                # Dashboard cliente
-â”‚   â”œâ”€â”€ products.php                 # CatÃ¡logo
-â”‚   â”œâ”€â”€ my_orders.php                # Mis pedidos
-â”‚   â”œâ”€â”€ my_points.php                # GestiÃ³n de puntos
-â”‚   â”œâ”€â”€ profile.php                  # Perfil
-â”‚   â”œâ”€â”€ order_detail.php             # Detalle de orden
-â”‚   â””â”€â”€ wholesale.php                # Solicitud mayoreo
-â”‚
-â”œâ”€â”€ admin/                            # Panel Admin
-â”‚   â””â”€â”€ dashboard.php                # Dashboard administrativo
-â”‚
-â”œâ”€â”€ assets/
-â”‚   â”œâ”€â”€ css/                         # Estilos
-â”‚   â”‚   â”œâ”€â”€ style.css                # Estilos principales
-â”‚   â”‚   â”œâ”€â”€ dashboard.css            # Dashboard
-â”‚   â”‚   â”œâ”€â”€ products.css             # Productos
-â”‚   â”‚   â”œâ”€â”€ forms.css                # Formularios
-â”‚   â”‚   â”œâ”€â”€ auth.css                 # AutenticaciÃ³n
-â”‚   â”‚   â””â”€â”€ responsive.css           # Responsive
-â”‚   â”‚
-â”‚   â”œâ”€â”€ js/                          # JavaScript
-â”‚   â”‚   â”œâ”€â”€ main.js                  # Principal
-â”‚   â”‚   â”œâ”€â”€ dashboard.js             # Dashboard
-â”‚   â”‚   â””â”€â”€ products.js              # Productos
-â”‚   â”‚
-â”‚   â””â”€â”€ img/                         # ImÃ¡genes y recursos
-â”‚
-â”œâ”€â”€ db/
-â”‚   â””â”€â”€ trupper_db.sql               # Script de base de datos
-â”‚
-â”œâ”€â”€ .htaccess                        # ConfiguraciÃ³n Apache
-â”œâ”€â”€ .gitignore                       # Archivos ignorados git
-â”œâ”€â”€ index.php                        # PÃ¡gina de inicio
-â”œâ”€â”€ install.php                      # Script de instalaciÃ³n
-â”œâ”€â”€ composer.json                    # Metadata del proyecto
-â”œâ”€â”€ README.md                        # DocumentaciÃ³n principal
-â”œâ”€â”€ QUICK_REFERENCE.md               # GuÃ­a rÃ¡pida
-â””â”€â”€ GITHUB_PUSH_INSTRUCTIONS.md     # Instrucciones push
+│
+├── backend/                          # Lógica de servidor
+│   ├── config/
+│   │   ├── database.php             # Configuración DB y conexión
+│   │   └── security.php             # Seguridad, auth, hashing
+│   │
+│   ├── controllers/
+│   │   ├── auth_controller.php      # Login/Register
+│   │   ├── order_controller.php     # Órdenes y pagos
+│   │   ├── profile_controller.php   # Perfil de usuario
+│   │   ├── logout.php               # Cierre de sesión
+│   │   └── wholesale_controller.php # Mayoreo
+│   │
+│   ├── models/
+│   │   ├── User.php                 # Gestión de usuarios
+│   │   ├── Product.php              # Catálogo de productos
+│   │   ├── Order.php                # Órdenes y items
+│   │   ├── Task.php                 # Tareas empleados
+│   │   ├── Analytics.php            # Estadísticas y ML
+│   │   ├── WholesaleSale.php        # Ventas mayoreo
+│   │   └── BarcodeReader.php        # Códigos de barras
+│   │
+│   └── utils/
+│       └── Utilities.php             # Logger, Email, Invoice
+│
+├── views/                            # Vistas Cliente
+│   ├── login.php                    # Formulario de login
+│   ├── register.php                 # Registro de usuario
+│   ├── dashboard.php                # Dashboard cliente
+│   ├── products.php                 # Catálogo
+│   ├── my_orders.php                # Mis pedidos
+│   ├── my_points.php                # Gestión de puntos
+│   ├── profile.php                  # Perfil
+│   ├── order_detail.php             # Detalle de orden
+│   └── wholesale.php                # Solicitud mayoreo
+│
+├── admin/                            # Panel Admin
+│   └── dashboard.php                # Dashboard administrativo
+│
+├── assets/
+│   ├── css/                         # Estilos
+│   │   ├── style.css                # Estilos principales
+│   │   ├── dashboard.css            # Dashboard
+│   │   ├── products.css             # Productos
+│   │   ├── forms.css                # Formularios
+│   │   ├── auth.css                 # Autenticación
+│   │   └── responsive.css           # Responsive
+│   │
+│   ├── js/                          # JavaScript
+│   │   ├── main.js                  # Principal
+│   │   ├── dashboard.js             # Dashboard
+│   │   └── products.js              # Productos
+│   │
+│   └── img/                         # Imágenes y recursos
+│
+├── db/
+│   └── trupper_db.sql               # Script de base de datos
+│
+├── .htaccess                        # Configuración Apache
+├── .gitignore                       # Archivos ignorados git
+├── index.php                        # Página de inicio
+├── install.php                      # Script de instalación
+├── composer.json                    # Metadata del proyecto
+├── README.md                        # Documentación principal
+├── QUICK_REFERENCE.md               # Guía rápida
+└── GITHUB_PUSH_INSTRUCTIONS.md     # Instrucciones push
 ```
 
 ---
 
-## ðŸ—„ï¸ Base de Datos
+## 🗄️ Base de Datos
 
 ### Tablas Principales (11 tablas)
 
 1. **users** - Usuarios del sistema (Admin, Empleado, Cliente)
-2. **products** - CatÃ¡logo de productos con SKU y cÃ³digos
-3. **orders** - Ã“rdenes de compra
+2. **products** - Catálogo de productos con SKU y códigos
+3. **orders** - Órdenes de compra
 4. **order_items** - Items de cada orden
 5. **payment_tracking** - Seguimiento de pagos
 6. **payments** - Comprobantes de pago
@@ -175,22 +175,22 @@ trupper_web/
 10. **wholesale_quote_items** - Items de cotizaciones
 11. **barcode_scans** - Historial de escaneos
 
-### Ãndices Optimizados
+### Índices Optimizados
 - Email, Role, Status, Fechas
-- BÃºsquedas rÃ¡pidas por usuario, orden, producto
+- Búsquedas rápidas por usuario, orden, producto
 
 ---
 
-## ðŸŽ¨ DiseÃ±o Visual
+## 🎨 Diseño Visual
 
 ### Colores Corporativos
-- ðŸŸ  Principal: `#FF8C00` (Naranja)
-- âš« Secundario: `#000000` (Negro)  
-- âšª Fondo: `#FFFFFF` (Blanco)
+- 🟠 Principal: `#FF8C00` (Naranja)
+- ⚫ Secundario: `#000000` (Negro)  
+- ⚪ Fondo: `#FFFFFF` (Blanco)
 
-### TipografÃ­a
+### Tipografía
 - Font: 'Segoe UI', Tahoma, Geneva, Verdana
-- Responsive: Escalado automÃ¡tico en mÃ³vil
+- Responsive: Escalado automático en móvil
 
 ### Componentes
 - Navbar sticky con logo
@@ -203,28 +203,28 @@ trupper_web/
 
 ---
 
-## ðŸ”’ Seguridad Implementada
+## 🔒 Seguridad Implementada
 
-| Aspecto | ImplementaciÃ³n |
+| Aspecto | Implementación |
 |--------|-----------------|
-| ContraseÃ±as | Bcrypt (cost 12) |
+| Contraseñas | Bcrypt (cost 12) |
 | Sesiones | Secure, HttpOnly, SameSite=Strict |
 | CSRF | Token incluido en formularios |
-| XSS | SanitizaciÃ³n con htmlspecialchars |
+| XSS | Sanitización con htmlspecialchars |
 | SQL Injection | Prepared statements con bind params |
-| AutenticaciÃ³n | Login seguro, roles verificados |
-| AutorizaciÃ³n | Middleware por rutas |
-| Headers HTTP | Security headers aÃ±adidos |
+| Autenticación | Login seguro, roles verificados |
+| Autorización | Middleware por rutas |
+| Headers HTTP | Security headers añadidos |
 | Logs | Registro de actividad |
 
 ---
 
-## ðŸ“Š EstadÃ­sticas del Proyecto
+## 📊 Estadísticas del Proyecto
 
-| MÃ©trica | Valor |
+| Métrica | Valor |
 |---------|-------|
 | Archivos Creados | 42 |
-| LÃ­neas de CÃ³digo | 4,658+ |
+| Líneas de Código | 4,658+ |
 | Modelos PHP | 8 |
 | Vistas HTML | 10+ |
 | Hojas CSS | 6 |
@@ -236,9 +236,9 @@ trupper_web/
 
 ---
 
-## ðŸš€ CÃ³mo Usar
+## 🚀 Cómo Usar
 
-### InstalaciÃ³n RÃ¡pida
+### Instalación Rápida
 
 1. **Base de Datos**
 ```bash
@@ -269,81 +269,81 @@ git push -u origin main
 
 ---
 
-## ðŸ“š DocumentaciÃ³n Disponible
+## 📚 Documentación Disponible
 
-1. **README.md** - DocumentaciÃ³n tÃ©cnica completa
-2. **QUICK_REFERENCE.md** - GuÃ­a de referencia rÃ¡pida
+1. **README.md** - Documentación técnica completa
+2. **QUICK_REFERENCE.md** - Guía de referencia rápida
 3. **GITHUB_PUSH_INSTRUCTIONS.md** - Pasos para GitHub
-4. Comentarios en cÃ³digo (docstrings)
+4. Comentarios en código (docstrings)
 5. Inline comments en funciones complejas
 
 ---
 
-## ðŸŽ¯ Funcionalidades Avanzadas
+## 🎯 Funcionalidades Avanzadas
 
 ### Machine Learning / Predicciones
-- Promedio mÃ³vil de 3 meses
-- AnÃ¡lisis de tendencias estacionales
-- Forecast automÃ¡tico de demanda
-- AnÃ¡lisis de rentabilidad
+- Promedio móvil de 3 meses
+- Análisis de tendencias estacionales
+- Forecast automático de demanda
+- Análisis de rentabilidad
 
 ### Integraciones
-- Lectores de cÃ³digo de barras
-- MÃºltiples mÃ©todos de pago
+- Lectores de código de barras
+- Múltiples métodos de pago
 - Email de notificaciones
-- Impresora tÃ©rmica de tickets
+- Impresora térmica de tickets
 
 ### Extensibilidad
 - Arquitectura MVC escalable
 - Controllers modulares
 - Models reutilizables
-- SeparaciÃ³n de concerns
+- Separación de concerns
 
 ---
 
-## ðŸ“ PrÃ³ximas Mejoras Opcionales
+## 📝 Próximas Mejoras Opcionales
 
 - [ ] API REST completa (JSON)
-- [ ] AutenticaciÃ³n OAuth2/Google
-- [ ] AplicaciÃ³n mÃ³vil iOS/Android
+- [ ] Autenticación OAuth2/Google
+- [ ] Aplicación móvil iOS/Android
 - [ ] Chat en vivo
 - [ ] Exportar a PDF/Excel
 - [ ] Sistema de reporte de bugs
-- [ ] SincronizaciÃ³n inventario real-time
+- [ ] Sincronización inventario real-time
 - [ ] Dark mode
 - [ ] Multi-idioma
 
 ---
 
-## âœ¨ CaracterÃ­sticas Especiales
+## ✨ Características Especiales
 
-âœ… **Inteligentcia**: Sistema aprende de compras pasadas
-âœ… **Predictivo**: Forecasting de demanda automÃ¡tico
-âœ… **Escalable**: FÃ¡cil agregar nuevos mÃ³dulos
-âœ… **Seguro**: OWASP Top 10 considerados
-âœ… **Responsivo**: Funciona en mÃ³vil y desktop
-âœ… **Eficiente**: Ãndices DB optimizados
-âœ… **Profesional**: CÃ³digo limpio y documentado
+✅ **Inteligentcia**: Sistema aprende de compras pasadas
+✅ **Predictivo**: Forecasting de demanda automático
+✅ **Escalable**: Fácil agregar nuevos módulos
+✅ **Seguro**: OWASP Top 10 considerados
+✅ **Responsivo**: Funciona en móvil y desktop
+✅ **Eficiente**: Índices DB optimizados
+✅ **Profesional**: Código limpio y documentado
 
 ---
 
-## ðŸ“ž Contacto
+## 📞 Contacto
 
 **Truper Development Team**
 - Email: info@truper.com
-- TelÃ©fono: +1-234-567-8900
-- VersiÃ³n: 1.0.0
+- Teléfono: +1-234-567-8900
+- Versión: 1.0.0
 - Fecha: Marzo 2024
 
 ---
 
-## ðŸ“„ Licencia
+## 📄 Licencia
 
-Â© 2024 Truper - Todos los derechos reservados
+© 2024 Truper - Todos los derechos reservados
 
 ---
 
-**Â¡Proyecto completado exitosamente! ðŸŽ‰**
+**¡Proyecto completado exitosamente! 🎉**
 
 
 

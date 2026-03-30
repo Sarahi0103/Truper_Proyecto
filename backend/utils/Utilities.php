@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Utilidades generales - Truper
  */
@@ -29,16 +29,16 @@ class Logger {
 
 class EmailService {
     public static function sendBirthdayBonus($email, $name, $bonus_amount) {
-        $subject = "Â¡Felicidades! BonificaciÃ³n de cumpleaÃ±os Truper";
+        $subject = "¡Felicidades! Bonificación de cumpleaños Truper";
         $message = "
         <html>
             <head>
-                <title>BonificaciÃ³n de CumpleaÃ±os Truper</title>
+                <title>Bonificación de Cumpleaños Truper</title>
             </head>
             <body>
-                <h2>Â¡Feliz CumpleaÃ±os, $name!</h2>
-                <p>En Truper queremos celebrar tu dÃ­a especial con un BONO de $bonus_amount puntos.</p>
-                <p>Este bono estÃ¡ disponible en tu cuenta para ser usado en tu prÃ³xima compra.</p>
+                <h2>¡Feliz Cumpleaños, $name!</h2>
+                <p>En Truper queremos celebrar tu día especial con un BONO de $bonus_amount puntos.</p>
+                <p>Este bono está disponible en tu cuenta para ser usado en tu próxima compra.</p>
                 <br>
                 <p>Accede a tu cuenta en: <a href='https://truper.com/login'>Truper Portal</a></p>
                 <br>
@@ -53,7 +53,7 @@ class EmailService {
     }
 
     public static function sendOrderConfirmation($email, $order_id, $total) {
-        $subject = "ConfirmaciÃ³n de Pedido #$order_id - Truper";
+        $subject = "Confirmación de Pedido #$order_id - Truper";
         $message = "
         <html>
             <head>
@@ -61,7 +61,7 @@ class EmailService {
             </head>
             <body>
                 <h2>Pedido Confirmado</h2>
-                <p>NÃºmero de pedido: <strong>$order_id</strong></p>
+                <p>Número de pedido: <strong>$order_id</strong></p>
                 <p>Total: <strong>\$$total</strong></p>
                 <p>Puedes seguir el estado de tu pedido en tu cuenta.</p>
                 <br>

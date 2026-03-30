@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../backend/config/security.php';
 $csrfToken = Security::generateCSRFToken();
 ?>
@@ -34,7 +34,7 @@ $csrfToken = Security::generateCSRFToken();
                 </div>
                 
                 <div class="form-group">
-                    <label for="phone">TelÃ©fono</label>
+                    <label for="phone">Teléfono</label>
                     <input type="tel" id="phone" name="phone" required placeholder="+1-234-567-8900">
                 </div>
                 
@@ -44,20 +44,20 @@ $csrfToken = Security::generateCSRFToken();
                 </div>
                 
                 <div class="form-group">
-                    <label for="password">ContraseÃ±a</label>
-                    <input type="password" id="password" name="password" required placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢">
+                    <label for="password">Contraseña</label>
+                    <input type="password" id="password" name="password" required placeholder="••••••••">
                 </div>
                 
                 <div class="form-group">
-                    <label for="password_confirm">Confirmar ContraseÃ±a</label>
-                    <input type="password" id="password_confirm" name="password_confirm" required placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢">
+                    <label for="password_confirm">Confirmar Contraseña</label>
+                    <input type="password" id="password_confirm" name="password_confirm" required placeholder="••••••••">
                 </div>
                 
                 <button type="submit" name="action" value="register" class="btn-primary btn-block">Registrarse</button>
             </form>
             
             <div class="auth-footer">
-                <p>Â¿Ya tienes cuenta? <a href="/views/login.php">Inicia sesiÃ³n</a></p>
+                <p>¿Ya tienes cuenta? <a href="/views/login.php">Inicia sesión</a></p>
             </div>
         </div>
     </div>

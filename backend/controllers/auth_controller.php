@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Auth Controller - Truper
  */
@@ -13,7 +13,7 @@ $action = $_POST['action'] ?? null;
 if (in_array($action, ['login', 'register'], true)) {
     Security::requirePost();
     if (!Security::verifyRequestCSRFToken()) {
-        header("Location: /views/login.php?error=" . urlencode("SesiÃ³n invÃ¡lida, recarga la pÃ¡gina"));
+        header("Location: /views/login.php?error=" . urlencode("Sesión inválida, recarga la página"));
         exit();
     }
 }
@@ -22,7 +22,7 @@ if ($action === 'login') {
     $email = Security::sanitize($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
 
-    // Limitador bÃ¡sico de intentos por sesiÃ³n+email (protecciÃ³n inicial)
+    // Limitador básico de intentos por sesión+email (protección inicial)
     $attemptKey = 'login_attempts_' . hash('sha256', strtolower($email));
     $bucket = $_SESSION[$attemptKey] ?? ['count' => 0, 'first' => time()];
     $windowSeconds = 900;
@@ -64,22 +64,22 @@ elseif ($action === 'register') {
     $birthday = Security::sanitize($_POST['birthday'] ?? '');
 
     if (!Security::validateEmail($email)) {
-        header("Location: /views/register.php?error=" . urlencode("Email invÃ¡lido"));
+        header("Location: /views/register.php?error=" . urlencode("Email inválido"));
         exit();
     }
     
     if ($password !== $password_confirm) {
-        header("Location: /views/register.php?error=" . urlencode("Las contraseÃ±as no coinciden"));
+        header("Location: /views/register.php?error=" . urlencode("Las contraseñas no coinciden"));
         exit();
     }
 
     if (strlen($password) < 8) {
-        header("Location: /views/register.php?error=" . urlencode("La contraseÃ±a debe tener al menos 8 caracteres"));
+        header("Location: /views/register.php?error=" . urlencode("La contraseña debe tener al menos 8 caracteres"));
         exit();
     }
 
     if (!preg_match('/[A-Za-z]/', $password) || !preg_match('/\d/', $password)) {
-        header("Location: /views/register.php?error=" . urlencode("La contraseÃ±a debe incluir letras y nÃºmeros"));
+        header("Location: /views/register.php?error=" . urlencode("La contraseña debe incluir letras y números"));
         exit();
     }
     
@@ -87,7 +87,7 @@ elseif ($action === 'register') {
     $result = $user_model->register($email, $password, $name, $phone);
     
     if ($result['success']) {
-        // Guardar fecha de cumpleaÃ±os
+        // Guardar fecha de cumpleaños
         session_regenerate_id(true);
         $_SESSION['user_id'] = $result['user_id'];
         $_SESSION['user_email'] = $email;
@@ -97,7 +97,7 @@ elseif ($action === 'register') {
         Logger::info("User registered: " . $email);
         
         // Enviar email de bienvenida
-        EmailService::sendOrderConfirmation($email, "#BIENVENIDA", "Â¡Registrate exitoso!");
+        EmailService::sendOrderConfirmation($email, "#BIENVENIDA", "¡Registrate exitoso!");
         
         header("Location: /views/dashboard.php");
         exit();

@@ -1,9 +1,9 @@
-﻿<?php
+<?php
 /**
- * ConfiguraciÃ³n de Seguridad - Truper
+ * Configuración de Seguridad - Truper
  */
 
-// ConfiguraciÃ³n de sesiÃ³n segura (antes de iniciar sesiÃ³n)
+// Configuración de sesión segura (antes de iniciar sesión)
 if (session_status() === PHP_SESSION_NONE) {
     $sessionTimeout = defined('SESSION_TIMEOUT') ? SESSION_TIMEOUT : 1800;
     $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
@@ -40,7 +40,7 @@ if ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['SE
 
 class Security {
     /**
-     * Verificar si el usuario estÃ¡ autenticado
+     * Verificar si el usuario está autenticado
      */
     public static function isAuthenticated() {
         return isset($_SESSION['user_id']) && !empty($_SESSION['user_id']);
@@ -68,14 +68,14 @@ class Security {
     }
 
     /**
-     * Hash de contraseÃ±a
+     * Hash de contraseña
      */
     public static function hashPassword($password) {
         return password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
     }
 
     /**
-     * Verificar contraseÃ±a
+     * Verificar contraseña
      */
     public static function verifyPassword($password, $hash) {
         return password_verify($password, $hash);
@@ -107,12 +107,12 @@ class Security {
     }
 
     /**
-     * Exigir mÃ©todo POST
+     * Exigir método POST
      */
     public static function requirePost() {
         if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
             http_response_code(405);
-            exit('MÃ©todo no permitido');
+            exit('Método no permitido');
         }
     }
 
@@ -150,7 +150,7 @@ class Security {
     }
 
     /**
-     * Redirigir si no estÃ¡ autenticado
+     * Redirigir si no está autenticado
      */
     public static function requireAuth() {
         if (!self::isAuthenticated()) {

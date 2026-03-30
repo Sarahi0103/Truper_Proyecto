@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Modelo de Usuario - Truper
  */
@@ -22,7 +22,7 @@ class User {
         
         // Validar email
         if (!Security::validateEmail($email)) {
-            return ['success' => false, 'message' => 'Email invÃ¡lido'];
+            return ['success' => false, 'message' => 'Email inválido'];
         }
 
         // Verificar si existe
@@ -32,10 +32,10 @@ class User {
         $stmt->execute();
         
         if ($stmt->get_result()->num_rows > 0) {
-            return ['success' => false, 'message' => 'El email ya estÃ¡ registrado'];
+            return ['success' => false, 'message' => 'El email ya está registrado'];
         }
 
-        // Hash de contraseÃ±a
+        // Hash de contraseña
         $hashed_password = Security::hashPassword($password);
         $name = Security::sanitize($name);
         $phone = Security::sanitize($phone);
@@ -66,16 +66,16 @@ class User {
         $result = $stmt->get_result();
 
         if ($result->num_rows === 0) {
-            return ['success' => false, 'message' => 'Email o contraseÃ±a incorrectos'];
+            return ['success' => false, 'message' => 'Email o contraseña incorrectos'];
         }
 
         $user = $result->fetch_assoc();
 
         if (!Security::verifyPassword($password, $user['password'])) {
-            return ['success' => false, 'message' => 'Email o contraseÃ±a incorrectos'];
+            return ['success' => false, 'message' => 'Email o contraseña incorrectos'];
         }
 
-        // Crear sesiÃ³n
+        // Crear sesión
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['user_email'] = $user['email'];
         $_SESSION['user_name'] = $user['name'];
@@ -96,7 +96,7 @@ class User {
     }
 
     /**
-     * Obtener hash de contraseÃ±a por ID
+     * Obtener hash de contraseña por ID
      */
     public function getPasswordHashById($id) {
         $query = "SELECT password FROM {$this->table} WHERE id = ?";

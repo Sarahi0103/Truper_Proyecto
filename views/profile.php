@@ -1,4 +1,4 @@
-﻿<!-- Truper - Mi Perfil -->
+<!-- Truper - Mi Perfil -->
 <?php
 require_once __DIR__ . '/../backend/config/security.php';
 require_once __DIR__ . '/../backend/config/database.php';
@@ -48,7 +48,7 @@ $csrfToken = Security::generateCSRFToken();
                 </div>
 
                 <div class="form-group">
-                    <label for="phone">TelÃ©fono</label>
+                    <label for="phone">Teléfono</label>
                     <input type="tel" id="phone" name="phone" value="<?php echo htmlspecialchars($user['phone']); ?>" required>
                 </div>
 
@@ -62,26 +62,26 @@ $csrfToken = Security::generateCSRFToken();
 
             <hr style="margin: 2rem 0;">
 
-            <h2>Cambiar ContraseÃ±a</h2>
+            <h2>Cambiar Contraseña</h2>
             
             <form action="/backend/controllers/profile_controller.php" method="POST" class="form">
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8'); ?>">
                 <div class="form-group">
-                    <label for="current_password">ContraseÃ±a Actual</label>
+                    <label for="current_password">Contraseña Actual</label>
                     <input type="password" id="current_password" name="current_password" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="new_password">Nueva ContraseÃ±a</label>
+                    <label for="new_password">Nueva Contraseña</label>
                     <input type="password" id="new_password" name="new_password" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="confirm_password">Confirmar ContraseÃ±a</label>
+                    <label for="confirm_password">Confirmar Contraseña</label>
                     <input type="password" id="confirm_password" name="confirm_password" required>
                 </div>
 
-                <button type="submit" name="action" value="change_password" class="btn-primary">Cambiar ContraseÃ±a</button>
+                <button type="submit" name="action" value="change_password" class="btn-primary">Cambiar Contraseña</button>
             </form>
         </div>
     </div>

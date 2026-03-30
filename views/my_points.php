@@ -1,4 +1,4 @@
-﻿<!-- Truper - Mis Puntos -->
+<!-- Truper - Mis Puntos -->
 <?php
 require_once __DIR__ . '/../backend/config/security.php';
 require_once __DIR__ . '/../backend/config/database.php';
@@ -36,7 +36,7 @@ $user = $user_model->getById($_SESSION['user_id']);
             <div class="dashboard-card">
                 <h3>Puntos Disponibles</h3>
                 <p class="card-value"><?php echo $user['points']; ?></p>
-                <p class="card-label">Puedes usarlos en tu prÃ³xima compra</p>
+                <p class="card-label">Puedes usarlos en tu próxima compra</p>
             </div>
 
             <div class="dashboard-card">
@@ -46,20 +46,20 @@ $user = $user_model->getById($_SESSION['user_id']);
             </div>
 
             <div class="dashboard-card">
-                <h3>PrÃ³ximo Bono</h3>
-                <p class="card-label">Â¡Tu cumpleaÃ±os es especial! RecibirÃ¡s un bono bonus.</p>
+                <h3>Próximo Bono</h3>
+                <p class="card-label">¡Tu cumpleaños es especial! Recibirás un bono bonus.</p>
                 <p class="card-label">Fecha: <?php echo date('d/m/Y', strtotime($user['birthday'])); ?></p>
             </div>
         </div>
 
         <section style="background: white; padding: 2rem; border-radius: 8px; margin-top: 2rem;">
-            <h2>CÃ³mo funcionan los Puntos</h2>
+            <h2>Cómo funcionan los Puntos</h2>
             <ul style="line-height: 2; padding-left: 2rem;">
-                <li>âœ“ Ganas 1 punto por cada $10 de compra</li>
-                <li>âœ“ Acumula puntos sin lÃ­mite</li>
-                <li>âœ“ Usa tus puntos como descuento en compras futuras</li>
-                <li>âœ“ Recibe bonus especial en tu cumpleaÃ±os</li>
-                <li>âœ“ Los puntos no caducan</li>
+                <li>✓ Ganas 1 punto por cada $10 de compra</li>
+                <li>✓ Acumula puntos sin límite</li>
+                <li>✓ Usa tus puntos como descuento en compras futuras</li>
+                <li>✓ Recibe bonus especial en tu cumpleaños</li>
+                <li>✓ Los puntos no caducan</li>
             </ul>
         </section>
     </div>

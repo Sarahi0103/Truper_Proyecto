@@ -1,8 +1,8 @@
-﻿# GUÃA RÃPIDA - Truper
+# GUÍA RÁPIDA - Truper
 
-## Inicio RÃ¡pido
+## Inicio Rápido
 
-### 1. InstalaciÃ³n Base de Datos
+### 1. Instalación Base de Datos
 ```bash
 mysql -u root -p < db/trupper_db.sql
 ```
@@ -21,53 +21,53 @@ php -S localhost:8000
 ## Funcionalidades Principales
 
 ### Para Clientes
-- âœ“ Registro y cuenta
-- âœ“ Browear catÃ¡logo de productos
-- âœ“ Crear Ã³rdenes
-- âœ“ Acumular puntos (1 punto = $10 de compra)
-- âœ“ BonificaciÃ³n de cumpleaÃ±os
-- âœ“ Solicitar mayoreo
-- âœ“ Rastrear pagos
+- ✓ Registro y cuenta
+- ✓ Browear catálogo de productos
+- ✓ Crear órdenes
+- ✓ Acumular puntos (1 punto = $10 de compra)
+- ✓ Bonificación de cumpleaños
+- ✓ Solicitar mayoreo
+- ✓ Rastrear pagos
 
 ### Para Administradores
-- âœ“ Dashboa con resumen general
-- âœ“ Gestionar usuarios y empleados
-- âœ“ Gestionar catÃ¡logo de productos
-- âœ“ Gestionar Ã³rdenes
-- âœ“ Ver analytics y predicciones
-- âœ“ Aprobar solicitudes de mayoreo
-- âœ“ Gestionar cÃ³digos de barras
+- ✓ Dashboa con resumen general
+- ✓ Gestionar usuarios y empleados
+- ✓ Gestionar catálogo de productos
+- ✓ Gestionar órdenes
+- ✓ Ver analytics y predicciones
+- ✓ Aprobar solicitudes de mayoreo
+- ✓ Gestionar códigos de barras
 
 ### Para Empleados
-- âœ“ Ver tareas asignadas
-- âœ“ Registrar escaneos de cÃ³digos
-- âœ“ Procesar pagos
+- ✓ Ver tareas asignadas
+- ✓ Registrar escaneos de códigos
+- ✓ Procesar pagos
 
 ## Estructura de Archivos Clave
 
 ```
 backend/
-  â”œâ”€â”€ config/        # ConfiguraciÃ³n y seguridad
-  â”œâ”€â”€ controllers/   # LÃ³gica de negocio
-  â”œâ”€â”€ models/        # Modelos de datos
-  â””â”€â”€ utils/         # Utilidades
+  ├── config/        # Configuración y seguridad
+  ├── controllers/   # Lógica de negocio
+  ├── models/        # Modelos de datos
+  └── utils/         # Utilidades
   
 views/               # Vistas para clientes
 admin/               # Panel administrativo
 assets/
-  â”œâ”€â”€ css/           # Estilos (Naranja #FF8C00)
-  â”œâ”€â”€ js/            # JavaScript
-  â””â”€â”€ img/           # ImÃ¡genes
+  ├── css/           # Estilos (Naranja #FF8C00)
+  ├── js/            # JavaScript
+  └── img/           # Imágenes
   
 db/                  # Base de datos SQL
 ```
 
 ## Endpoints Principales
 
-### AutenticaciÃ³n
+### Autenticación
 - `POST /backend/controllers/auth_controller.php` (login, register)
 
-### Ã“rdenes
+### Órdenes
 - `POST /backend/controllers/order_controller.php` (create, track_payment)
 
 ### Mayoreo
@@ -77,30 +77,30 @@ db/                  # Base de datos SQL
 - `POST /backend/controllers/profile_controller.php` (update_profile, change_password)
 
 ## Colores Truper
-- ðŸŸ  Primario: `#FF8C00` (Naranja)
-- âš« Secundario: `#000000` (Negro)
-- âšª Fondo: `#FFFFFF` (Blanco)
+- 🟠 Primario: `#FF8C00` (Naranja)
+- ⚫ Secundario: `#000000` (Negro)
+- ⚪ Fondo: `#FFFFFF` (Blanco)
 
-## Scripts SQL Ãštiles
+## Scripts SQL Útiles
 
 ### Agregar producto
 ```sql
 INSERT INTO products (name, sku, description, category, cost_price, sell_price)
-VALUES ('Producto', 'SKU001', 'DescripciÃ³n', 'CategorÃ­a', 10.00, 25.00);
+VALUES ('Producto', 'SKU001', 'Descripción', 'Categoría', 10.00, 25.00);
 ```
 
-### Ver Ã³rdenes de usuario
+### Ver órdenes de usuario
 ```sql
 SELECT * FROM orders WHERE user_id = 2 ORDER BY created_at DESC;
 ```
 
-### Obtener estadÃ­sticas mensuales
+### Obtener estadísticas mensuales
 ```sql
 SELECT DATE_FORMAT(created_at, '%Y-%m') as mes, COUNT(*) as ordenes, SUM(total) as venta
 FROM orders GROUP BY DATE_FORMAT(created_at, '%Y-%m');
 ```
 
-## Funciones PHP Ãštiles
+## Funciones PHP Útiles
 
 ```php
 // Agregar orden
@@ -111,30 +111,30 @@ $order->create($user_id, $total);
 $payment = new PaymentTracker();
 $payment->recordPayment($order_id, $amount, 'credit_card');
 
-// Get anÃ¡lytics
+// Get análytics
 $analytics = new Analytics();
 $forecast = $analytics->demandForecast($product_id);
 $trends = $analytics->getSeasonalTrends();
 
-// Escanear cÃ³digo de barras
+// Escanear código de barras
 $barcode = new BarcodeReader();
 $product = $barcode->scanBarcode($barcode_number);
 ```
 
 ## Seguridad
 
-- âœ“ ContraseÃ±as hasheadas con Bcrypt
-- âœ“ ProtecciÃ³n CSRF activa
-- âœ“ ValidaciÃ³n de inputs
-- âœ“ AutenticaciÃ³n por roles
-- âœ“ HTTPS ready
-- âœ“ Logs de actividad
+- ✓ Contraseñas hasheadas con Bcrypt
+- ✓ Protección CSRF activa
+- ✓ Validación de inputs
+- ✓ Autenticación por roles
+- ✓ HTTPS ready
+- ✓ Logs de actividad
 
 ## Troubleshooting
 
-### Error de conexiÃ³n DB
+### Error de conexión DB
 1. Verificar credenciales en `backend/config/database.php`
-2. Asegurar MySQL estÃ¡ corriendo
+2. Asegurar MySQL está corriendo
 3. Crear usuario: `CREATE USER 'trupper_user'@'localhost' IDENTIFIED BY 'trupper_password';`
 
 ### Permisos de carpeta
@@ -144,22 +144,22 @@ chmod 755 assets/
 ```
 
 ### PHP no encuentra archivos
-Verificar que `RewriteEngine On` en `.htaccess` estÃ¡ activo
+Verificar que `RewriteEngine On` en `.htaccess` está activo
 
-## PrÃ³ximas Mejoras
+## Próximas Mejoras
 
 - [ ] API REST completa
-- [ ] AutenticaciÃ³n OAuth
-- [ ] Alertas por email de cumpleaÃ±os
-- [ ] SincronizaciÃ³n de inventario en tiempo real
-- [ ] AplicaciÃ³n mÃ³vil
+- [ ] Autenticación OAuth
+- [ ] Alertas por email de cumpleaños
+- [ ] Sincronización de inventario en tiempo real
+- [ ] Aplicación móvil
 - [ ] Sistema de chat en vivo
 - [ ] Reportes PDF
 - [ ] Exportar datos a Excel
 
 ---
-**Ãšltima actualizaciÃ³n**: Marzo 2024
-**VersiÃ³n**: 1.0.0
+**Última actualización**: Marzo 2024
+**Versión**: 1.0.0
 
 
 

@@ -1,6 +1,6 @@
-﻿<?php
+<?php
 /**
- * Modelo de EstadÃ­sticas y Analytics - Truper
+ * Modelo de Estadísticas y Analytics - Truper
  */
 
 require_once __DIR__ . '/../config/database.php';
@@ -13,7 +13,7 @@ class Analytics {
     }
 
     /**
-     * Obtener estadÃ­sticas de compras por mes
+     * Obtener estadísticas de compras por mes
      */
     public function getPurchaseStatsByMonth($months = 12) {
         $query = "SELECT 
@@ -34,7 +34,7 @@ class Analytics {
     }
 
     /**
-     * Productos mÃ¡s comprados
+     * Productos más comprados
      */
     public function getTopPurchasedProducts($limit = 10) {
         $query = "SELECT 
@@ -78,10 +78,10 @@ class Analytics {
     }
 
     /**
-     * PredicciÃ³n de demanda usando promedio mÃ³vil
+     * Predicción de demanda usando promedio móvil
      */
     public function demandForecast($product_id, $months = 3) {
-        // Obtener datos histÃ³ricos
+        // Obtener datos históricos
         $query = "SELECT 
                     DATE_FORMAT(o.created_at, '%Y-%m') as month,
                     SUM(oi.quantity) as quantity
@@ -98,7 +98,7 @@ class Analytics {
         $stmt->execute();
         $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         
-        // Calcular promedio mÃ³vil simple
+        // Calcular promedio móvil simple
         if (count($result) < 3) {
             return null;
         }
@@ -107,7 +107,7 @@ class Analytics {
         $values = array_column($result, 'quantity');
         $average = array_sum($values) / count($values);
         
-        // Promedio mÃ³vil de 3 meses
+        // Promedio móvil de 3 meses
         $moving_avg = 0;
         for ($i = 0; $i < 3 && $i < count($values); $i++) {
             $moving_avg += $values[$i];
@@ -123,7 +123,7 @@ class Analytics {
     }
 
     /**
-     * AnÃ¡lisis de ingresos vs costos
+     * Análisis de ingresos vs costos
      */
     public function getFinancialAnalysis($start_date, $end_date) {
         $query = "SELECT 
@@ -146,10 +146,10 @@ class Analytics {
     }
 
     /**
-     * Total general de estadÃ­sticas
+     * Total general de estadísticas
      */
     public function getSummary() {
-        // Total de Ã³rdenes
+        // Total de órdenes
         $query = "SELECT COUNT(*) as total FROM orders";
         $total_orders = $this->conn->query($query)->fetch_assoc()['total'];
         

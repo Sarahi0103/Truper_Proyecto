@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Main JavaScript - Truper
  */
 
@@ -161,7 +161,7 @@ function validateForm(formId) {
     return isValid;
 }
 
-// AJAX para envÃ­o de datos
+// AJAX para envío de datos
 function submitFormAjax(formSelector, endpoint) {
     const form = document.querySelector(formSelector);
     if (!form) return;
@@ -183,13 +183,13 @@ function submitFormAjax(formSelector, endpoint) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('OperaciÃ³n realizada exitosamente');
+                alert('Operación realizada exitosamente');
                 form.reset();
                 if (data.redirect) {
                     window.location.href = data.redirect;
                 }
             } else {
-                alert(data.message || 'Error en la operaciÃ³n');
+                alert(data.message || 'Error en la operación');
             }
         })
         .catch(error => {
