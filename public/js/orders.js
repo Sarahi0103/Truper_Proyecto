@@ -134,10 +134,16 @@ async function createOrder() {
     }
     
     const isWholesale = document.getElementById('isWholesale')?.checked || false;
+    const weatherCondition = document.getElementById('weatherCondition')?.value || null;
+    const specialEvent = document.getElementById('specialEvent')?.value || null;
+    const notes = document.getElementById('orderNotes')?.value || null;
     
     const orderData = {
         items: currentCart,
-        is_wholesale: isWholesale
+        is_wholesale: isWholesale,
+        weather_condition: weatherCondition,
+        special_event: specialEvent,
+        notes: notes
     };
     
     const response = await apiCall('/orders.php?action=create', 'POST', orderData);

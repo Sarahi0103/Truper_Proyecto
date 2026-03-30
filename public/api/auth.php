@@ -28,6 +28,7 @@ try {
                 'first_name' => sanitize($_POST['first_name'] ?? ''),
                 'last_name' => sanitize($_POST['last_name'] ?? ''),
                 'phone' => sanitize($_POST['phone'] ?? ''),
+                'birthdate' => $_POST['birthdate'] ?? null,
                 'company_name' => sanitize($_POST['company_name'] ?? '')
             ]);
 

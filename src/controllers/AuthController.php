@@ -38,8 +38,8 @@ class AuthController {
             
             // Insertar usuario
             $stmt = $this->pdo->prepare("
-                INSERT INTO users (email, password_hash, first_name, last_name, role, phone, is_active, is_verified)
-                VALUES (?, ?, ?, ?, ?, ?, true, false)
+                INSERT INTO users (email, password_hash, first_name, last_name, role, phone, birthdate, is_active, is_verified)
+                VALUES (?, ?, ?, ?, ?, ?, ?, true, false)
             ");
             
             $stmt->execute([
@@ -48,7 +48,8 @@ class AuthController {
                 htmlspecialchars($data['first_name']),
                 htmlspecialchars($data['last_name']),
                 'client',
-                htmlspecialchars($data['phone'] ?? '')
+                htmlspecialchars($data['phone'] ?? ''),
+                $data['birthdate'] ?: null
             ]);
             
             $user_id = $this->pdo->lastInsertId();

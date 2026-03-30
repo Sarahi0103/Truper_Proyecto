@@ -10,7 +10,7 @@ class OrderController {
         $this->pdo = $pdo;
     }
     
-    public function createOrder($client_id, $items, $is_wholesale = false) {
+    public function createOrder($client_id, $items, $is_wholesale = false, $context = []) {
         try {
             $this->pdo->beginTransaction();
             
@@ -47,8 +47,8 @@ class OrderController {
             
             // Crear orden
             $stmt = $this->pdo->prepare("
-                INSERT INTO orders (client_id, order_number, total_amount, balance, is_wholesale, status)
-                VALUES (?, ?, ?, ?, ?, 'pending')
+                INSERT INTO orders (client_id, order_number, total_amount, balance, is_wholesale, status, notes)
+                VALUES (?, ?, ?, ?, ?, 'pending', ?)
             ");
             
             $stmt->execute([
@@ -56,7 +56,8 @@ class OrderController {
                 $order_number,
                 $total_amount,
                 $total_amount,
-                $is_wholesale ? 1 : 0
+                $is_wholesale ? 1 : 0,
+                $context['notes'] ?? null
             ]);
             
             $order_id = $this->pdo->lastInsertId();
@@ -81,7 +82,14 @@ class OrderController {
                 ]);
                 
                 // Actualizar estadísticas de compra
-                $this->updatePurchaseStatistics($item['product_id'], $item['quantity']);
+                $lineTotal = $unit_price * $item['quantity'];
+                $this->updatePurchaseStatistics(
+                    $item['product_id'],
+                    $item['quantity'],
+                    $lineTotal,
+                    $context['weather_condition'] ?? null,
+                    $context['special_event'] ?? null
+                );
             }
             
             $this->pdo->commit();
@@ -182,7 +190,7 @@ class OrderController {
         return $stmt->fetch();
     }
     
-    private function updatePurchaseStatistics($product_id, $quantity) {
+    private function updatePurchaseStatistics($product_id, $quantity, $amount, $weather_condition = null, $special_event = null) {
         $month = date('m');
         $year = date('Y');
         $season = $this->getSeason();
@@ -197,16 +205,21 @@ class OrderController {
         if ($stat) {
             $stmt = $this->pdo->prepare("
                 UPDATE purchase_statistics 
-                SET total_quantity = total_quantity + ? 
+                SET total_quantity = total_quantity + ?,
+                    total_amount = total_amount + ?,
+                    weather_condition = COALESCE(?, weather_condition),
+                    special_event = COALESCE(?, special_event),
+                    updated_at = NOW()
                 WHERE id = ?
             ");
-            $stmt->execute([$quantity, $stat['id']]);
+            $stmt->execute([$quantity, $amount, $weather_condition, $special_event, $stat['id']]);
         } else {
             $stmt = $this->pdo->prepare("
-                INSERT INTO purchase_statistics (product_id, month, year, total_quantity, season)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO purchase_statistics
+                (product_id, month, year, total_quantity, total_amount, season, weather_condition, special_event)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ");
-            $stmt->execute([$product_id, $month, $year, $quantity, $season]);
+            $stmt->execute([$product_id, $month, $year, $quantity, $amount, $season, $weather_condition, $special_event]);
         }
     }
     

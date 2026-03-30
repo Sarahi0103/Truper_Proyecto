@@ -11,6 +11,7 @@ try {
 }
 
 $isLogged = is_logged_in();
+$isAdmin = (($_SESSION['role'] ?? '') === 'admin');
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -28,6 +29,8 @@ $isLogged = is_logged_in();
                 <a href="/" class="active">Productos</a>
                 <?php if ($isLogged): ?>
                     <a href="/orders.php">Pedidos</a>
+                    <a href="/wholesale.php">Mayoreo</a>
+                    <?php if ($isAdmin): ?><a href="/cashier.php">Caja</a><?php endif; ?>
                     <a href="/dashboard.php">Dashboard</a>
                 <?php else: ?>
                     <a href="/login.php">Iniciar Sesión</a>

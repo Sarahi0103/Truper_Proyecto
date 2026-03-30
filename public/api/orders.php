@@ -37,7 +37,12 @@ try {
             $response = $orderController->createOrder(
                 $client['id'],
                 $input['items'] ?? [],
-                $input['is_wholesale'] ?? false
+                $input['is_wholesale'] ?? false,
+                [
+                    'weather_condition' => $input['weather_condition'] ?? null,
+                    'special_event' => $input['special_event'] ?? null,
+                    'notes' => $input['notes'] ?? null
+                ]
             );
 
             log_action(

@@ -22,6 +22,8 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
             <nav class="nav-menu">
                 <a href="dashboard.php" class="active">Dashboard</a>
                 <a href="orders.php">Pedidos</a>
+                <a href="wholesale.php">Mayoreo</a>
+                <?php if (($_SESSION['role'] ?? '') === 'admin'): ?><a href="cashier.php">Caja</a><?php endif; ?>
                 <a href="tasks.php">Tareas</a>
                 <a href="analytics.php">Estadísticas</a>
                 <a href="profile.php">Perfil</a>
@@ -111,6 +113,9 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
                         </a>
                         <a href="analytics.php" class="btn btn-primary" style="text-align: center;">
                             📊 Reportes
+                        </a>
+                        <a href="wholesale.php" class="btn btn-primary" style="text-align: center;">
+                            🏷️ Mayoreo
                         </a>
                     </div>
                 </div>

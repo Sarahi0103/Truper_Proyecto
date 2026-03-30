@@ -198,6 +198,31 @@ CREATE TABLE IF NOT EXISTS ai_predictions (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Tabla de cajón de dinero (POS)
+CREATE TABLE IF NOT EXISTS cash_drawer_sessions (
+    id SERIAL PRIMARY KEY,
+    opened_by INTEGER NOT NULL REFERENCES users(id),
+    opened_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    opening_amount DECIMAL(12, 2) NOT NULL DEFAULT 0,
+    closed_by INTEGER REFERENCES users(id),
+    closed_at TIMESTAMP,
+    closing_amount DECIMAL(12, 2),
+    expected_amount DECIMAL(12, 2),
+    difference_amount DECIMAL(12, 2),
+    status VARCHAR(20) NOT NULL DEFAULT 'open', -- open, closed
+    notes TEXT
+);
+
+CREATE TABLE IF NOT EXISTS cash_drawer_movements (
+    id SERIAL PRIMARY KEY,
+    session_id INTEGER NOT NULL REFERENCES cash_drawer_sessions(id) ON DELETE CASCADE,
+    movement_type VARCHAR(20) NOT NULL, -- in, out, sale
+    amount DECIMAL(12, 2) NOT NULL,
+    description TEXT,
+    created_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Índices para optimización
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_role ON users(role);

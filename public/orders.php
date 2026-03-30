@@ -22,6 +22,8 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
             <nav class="nav-menu">
                 <a href="dashboard.php">Dashboard</a>
                 <a href="orders.php" class="active">Pedidos</a>
+                <a href="wholesale.php">Mayoreo</a>
+                <?php if (($_SESSION['role'] ?? '') === 'admin'): ?><a href="cashier.php">Caja</a><?php endif; ?>
                 <a href="tasks.php">Tareas</a>
                 <a href="analytics.php">Estadísticas</a>
                 <a href="profile.php">Perfil</a>
@@ -162,6 +164,24 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
                             <div class="form-group mt-3">
                                 <label for="orderNotes">Notas Adicionales</label>
                                 <textarea id="orderNotes" placeholder="Agrega notas sobre tu pedido..." style="width: 100%;"></textarea>
+                            </div>
+
+                            <div class="grid grid-2 mt-3">
+                                <div class="form-group">
+                                    <label for="weatherCondition">Clima (opcional)</label>
+                                    <select id="weatherCondition">
+                                        <option value="">No especificado</option>
+                                        <option value="Soleado">Soleado</option>
+                                        <option value="Lluvia">Lluvia</option>
+                                        <option value="Frio">Frio</option>
+                                        <option value="Calor">Calor</option>
+                                        <option value="Viento">Viento</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="specialEvent">Fecha o evento especial (opcional)</label>
+                                    <input type="text" id="specialEvent" placeholder="Ej. Buen Fin, Navidad, Inicio de obra">
+                                </div>
                             </div>
 
                             <div class="btn-group mt-4">

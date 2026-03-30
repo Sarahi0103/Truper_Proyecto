@@ -44,6 +44,11 @@ if (is_logged_in()) {
                 </div>
 
                 <div class="form-group">
+                    <label for="birthdate">Fecha de Nacimiento</label>
+                    <input type="date" id="birthdate" name="birthdate" required>
+                </div>
+
+                <div class="form-group">
                     <label for="company_name">Empresa (Opcional)</label>
                     <input type="text" id="company_name" name="company_name">
                 </div>
