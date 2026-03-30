@@ -47,12 +47,12 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
 
             <!-- TABS -->
             <div class="tabs">
-                <button class="tab-button active" data-tab="myOrders">Mis Pedidos</button>
-                <button class="tab-button" data-tab="newOrder">Crear Pedido</button>
+                <button class="tab-button" data-tab="myOrders">Mis Pedidos</button>
+                <button class="tab-button active" data-tab="newOrder">Crear Pedido</button>
             </div>
 
             <!-- MIS ÓRDENES -->
-            <div id="myOrders" class="tab-content active">
+            <div id="myOrders" class="tab-content">
                 <div class="card">
                     <div class="card-header">Mi Historial de Pedidos</div>
                     <div class="card-body">
@@ -91,7 +91,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
             </div>
 
             <!-- CREAR NUEVO PEDIDO -->
-            <div id="newOrder" class="tab-content">
+            <div id="newOrder" class="tab-content active">
                 <div class="card">
                     <div class="card-header">Crear Nuevo Pedido</div>
                     <div class="card-body">

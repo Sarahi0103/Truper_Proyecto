@@ -807,6 +807,57 @@ footer {
     animation: spin 0.8s linear infinite;
 }
 
+.catalog-hero {
+    background: linear-gradient(120deg, #1a1a1a 0%, #2f2f2f 100%);
+    color: #ffffff;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.catalog-hero h1 {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    color: var(--color-naranja);
+}
+
+.catalog-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+.catalog-card {
+    background: #fff;
+    border: 1px solid var(--color-gris);
+    border-radius: 10px;
+    padding: 1rem;
+    box-shadow: var(--sombra);
+}
+
+.catalog-card h3 {
+    font-size: 1rem;
+    margin: 0.4rem 0;
+}
+
+.catalog-tag {
+    display: inline-block;
+    background: #fff1e6;
+    color: #b65b00;
+    border: 1px solid #ffd2a8;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    padding: 0.15rem 0.5rem;
+}
+
+.catalog-price {
+    margin-top: 0.75rem;
+    color: var(--color-naranja);
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
 @keyframes spin {
     to { transform: rotate(360deg); }
 }

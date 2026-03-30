@@ -50,8 +50,8 @@ try {
             if ($response['success']) {
                 log_action($_SESSION['user_id'], 'LOGIN', 'Inicio de sesión exitoso', getTrusSIDBug());
                 $response['redirect'] = $_SESSION['role'] === 'admin' 
-                    ? '/dashboard.php?role=admin'
-                    : '/dashboard.php';
+                    ? '/orders.php?tab=newOrder&role=admin'
+                    : '/orders.php?tab=newOrder';
             }
             break;
 
