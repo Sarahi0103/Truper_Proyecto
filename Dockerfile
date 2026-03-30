@@ -3,11 +3,9 @@ FROM php:8.2-apache
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libzip-dev unzip \
     && docker-php-ext-install mysqli \
-    && a2enmod rewrite headers \
-    && a2dismod ssl \
+    && a2enmod rewrite headers expires deflate \
+    && sed -ri 's/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf \
     && rm -rf /var/lib/apt/lists/*
-
-RUN echo '<Directory /var/www/html>\n    AllowOverride All\n    Require all granted\n</Directory>' > /etc/apache2/conf-enabled/override.conf
 
 COPY . /var/www/html
 
