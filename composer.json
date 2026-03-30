@@ -1,0 +1,23 @@
+{
+    "name": "TRUPPER - Sistema de Gestión de Inventario",
+    "description": "Plataforma web integral de gestión de inventario y ventas para TRUPPER",
+    "version": "1.0.0",
+    "author": "TRUPPER Development Team",
+    "license": "All Rights Reserved",
+    "require": {
+        "php": ">=7.4.0",
+        "ext-mysqli": "*",
+        "ext-json": "*"
+    },
+    "scripts": {
+        "start": "php -S localhost:8000",
+        "install-db": "mysql -u root -p < db/trupper_db.sql"
+    },
+    "keywords": [
+        "inventory",
+        "ecommerce",
+        "herramientas",
+        "admin",
+        "pos"
+    ]
+}

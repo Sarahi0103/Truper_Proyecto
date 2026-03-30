@@ -1,0 +1,17 @@
+/* ============================================
+   AUTH STYLES - TRUPPER
+   ============================================ */
+
+.auth-form {
+    gap: 1rem;
+}
+
+.auth-form input,
+.auth-form select {
+    width: 100%;
+}
+
+.btn-block {
+    width: 100%;
+    margin-top: 1rem;
+}
