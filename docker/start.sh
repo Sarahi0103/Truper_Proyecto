@@ -4,6 +4,11 @@ set -euo pipefail
 PORT_VALUE="${PORT:-80}"
 APP_ROOT="/var/www/html"
 
+# Prefer serving from public web root when available.
+if [ -f "/var/www/html/public/index.php" ] || [ -f "/var/www/html/public/login.php" ]; then
+  APP_ROOT="/var/www/html/public"
+fi
+
 # Some deploys use a parent folder that contains trupper_web as subdirectory.
 if [ ! -f "${APP_ROOT}/index.php" ] && [ -f "${APP_ROOT}/trupper_web/index.php" ]; then
   APP_ROOT="${APP_ROOT}/trupper_web"

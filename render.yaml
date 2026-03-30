@@ -1,3 +1,9 @@
+databases:
+  - name: truper-db
+    databaseName: truper_platform
+    user: truper_admin
+    plan: free
+
 services:
   - type: web
     name: truper-web
@@ -5,19 +11,35 @@ services:
     plan: free
     dockerfilePath: ./Dockerfile
     autoDeploy: true
-    healthCheckPath: /index.php
+    healthCheckPath: /health.php
     envVars:
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
         value: "false"
+      - key: APP_URL
+        value: https://truper-web.onrender.com
       - key: DB_HOST
-        sync: false
+        fromDatabase:
+          name: truper-db
+          property: host
       - key: DB_PORT
-        value: "3306"
+        fromDatabase:
+          name: truper-db
+          property: port
       - key: DB_USER
-        sync: false
+        fromDatabase:
+          name: truper-db
+          property: user
       - key: DB_PASS
-        sync: false
+        fromDatabase:
+          name: truper-db
+          property: password
       - key: DB_NAME
-        sync: false
+        fromDatabase:
+          name: truper-db
+          property: database
+      - key: DATABASE_URL
+        fromDatabase:
+          name: truper-db
+          property: connectionString
