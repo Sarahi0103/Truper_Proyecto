@@ -11,6 +11,8 @@ COPY . /var/www/html
 
 RUN chown -R www-data:www-data /var/www/html
 
+RUN chmod +x /var/www/html/docker/start.sh
+
 EXPOSE 80
 
-CMD ["bash", "-lc", "PORT_VALUE=${PORT:-80}; sed -ri \"s/^Listen 80$/Listen ${PORT_VALUE}/\" /etc/apache2/ports.conf; sed -ri \"s/<VirtualHost \*:80>/<VirtualHost *:${PORT_VALUE}>/\" /etc/apache2/sites-available/000-default.conf; apache2-foreground"]
+CMD ["/var/www/html/docker/start.sh"]
