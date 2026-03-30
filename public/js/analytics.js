@@ -52,7 +52,7 @@ function generateStatsTable(containerId, data) {
  * Cargar predicciones
  */
 async function loadPredictions() {
-    const response = await apiCall('/analytics/predictions');
+    const response = await apiCall('/analytics.php?action=predictions');
     
     if (response && response.predictions) {
         displayPredictions(response.predictions);
@@ -72,7 +72,7 @@ function displayPredictions(predictions) {
         html += `
             <div class="card">
                 <div class="card-body">
-                    <h4>${pred.product_name}</h4>
+                    <h4>${pred.product_name || `Producto #${pred.product_id}`}</h4>
                     <p><strong>Demanda Predicha:</strong> ${pred.predicted_demand} unidades</p>
                     <p><strong>Confianza:</strong> ${pred.confidence}%</p>
                     <p><strong>Temporada:</strong> ${pred.season}</p>
@@ -91,7 +91,7 @@ function displayPredictions(predictions) {
  * Exportar estadísticas
  */
 async function exportStats(format = 'csv') {
-    const response = await apiCall(`/analytics/export?format=${format}`);
+    const response = await apiCall(`/analytics.php?action=export&format=${format}`);
     
     if (response && response.success) {
         const link = document.createElement('a');
@@ -106,7 +106,7 @@ async function exportStats(format = 'csv') {
  * Cargar métricas del dashboard
  */
 async function loadDashboardMetrics() {
-    const response = await apiCall('/analytics/dashboard-metrics');
+    const response = await apiCall('/analytics.php?action=dashboard-metrics');
     
     if (response && response.metrics) {
         updateMetricsUI(response.metrics);
@@ -156,7 +156,7 @@ function updateMetricsUI(metrics) {
  * Generar reporte de compras por temporada
  */
 async function generateSeasonalReport() {
-    const response = await apiCall('/analytics/seasonal-report');
+    const response = await apiCall('/analytics.php?action=seasonal-report');
     
     if (response && response.report) {
         displaySeasonalReport(response.report);
@@ -212,7 +212,7 @@ function displaySeasonalReport(report) {
  * Cargar análisis de clientes
  */
 async function loadClientAnalytics() {
-    const response = await apiCall('/analytics/client-analytics');
+    const response = await apiCall('/analytics.php?action=client-analytics');
     
     if (response && response.clients) {
         displayClientAnalytics(response.clients);

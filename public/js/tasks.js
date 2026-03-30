@@ -20,7 +20,7 @@ async function createTask() {
         priority: document.getElementById('priority').value
     };
     
-    const response = await apiCall('/tasks/create', 'POST', taskData);
+    const response = await apiCall('/tasks.php?action=create', 'POST', taskData);
     
     if (response && response.success) {
         showAlert(response.message, 'success');
@@ -36,7 +36,8 @@ async function createTask() {
  * Actualizar estado de tarea
  */
 async function updateTaskStatus(taskId, newStatus) {
-    const response = await apiCall(`/tasks/${taskId}/status`, 'PUT', {
+    const response = await apiCall('/tasks.php?action=update-status', 'PUT', {
+        task_id: taskId,
         status: newStatus
     });
     
@@ -59,7 +60,8 @@ async function logTaskHours(taskId) {
         return;
     }
     
-    const response = await apiCall(`/tasks/${taskId}/hours`, 'POST', {
+    const response = await apiCall('/tasks.php?action=log-hours', 'POST', {
+        task_id: taskId,
         hours: hours
     });
     
@@ -116,7 +118,7 @@ async function deleteTask(taskId) {
         return;
     }
     
-    const response = await apiCall(`/tasks/${taskId}`, 'DELETE');
+    const response = await apiCall('/tasks.php?action=delete', 'DELETE', { task_id: taskId });
     
     if (response && response.success) {
         showAlert('Tarea eliminada', 'success');
@@ -125,3 +127,63 @@ async function deleteTask(taskId) {
         }, 1000);
     }
 }
+
+function getPriorityClass(priority) {
+    if (priority === 'high' || priority === 'urgent') return 'priority-high';
+    if (priority === 'low') return 'priority-low';
+    return 'priority-medium';
+}
+
+async function loadTasks() {
+    let response = await apiCall('/tasks.php?action=list-all');
+    if (!response || !response.success) {
+        response = await apiCall('/tasks.php?action=list');
+    }
+
+    const container = document.getElementById('tasksList');
+    if (!container) return;
+
+    if (!response || !response.success || !Array.isArray(response.tasks)) {
+        container.innerHTML = '<p class="text-muted">No fue posible cargar tareas.</p>';
+        return;
+    }
+
+    if (response.tasks.length === 0) {
+        container.innerHTML = '<p class="text-muted">No hay tareas registradas.</p>';
+        return;
+    }
+
+    container.innerHTML = response.tasks.map(task => `
+        <div class="task-item task-priority-${task.priority}" data-status="${task.status}" data-priority="${task.priority}">
+            <div class="task-header">
+                <div class="task-title">${task.title}</div>
+                <span class="priority-badge ${getPriorityClass(task.priority)}">${task.priority}</span>
+            </div>
+            <div>${task.description}</div>
+            <div class="task-details">Vence: ${task.due_date || 'Sin fecha'} | Estado: ${task.status}</div>
+            <div class="task-actions">
+                <button class="btn btn-small btn-secondary" onclick="updateTaskStatus(${task.id}, 'in_progress')">En progreso</button>
+                <button class="btn btn-small btn-success" onclick="updateTaskStatus(${task.id}, 'completed')">Completar</button>
+                <input id="hours_${task.id}" type="number" min="0" step="0.5" placeholder="Horas" style="width: 90px;">
+                <button class="btn btn-small btn-primary" onclick="logTaskHours(${task.id})">Registrar horas</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function loadAssignees() {
+    const response = await apiCall('/tasks.php?action=assignees');
+    const select = document.getElementById('assignTo');
+    if (!select || !response || !response.success || !Array.isArray(response.users)) return;
+
+    const options = response.users.map(u =>
+        `<option value="${u.id}">${u.first_name} ${u.last_name} (${u.role})</option>`
+    ).join('');
+
+    select.innerHTML = '<option value="">Seleccionar empleado...</option>' + options;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadTasks();
+    loadAssignees();
+});

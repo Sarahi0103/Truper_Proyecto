@@ -1,3 +1,13 @@
+<?php
+require_once '../config/config.php';
+require_login();
+
+$stmt = $pdo->prepare("SELECT first_name, last_name, email, phone, address, birthdate, loyalty_points FROM users WHERE id = ?");
+$stmt->execute([$_SESSION['user_id']]);
+$profile = $stmt->fetch() ?: [];
+
+$user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8');
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -10,7 +20,7 @@
     <!-- HEADER -->
     <header>
         <div class="header-content">
-            <a href="dashboard.php" class="logo">🏪 Truper</a>
+            <a href="dashboard.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
             <nav class="nav-menu">
                 <a href="dashboard.php">Dashboard</a>
                 <a href="orders.php">Pedidos</a>
@@ -19,7 +29,7 @@
         </div>
         <div class="user-menu">
             <div class="user-info">
-                <div class="user-name">Usuario</div>
+                <div class="user-name"><?php echo $user_name; ?></div>
             </div>
             <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
         </div>
@@ -40,31 +50,31 @@
                 <div class="card">
                     <div class="card-header">Información de Perfil</div>
                     <div class="card-body">
-                        <form id="profileForm" action="api/profile.php" method="POST">
+                        <form id="profileForm" action="api/profile.php?action=update" method="POST">
                             <div class="form-group">
                                 <label>Nombre</label>
-                                <input type="text" name="first_name" value="Juan" required>
+                                <input type="text" name="first_name" value="<?php echo htmlspecialchars($profile['first_name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" required>
                             </div>
 
                             <div class="form-group">
                                 <label>Apellido</label>
-                                <input type="text" name="last_name" value="Pérez" required>
+                                <input type="text" name="last_name" value="<?php echo htmlspecialchars($profile['last_name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" required>
                             </div>
 
                             <div class="form-group">
                                 <label>Email</label>
-                                <input type="email" name="email" value="juan@example.com" disabled>
+                                <input type="email" name="email" value="<?php echo htmlspecialchars($profile['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" disabled>
                                 <small class="text-muted">No se puede cambiar el email</small>
                             </div>
 
                             <div class="form-group">
                                 <label>Teléfono</label>
-                                <input type="tel" name="phone" value="+56 9 1234 5678">
+                                <input type="tel" name="phone" value="<?php echo htmlspecialchars($profile['phone'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                             </div>
 
                             <div class="form-group">
                                 <label>Dirección</label>
-                                <textarea name="address">Calle Principal 123, Santiago</textarea>
+                                <textarea name="address"><?php echo htmlspecialchars($profile['address'] ?? '', ENT_QUOTES, 'UTF-8'); ?></textarea>
                             </div>
 
                             <div class="form-group">
@@ -74,7 +84,7 @@
 
                             <div class="form-group">
                                 <label>Fecha de Nacimiento</label>
-                                <input type="date" name="birthdate" value="1990-05-15">
+                                <input type="date" name="birthdate" value="<?php echo htmlspecialchars($profile['birthdate'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                             </div>
 
                             <button type="submit" class="btn btn-primary btn-block">Actualizar Perfil</button>
@@ -90,7 +100,7 @@
                     <div class="card-body">
                         <div style="text-align: center; padding: 2rem;">
                             <div style="font-size: 2rem; color: #FF7F00; margin-bottom: 0.5rem;">⭐</div>
-                            <div style="font-size: 2.5rem; font-weight: bold; color: #FF7F00;">2,450</div>
+                            <div style="font-size: 2.5rem; font-weight: bold; color: #FF7F00;"><?php echo (int)($profile['loyalty_points'] ?? 0); ?></div>
                             <div style="color: #666; margin-bottom: 2rem;">Puntos Disponibles</div>
 
                             <div style="background-color: #f5f5f5; padding: 1.5rem; border-radius: 8px; text-align: left;">

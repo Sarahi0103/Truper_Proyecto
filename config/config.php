@@ -3,24 +3,29 @@
  * Configuración General de la Aplicación
  */
 
-session_start();
+$is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    || (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443);
+
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_set_cookie_params([
+        'lifetime' => 1800,
+        'path' => '/',
+        'domain' => '',
+        'secure' => $is_https,
+        'httponly' => true,
+        'samesite' => 'Strict'
+    ]);
+    session_start();
+}
 
 // Headers de seguridad
 header("X-Content-Type-Options: nosniff");
 header("X-Frame-Options: SAMEORIGIN");
 header("X-XSS-Protection: 1; mode=block");
-header("Strict-Transport-Security: max-age=31536000; includeSubDomains");
+if ($is_https) {
+    header("Strict-Transport-Security: max-age=31536000; includeSubDomains");
+}
 header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;");
-
-// Configuración de sesión
-session_set_cookie_params([
-    'lifetime' => 1800,
-    'path' => '/',
-    'domain' => '',
-    'secure' => true,
-    'httponly' => true,
-    'samesite' => 'Strict'
-]);
 
 // Incluir base de datos
 $pdo = include __DIR__ . '/database.php';
@@ -68,26 +73,45 @@ function is_logged_in() {
     return isset($_SESSION['user_id']) && isset($_SESSION['role']);
 }
 
+function is_api_request() {
+    $uri = $_SERVER['REQUEST_URI'] ?? '';
+    $xrw = $_SERVER['HTTP_X_REQUESTED_WITH'] ?? '';
+    $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
+
+    return strpos($uri, '/api/') !== false
+        || strtolower($xrw) === 'xmlhttprequest'
+        || strpos($accept, 'application/json') !== false;
+}
+
+function deny_unauthorized($code, $message) {
+    if (is_api_request()) {
+        http_response_code($code);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => $message]);
+        exit;
+    }
+
+    header("Location: /truper_platform/public/login.php?error=unauthorized");
+    exit;
+}
+
 function require_login() {
     if (!is_logged_in()) {
-        header("Location: /truper_platform/public/login.php");
-        exit;
+        deny_unauthorized(401, 'Debes iniciar sesión');
     }
 }
 
 function require_admin() {
     require_login();
     if ($_SESSION['role'] !== 'admin') {
-        header("Location: /truper_platform/public/dashboard.php?error=unauthorized");
-        exit;
+        deny_unauthorized(403, 'Acceso solo para administradores');
     }
 }
 
 function require_client() {
     require_login();
     if ($_SESSION['role'] !== 'client') {
-        header("Location: /truper_platform/public/dashboard.php?error=unauthorized");
-        exit;
+        deny_unauthorized(403, 'Acceso solo para clientes');
     }
 }
 

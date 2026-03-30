@@ -1,3 +1,10 @@
+<?php
+require_once '../config/config.php';
+if (is_logged_in()) {
+    header('Location: /truper_platform/public/dashboard.php');
+    exit;
+}
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -10,7 +17,7 @@
     <div class="login-container">
         <div class="login-box" style="max-width: 500px;">
             <div class="login-header">
-                <div class="login-logo">🏪</div>
+                <div class="login-logo"><img src="images/truper-logo.svg" alt="Truper" style="height: 42px;"></div>
                 <h1 class="login-title">Crear Cuenta</h1>
                 <p class="login-subtitle">Únete a Truper Platform</p>
             </div>

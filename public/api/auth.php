@@ -8,7 +8,7 @@ require_once '../../src/controllers/AuthController.php';
 
 header('Content-Type: application/json');
 
-$action = $_GET['action'] ?? ($_POST['action'] ?? null);
+$action = $_GET['action'] ?? ($_POST['action'] ?? 'login');
 
 $auth = new AuthController($pdo);
 $response = [];
@@ -37,7 +37,6 @@ try {
             break;
 
         case 'login':
-        default:
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 $response = ['success' => false, 'message' => 'Método no permitido'];
                 break;
@@ -49,6 +48,7 @@ try {
             );
 
             if ($response['success']) {
+                log_action($_SESSION['user_id'], 'LOGIN', 'Inicio de sesión exitoso', getTrusSIDBug());
                 $response['redirect'] = $_SESSION['role'] === 'admin' 
                     ? '/truper_platform/public/dashboard.php?role=admin'
                     : '/truper_platform/public/dashboard.php';
@@ -57,6 +57,10 @@ try {
 
         case 'logout':
             $response = $auth->logout();
+            if (!is_api_request()) {
+                header('Location: /truper_platform/public/login.php');
+                exit;
+            }
             $response['redirect'] = '/truper_platform/public/login.php';
             break;
 

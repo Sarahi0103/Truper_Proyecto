@@ -1,3 +1,10 @@
+<?php
+require_once '../config/config.php';
+require_admin();
+
+$user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8');
+$user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8');
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -11,7 +18,7 @@
     <!-- HEADER -->
     <header>
         <div class="header-content">
-            <a href="dashboard.php" class="logo">🏪 Truper</a>
+            <a href="dashboard.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
             <nav class="nav-menu">
                 <a href="dashboard.php">Dashboard</a>
                 <a href="orders.php">Pedidos</a>
@@ -22,8 +29,8 @@
         </div>
         <div class="user-menu">
             <div class="user-info">
-                <div class="user-name">Usuario</div>
-                <div class="user-role">Admin</div>
+                <div class="user-name"><?php echo $user_name; ?></div>
+                <div class="user-role"><?php echo ucfirst($user_role); ?></div>
             </div>
             <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
         </div>
@@ -159,7 +166,7 @@
 
         async function loadPurchaseStats() {
             const year = document.getElementById('yearFilter').value;
-            const response = await apiCall(`/analytics/purchase-stats?year=${year}`);
+            const response = await apiCall(`/analytics.php?action=purchase-stats&year=${year}`);
             if (response && response.stats) {
                 generateChart('purchaseStatsContainer', response.stats);
             }

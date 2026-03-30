@@ -9,7 +9,7 @@ require_once '../../src/controllers/OrderController.php';
 require_login();
 header('Content-Type: application/json');
 
-$action = $_GET['action'] ?? null;
+$action = $_GET['action'] ?? 'list';
 $method = $_SERVER['REQUEST_METHOD'];
 $input = json_decode(file_get_contents('php://input'), true);
 
@@ -74,6 +74,13 @@ try {
         case 'list':
             if ($method !== 'GET') {
                 $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            if (($_SESSION['role'] ?? '') === 'admin') {
+                $stmt = $pdo->prepare("SELECT * FROM orders ORDER BY created_at DESC LIMIT 100");
+                $stmt->execute();
+                $response = ['success' => true, 'orders' => $stmt->fetchAll()];
                 break;
             }
 

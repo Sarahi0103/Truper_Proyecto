@@ -4,6 +4,7 @@
 
 let currentCart = [];
 let currentTotal = 0;
+let selectedOrderId = null;
 
 /**
  * Agregar producto al carrito
@@ -139,7 +140,7 @@ async function createOrder() {
         is_wholesale: isWholesale
     };
     
-    const response = await apiCall('/orders/create', 'POST', orderData);
+    const response = await apiCall('/orders.php?action=create', 'POST', orderData);
     
     if (response && response.success) {
         showAlert(response.message, 'success');
@@ -156,6 +157,7 @@ async function createOrder() {
  * Registrar pago
  */
 async function recordPayment(orderId) {
+    const effectiveOrderId = orderId || selectedOrderId;
     const amount = parseFloat(document.getElementById('paymentAmount')?.value || 0);
     const method = document.getElementById('paymentMethod')?.value || 'cash';
     
@@ -165,13 +167,13 @@ async function recordPayment(orderId) {
     }
     
     const paymentData = {
-        order_id: orderId,
+        order_id: effectiveOrderId,
         amount: amount,
         payment_method: method,
         reference: document.getElementById('paymentReference')?.value || null
     };
     
-    const response = await apiCall('/orders/payment', 'POST', paymentData);
+    const response = await apiCall('/orders.php?action=payment', 'POST', paymentData);
     
     if (response && response.success) {
         showAlert(response.message, 'success');
@@ -213,3 +215,95 @@ function filterOrders() {
         }
     });
 }
+
+function openPaymentModal(orderId) {
+    selectedOrderId = orderId;
+    openModal('paymentModal');
+}
+
+function searchOrders() {
+    const searchTerm = document.getElementById('orderSearch')?.value.toLowerCase() || '';
+    const rows = document.querySelectorAll('#ordersList tr');
+
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(searchTerm) ? '' : 'none';
+    });
+}
+
+function getStatusLabel(status) {
+    const labels = {
+        pending: 'Pendiente',
+        confirmed: 'Confirmado',
+        processing: 'En Proceso',
+        shipped: 'Enviado',
+        delivered: 'Entregado',
+        cancelled: 'Cancelado'
+    };
+    return labels[status] || status || 'N/A';
+}
+
+async function loadOrders() {
+    const response = await apiCall('/orders.php?action=list');
+    const ordersList = document.getElementById('ordersList');
+    if (!ordersList) return;
+
+    if (!response || !response.success || !Array.isArray(response.orders)) {
+        ordersList.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No fue posible cargar órdenes</td></tr>';
+        return;
+    }
+
+    if (response.orders.length === 0) {
+        ordersList.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Aún no tienes pedidos</td></tr>';
+        return;
+    }
+
+    ordersList.innerHTML = response.orders.map(order => `
+        <tr data-status="${order.status}">
+            <td>${order.order_number}</td>
+            <td>${formatDate(order.created_at)}</td>
+            <td>${formatCurrency(order.total_amount)}</td>
+            <td>${getStatusLabel(order.payment_status)}</td>
+            <td>${getStatusLabel(order.status)}</td>
+            <td>
+                <button class="btn btn-small btn-secondary" onclick="openPaymentModal(${order.id})">Pagar</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function loadProducts() {
+    const response = await apiCall('/products.php?action=list');
+    const productsList = document.getElementById('productsList');
+    if (!productsList) return;
+
+    if (!response || !response.success || !Array.isArray(response.products)) {
+        productsList.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No fue posible cargar productos</td></tr>';
+        return;
+    }
+
+    if (response.products.length === 0) {
+        productsList.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No hay productos registrados</td></tr>';
+        return;
+    }
+
+    productsList.innerHTML = response.products.map(product => `
+        <tr>
+            <td>${product.name}</td>
+            <td>${product.sku}</td>
+            <td>${formatCurrency(product.unit_price)}</td>
+            <td><input id="qty_${product.id}" type="number" min="1" value="1" style="width: 80px;"></td>
+            <td>
+                <button class="btn btn-primary btn-small"
+                    onclick="addToCart(${product.id}, '${String(product.name).replace(/'/g, "\\'")}', ${product.unit_price}, document.getElementById('qty_${product.id}').value)">
+                    Agregar
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadOrders();
+    loadProducts();
+});

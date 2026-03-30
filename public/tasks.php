@@ -1,3 +1,10 @@
+<?php
+require_once '../config/config.php';
+require_login();
+
+$user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8');
+$user_role = htmlspecialchars($_SESSION['role'] ?? 'employee', ENT_QUOTES, 'UTF-8');
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -11,7 +18,7 @@
     <!-- HEADER -->
     <header>
         <div class="header-content">
-            <a href="dashboard.php" class="logo">🏪 Truper</a>
+            <a href="dashboard.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
             <nav class="nav-menu">
                 <a href="dashboard.php">Dashboard</a>
                 <a href="orders.php">Pedidos</a>
@@ -22,8 +29,8 @@
         </div>
         <div class="user-menu">
             <div class="user-info">
-                <div class="user-name">Usuario</div>
-                <div class="user-role">Empleado</div>
+                <div class="user-name"><?php echo $user_name; ?></div>
+                <div class="user-role"><?php echo ucfirst($user_role); ?></div>
             </div>
             <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
         </div>
@@ -33,9 +40,11 @@
         <div class="container-fluid">
             <div class="d-flex justify-between align-center">
                 <h1>Gestión de Tareas</h1>
+                <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
                 <button class="btn btn-primary" onclick="openModal('taskModal')">
                     ➕ Nueva Tarea
                 </button>
+                <?php endif; ?>
             </div>
 
             <!-- FILTROS -->

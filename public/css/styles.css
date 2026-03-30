@@ -67,6 +67,12 @@ header {
     gap: 0.5rem;
 }
 
+.logo img {
+    height: 32px;
+    width: auto;
+    display: block;
+}
+
 .logo:hover {
     color: var(--color-blanco);
     transition: var(--transition);

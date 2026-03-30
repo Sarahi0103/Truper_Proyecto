@@ -47,7 +47,7 @@ async function processBarcode(barcode) {
     
     try {
         // Buscar producto con este código
-        const response = await apiCall(`/products/by-barcode?barcode=${barcode}`);
+        const response = await apiCall(`/products.php?action=by-barcode&barcode=${barcode}`);
         
         if (response && response.success && response.product) {
             const product = response.product;
@@ -66,7 +66,7 @@ async function processBarcode(barcode) {
             }
             
             // Registrar escaneo
-            await apiCall('/products/log-scan', 'POST', {
+            await apiCall('/products.php?action=log-scan', 'POST', {
                 barcode: barcode,
                 product_id: product.id
             });

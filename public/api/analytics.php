@@ -6,7 +6,7 @@
 require_once '../../config/config.php';
 require_once '../../src/controllers/AnalyticsController.php';
 
-require_admin();
+require_login();
 header('Content-Type: application/json');
 
 $action = $_GET['action'] ?? null;
@@ -18,6 +18,7 @@ $response = [];
 try {
     switch ($action) {
         case 'purchase-stats':
+            require_admin();
             if ($method !== 'GET') {
                 $response = ['success' => false, 'message' => 'Método no permitido'];
                 break;
@@ -31,6 +32,7 @@ try {
             break;
 
         case 'predictions':
+            require_admin();
             if ($method !== 'GET') {
                 $response = ['success' => false, 'message' => 'Método no permitido'];
                 break;
@@ -58,6 +60,7 @@ try {
             break;
 
         case 'export':
+            require_admin();
             if ($method !== 'GET') {
                 $response = ['success' => false, 'message' => 'Método no permitido'];
                 break;
@@ -70,6 +73,59 @@ try {
                 'file_url' => '/truper_platform/exports/report.' . $format,
                 'filename' => 'truper_report_' . date('Y-m-d') . '.' . $format
             ];
+            break;
+
+        case 'seasonal-report':
+            require_admin();
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            $stats = $analyticsController->getPurchaseStatistics(null, date('Y'));
+            $report = [];
+            foreach ($stats as $row) {
+                $season = $row['season'] ?: 'Sin temporada';
+                if (!isset($report[$season])) {
+                    $report[$season] = [
+                        'total_amount' => 0,
+                        'total_quantity' => 0,
+                        'top_products' => [],
+                        'factors' => ['Temporada histórica']
+                    ];
+                }
+
+                $report[$season]['total_quantity'] += (int) ($row['total_quantity'] ?? 0);
+            }
+            $response = ['success' => true, 'report' => $report];
+            break;
+
+        case 'client-analytics':
+            require_admin();
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            $stmt = $pdo->prepare("
+                SELECT
+                    u.id,
+                    CONCAT(u.first_name, ' ', u.last_name) AS name,
+                    u.loyalty_points,
+                    u.is_active,
+                    COALESCE(COUNT(o.id), 0) AS order_count,
+                    COALESCE(SUM(o.total_amount), 0) AS total_spent
+                FROM users u
+                LEFT JOIN clients c ON c.user_id = u.id
+                LEFT JOIN orders o ON o.client_id = c.id
+                WHERE u.role = 'client'
+                GROUP BY u.id, u.first_name, u.last_name, u.loyalty_points, u.is_active
+                ORDER BY total_spent DESC
+                LIMIT 100
+            ");
+            $stmt->execute();
+
+            $response = ['success' => true, 'clients' => $stmt->fetchAll()];
             break;
 
         default:

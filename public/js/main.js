@@ -5,7 +5,7 @@
 
 // Configuración global
 const APP = {
-    apiUrl: '/truper_platform/api',
+    apiUrl: '/truper_platform/public/api',
     timeout: 5000
 };
 
@@ -35,6 +35,7 @@ function showAlert(message, type = 'info') {
  */
 async function apiCall(endpoint, method = 'GET', data = null) {
     try {
+        const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
         const options = {
             method: method,
             headers: {
@@ -47,7 +48,7 @@ async function apiCall(endpoint, method = 'GET', data = null) {
             options.body = JSON.stringify(data);
         }
         
-        const response = await fetch(`${APP.apiUrl}${endpoint}`, options);
+        const response = await fetch(`${APP.apiUrl}${normalizedEndpoint}`, options);
         
         if (!response.ok) {
             throw new Error(`Error ${response.status}: ${response.statusText}`);

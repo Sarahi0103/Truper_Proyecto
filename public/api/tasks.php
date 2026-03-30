@@ -98,6 +98,41 @@ try {
             $response = ['success' => true, 'tasks' => $tasks];
             break;
 
+        case 'assignees':
+            require_admin();
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            $stmt = $pdo->prepare("
+                SELECT id, first_name, last_name, role
+                FROM users
+                WHERE role IN ('employee', 'admin') AND is_active = true
+                ORDER BY first_name, last_name
+            ");
+            $stmt->execute();
+            $response = ['success' => true, 'users' => $stmt->fetchAll()];
+            break;
+
+        case 'delete':
+            require_admin();
+            if ($method !== 'DELETE' && $method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            $task_id = $input['task_id'] ?? null;
+            if (!$task_id) {
+                $response = ['success' => false, 'message' => 'ID de tarea requerido'];
+                break;
+            }
+
+            $stmt = $pdo->prepare("DELETE FROM tasks WHERE id = ?");
+            $stmt->execute([$task_id]);
+            $response = ['success' => true, 'message' => 'Tarea eliminada'];
+            break;
+
         default:
             $response = ['success' => false, 'message' => 'Acción no reconocida'];
     }
