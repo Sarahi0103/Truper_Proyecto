@@ -104,10 +104,10 @@ try {
         case 'logout':
             $response = $auth->logout();
             if (!is_api_request()) {
-                header('Location: /login.php');
+                header('Location: /index.php');
                 exit;
             }
-            $response['redirect'] = '/login.php';
+            $response['redirect'] = '/index.php';
             break;
 
         case 'verify-email':
