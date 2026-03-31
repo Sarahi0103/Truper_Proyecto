@@ -2,7 +2,49 @@
 require_once '../config/config.php';
 require_login();
 
-$stmt = $pdo->prepare("SELECT first_name, last_name, email, phone, address, birthdate, loyalty_points FROM users WHERE id = ?");
+$selectParts = ['email'];
+
+if (db_column_exists('users', 'first_name')) {
+    $selectParts[] = 'first_name';
+} else {
+    $selectParts[] = "'' AS first_name";
+}
+
+if (db_column_exists('users', 'last_name')) {
+    $selectParts[] = 'last_name';
+} else {
+    $selectParts[] = "'' AS last_name";
+}
+
+if (db_column_exists('users', 'phone')) {
+    $selectParts[] = 'phone';
+} else {
+    $selectParts[] = "'' AS phone";
+}
+
+if (db_column_exists('users', 'address')) {
+    $selectParts[] = 'address';
+} else {
+    $selectParts[] = "'' AS address";
+}
+
+if (db_column_exists('users', 'birthdate')) {
+    $selectParts[] = 'birthdate';
+} elseif (db_column_exists('users', 'birthday')) {
+    $selectParts[] = 'birthday AS birthdate';
+} else {
+    $selectParts[] = 'NULL AS birthdate';
+}
+
+if (db_column_exists('users', 'loyalty_points')) {
+    $selectParts[] = 'loyalty_points';
+} elseif (db_column_exists('users', 'points')) {
+    $selectParts[] = 'points AS loyalty_points';
+} else {
+    $selectParts[] = '0 AS loyalty_points';
+}
+
+$stmt = $pdo->prepare("SELECT " . implode(', ', $selectParts) . " FROM users WHERE id = ?");
 $stmt->execute([$_SESSION['user_id']]);
 $profile = $stmt->fetch() ?: [];
 

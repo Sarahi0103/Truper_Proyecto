@@ -21,25 +21,48 @@ try {
                 break;
             }
 
-            $stmt = $pdo->prepare("
-                UPDATE users SET 
-                    first_name = ?,
-                    last_name = ?,
-                    phone = ?,
-                    address = ?,
-                    birthdate = ?,
-                    updated_at = NOW()
-                WHERE id = ?
-            ");
+            $sets = [];
+            $values = [];
 
-            $stmt->execute([
-                sanitize($_POST['first_name'] ?? ''),
-                sanitize($_POST['last_name'] ?? ''),
-                sanitize($_POST['phone'] ?? ''),
-                sanitize($_POST['address'] ?? ''),
-                $_POST['birthdate'] ?? null,
-                $_SESSION['user_id']
-            ]);
+            if (db_column_exists('users', 'first_name')) {
+                $sets[] = 'first_name = ?';
+                $values[] = sanitize($_POST['first_name'] ?? '');
+            }
+            if (db_column_exists('users', 'last_name')) {
+                $sets[] = 'last_name = ?';
+                $values[] = sanitize($_POST['last_name'] ?? '');
+            }
+            if (db_column_exists('users', 'name')) {
+                $sets[] = 'name = ?';
+                $values[] = trim(sanitize($_POST['first_name'] ?? '') . ' ' . sanitize($_POST['last_name'] ?? ''));
+            }
+            if (db_column_exists('users', 'phone')) {
+                $sets[] = 'phone = ?';
+                $values[] = sanitize($_POST['phone'] ?? '');
+            }
+            if (db_column_exists('users', 'address')) {
+                $sets[] = 'address = ?';
+                $values[] = sanitize($_POST['address'] ?? '');
+            }
+            if (db_column_exists('users', 'birthdate')) {
+                $sets[] = 'birthdate = ?';
+                $values[] = $_POST['birthdate'] ?? null;
+            } elseif (db_column_exists('users', 'birthday')) {
+                $sets[] = 'birthday = ?';
+                $values[] = $_POST['birthdate'] ?? null;
+            }
+            if (db_column_exists('users', 'updated_at')) {
+                $sets[] = 'updated_at = NOW()';
+            }
+
+            if (empty($sets)) {
+                $response = ['success' => false, 'message' => 'No hay campos disponibles para actualizar'];
+                break;
+            }
+
+            $values[] = $_SESSION['user_id'];
+            $stmt = $pdo->prepare('UPDATE users SET ' . implode(', ', $sets) . ' WHERE id = ?');
+            $stmt->execute($values);
 
             $response = ['success' => true, 'message' => 'Perfil actualizado exitosamente'];
             
@@ -58,11 +81,25 @@ try {
             }
 
             // Verificar contraseña actual
-            $stmt = $pdo->prepare("SELECT password_hash FROM users WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT password_hash, password FROM users WHERE id = ?");
             $stmt->execute([$_SESSION['user_id']]);
             $user = $stmt->fetch();
 
-            if (!$user || !verify_password($_POST['current_password'] ?? '', $user['password_hash'])) {
+            $currentPassword = $_POST['current_password'] ?? '';
+            $ok = false;
+            if (!empty($user['password_hash'])) {
+                $ok = verify_password($currentPassword, $user['password_hash']);
+            }
+            if (!$ok && !empty($user['password'])) {
+                $legacy = (string)$user['password'];
+                if (str_starts_with($legacy, '$2y$') || str_starts_with($legacy, '$2a$') || str_starts_with($legacy, '$2b$')) {
+                    $ok = verify_password($currentPassword, $legacy);
+                } else {
+                    $ok = hash_equals($legacy, (string)$currentPassword);
+                }
+            }
+
+            if (!$user || !$ok) {
                 $response = ['success' => false, 'message' => 'Contraseña actual incorrecta'];
                 break;
             }
@@ -78,8 +115,17 @@ try {
             }
 
             $new_hash = hash_password($_POST['new_password']);
-            
-            $stmt = $pdo->prepare("UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ?");
+
+            if (db_column_exists('users', 'password_hash')) {
+                $sql = 'UPDATE users SET password_hash = ?';
+            } else {
+                $sql = 'UPDATE users SET password = ?';
+            }
+            if (db_column_exists('users', 'updated_at')) {
+                $sql .= ', updated_at = NOW()';
+            }
+            $sql .= ' WHERE id = ?';
+            $stmt = $pdo->prepare($sql);
             $stmt->execute([$new_hash, $_SESSION['user_id']]);
 
             $response = ['success' => true, 'message' => 'Contraseña cambiada exitosamente'];
@@ -98,11 +144,28 @@ try {
                 break;
             }
 
-            $stmt = $pdo->prepare("
-                SELECT id, email, first_name, last_name, phone, address, birthdate, loyalty_points, role
-                FROM users 
-                WHERE id = ?
-            ");
+            $select = ['id', 'email'];
+            $select[] = db_column_exists('users', 'first_name') ? 'first_name' : "'' AS first_name";
+            $select[] = db_column_exists('users', 'last_name') ? 'last_name' : "'' AS last_name";
+            $select[] = db_column_exists('users', 'phone') ? 'phone' : "'' AS phone";
+            $select[] = db_column_exists('users', 'address') ? 'address' : "'' AS address";
+            if (db_column_exists('users', 'birthdate')) {
+                $select[] = 'birthdate';
+            } elseif (db_column_exists('users', 'birthday')) {
+                $select[] = 'birthday AS birthdate';
+            } else {
+                $select[] = 'NULL AS birthdate';
+            }
+            if (db_column_exists('users', 'loyalty_points')) {
+                $select[] = 'loyalty_points';
+            } elseif (db_column_exists('users', 'points')) {
+                $select[] = 'points AS loyalty_points';
+            } else {
+                $select[] = '0 AS loyalty_points';
+            }
+            $select[] = db_column_exists('users', 'role') ? 'role' : "'client' AS role";
+
+            $stmt = $pdo->prepare('SELECT ' . implode(', ', $select) . ' FROM users WHERE id = ?');
             $stmt->execute([$_SESSION['user_id']]);
             $user = $stmt->fetch();
 
