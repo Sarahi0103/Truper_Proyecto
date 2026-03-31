@@ -12,6 +12,7 @@ class OrderController {
     
     public function createOrder($client_id, $items, $is_wholesale = false, $context = []) {
         try {
+            $this->ensureTransactionHistoryTable();
             $this->pdo->beginTransaction();
             
             // Generar número de orden
@@ -93,13 +94,21 @@ class OrderController {
             }
             
             $this->pdo->commit();
+
+            $historyStmt = $this->pdo->prepare("INSERT INTO transaction_history (transaction_type, reference_folio, data_json, created_by) VALUES ('client_order', ?, ?, ?)");
+            $historyStmt->execute([
+                $order_number,
+                json_encode(['order_id' => $order_id, 'total' => $total_amount], JSON_UNESCAPED_UNICODE),
+                $_SESSION['user_id'] ?? null
+            ]);
             
             return [
                 'success' => true,
                 'message' => 'Orden creada exitosamente',
                 'order_id' => $order_id,
                 'order_number' => $order_number,
-                'total' => $total_amount
+                'total' => $total_amount,
+                'ticket_url' => '/ticket_client.php?id=' . $order_id
             ];
         } catch (Exception $e) {
             $this->pdo->rollBack();
@@ -110,6 +119,7 @@ class OrderController {
     
     public function recordPayment($order_id, $amount, $payment_method, $reference = null) {
         try {
+            $this->ensureTransactionHistoryTable();
             // Registrar pago
             $stmt = $this->pdo->prepare("
                 INSERT INTO payments (order_id, amount, payment_method, reference_number, processed_by)
@@ -145,6 +155,16 @@ class OrderController {
                 max(0, $new_balance),
                 $amount,
                 $order_id
+            ]);
+
+            $folioStmt = $this->pdo->prepare("SELECT order_number FROM orders WHERE id = ?");
+            $folioStmt->execute([$order_id]);
+            $ord = $folioStmt->fetch();
+            $historyStmt = $this->pdo->prepare("INSERT INTO transaction_history (transaction_type, reference_folio, data_json, created_by) VALUES ('payment', ?, ?, ?)");
+            $historyStmt->execute([
+                $ord['order_number'] ?? ('ORD-' . $order_id),
+                json_encode(['order_id' => $order_id, 'amount' => $amount, 'method' => $payment_method], JSON_UNESCAPED_UNICODE),
+                $_SESSION['user_id'] ?? null
             ]);
             
             return [
@@ -229,6 +249,17 @@ class OrderController {
         if ($month >= 3 && $month <= 5) return 'Primavera';
         if ($month >= 6 && $month <= 8) return 'Verano';
         return 'Otoño';
+    }
+
+    private function ensureTransactionHistoryTable() {
+        $this->pdo->exec("CREATE TABLE IF NOT EXISTS transaction_history (
+            id SERIAL PRIMARY KEY,
+            transaction_type VARCHAR(40) NOT NULL,
+            reference_folio VARCHAR(80) NOT NULL,
+            data_json TEXT,
+            created_by INTEGER REFERENCES users(id),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )");
     }
 }
 ?>

@@ -43,6 +43,9 @@ CREATE TABLE IF NOT EXISTS products (
     sku VARCHAR(50) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT,
+    technical_specs TEXT,
+    image_url TEXT,
+    variants_json TEXT,
     category VARCHAR(100),
     unit_price DECIMAL(10, 2) NOT NULL,
     barcode VARCHAR(100) UNIQUE,
@@ -223,6 +226,39 @@ CREATE TABLE IF NOT EXISTS cash_drawer_movements (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Tabla de calendario logistico de proveedores
+CREATE TABLE IF NOT EXISTS supplier_calendar (
+    id SERIAL PRIMARY KEY,
+    supplier_name VARCHAR(180) NOT NULL,
+    visit_datetime TIMESTAMP NOT NULL,
+    notes TEXT,
+    created_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabla de ordenes a proveedores
+CREATE TABLE IF NOT EXISTS supplier_orders (
+    id SERIAL PRIMARY KEY,
+    folio VARCHAR(50) UNIQUE NOT NULL,
+    supplier_name VARCHAR(180) NOT NULL,
+    expected_date DATE NOT NULL,
+    items_json TEXT NOT NULL,
+    total_estimated DECIMAL(12, 2) DEFAULT 0,
+    status VARCHAR(20) DEFAULT 'pending',
+    created_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabla historica de transacciones
+CREATE TABLE IF NOT EXISTS transaction_history (
+    id SERIAL PRIMARY KEY,
+    transaction_type VARCHAR(40) NOT NULL,
+    reference_folio VARCHAR(80) NOT NULL,
+    data_json TEXT,
+    created_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Índices para optimización
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_role ON users(role);
@@ -242,6 +278,9 @@ CREATE INDEX idx_purchase_stats_product ON purchase_statistics(product_id);
 CREATE INDEX idx_purchase_stats_date ON purchase_statistics(month, year);
 CREATE INDEX idx_action_logs_user_id ON action_logs(user_id);
 CREATE INDEX idx_action_logs_timestamp ON action_logs(timestamp);
+CREATE INDEX idx_supplier_calendar_visit ON supplier_calendar(visit_datetime);
+CREATE INDEX idx_supplier_orders_created ON supplier_orders(created_at);
+CREATE INDEX idx_transaction_history_created ON transaction_history(created_at);
 
 -- Crear usuario administrador por defecto
 INSERT INTO users (email, password_hash, first_name, last_name, role, is_active, is_verified)
@@ -256,19 +295,28 @@ VALUES (
 ) ON CONFLICT DO NOTHING;
 
 -- Productos de ejemplo para catálogo público
-INSERT INTO products (sku, name, description, category, unit_price, barcode, stock_quantity, reorder_level, is_active)
+INSERT INTO products (sku, name, description, technical_specs, variants_json, image_url, category, unit_price, barcode, stock_quantity, reorder_level, is_active)
 VALUES
-('TRUP-001', 'Taladro Percutor 1/2" 750W', 'Taladro de alto rendimiento para concreto y metal.', 'Herramientas Eléctricas', 1899.00, '750624060001', 35, 10, true),
-('TRUP-002', 'Juego de Llaves Combinadas 12 pzas', 'Juego profesional de llaves de acero cromo vanadio.', 'Herramientas Manuales', 799.00, '750624060002', 50, 12, true),
-('TRUP-003', 'Esmeriladora Angular 4-1/2" 900W', 'Corte y desbaste con control y seguridad.', 'Herramientas Eléctricas', 1299.00, '750624060003', 28, 8, true),
-('TRUP-004', 'Caja de Herramientas 19" Reforzada', 'Caja resistente con compartimentos organizadores.', 'Almacenamiento', 499.00, '750624060004', 42, 10, true),
-('TRUP-005', 'Martillo Uña 16 oz Mango Fibra', 'Martillo balanceado para uso diario en obra.', 'Herramientas Manuales', 249.00, '750624060005', 95, 20, true),
-('TRUP-006', 'Cinta Métrica 8m Uso Rudo', 'Cinta con recubrimiento anti-impacto y freno rápido.', 'Medición', 179.00, '750624060006', 120, 25, true),
-('TRUP-007', 'Pistola para Pintar HVLP', 'Acabado uniforme para madera y metal.', 'Pintura', 999.00, '750624060007', 22, 8, true),
-('TRUP-008', 'Compresor de Aire 24L 2HP', 'Compresor portátil para taller y construcción.', 'Equipo Industrial', 3599.00, '750624060008', 15, 5, true),
-('TRUP-009', 'Guantes de Trabajo Anticorte', 'Protección de manos para manejo de materiales.', 'Seguridad', 129.00, '750624060009', 160, 40, true),
-('TRUP-010', 'Carretilla 5 ft3 Reforzada', 'Carretilla de alta capacidad para obra pesada.', 'Construcción', 1499.00, '750624060010', 18, 6, true)
-ON CONFLICT (sku) DO NOTHING;
+('TRUP-001', 'Taladro Percutor 1/2" 750W', 'Taladro de alto rendimiento para concreto y metal.', 'Potencia 750W | Velocidad variable | Mandril 1/2"', '["Modelo Compacto", "Modelo Industrial"]', 'images/products/default-product.svg', 'Herramientas Eléctricas', 1899.00, '750624060001', 35, 10, true),
+('TRUP-002', 'Juego de Llaves Combinadas 12 pzas', 'Juego profesional de llaves de acero cromo vanadio.', '12 piezas | Acero Cr-V | Acabado anticorrosivo', '["6-17 mm", "8-19 mm"]', 'images/products/default-product.svg', 'Herramientas Manuales', 799.00, '750624060002', 50, 12, true),
+('TRUP-003', 'Esmeriladora Angular 4-1/2" 900W', 'Corte y desbaste con control y seguridad.', '900W | Disco 4-1/2" | Guarda ajustable', '["Con maletin", "Sin maletin"]', 'images/products/default-product.svg', 'Herramientas Eléctricas', 1299.00, '750624060003', 28, 8, true),
+('TRUP-004', 'Caja de Herramientas 19" Reforzada', 'Caja resistente con compartimentos organizadores.', 'Polimero reforzado | 19 pulgadas | Cierres metalicos', '["Roja", "Negra"]', 'images/products/default-product.svg', 'Almacenamiento', 499.00, '750624060004', 42, 10, true),
+('TRUP-005', 'Martillo Uña 16 oz Mango Fibra', 'Martillo balanceado para uso diario en obra.', '16 oz | Mango de fibra | Cabeza templada', '["16 oz", "20 oz"]', 'images/products/default-product.svg', 'Herramientas Manuales', 249.00, '750624060005', 95, 20, true),
+('TRUP-006', 'Cinta Métrica 8m Uso Rudo', 'Cinta con recubrimiento anti-impacto y freno rápido.', '8 metros | Carcasa ABS | Gancho magnetico', '["5 m", "8 m"]', 'images/products/default-product.svg', 'Medición', 179.00, '750624060006', 120, 25, true),
+('TRUP-007', 'Pistola para Pintar HVLP', 'Acabado uniforme para madera y metal.', 'Boquilla 1.4 mm | Deposito 600 ml | Bajo consumo', '["Boquilla 1.4", "Boquilla 1.8"]', 'images/products/default-product.svg', 'Pintura', 999.00, '750624060007', 22, 8, true),
+('TRUP-008', 'Compresor de Aire 24L 2HP', 'Compresor portátil para taller y construcción.', 'Tanque 24L | Motor 2HP | 120 PSI', '["24L", "50L"]', 'images/products/default-product.svg', 'Equipo Industrial', 3599.00, '750624060008', 15, 5, true),
+('TRUP-009', 'Guantes de Trabajo Anticorte', 'Protección de manos para manejo de materiales.', 'Nivel de corte C | Palma antiderrapante', '["Talla M", "Talla L", "Talla XL"]', 'images/products/default-product.svg', 'Seguridad', 129.00, '750624060009', 160, 40, true),
+('TRUP-010', 'Carretilla 5 ft3 Reforzada', 'Carretilla de alta capacidad para obra pesada.', 'Capacidad 5 ft3 | Bastidor de acero', '["Llanta solida", "Llanta neumatica"]', 'images/products/default-product.svg', 'Construcción', 1499.00, '750624060010', 18, 6, true)
+ON CONFLICT (sku) DO UPDATE SET
+description = EXCLUDED.description,
+technical_specs = EXCLUDED.technical_specs,
+variants_json = EXCLUDED.variants_json,
+image_url = EXCLUDED.image_url,
+category = EXCLUDED.category,
+unit_price = EXCLUDED.unit_price,
+stock_quantity = EXCLUDED.stock_quantity,
+reorder_level = EXCLUDED.reorder_level,
+is_active = EXCLUDED.is_active;
 
 -- Crear tabla de configuración del sistema
 CREATE TABLE IF NOT EXISTS system_config (

@@ -150,6 +150,9 @@ async function createOrder() {
     
     if (response && response.success) {
         showAlert(response.message, 'success');
+        if (response.ticket_url) {
+            window.open(response.ticket_url, '_blank');
+        }
         currentCart = [];
         updateCartUI();
         
@@ -273,6 +276,7 @@ async function loadOrders() {
             <td>${getStatusLabel(order.status)}</td>
             <td>
                 <button class="btn btn-small btn-secondary" onclick="openPaymentModal(${order.id})">Pagar</button>
+                <a class="btn btn-small btn-primary" href="/ticket_client.php?id=${order.id}" target="_blank">Ticket</a>
             </td>
         </tr>
     `).join('');

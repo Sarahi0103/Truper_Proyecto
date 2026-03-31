@@ -24,6 +24,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
                 <a href="orders.php" class="active">Pedidos</a>
                 <a href="wholesale.php">Mayoreo</a>
                 <?php if (($_SESSION['role'] ?? '') === 'admin'): ?><a href="cashier.php">Caja</a><?php endif; ?>
+                <?php if (($_SESSION['role'] ?? '') === 'admin'): ?><a href="admin_supply.php">Abastecimiento</a><?php endif; ?>
                 <a href="tasks.php">Tareas</a>
                 <a href="analytics.php">Estadísticas</a>
                 <a href="profile.php">Perfil</a>
