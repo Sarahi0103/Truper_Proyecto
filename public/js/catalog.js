@@ -142,7 +142,7 @@
     });
   }
 
-  function drawTicketWindow() {
+  function drawTicketWindow(format) {
     const cart = getCart();
     if (cart.length === 0) {
       if (window.showAlert) window.showAlert('No hay productos en el carrito', 'warning');
@@ -158,11 +158,12 @@
     }).join('<br>');
     const total = cart.reduce((sum, item) => sum + toNumber(item.unit_price) * toNumber(item.quantity), 0);
 
+    const isA4 = format === 'a4';
     const html = `
       <html><head><title>Ticket ${folio}</title>
       <style>
         body{font-family:monospace;margin:0;padding:10px}
-        .ticket-print{width:280px}
+        .ticket-print{width:${isA4 ? '760px' : '280px'};margin:${isA4 ? '0 auto' : '0'}}
         .ticket-print h2{text-align:center;font-size:14px;margin-bottom:8px}
         .line{border-top:1px dashed #000;margin:6px 0}
       </style></head>
@@ -185,6 +186,50 @@
       win.document.write(html);
       win.document.close();
     }
+  }
+
+  function applyFilters() {
+    const query = (document.getElementById('catalogSearch')?.value || '').toLowerCase().trim();
+    const category = document.getElementById('filterCategory')?.value || '';
+    const stockMode = document.getElementById('filterStock')?.value || '';
+    const maxPriceRaw = document.getElementById('filterMaxPrice')?.value || '';
+    const maxPrice = maxPriceRaw === '' ? null : toNumber(maxPriceRaw);
+
+    document.querySelectorAll('[data-product-card]').forEach((card) => {
+      const name = (card.dataset.name || '').toLowerCase();
+      const sku = (card.dataset.sku || '').toLowerCase();
+      const cardCategory = card.dataset.category || '';
+      const price = toNumber(card.dataset.price);
+      const stock = toNumber(card.dataset.stock);
+
+      const textMatch = `${name} ${sku} ${cardCategory.toLowerCase()}`.includes(query);
+      const categoryMatch = !category || cardCategory === category;
+      const priceMatch = maxPrice === null || price <= maxPrice;
+      const stockMatch = !stockMode || (stockMode === 'available' ? stock > 0 : stock <= 10);
+
+      card.style.display = textMatch && categoryMatch && priceMatch && stockMatch ? '' : 'none';
+    });
+  }
+
+  function setupZoomModal() {
+    const modal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImage');
+    const closeBtn = document.getElementById('closeImageModal');
+    if (!modal || !modalImage) return;
+
+    document.querySelectorAll('[data-zoomable]').forEach((img) => {
+      img.addEventListener('click', () => {
+        modalImage.src = img.src;
+        modal.classList.add('active');
+      });
+    });
+
+    if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.remove('active'));
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('active');
+      }
+    });
   }
 
   function setupHandlers() {
@@ -210,14 +255,25 @@
       });
     });
 
-    const searchInput = document.getElementById('catalogSearch');
-    if (searchInput) {
-      searchInput.addEventListener('input', function () {
-        const q = this.value.toLowerCase().trim();
-        document.querySelectorAll('[data-product-card]').forEach((card) => {
-          const haystack = `${card.dataset.name} ${card.dataset.sku} ${card.dataset.category}`.toLowerCase();
-          card.style.display = haystack.includes(q) ? '' : 'none';
-        });
+    const filterIds = ['catalogSearch', 'filterCategory', 'filterStock', 'filterMaxPrice'];
+    filterIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', applyFilters);
+      if (el && el.tagName === 'SELECT') el.addEventListener('change', applyFilters);
+    });
+
+    const clearFilters = document.getElementById('clearFilters');
+    if (clearFilters) {
+      clearFilters.addEventListener('click', () => {
+        const search = document.getElementById('catalogSearch');
+        const cat = document.getElementById('filterCategory');
+        const stock = document.getElementById('filterStock');
+        const price = document.getElementById('filterMaxPrice');
+        if (search) search.value = '';
+        if (cat) cat.value = '';
+        if (stock) stock.value = '';
+        if (price) price.value = '';
+        applyFilters();
       });
     }
 
@@ -228,7 +284,9 @@
     if (closeBtn && drawer) closeBtn.addEventListener('click', () => drawer.classList.remove('open'));
 
     const ticketBtn = document.getElementById('printTicket');
-    if (ticketBtn) ticketBtn.addEventListener('click', drawTicketWindow);
+    if (ticketBtn) ticketBtn.addEventListener('click', () => drawTicketWindow('thermal'));
+    const ticketA4Btn = document.getElementById('printTicketA4');
+    if (ticketA4Btn) ticketA4Btn.addEventListener('click', () => drawTicketWindow('a4'));
 
     const clearBtn = document.getElementById('clearCart');
     if (clearBtn) {
@@ -238,6 +296,9 @@
         renderCart();
       });
     }
+
+    setupZoomModal();
+    applyFilters();
   }
 
   document.addEventListener('DOMContentLoaded', () => {

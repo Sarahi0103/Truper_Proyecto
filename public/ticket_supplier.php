@@ -3,6 +3,7 @@ require_once '../config/config.php';
 require_admin();
 
 $id = (int)($_GET['id'] ?? 0);
+$format = ($_GET['format'] ?? 'thermal') === 'a4' ? 'a4' : 'thermal';
 if ($id <= 0) {
     http_response_code(400);
     echo 'ID de ticket invalido';
@@ -43,14 +44,20 @@ if (!is_array($items)) {
     <title>Ticket proveedor <?php echo htmlspecialchars($order['folio'], ENT_QUOTES, 'UTF-8'); ?></title>
     <style>
         body { font-family: monospace; margin: 0; padding: 10px; }
-        .ticket { width: 300px; margin: 0 auto; }
+        .ticket { width: <?php echo $format === 'a4' ? '760px' : '300px'; ?>; margin: 0 auto; }
         h1 { text-align: center; font-size: 18px; margin: 0 0 8px; }
         .line { border-top: 1px dashed #000; margin: 8px 0; }
         .row { margin-bottom: 6px; }
+        .format-switch { text-align: center; margin-bottom: 8px; }
+        @media print { .format-switch { display: none; } }
     </style>
 </head>
 <body onload="window.print()">
 <div class="ticket">
+    <div class="format-switch">
+        <a href="/ticket_supplier.php?id=<?php echo $id; ?>&format=thermal">Térmico</a> |
+        <a href="/ticket_supplier.php?id=<?php echo $id; ?>&format=a4">A4</a>
+    </div>
     <h1>ORDEN A PROVEEDOR</h1>
     <div class="row"><strong>Folio:</strong> <?php echo htmlspecialchars($order['folio'], ENT_QUOTES, 'UTF-8'); ?></div>
     <div class="row"><strong>Proveedor:</strong> <?php echo htmlspecialchars($order['supplier_name'], ENT_QUOTES, 'UTF-8'); ?></div>

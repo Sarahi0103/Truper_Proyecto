@@ -70,6 +70,30 @@ $isAdmin = (($_SESSION['role'] ?? '') === 'admin');
                 </div>
             </div>
 
+            <div class="catalog-filters">
+                <select id="filterCategory">
+                    <option value="">Todas las categorías</option>
+                    <?php
+                    $categories = [];
+                    foreach ($products as $p) {
+                        if (!empty($p['category'])) {
+                            $categories[$p['category']] = true;
+                        }
+                    }
+                    foreach (array_keys($categories) as $cat):
+                    ?>
+                    <option value="<?php echo htmlspecialchars($cat, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($cat, ENT_QUOTES, 'UTF-8'); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <input id="filterMaxPrice" type="number" min="0" step="1" placeholder="Precio maximo">
+                <select id="filterStock">
+                    <option value="">Todo stock</option>
+                    <option value="available">Solo disponibles</option>
+                    <option value="low">Stock bajo</option>
+                </select>
+                <button id="clearFilters" class="btn btn-ghost">Limpiar filtros</button>
+            </div>
+
             <div class="catalog-grid-min">
                 <?php foreach ($products as $product): ?>
                     <?php
@@ -87,9 +111,11 @@ $isAdmin = (($_SESSION['role'] ?? '') === 'admin');
                         data-product-card
                         data-name="<?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?>"
                         data-sku="<?php echo htmlspecialchars($product['sku'], ENT_QUOTES, 'UTF-8'); ?>"
-                        data-category="<?php echo htmlspecialchars($product['category'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                        data-category="<?php echo htmlspecialchars($product['category'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                        data-price="<?php echo (float)$product['unit_price']; ?>"
+                        data-stock="<?php echo $stock; ?>">
                         <div class="product-media">
-                            <img src="<?php echo htmlspecialchars($imagePath, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?>" loading="lazy">
+                            <img src="<?php echo htmlspecialchars($imagePath, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?>" loading="lazy" data-zoomable>
                         </div>
                         <div class="product-content">
                             <div class="catalog-tag"><?php echo htmlspecialchars($product['category'] ?: 'General', ENT_QUOTES, 'UTF-8'); ?></div>
@@ -145,10 +171,16 @@ $isAdmin = (($_SESSION['role'] ?? '') === 'admin');
             <div class="d-flex justify-between"><strong>Total:</strong> <strong id="cartTotalAmount">$0</strong></div>
             <div class="btn-group mt-2">
                 <button id="clearCart" class="btn btn-secondary">Vaciar</button>
-                <button id="printTicket" class="btn btn-primary">Generar Ticket</button>
+                <button id="printTicket" class="btn btn-primary">Ticket térmico</button>
+                <button id="printTicketA4" class="btn btn-ghost">Ticket A4</button>
             </div>
         </div>
     </aside>
+
+    <div id="imageModal" class="image-modal">
+        <button class="btn btn-small btn-danger close" id="closeImageModal">Cerrar</button>
+        <img id="modalImage" src="" alt="Zoom de producto">
+    </div>
 
     <footer>
         <div class="footer-bottom">&copy; 2026 Truper Platform</div>

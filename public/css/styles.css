@@ -274,6 +274,42 @@ main {
     font-size: 1.65rem;
 }
 
+.register-clean {
+    background:
+        radial-gradient(circle at 12% 10%, rgba(255, 127, 0, 0.12), transparent 32%),
+        radial-gradient(circle at 90% 85%, rgba(17, 24, 39, 0.08), transparent 30%),
+        #f7f8fb;
+}
+
+.register-clean .login-container {
+    padding: 2rem 1rem;
+}
+
+.register-panel {
+    width: 100%;
+    max-width: 840px;
+    margin: 0 auto;
+    background: #fff;
+    border: 1px solid #e8edf3;
+    border-radius: 18px;
+    box-shadow: 0 22px 38px rgba(15, 23, 42, 0.12);
+    padding: 2rem;
+}
+
+.register-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.register-panel .form-group {
+    margin-bottom: 1rem;
+}
+
+.register-full {
+    grid-column: span 2;
+}
+
 .form-group {
     margin-bottom: 1.5rem;
 }
@@ -966,6 +1002,18 @@ footer {
     margin-bottom: 1rem;
 }
 
+.catalog-filters {
+    display: grid;
+    grid-template-columns: 1fr 180px 180px 160px;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+}
+
+.catalog-filters select,
+.catalog-filters input {
+    border-radius: 10px;
+}
+
 .catalog-search {
     width: 100%;
     max-width: 520px;
@@ -1006,6 +1054,10 @@ footer {
     height: 100%;
     object-fit: cover;
     display: block;
+}
+
+.product-media {
+    cursor: zoom-in;
 }
 
 .product-content {
@@ -1104,6 +1156,36 @@ footer {
     right: 0;
 }
 
+.image-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.76);
+    z-index: 1200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.image-modal.active {
+    display: flex;
+}
+
+.image-modal img {
+    max-width: 960px;
+    width: 100%;
+    max-height: 86vh;
+    object-fit: contain;
+    border-radius: 14px;
+    background: #fff;
+}
+
+.image-modal .close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+}
+
 .cart-list {
     flex: 1;
     overflow: auto;
@@ -1137,8 +1219,24 @@ footer {
         grid-template-columns: 1fr;
     }
 
+    .catalog-filters {
+        grid-template-columns: 1fr;
+    }
+
     .catalog-shell {
         padding: 0.75rem;
+    }
+
+    .register-panel {
+        padding: 1.25rem;
+    }
+
+    .register-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .register-full {
+        grid-column: span 1;
     }
 }
 
