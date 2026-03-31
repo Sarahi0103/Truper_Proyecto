@@ -211,27 +211,6 @@
     });
   }
 
-  function setupZoomModal() {
-    const modal = document.getElementById('imageModal');
-    const modalImage = document.getElementById('modalImage');
-    const closeBtn = document.getElementById('closeImageModal');
-    if (!modal || !modalImage) return;
-
-    document.querySelectorAll('[data-zoomable]').forEach((img) => {
-      img.addEventListener('click', () => {
-        modalImage.src = img.src;
-        modal.classList.add('active');
-      });
-    });
-
-    if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.remove('active'));
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        modal.classList.remove('active');
-      }
-    });
-  }
-
   function setupHandlers() {
     document.querySelectorAll('[data-add-product]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -297,7 +276,6 @@
       });
     }
 
-    setupZoomModal();
     applyFilters();
   }
 

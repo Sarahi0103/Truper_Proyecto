@@ -109,7 +109,7 @@ $isAdmin = (($_SESSION['role'] ?? '') === 'admin');
                         data-price="<?php echo (float)$product['unit_price']; ?>"
                         data-stock="<?php echo $stock; ?>">
                         <div class="product-media">
-                            <img src="<?php echo htmlspecialchars($imagePath, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?>" loading="lazy" data-zoomable>
+                            <img src="<?php echo htmlspecialchars($imagePath, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?>" loading="lazy">
                         </div>
                         <div class="product-content">
                             <div class="catalog-tag"><?php echo htmlspecialchars($product['category'] ?: 'General', ENT_QUOTES, 'UTF-8'); ?></div>
@@ -173,11 +173,6 @@ $isAdmin = (($_SESSION['role'] ?? '') === 'admin');
             </div>
         </div>
     </aside>
-
-    <div id="imageModal" class="image-modal">
-        <button class="btn btn-small btn-danger close" id="closeImageModal">Cerrar</button>
-        <img id="modalImage" src="" alt="Zoom de producto">
-    </div>
 
     <footer>
         <div class="footer-bottom">&copy; 2026 Truper Platform</div>
