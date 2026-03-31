@@ -255,6 +255,21 @@ VALUES (
     true
 ) ON CONFLICT DO NOTHING;
 
+-- Productos de ejemplo para catálogo público
+INSERT INTO products (sku, name, description, category, unit_price, barcode, stock_quantity, reorder_level, is_active)
+VALUES
+('TRUP-001', 'Taladro Percutor 1/2" 750W', 'Taladro de alto rendimiento para concreto y metal.', 'Herramientas Eléctricas', 1899.00, '750624060001', 35, 10, true),
+('TRUP-002', 'Juego de Llaves Combinadas 12 pzas', 'Juego profesional de llaves de acero cromo vanadio.', 'Herramientas Manuales', 799.00, '750624060002', 50, 12, true),
+('TRUP-003', 'Esmeriladora Angular 4-1/2" 900W', 'Corte y desbaste con control y seguridad.', 'Herramientas Eléctricas', 1299.00, '750624060003', 28, 8, true),
+('TRUP-004', 'Caja de Herramientas 19" Reforzada', 'Caja resistente con compartimentos organizadores.', 'Almacenamiento', 499.00, '750624060004', 42, 10, true),
+('TRUP-005', 'Martillo Uña 16 oz Mango Fibra', 'Martillo balanceado para uso diario en obra.', 'Herramientas Manuales', 249.00, '750624060005', 95, 20, true),
+('TRUP-006', 'Cinta Métrica 8m Uso Rudo', 'Cinta con recubrimiento anti-impacto y freno rápido.', 'Medición', 179.00, '750624060006', 120, 25, true),
+('TRUP-007', 'Pistola para Pintar HVLP', 'Acabado uniforme para madera y metal.', 'Pintura', 999.00, '750624060007', 22, 8, true),
+('TRUP-008', 'Compresor de Aire 24L 2HP', 'Compresor portátil para taller y construcción.', 'Equipo Industrial', 3599.00, '750624060008', 15, 5, true),
+('TRUP-009', 'Guantes de Trabajo Anticorte', 'Protección de manos para manejo de materiales.', 'Seguridad', 129.00, '750624060009', 160, 40, true),
+('TRUP-010', 'Carretilla 5 ft3 Reforzada', 'Carretilla de alta capacidad para obra pesada.', 'Construcción', 1499.00, '750624060010', 18, 6, true)
+ON CONFLICT (sku) DO NOTHING;
+
 -- Crear tabla de configuración del sistema
 CREATE TABLE IF NOT EXISTS system_config (
     id SERIAL PRIMARY KEY,

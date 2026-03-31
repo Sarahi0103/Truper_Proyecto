@@ -10,6 +10,19 @@ try {
     $products = [];
 }
 
+if (empty($products)) {
+    $products = [
+        ['name' => 'Taladro Percutor 1/2" 750W', 'sku' => 'TRUP-001', 'unit_price' => 1899, 'category' => 'Herramientas Eléctricas'],
+        ['name' => 'Juego de Llaves Combinadas 12 pzas', 'sku' => 'TRUP-002', 'unit_price' => 799, 'category' => 'Herramientas Manuales'],
+        ['name' => 'Esmeriladora Angular 4-1/2" 900W', 'sku' => 'TRUP-003', 'unit_price' => 1299, 'category' => 'Herramientas Eléctricas'],
+        ['name' => 'Caja de Herramientas 19" Reforzada', 'sku' => 'TRUP-004', 'unit_price' => 499, 'category' => 'Almacenamiento'],
+        ['name' => 'Martillo Uña 16 oz Mango Fibra', 'sku' => 'TRUP-005', 'unit_price' => 249, 'category' => 'Herramientas Manuales'],
+        ['name' => 'Cinta Métrica 8m Uso Rudo', 'sku' => 'TRUP-006', 'unit_price' => 179, 'category' => 'Medición'],
+        ['name' => 'Pistola para Pintar HVLP', 'sku' => 'TRUP-007', 'unit_price' => 999, 'category' => 'Pintura'],
+        ['name' => 'Compresor de Aire 24L 2HP', 'sku' => 'TRUP-008', 'unit_price' => 3599, 'category' => 'Equipo Industrial']
+    ];
+}
+
 $isLogged = is_logged_in();
 $isAdmin = (($_SESSION['role'] ?? '') === 'admin');
 ?>
@@ -55,18 +68,14 @@ $isAdmin = (($_SESSION['role'] ?? '') === 'admin');
         </section>
 
         <section class="catalog-grid">
-            <?php if (!empty($products)): ?>
-                <?php foreach ($products as $product): ?>
-                    <article class="catalog-card">
-                        <div class="catalog-tag"><?php echo htmlspecialchars($product['category'] ?: 'General', ENT_QUOTES, 'UTF-8'); ?></div>
-                        <h3><?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?></h3>
-                        <p class="text-muted">SKU: <?php echo htmlspecialchars($product['sku'], ENT_QUOTES, 'UTF-8'); ?></p>
-                        <div class="catalog-price">$<?php echo number_format((float) $product['unit_price'], 0, ',', '.'); ?></div>
-                    </article>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <div class="alert alert-info">Aún no hay productos cargados. Importa PRODUCTOS_EJEMPLO.sql para ver el catálogo.</div>
-            <?php endif; ?>
+            <?php foreach ($products as $product): ?>
+                <article class="catalog-card">
+                    <div class="catalog-tag"><?php echo htmlspecialchars($product['category'] ?: 'General', ENT_QUOTES, 'UTF-8'); ?></div>
+                    <h3><?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?></h3>
+                    <p class="text-muted">SKU: <?php echo htmlspecialchars($product['sku'], ENT_QUOTES, 'UTF-8'); ?></p>
+                    <div class="catalog-price">$<?php echo number_format((float) $product['unit_price'], 0, ',', '.'); ?></div>
+                </article>
+            <?php endforeach; ?>
         </section>
     </main>
 
