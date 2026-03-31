@@ -62,12 +62,6 @@ $isAdmin = (($_SESSION['role'] ?? '') === 'admin');
         <section class="catalog-shell">
             <div class="catalog-toolbar">
                 <input id="catalogSearch" class="catalog-search" type="text" placeholder="Buscar por nombre, SKU o categoría...">
-                <div class="d-flex gap-1">
-                    <?php if (!$isLogged): ?>
-                        <a class="btn btn-secondary" href="/login.php">Iniciar Sesión</a>
-                        <a class="btn btn-primary" href="/register.php">Registrarse</a>
-                    <?php endif; ?>
-                </div>
             </div>
 
             <div class="catalog-filters">
@@ -163,16 +157,19 @@ $isAdmin = (($_SESSION['role'] ?? '') === 'admin');
     <button id="openCart" class="cart-fab">Carrito (<span id="cartCount">0</span>)</button>
     <aside id="cartDrawer" class="cart-drawer">
         <div class="d-flex justify-between align-center">
-            <h3>Carrito</h3>
-            <button id="closeCart" class="btn btn-small btn-ghost">Cerrar</button>
+            <h3>Tu Carrito</h3>
+            <button id="closeCart" class="btn btn-small btn-ghost">✕</button>
         </div>
         <div id="cartList" class="cart-list"></div>
-        <div class="mt-2">
-            <div class="d-flex justify-between"><strong>Total:</strong> <strong id="cartTotalAmount">$0</strong></div>
-            <div class="btn-group mt-2">
-                <button id="clearCart" class="btn btn-secondary">Vaciar</button>
-                <button id="printTicket" class="btn btn-primary">Ticket térmico</button>
-                <button id="printTicketA4" class="btn btn-ghost">Ticket A4</button>
+        <div class="cart-summary">
+            <div class="d-flex justify-between align-center">
+                <span><strong>Total:</strong></span>
+                <span class="cart-total"><strong id="cartTotalAmount">$0</strong></span>
+            </div>
+            <div class="btn-group">
+                <button id="printTicket" class="btn btn-primary">⬇️ Descargar Ticket</button>
+                <button id="printTicketA4" class="btn btn-ghost">📄 Formato A4</button>
+                <button id="clearCart" class="btn btn-secondary">🗑️ Vaciar Carrito</button>
             </div>
         </div>
     </aside>
