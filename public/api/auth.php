@@ -103,7 +103,11 @@ try {
 
         case 'logout':
             $response = $auth->logout();
-            if (!is_api_request()) {
+            $xrw = strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '');
+            $accept = strtolower($_SERVER['HTTP_ACCEPT'] ?? '');
+            $isBrowserNavigation = ($xrw !== 'xmlhttprequest') && (strpos($accept, 'text/html') !== false || $accept === '' || strpos($accept, '*/*') !== false);
+
+            if ($isBrowserNavigation || !is_api_request()) {
                 header('Location: /index.php');
                 exit;
             }
