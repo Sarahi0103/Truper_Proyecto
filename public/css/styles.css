@@ -24,6 +24,91 @@
     --sombra: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* ============================================================
+   ESTILOS MINIMALISTAS MEJORADOS - Formularios y Forms
+   ============================================================ */
+
+/* Inputs y controles mejorados */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="tel"],
+input[type="date"],
+input[type="number"],
+select,
+textarea {
+    border: 1px solid #E0E0E0;
+    border-radius: 6px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="tel"]:focus,
+input[type="date"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--color-naranja);
+    box-shadow: 0 0 0 2px rgba(255, 127, 0, 0.1);
+}
+
+/* Botones minimalistas */
+.btn {
+    border-radius: 6px;
+    font-weight: 600;
+    transition: background-color 0.3s ease;
+}
+
+.btn-primary {
+    background-color: var(--color-naranja);
+    color: var(--color-blanco);
+}
+
+.btn-primary:hover {
+    background-color: #E67E00;
+}
+
+.btn-small {
+    border-radius: 4px;
+}
+
+/* Text utilities */
+.text-center {
+    text-align: center;
+}
+
+.text-muted {
+    color: #999;
+    font-size: 0.85rem;
+}
+
+.mt-3 {
+    margin-top: 1.5rem;
+}
+
+/* Logo improvements */
+.login-logo {
+    margin-bottom: 1.5rem;
+}
+
+.login-logo img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
+/* Links mejorados */
+a {
+    transition: color 0.3s ease;
+}
+
+a:hover {
+    color: inherit;
+}
+
 html, body {
     height: 100%;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -172,27 +257,24 @@ main {
 }
 
 .auth-page {
-    background:
-        radial-gradient(circle at 10% 20%, rgba(255, 127, 0, 0.18), transparent 40%),
-        radial-gradient(circle at 90% 80%, rgba(0, 0, 0, 0.14), transparent 35%),
-        #f4f5f7;
+    background: #FAFAFA;
 }
 
 .auth-shell {
     width: 100%;
-    max-width: 1080px;
+    max-width: 1000px;
     display: grid;
-    grid-template-columns: 1.05fr 1fr;
-    border-radius: 16px;
+    grid-template-columns: 45% 55%;
+    border-radius: 12px;
     overflow: hidden;
     background: var(--color-blanco);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
 }
 
 .auth-side {
-    background: linear-gradient(145deg, #111 0%, #2b2b2b 70%);
+    background: var(--color-negro);
     color: var(--color-blanco);
-    padding: 2.5rem;
+    padding: 3rem;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -275,10 +357,7 @@ main {
 }
 
 .register-clean {
-    background:
-        radial-gradient(circle at 12% 10%, rgba(255, 127, 0, 0.12), transparent 32%),
-        radial-gradient(circle at 90% 85%, rgba(17, 24, 39, 0.08), transparent 30%),
-        #f7f8fb;
+    background: #FAFAFA;
 }
 
 .register-clean .login-container {
@@ -287,13 +366,13 @@ main {
 
 .register-panel {
     width: 100%;
-    max-width: 840px;
+    max-width: 800px;
     margin: 0 auto;
     background: #fff;
-    border: 1px solid #e8edf3;
-    border-radius: 18px;
-    box-shadow: 0 22px 38px rgba(15, 23, 42, 0.12);
-    padding: 2rem;
+    border: 1px solid #E0E0E0;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    padding: 2.5rem;
 }
 
 .register-grid {
@@ -381,8 +460,6 @@ textarea {
 
 .btn-primary:hover {
     background-color: #E67E00;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(255, 127, 0, 0.3);
 }
 
 .btn-secondary {
@@ -529,8 +606,7 @@ tbody tr:last-child td {
 }
 
 .card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .card-header {
@@ -1060,8 +1136,7 @@ footer {
 }
 
 .product-card-min:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 22px rgba(22, 31, 44, 0.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .product-media {
@@ -1077,7 +1152,7 @@ footer {
 }
 
 .product-media {
-    cursor: zoom-in;
+    cursor: pointer;
 }
 
 .product-content {
