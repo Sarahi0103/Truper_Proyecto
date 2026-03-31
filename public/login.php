@@ -34,6 +34,12 @@ if (is_logged_in()) {
                         <p class="login-subtitle">Accede a tu cuenta de Truper Platform</p>
                     </div>
 
+            <?php if (isset($_GET['registered'])): ?>
+                <div class="alert alert-success">
+                    Registro exitoso. Ahora inicia sesión.
+                </div>
+            <?php endif; ?>
+
             <?php if (isset($_GET['error'])): ?>
                 <div class="alert alert-error">
                     <?php 
@@ -48,14 +54,15 @@ if (is_logged_in()) {
             <?php endif; ?>
 
                     <form id="loginForm" action="api/auth.php" method="POST">
+                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
                         <div class="form-group">
                             <label for="email">Email</label>
-                            <input type="email" id="email" name="email" required placeholder="tu@email.com">
+                            <input type="email" id="email" name="email" required placeholder="tu@email.com" maxlength="255" autocomplete="email">
                         </div>
 
                         <div class="form-group">
                             <label for="password">Contraseña</label>
-                            <input type="password" id="password" name="password" required placeholder="Tu contraseña">
+                            <input type="password" id="password" name="password" required placeholder="Tu contraseña" minlength="8" autocomplete="current-password">
                         </div>
 
                         <button type="submit" class="btn btn-primary btn-block">Iniciar Sesión</button>

@@ -14,6 +14,17 @@ if (is_logged_in()) {
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="register-clean">
+    <header>
+        <div class="header-content">
+            <a href="index.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
+            <nav class="nav-menu">
+                <a href="index.php">Productos</a>
+                <a href="login.php">Iniciar Sesión</a>
+                <a href="register.php" class="active">Registrarse</a>
+            </nav>
+        </div>
+    </header>
+
     <div class="login-container">
         <div class="register-panel">
             <div class="login-header" style="margin-bottom: 1rem;">
@@ -22,25 +33,32 @@ if (is_logged_in()) {
                 <p class="login-subtitle">Registro rápido para clientes con beneficios y seguimiento de pedidos.</p>
             </div>
 
+            <?php if (isset($_GET['error'])): ?>
+                <div class="alert alert-error">
+                    <?php echo htmlspecialchars($_GET['error'], ENT_QUOTES, 'UTF-8'); ?>
+                </div>
+            <?php endif; ?>
+
             <form id="registerForm" action="api/auth.php?action=register" method="POST" class="register-grid">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
                 <div class="form-group">
                     <label for="first_name">Nombre</label>
-                    <input type="text" id="first_name" name="first_name" required>
+                    <input type="text" id="first_name" name="first_name" required maxlength="100" autocomplete="given-name">
                 </div>
 
                 <div class="form-group">
                     <label for="last_name">Apellido</label>
-                    <input type="text" id="last_name" name="last_name" required>
+                    <input type="text" id="last_name" name="last_name" required maxlength="100" autocomplete="family-name">
                 </div>
 
                 <div class="form-group">
                     <label for="email">Email</label>
-                    <input type="email" id="email" name="email" required>
+                    <input type="email" id="email" name="email" required maxlength="255" autocomplete="email">
                 </div>
 
                 <div class="form-group">
                     <label for="phone">Teléfono</label>
-                    <input type="tel" id="phone" name="phone" placeholder="+56 9 XXXX XXXX">
+                    <input type="tel" id="phone" name="phone" placeholder="+56 9 XXXX XXXX" maxlength="20" autocomplete="tel">
                 </div>
 
                 <div class="form-group">
@@ -55,13 +73,13 @@ if (is_logged_in()) {
 
                 <div class="form-group">
                     <label for="password">Contraseña</label>
-                    <input type="password" id="password" name="password" required minlength="8">
-                    <small class="text-muted">Mínimo 8 caracteres</small>
+                    <input type="password" id="password" name="password" required minlength="8" autocomplete="new-password" pattern="(?=.*[A-Za-z])(?=.*\d).{8,}" title="Debe incluir al menos 8 caracteres, letras y números">
+                    <small class="text-muted">Mínimo 8 caracteres, con letras y números</small>
                 </div>
 
                 <div class="form-group">
                     <label for="confirm_password">Confirmar Contraseña</label>
-                    <input type="password" id="confirm_password" name="confirm_password" required>
+                    <input type="password" id="confirm_password" name="confirm_password" required autocomplete="new-password">
                 </div>
 
                 <div class="form-group register-full">

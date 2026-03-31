@@ -13,11 +13,40 @@ $action = $_GET['action'] ?? ($_POST['action'] ?? 'login');
 $auth = new AuthController($pdo);
 $response = [];
 
+function auth_rate_limit_check($key, $maxAttempts, $windowSeconds) {
+    $now = time();
+    $bucket = $_SESSION[$key] ?? ['count' => 0, 'start' => $now];
+    if (($now - (int)$bucket['start']) > $windowSeconds) {
+        $bucket = ['count' => 0, 'start' => $now];
+    }
+    if ((int)$bucket['count'] >= $maxAttempts) {
+        return false;
+    }
+    $bucket['count'] = (int)$bucket['count'] + 1;
+    $_SESSION[$key] = $bucket;
+    return true;
+}
+
+function auth_rate_limit_reset($key) {
+    unset($_SESSION[$key]);
+}
+
 try {
     switch ($action) {
         case 'register':
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+                $response = ['success' => false, 'message' => 'Sesión inválida. Recarga la página.'];
+                break;
+            }
+
+            $registerKey = 'register_attempts_' . hash('sha256', strtolower(trim((string)($_POST['email'] ?? ''))) . '_' . getTrusSIDBug());
+            if (!auth_rate_limit_check($registerKey, 4, 900)) {
+                $response = ['success' => false, 'message' => 'Demasiados intentos de registro. Intenta en 15 minutos.'];
                 break;
             }
 
@@ -33,7 +62,8 @@ try {
             ]);
 
             if ($response['success']) {
-                $response['redirect'] = '/login.php';
+                auth_rate_limit_reset($registerKey);
+                $response['redirect'] = '/login.php?registered=1';
             }
             break;
 
@@ -43,16 +73,33 @@ try {
                 break;
             }
 
+            if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+                $response = ['success' => false, 'message' => 'Sesión inválida. Recarga la página.'];
+                break;
+            }
+
+            $loginKey = 'login_attempts_' . hash('sha256', strtolower(trim((string)($_POST['email'] ?? ''))) . '_' . getTrusSIDBug());
+            if (!auth_rate_limit_check($loginKey, 6, 900)) {
+                $response = ['success' => false, 'message' => 'Demasiados intentos. Intenta en 15 minutos.'];
+                break;
+            }
+
             $response = $auth->login(
                 sanitize($_POST['email'] ?? ''),
                 $_POST['password'] ?? ''
             );
 
             if ($response['success']) {
+                auth_rate_limit_reset($loginKey);
                 log_action($_SESSION['user_id'], 'LOGIN', 'Inicio de sesión exitoso', getTrusSIDBug());
-                $response['redirect'] = $_SESSION['role'] === 'admin' 
-                    ? '/orders.php?tab=newOrder&role=admin'
-                    : '/orders.php?tab=newOrder';
+                $role = $_SESSION['role'] ?? 'client';
+                if ($role === 'admin') {
+                    $response['redirect'] = '/admin_supply.php';
+                } elseif ($role === 'employee') {
+                    $response['redirect'] = '/tasks.php';
+                } else {
+                    $response['redirect'] = '/orders.php?tab=newOrder';
+                }
             }
             break;
 
