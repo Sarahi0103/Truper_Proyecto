@@ -257,7 +257,10 @@ main {
 }
 
 .auth-page {
-    background: #FAFAFA;
+    background:
+        radial-gradient(circle at 12% 18%, rgba(255, 127, 0, 0.24), transparent 34%),
+        radial-gradient(circle at 85% 78%, rgba(22, 22, 22, 0.16), transparent 38%),
+        linear-gradient(135deg, #f4f5f8 0%, #eef0f4 100%);
 }
 
 .auth-shell {
@@ -265,14 +268,15 @@ main {
     max-width: 1000px;
     display: grid;
     grid-template-columns: 45% 55%;
-    border-radius: 12px;
+    border-radius: 18px;
     overflow: hidden;
     background: var(--color-blanco);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    border: 1px solid #e7eaee;
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.12);
 }
 
 .auth-side {
-    background: var(--color-negro);
+    background: linear-gradient(160deg, #111214 0%, #17181b 60%, #1f2025 100%);
     color: var(--color-blanco);
     padding: 3rem;
     display: flex;
@@ -287,7 +291,7 @@ main {
 }
 
 .auth-side p {
-    color: #d4d4d4;
+    color: #d5d7dc;
     line-height: 1.6;
     margin-bottom: 1.25rem;
 }
@@ -324,8 +328,8 @@ main {
 .login-box {
     background: var(--color-blanco);
     padding: 3rem;
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
     width: 100%;
     max-width: 400px;
 }
@@ -357,7 +361,10 @@ main {
 }
 
 .register-clean {
-    background: #FAFAFA;
+    background:
+        radial-gradient(circle at 8% 12%, rgba(255, 127, 0, 0.2), transparent 28%),
+        radial-gradient(circle at 88% 84%, rgba(24, 24, 28, 0.14), transparent 34%),
+        linear-gradient(135deg, #f4f5f8 0%, #eef0f4 100%);
 }
 
 .register-clean .login-container {
@@ -369,9 +376,9 @@ main {
     max-width: 800px;
     margin: 0 auto;
     background: #fff;
-    border: 1px solid #E0E0E0;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e7eaee;
+    border-radius: 16px;
+    box-shadow: 0 22px 44px rgba(15, 23, 42, 0.12);
     padding: 2.5rem;
 }
 
