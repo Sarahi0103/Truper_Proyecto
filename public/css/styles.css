@@ -168,7 +168,75 @@ main {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    background: linear-gradient(135deg, var(--color-negro) 0%, var(--color-gris-oscuro) 100%);
+    padding: 2rem 1rem;
+}
+
+.auth-page {
+    background:
+        radial-gradient(circle at 10% 20%, rgba(255, 127, 0, 0.18), transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(0, 0, 0, 0.14), transparent 35%),
+        #f4f5f7;
+}
+
+.auth-shell {
+    width: 100%;
+    max-width: 1080px;
+    display: grid;
+    grid-template-columns: 1.05fr 1fr;
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--color-blanco);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
+}
+
+.auth-side {
+    background: linear-gradient(145deg, #111 0%, #2b2b2b 70%);
+    color: var(--color-blanco);
+    padding: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.auth-side h2 {
+    color: var(--color-naranja);
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+}
+
+.auth-side p {
+    color: #d4d4d4;
+    line-height: 1.6;
+    margin-bottom: 1.25rem;
+}
+
+.auth-side ul {
+    list-style: none;
+    margin-top: 0.75rem;
+}
+
+.auth-side li {
+    margin-bottom: 0.65rem;
+    color: #e8e8e8;
+}
+
+.auth-side li::before {
+    content: "•";
+    color: var(--color-naranja);
+    margin-right: 0.5rem;
+}
+
+.auth-form-wrap {
+    background: var(--color-blanco);
+    padding: 0;
+}
+
+.auth-form-wrap .login-box {
+    max-width: none;
+    width: 100%;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 2.2rem 2rem;
 }
 
 .login-box {
@@ -200,6 +268,10 @@ main {
 .login-subtitle {
     color: var(--color-gris-oscuro);
     font-size: 0.9rem;
+}
+
+.auth-form-wrap .login-title {
+    font-size: 1.65rem;
 }
 
 .form-group {
@@ -715,6 +787,23 @@ footer {
 
     th, td {
         padding: 0.5rem;
+    }
+
+    .login-container {
+        padding: 1rem;
+    }
+
+    .auth-shell {
+        grid-template-columns: 1fr;
+        border-radius: 12px;
+    }
+
+    .auth-side {
+        padding: 1.25rem;
+    }
+
+    .auth-form-wrap .login-box {
+        padding: 1.25rem;
     }
 }
 
