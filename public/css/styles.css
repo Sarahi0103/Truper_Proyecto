@@ -290,7 +290,7 @@ main {
 }
 
 .register-shell {
-    max-width: 1100px;
+    max-width: 1020px;
     grid-template-columns: 42% 58%;
 }
 
@@ -303,7 +303,25 @@ main {
     width: 100%;
     box-shadow: none;
     border-radius: 0;
-    padding: 2.2rem 2rem;
+    padding: 1.7rem 1.7rem;
+}
+
+.register-auth-page .login-container {
+    padding: 1.25rem 1rem;
+    min-height: calc(100vh - 1rem);
+}
+
+.register-auth-page .register-shell {
+    min-height: auto;
+}
+
+.register-auth-page .auth-form-wrap {
+    max-height: calc(100vh - 2.5rem);
+    overflow-y: auto;
+}
+
+.register-auth-page .register-grid {
+    gap: 0.85rem;
 }
 
 .auth-side {
@@ -983,6 +1001,11 @@ footer {
 
     .register-box {
         padding: 1.25rem;
+    }
+
+    .register-auth-page .auth-form-wrap {
+        max-height: none;
+        overflow: visible;
     }
 }
 

@@ -13,7 +13,7 @@ if (is_logged_in()) {
     <title>Registrarse - Truper Platform</title>
     <link rel="stylesheet" href="css/styles.css">
 </head>
-<body class="auth-page">
+<body class="auth-page register-auth-page">
     <div class="login-container">
         <div class="auth-shell register-shell">
             <aside class="auth-side">
