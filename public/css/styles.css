@@ -391,6 +391,22 @@ main {
     font-size: 1.65rem;
 }
 
+.auth-back-row {
+    margin-bottom: 0.75rem;
+}
+
+.auth-back-link {
+    color: #4b5563;
+    text-decoration: none;
+    font-size: 0.92rem;
+    font-weight: 600;
+    transition: color 0.2s ease;
+}
+
+.auth-back-link:hover {
+    color: var(--color-naranja);
+}
+
 .register-clean {
     background:
         radial-gradient(circle at 8% 12%, rgba(255, 127, 0, 0.2), transparent 28%),

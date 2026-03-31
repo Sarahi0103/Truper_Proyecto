@@ -29,6 +29,9 @@ if (is_logged_in()) {
 
             <div class="auth-form-wrap">
                 <div class="login-box">
+                    <div class="auth-back-row">
+                        <a href="index.php" class="auth-back-link">← Volver a productos</a>
+                    </div>
                     <div class="login-header">
                         <h1 class="login-title">Iniciar Sesión</h1>
                         <p class="login-subtitle">Accede a tu cuenta de Truper Platform</p>

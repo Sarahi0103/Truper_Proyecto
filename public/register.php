@@ -29,6 +29,9 @@ if (is_logged_in()) {
 
             <div class="auth-form-wrap">
                 <div class="login-box register-box">
+                    <div class="auth-back-row">
+                        <a href="index.php" class="auth-back-link">← Volver a productos</a>
+                    </div>
                     <div class="login-header" style="margin-bottom: 1rem;">
                         <h1 class="login-title">Crear Cuenta</h1>
                         <p class="login-subtitle">Registro rápido para clientes con beneficios y seguimiento de pedidos.</p>
