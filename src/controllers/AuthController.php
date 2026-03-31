@@ -8,10 +8,12 @@ class AuthController {
     
     public function __construct($pdo) {
         $this->pdo = $pdo;
+        $this->ensureAuthSchema();
     }
     
     public function register($data) {
         try {
+            $this->ensureAuthSchema();
             if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
                 return ['success' => false, 'message' => 'Email inválido'];
             }
@@ -63,10 +65,11 @@ class AuthController {
     
     public function login($email, $password) {
         try {
-            $user = $this->getUserByEmail($email);
+            $this->ensureAuthSchema();
+            $user = $this->safeGetUserByEmail($email);
             if (!$user && strtolower((string)$email) === 'admin@truper.com' && $password === 'Admin123!') {
                 $this->ensureDefaultAdminAccount();
-                $user = $this->getUserByEmail($email);
+                $user = $this->safeGetUserByEmail($email);
             }
             if (!$user) {
                 return ['success' => false, 'message' => 'Email o contraseña incorrectos'];
@@ -180,6 +183,19 @@ class AuthController {
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
+    private function safeGetUserByEmail($email) {
+        try {
+            return $this->getUserByEmail($email);
+        } catch (Exception $e) {
+            $this->ensureAuthSchema();
+            try {
+                return $this->getUserByEmail($email);
+            } catch (Exception $ignored) {
+                return null;
+            }
+        }
+    }
+
     private function tableExists($table) {
         try {
             $stmt = $this->pdo->prepare("SELECT to_regclass(?) IS NOT NULL AS exists_table");
@@ -249,6 +265,7 @@ class AuthController {
     }
 
     private function ensureDefaultAdminAccount() {
+        $this->ensureAuthSchema();
         $passwordHash = password_hash('Admin123!', PASSWORD_BCRYPT, ['cost' => 12]);
 
         $sqlA = "INSERT INTO users (email, password_hash, first_name, last_name, role, phone, is_active, is_verified) VALUES ('admin@truper.com', ?, 'Administrador', 'Truper', 'admin', '', true, true)";
@@ -278,6 +295,42 @@ class AuthController {
         }
         $normalized = strtolower(trim((string)$value));
         return in_array($normalized, ['1', 'true', 't', 'yes', 'y'], true);
+    }
+
+    private function ensureAuthSchema() {
+        try {
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                password_hash VARCHAR(255),
+                password VARCHAR(255),
+                first_name VARCHAR(120),
+                last_name VARCHAR(120),
+                name VARCHAR(255),
+                role VARCHAR(20) NOT NULL DEFAULT 'client',
+                phone VARCHAR(30),
+                birthdate DATE,
+                birthday DATE,
+                loyalty_points INTEGER DEFAULT 0,
+                points INTEGER DEFAULT 0,
+                is_active BOOLEAN DEFAULT true,
+                active BOOLEAN DEFAULT true,
+                is_verified BOOLEAN DEFAULT true,
+                last_login TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )");
+
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS clients (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+                company_name VARCHAR(255),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )");
+        } catch (Exception $e) {
+            // Evita interrumpir la app si el usuario de BD no tiene permisos DDL.
+        }
     }
 }
 ?>
