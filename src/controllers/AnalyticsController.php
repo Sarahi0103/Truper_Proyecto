@@ -44,22 +44,10 @@ class AnalyticsController {
     
     public function generatePredictions() {
         try {
-            // Obtener datos históricos
-            $stmt = $this->pdo->prepare("
-                SELECT 
-                    product_id,
-                    month,
-                    total_quantity,
-                    season,
-                    year
-                FROM purchase_statistics
-                WHERE year >= ? 
-                ORDER BY product_id, year DESC, month DESC
-                LIMIT 100
-            ");
-            
-            $stmt->execute([date('Y') - 2]);
-            $historical = $stmt->fetchAll();
+            $historical = $this->getHistoricalDataForPrediction();
+            if (empty($historical)) {
+                return [];
+            }
             
             // Agrupar por producto
             $product_data = [];
@@ -82,6 +70,57 @@ class AnalyticsController {
             return $predictions;
         } catch (Exception $e) {
             error_log("Error generando predicciones: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    private function getHistoricalDataForPrediction() {
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT 
+                    product_id,
+                    month,
+                    total_quantity,
+                    season,
+                    year
+                FROM purchase_statistics
+                WHERE year >= ? 
+                ORDER BY product_id, year DESC, month DESC
+                LIMIT 240
+            ");
+            $stmt->execute([date('Y') - 2]);
+            $rows = $stmt->fetchAll();
+            if (!empty($rows)) {
+                return $rows;
+            }
+        } catch (Exception $e) {
+            // Continua al fallback
+        }
+
+        try {
+            $fallbackStmt = $this->pdo->prepare("
+                SELECT
+                    oi.product_id,
+                    EXTRACT(MONTH FROM o.created_at)::int AS month,
+                    SUM(oi.quantity)::int AS total_quantity,
+                    EXTRACT(YEAR FROM o.created_at)::int AS year
+                FROM order_items oi
+                JOIN orders o ON o.id = oi.order_id
+                WHERE o.created_at >= NOW() - INTERVAL '24 months'
+                GROUP BY oi.product_id, EXTRACT(YEAR FROM o.created_at), EXTRACT(MONTH FROM o.created_at)
+                ORDER BY oi.product_id, year DESC, month DESC
+                LIMIT 240
+            ");
+            $fallbackStmt->execute();
+            $fallbackRows = $fallbackStmt->fetchAll();
+
+            foreach ($fallbackRows as &$row) {
+                $row['season'] = $this->seasonByMonth((int)$row['month']);
+            }
+            unset($row);
+
+            return $fallbackRows;
+        } catch (Exception $e) {
             return [];
         }
     }
@@ -200,6 +239,13 @@ class AnalyticsController {
     
     private function getSeason() {
         $month = date('m');
+        if ($month >= 12 || $month <= 2) return 'Invierno';
+        if ($month >= 3 && $month <= 5) return 'Primavera';
+        if ($month >= 6 && $month <= 8) return 'Verano';
+        return 'Otoño';
+    }
+
+    private function seasonByMonth($month) {
         if ($month >= 12 || $month <= 2) return 'Invierno';
         if ($month >= 3 && $month <= 5) return 'Primavera';
         if ($month >= 6 && $month <= 8) return 'Verano';

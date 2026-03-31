@@ -4,7 +4,7 @@
  * Se ejecuta diariamente para enviar notificaciones
  */
 
-require_once 'config/config.php';
+require_once __DIR__ . '/../../config/config.php';
 
 class BirthdayReminder {
     private $pdo;

@@ -92,14 +92,12 @@ try {
             if ($response['success']) {
                 auth_rate_limit_reset($loginKey);
                 log_action($_SESSION['user_id'], 'LOGIN', 'Inicio de sesión exitoso', getTrusSIDBug());
-                $role = $_SESSION['role'] ?? 'client';
-                if ($role === 'admin') {
-                    $response['redirect'] = '/admin_supply.php';
-                } elseif ($role === 'employee') {
-                    $response['redirect'] = '/tasks.php';
-                } else {
-                    $response['redirect'] = '/orders.php?tab=newOrder';
+                $engagement = apply_login_engagement_rules($_SESSION['user_id']);
+                if (!empty($engagement['birthday_bonus_awarded'])) {
+                    $response['message'] = ($response['message'] ?? 'Bienvenido') . '. ' . ($engagement['message'] ?? 'Bono de cumpleaños aplicado.');
                 }
+                $role = $_SESSION['role'] ?? 'client';
+                $response['redirect'] = route_by_role($role);
             }
             break;
 

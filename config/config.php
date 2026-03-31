@@ -172,4 +172,106 @@ function calculateProductPrice($base_price, $quantity, $is_wholesale = false) {
     }
     return $base_price;
 }
+
+function db_table_exists($table_name) {
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("SELECT to_regclass(?)");
+        $stmt->execute([$table_name]);
+        return $stmt->fetchColumn() !== null;
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
+function db_column_exists($table_name, $column_name) {
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = ? AND column_name = ?)");
+        $stmt->execute([$table_name, $column_name]);
+        return (bool)$stmt->fetchColumn();
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
+function route_by_role($role) {
+    if ($role === 'admin') {
+        return '/admin_supply.php';
+    }
+    if ($role === 'employee') {
+        return '/tasks.php';
+    }
+    return '/orders.php?tab=newOrder';
+}
+
+function apply_login_engagement_rules($user_id) {
+    global $pdo;
+
+    try {
+        $userStmt = $pdo->prepare("SELECT id, role, birthdate, birthday, loyalty_points, points FROM users WHERE id = ?");
+        $userStmt->execute([$user_id]);
+        $user = $userStmt->fetch();
+
+        if (!$user || (($user['role'] ?? 'client') !== 'client')) {
+            return ['birthday_bonus_awarded' => false];
+        }
+
+        $birth = $user['birthdate'] ?? ($user['birthday'] ?? null);
+        if (empty($birth)) {
+            return ['birthday_bonus_awarded' => false];
+        }
+
+        $today = date('m-d');
+        $birthMmDd = date('m-d', strtotime((string)$birth));
+        if ($today !== $birthMmDd) {
+            return ['birthday_bonus_awarded' => false];
+        }
+
+        $alreadyAwarded = false;
+        if (db_table_exists('action_logs')) {
+            $logStmt = $pdo->prepare("SELECT 1 FROM action_logs WHERE user_id = ? AND action = 'BIRTHDAY_BONUS' AND EXTRACT(YEAR FROM timestamp) = EXTRACT(YEAR FROM NOW()) LIMIT 1");
+            $logStmt->execute([$user_id]);
+            $alreadyAwarded = (bool)$logStmt->fetchColumn();
+        }
+
+        if ($alreadyAwarded) {
+            return ['birthday_bonus_awarded' => false];
+        }
+
+        $pointsColumn = db_column_exists('users', 'loyalty_points') ? 'loyalty_points' : (db_column_exists('users', 'points') ? 'points' : null);
+        if ($pointsColumn) {
+            $updateStmt = $pdo->prepare("UPDATE users SET {$pointsColumn} = COALESCE({$pointsColumn}, 0) + 50 WHERE id = ?");
+            $updateStmt->execute([$user_id]);
+
+            if (isset($_SESSION['loyalty_points'])) {
+                $_SESSION['loyalty_points'] = (int)$_SESSION['loyalty_points'] + 50;
+            }
+        }
+
+        if (db_table_exists('clients') && db_table_exists('promotions')) {
+            $clientStmt = $pdo->prepare("SELECT id FROM clients WHERE user_id = ? LIMIT 1");
+            $clientStmt->execute([$user_id]);
+            $clientId = $clientStmt->fetchColumn();
+            if ($clientId) {
+                $promoStmt = $pdo->prepare("INSERT INTO promotions (client_id, promotion_type, discount_percentage, expiry_date) VALUES (?, 'birthday_bonus', 10, ?) ");
+                $promoStmt->execute([$clientId, date('Y-m-d', strtotime('+30 days'))]);
+            }
+        }
+
+        if (db_table_exists('action_logs')) {
+            log_action($user_id, 'BIRTHDAY_BONUS', 'Bono de cumpleaños aplicado: +50 puntos y 10% promo', getTrusSIDBug());
+        }
+
+        $_SESSION['birthday_bonus_notice'] = 'Feliz cumpleaños. Recibiste 50 puntos y un bono del 10%.';
+
+        return [
+            'birthday_bonus_awarded' => true,
+            'message' => $_SESSION['birthday_bonus_notice']
+        ];
+    } catch (Exception $e) {
+        error_log('apply_login_engagement_rules error: ' . $e->getMessage());
+        return ['birthday_bonus_awarded' => false];
+    }
+}
 ?>
