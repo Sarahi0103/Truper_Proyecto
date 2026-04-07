@@ -114,7 +114,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
 
         <section class="catalog-shell">
             <div class="catalog-categories-top">
-                <div class="catalog-categories-title">Categorías rápidas</div>
+                <div class="catalog-categories-title">Categorías</div>
                 <div class="catalog-categories-actions">
                     <button type="button" class="btn btn-ghost btn-small active" data-quick-category="">Todas</button>
                     <button type="button" class="btn btn-ghost btn-small" data-quick-category="Material eléctrico">Material eléctrico</button>
@@ -129,20 +129,6 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
             </div>
 
             <div class="catalog-filters">
-                <select id="filterCategory">
-                    <option value="">Todas las categorías</option>
-                    <?php
-                    $categories = [];
-                    foreach ($products as $p) {
-                        if (!empty($p['category'])) {
-                            $categories[$p['category']] = true;
-                        }
-                    }
-                    foreach (array_keys($categories) as $cat):
-                    ?>
-                    <option value="<?php echo htmlspecialchars($cat, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($cat, ENT_QUOTES, 'UTF-8'); ?></option>
-                    <?php endforeach; ?>
-                </select>
                 <input id="filterMaxPrice" type="number" min="0" step="1" placeholder="Precio maximo">
                 <select id="filterStock">
                     <option value="">Todo stock</option>

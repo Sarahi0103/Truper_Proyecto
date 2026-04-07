@@ -1,6 +1,7 @@
 (function () {
   const STORAGE_CART = 'truper_cart';
   const STORAGE_FAV = 'truper_favorites';
+  let selectedQuickCategory = '';
 
   function readJson(key, fallback) {
     try {
@@ -260,7 +261,7 @@
 
   function applyFilters() {
     const query = (document.getElementById('catalogSearch')?.value || '').toLowerCase().trim();
-    const category = document.getElementById('filterCategory')?.value || '';
+    const category = selectedQuickCategory || '';
     const stockMode = document.getElementById('filterStock')?.value || '';
     const maxPriceRaw = document.getElementById('filterMaxPrice')?.value || '';
     const maxPrice = maxPriceRaw === '' ? null : toNumber(maxPriceRaw);
@@ -273,7 +274,7 @@
       const stock = toNumber(card.dataset.stock);
 
       const textMatch = `${name} ${sku} ${cardCategory.toLowerCase()}`.includes(query);
-      const categoryMatch = !category || cardCategory === category;
+      const categoryMatch = !category || normalizeCategory(cardCategory) === normalizeCategory(category);
       const priceMatch = maxPrice === null || price <= maxPrice;
       const stockMatch = !stockMode || (stockMode === 'available' ? stock > 0 : stock <= 10);
 
@@ -304,7 +305,7 @@
       });
     });
 
-    const filterIds = ['catalogSearch', 'filterCategory', 'filterStock', 'filterMaxPrice'];
+    const filterIds = ['catalogSearch', 'filterStock', 'filterMaxPrice'];
     filterIds.forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.addEventListener('input', applyFilters);
@@ -315,13 +316,15 @@
     if (clearFilters) {
       clearFilters.addEventListener('click', () => {
         const search = document.getElementById('catalogSearch');
-        const cat = document.getElementById('filterCategory');
         const stock = document.getElementById('filterStock');
         const price = document.getElementById('filterMaxPrice');
         if (search) search.value = '';
-        if (cat) cat.value = '';
         if (stock) stock.value = '';
         if (price) price.value = '';
+        selectedQuickCategory = '';
+        document.querySelectorAll('[data-quick-category]').forEach((btn) => {
+          btn.classList.toggle('active', (btn.dataset.quickCategory || '') === '');
+        });
         applyFilters();
       });
     }
@@ -330,17 +333,7 @@
     if (quickCategoryButtons.length > 0) {
       quickCategoryButtons.forEach((btn) => {
         btn.addEventListener('click', () => {
-          const targetLabel = btn.dataset.quickCategory || '';
-          const select = document.getElementById('filterCategory');
-          if (select) {
-            if (targetLabel === '') {
-              select.value = '';
-            } else {
-              const wanted = normalizeCategory(targetLabel);
-              const match = Array.from(select.options).find((opt) => normalizeCategory(opt.value) === wanted || normalizeCategory(opt.textContent) === wanted);
-              select.value = match ? match.value : '';
-            }
-          }
+          selectedQuickCategory = btn.dataset.quickCategory || '';
 
           quickCategoryButtons.forEach((x) => x.classList.remove('active'));
           btn.classList.add('active');

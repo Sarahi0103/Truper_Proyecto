@@ -1257,7 +1257,7 @@ footer {
 
 .catalog-filters {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
     gap: 0.8rem;
     margin-bottom: 1.5rem;
     padding: 0.9rem;
