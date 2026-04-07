@@ -65,7 +65,7 @@ $user_id = (int)$_SESSION['user_id'];
 <main>
     <div class="container">
         <div class="page-hero">
-            <div class="module-badge module-client"><span class="module-glyph">CL</span>Portal de cliente</div>
+            <div class="module-badge module-client"><span class="module-glyph">CL</span> Portal de cliente</div>
             <h1>Mi Cuenta</h1>
             <p class="text-muted">Administra tu crédito, control semanal y cotizaciones.</p>
         </div>

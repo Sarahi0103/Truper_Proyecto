@@ -42,7 +42,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
 <main>
     <div class="container">
     <div class="page-hero">
-      <div class="module-badge module-finance"><span class="module-glyph">CJ</span>Control financiero</div>
+      <div class="module-badge module-finance"><span class="module-glyph">CJ</span> Control financiero</div>
       <h1>Control de Cajon de Dinero</h1>
       <p class="text-muted">Apertura, movimientos y cierre diario para evitar perdidas.</p>
     </div>

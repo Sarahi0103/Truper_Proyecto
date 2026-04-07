@@ -36,6 +36,10 @@
       .trim();
   }
 
+  function displayProductCode(rawSku) {
+    return String(rawSku || '').replace(/^XLS-/i, '');
+  }
+
   function money(v) {
     return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(toNumber(v));
   }
@@ -97,7 +101,7 @@
       return `
         <div class="cart-item">
           <strong>${item.name}</strong>
-          <div class="text-muted">${item.sku}</div>
+          <div class="text-muted">${displayProductCode(item.sku)}</div>
           <div class="d-flex justify-between align-center mt-1">
             <div>${money(item.unit_price)} x ${item.quantity}</div>
             <div>

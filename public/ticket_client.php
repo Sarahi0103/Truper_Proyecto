@@ -35,6 +35,10 @@ if (($_SESSION['role'] ?? '') !== 'admin' && (int)$order['user_id'] !== (int)$_S
 $itemsStmt = $pdo->prepare("SELECT oi.quantity, oi.unit_price, oi.line_total, p.name, p.sku FROM order_items oi JOIN products p ON p.id = oi.product_id WHERE oi.order_id = ?");
 $itemsStmt->execute([$id]);
 $items = $itemsStmt->fetchAll();
+
+function display_product_code($sku) {
+    return preg_replace('/^XLS-/i', '', (string)$sku);
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -66,7 +70,7 @@ $items = $itemsStmt->fetchAll();
     <div class="line"></div>
     <?php foreach ($items as $it): ?>
         <div class="row"><?php echo htmlspecialchars($it['name'], ENT_QUOTES, 'UTF-8'); ?></div>
-        <div class="row">SKU: <?php echo htmlspecialchars($it['sku'], ENT_QUOTES, 'UTF-8'); ?></div>
+        <div class="row">SKU: <?php echo htmlspecialchars(display_product_code($it['sku']), ENT_QUOTES, 'UTF-8'); ?></div>
         <div class="row"><?php echo (int)$it['quantity']; ?> x $<?php echo number_format((float)$it['unit_price'], 2, '.', ''); ?> = $<?php echo number_format((float)$it['line_total'], 2, '.', ''); ?></div>
         <div class="line"></div>
     <?php endforeach; ?>

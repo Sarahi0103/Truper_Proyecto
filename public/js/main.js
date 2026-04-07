@@ -90,7 +90,7 @@ function showAlert(message, type = 'info') {
  * Hacer petición AJAX
  */
 async function apiCall(endpoint, method = 'GET', data = null, options = {}) {
-    const silent = Boolean(options.silent);
+    const silent = typeof options.silent === 'boolean' ? options.silent : method === 'GET';
     try {
         const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
         const fetchOptions = {

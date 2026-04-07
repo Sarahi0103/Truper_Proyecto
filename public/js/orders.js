@@ -6,6 +6,10 @@ let currentCart = [];
 let currentTotal = 0;
 let selectedOrderId = null;
 
+function displayProductCode(rawSku) {
+    return String(rawSku || '').replace(/^XLS-/i, '');
+}
+
 /**
  * Agregar producto al carrito
  */
@@ -326,7 +330,7 @@ async function loadProducts() {
     productsList.innerHTML = filteredProducts.map(product => `
         <tr>
             <td>${product.name}</td>
-            <td>${product.sku}</td>
+            <td>${displayProductCode(product.sku)}</td>
             <td>${formatCurrency(product.unit_price)}</td>
             <td><input id="qty_${product.id}" type="number" min="1" value="1" style="width: 80px;"></td>
             <td>

@@ -46,7 +46,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
     <main>
         <div class="container-fluid">
             <div class="page-hero">
-                <div class="module-badge module-admin"><span class="module-glyph">DB</span>Vista ejecutiva</div>
+                <div class="module-badge module-admin"><span class="module-glyph">DB</span> Vista ejecutiva</div>
                 <h1>Dashboard</h1>
                 <p class="text-muted">Bienvenido de vuelta a Truper Platform</p>
             </div>

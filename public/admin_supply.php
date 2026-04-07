@@ -47,7 +47,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
 <main>
     <div class="container-fluid">
         <div class="page-hero">
-            <div class="module-badge module-admin"><span class="module-glyph">AD</span>Módulo administrativo</div>
+            <div class="module-badge module-admin"><span class="module-glyph">AD</span> Módulo administrativo</div>
             <h1>Panel de Abastecimiento</h1>
             <p class="text-muted">Control de existencias, calendario de proveedores, ordenes de compra y historico.</p>
         </div>
@@ -231,6 +231,10 @@ function escapeHtml(v) {
     });
 }
 
+function displayProductCode(rawSku) {
+    return String(rawSku || '').replace(/^XLS-/i, '');
+}
+
 async function loadStock() {
     const res = await apiCall('/admin_supply.php?action=stock', 'GET', null, { silent: true });
     const body = document.getElementById('stockRows');
@@ -241,7 +245,7 @@ async function loadStock() {
     body.innerHTML = res.items.map(i => {
         const low = Number(i.stock_quantity) <= Number(i.reorder_level);
         return `<tr>
-            <td>${escapeHtml(i.sku)}</td>
+            <td>${escapeHtml(displayProductCode(i.sku))}</td>
             <td>${escapeHtml(i.name)}</td>
             <td>${escapeHtml(i.category || '')}</td>
             <td>${escapeHtml(i.stock_quantity)}</td>
@@ -376,7 +380,7 @@ function renderPoItems() {
         box.innerHTML = '<p class="text-muted">No hay items</p>';
         return;
     }
-    box.innerHTML = '<ul>' + supplierOrderItems.map((i, idx) => `<li>${escapeHtml(i.product_name || i.sku)} | ${i.quantity} | $${Number(i.estimated_cost || 0).toFixed(2)} <button class="btn btn-small btn-danger" onclick="removePoItem(${idx})">Quitar</button></li>`).join('') + '</ul>';
+    box.innerHTML = '<ul>' + supplierOrderItems.map((i, idx) => `<li>${escapeHtml(i.product_name || displayProductCode(i.sku))} | ${i.quantity} | $${Number(i.estimated_cost || 0).toFixed(2)} <button class="btn btn-small btn-danger" onclick="removePoItem(${idx})">Quitar</button></li>`).join('') + '</ul>';
 }
 
 function removePoItem(index) {
@@ -393,7 +397,7 @@ async function loadSupplierProducts() {
         const stockRes = await apiCall('/admin_supply.php?action=stock', 'GET', null, { silent: true });
         if (stockRes && stockRes.success && Array.isArray(stockRes.items)) {
             productSelect.innerHTML = '<option value="">Selecciona producto...</option>' + stockRes.items
-                .map((p) => `<option value="${Number(p.id)}">${escapeHtml(p.sku)} | ${escapeHtml(p.name)}</option>`)
+                .map((p) => `<option value="${Number(p.id)}">${escapeHtml(displayProductCode(p.sku))} | ${escapeHtml(p.name)}</option>`)
                 .join('');
         }
     }
@@ -407,7 +411,7 @@ async function loadSupplierProducts() {
         if (res.items.length === 0) {
             listBox.innerHTML = '<p class="text-muted">Sin asignaciones.</p>';
         } else {
-            listBox.innerHTML = '<ul>' + res.items.map((i) => `<li>${escapeHtml(i.supplier_name)} -> ${escapeHtml(i.sku)} ${escapeHtml(i.product_name || '')} (${escapeHtml(i.supplier_sku || 'sin SKU')}) $${Number(i.unit_cost || 0).toFixed(2)}</li>`).join('') + '</ul>';
+            listBox.innerHTML = '<ul>' + res.items.map((i) => `<li>${escapeHtml(i.supplier_name)} -> ${escapeHtml(displayProductCode(i.sku))} ${escapeHtml(i.product_name || '')} (${escapeHtml(i.supplier_sku || 'sin SKU')}) $${Number(i.unit_cost || 0).toFixed(2)}</li>`).join('') + '</ul>';
         }
     }
 }
@@ -449,7 +453,7 @@ async function loadMappedProductsBySupplier() {
     }
 
     select.innerHTML = '<option value="">Selecciona producto...</option>' + res.items.map((i) => {
-        const label = `${i.sku} | ${i.product_name} | ${i.supplier_sku || 'sin SKU prov.'}`;
+        const label = `${displayProductCode(i.sku)} | ${i.product_name} | ${i.supplier_sku || 'sin SKU prov.'}`;
         return `<option value="${Number(i.id)}" data-product-name="${escapeHtml(i.product_name)}" data-sku="${escapeHtml(i.sku)}">${escapeHtml(label)}</option>`;
     }).join('');
 }
@@ -584,7 +588,7 @@ async function createProductByAdmin() {
     }
 
     if (box) {
-        box.innerHTML = `<div class="alert alert-success">Producto registrado correctamente: <strong>${escapeHtml(res.product.sku || '')}</strong></div>`;
+        box.innerHTML = `<div class="alert alert-success">Producto registrado correctamente: <strong>${escapeHtml(displayProductCode(res.product.sku || ''))}</strong></div>`;
     }
 
     showAlert('Producto registrado correctamente', 'success');

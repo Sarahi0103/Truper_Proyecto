@@ -35,6 +35,10 @@ $items = json_decode($order['items_json'] ?? '[]', true);
 if (!is_array($items)) {
     $items = [];
 }
+
+function display_product_code($sku) {
+    return preg_replace('/^XLS-/i', '', (string)$sku);
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -65,7 +69,7 @@ if (!is_array($items)) {
     <div class="row"><strong>Creación:</strong> <?php echo htmlspecialchars($order['created_at'], ENT_QUOTES, 'UTF-8'); ?></div>
     <div class="line"></div>
     <?php foreach ($items as $it): ?>
-        <div class="row">SKU: <?php echo htmlspecialchars($it['sku'] ?? '', ENT_QUOTES, 'UTF-8'); ?></div>
+        <div class="row">SKU: <?php echo htmlspecialchars(display_product_code($it['sku'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></div>
         <div class="row">Cant: <?php echo (int)($it['quantity'] ?? 0); ?> | Costo: $<?php echo number_format((float)($it['estimated_cost'] ?? 0), 2, '.', ''); ?></div>
         <div class="line"></div>
     <?php endforeach; ?>
