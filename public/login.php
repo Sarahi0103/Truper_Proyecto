@@ -12,6 +12,7 @@ if (is_logged_in() && (($_SESSION['role'] ?? '') !== 'admin')) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Sesión Cliente - Truper Platform</title>
     <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/theme.css">
 </head>
 <body class="auth-page">
     <div class="login-container">

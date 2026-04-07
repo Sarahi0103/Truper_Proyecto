@@ -83,8 +83,12 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Truper - Catálogo de Productos</title>
     <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/theme.css">
 </head>
 <body class="catalog-minimal" data-client-code="<?php echo htmlspecialchars($clientTicketCode, ENT_QUOTES, 'UTF-8'); ?>" data-client-number="<?php echo htmlspecialchars($clientTicketNumber, ENT_QUOTES, 'UTF-8'); ?>">
+    <div class="theme-toggle">
+        <button onclick="toggleTheme()">🌙 Tema</button>
+    </div>
     <header>
         <div class="header-content">
             <a href="/" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
@@ -215,8 +219,9 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                 <span><strong>Total:</strong></span>
                 <span class="cart-total"><strong id="cartTotalAmount">$0</strong></span>
             </div>
-            <div class="btn-group">
+            <div class="btn-group" style="flex-direction: column; gap: 8px;">
                 <button id="printTicket" class="btn btn-primary">⬇️ Descargar Ticket</button>
+                <button id="shareWhatsApp" class="btn btn-secondary" style="background: #25D366; border-color: #25D366;">📱 Compartir por WhatsApp</button>
                 <button id="clearCart" class="btn btn-secondary">🗑️ Vaciar Carrito</button>
             </div>
         </div>
@@ -228,5 +233,46 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
     <script src="js/jspdf.umd.min.js"></script>
     <script src="js/main.js"></script>
     <script src="js/catalog.js"></script>
+    <script>
+        // Tema oscuro/claro
+        function initTheme() {
+            const saved = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', saved);
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme') || 'light';
+            const newTheme = current === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // Compartir por WhatsApp
+        document.addEventListener('DOMContentLoaded', function() {
+            const shareBtn = document.getElementById('shareWhatsApp');
+            if (shareBtn) {
+                shareBtn.addEventListener('click', function() {
+                    const items = JSON.parse(localStorage.getItem('cart') || '[]');
+                    if (items.length === 0) {
+                        alert('El carrito está vacío');
+                        return;
+                    }
+
+                    const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                    let message = 'Solicito cotización de los siguientes productos:\\n\\n';
+                    items.forEach(item => {
+                        message += `• ${item.quantity} x ${item.name}\\n`;
+                    });
+                    message += `\\nTotal estimado: $${total.toFixed(2)}\\n\\n¿Pueden confirmar disponibilidad y tiempo de entrega?`;
+
+                    const encodedMsg = encodeURIComponent(message);
+                    const whatsappUrl = `https://wa.me/?text=${encodedMsg}`;
+                    window.open(whatsappUrl, '_blank');
+                });
+            }
+
+            initTheme();
+        });
+    </script>
 </body>
 </html>

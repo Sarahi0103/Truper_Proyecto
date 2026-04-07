@@ -11,6 +11,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Abastecimiento - Truper Platform</title>
     <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/theme.css">
     <style>
         .grid-4 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
         .calendar-weekdays,
