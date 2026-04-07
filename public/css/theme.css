@@ -47,6 +47,55 @@
     color: #dbe3ef;
 }
 
+:root[data-theme='dark'] .catalog-shell,
+:root[data-theme='dark'] .catalog-categories-top,
+:root[data-theme='dark'] .catalog-toolbar,
+:root[data-theme='dark'] .catalog-filters {
+    background: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+}
+
+:root[data-theme='dark'] .product-card-min {
+    background: #152037 !important;
+    border-color: #2f3c55 !important;
+}
+
+:root[data-theme='dark'] .product-title,
+:root[data-theme='dark'] .product-code-label,
+:root[data-theme='dark'] .product-spec,
+:root[data-theme='dark'] .catalog-price,
+:root[data-theme='dark'] .catalog-categories-title,
+:root[data-theme='dark'] .text-muted {
+    color: #e5e7eb !important;
+}
+
+:root[data-theme='dark'] .variant-pill {
+    background: #1c2a44 !important;
+    border-color: #344565 !important;
+    color: #dbe3ef !important;
+}
+
+:root[data-theme='dark'] .btn-ghost {
+    background: #122038 !important;
+    border-color: #2f3c55 !important;
+    color: #cdd7e7 !important;
+}
+
+:root[data-theme='dark'] .cart-drawer {
+    background: #111a2c !important;
+    color: #e5e7eb !important;
+    box-shadow: -12px 0 28px rgba(0, 0, 0, 0.45);
+}
+
+:root[data-theme='dark'] .cart-item,
+:root[data-theme='dark'] .cart-list {
+    border-color: #2f3c55 !important;
+}
+
+:root[data-theme='dark'] .gallery-counter {
+    background: rgba(3, 8, 20, 0.72);
+}
+
 :root {
     --ui-bg: var(--bg-primary);
     --ui-surface: var(--bg-secondary);

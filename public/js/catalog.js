@@ -1,6 +1,5 @@
 (function () {
   const STORAGE_CART = 'truper_cart';
-  const STORAGE_FAV = 'truper_favorites';
   let selectedQuickCategory = '';
 
   function readJson(key, fallback) {
@@ -22,14 +21,6 @@
 
   function setCart(items) {
     writeJson(STORAGE_CART, items);
-  }
-
-  function getFavs() {
-    return readJson(STORAGE_FAV, []);
-  }
-
-  function setFavs(items) {
-    writeJson(STORAGE_FAV, items);
   }
 
   function toNumber(v) {
@@ -54,23 +45,6 @@
     const count = cart.reduce((sum, i) => sum + toNumber(i.quantity), 0);
     const badge = document.getElementById('cartCount');
     if (badge) badge.textContent = String(count);
-  }
-
-  function toggleFavorite(product) {
-    const favs = getFavs();
-    const exists = favs.find((p) => p.sku === product.sku);
-    const next = exists ? favs.filter((p) => p.sku !== product.sku) : favs.concat([product]);
-    setFavs(next);
-    renderFavoriteButtons();
-  }
-
-  function renderFavoriteButtons() {
-    const favs = getFavs();
-    document.querySelectorAll('[data-fav-sku]').forEach((btn) => {
-      const isFav = favs.some((f) => f.sku === btn.dataset.favSku);
-      btn.classList.toggle('active', isFav);
-      btn.textContent = isFav ? 'Favorito' : 'Favoritos';
-    });
   }
 
   function addToCart(product) {
@@ -323,46 +297,6 @@
   }
 
   function setupHandlers() {
-    const detailModal = document.getElementById('productDetailModal');
-    const closeDetailBtn = document.getElementById('closeProductDetail');
-
-    const openProductDetail = (payload, card) => {
-      if (!detailModal) return;
-
-      document.querySelectorAll('[data-product-card].product-selected').forEach((x) => x.classList.remove('product-selected'));
-      if (card) card.classList.add('product-selected');
-
-      const detailImage = document.getElementById('detailImage');
-      const detailCategory = document.getElementById('detailCategory');
-      const detailCode = document.getElementById('detailCode');
-      const detailName = document.getElementById('detailName');
-      const detailDescription = document.getElementById('detailDescription');
-      const detailStock = document.getElementById('detailStock');
-      const detailPrice = document.getElementById('detailPrice');
-
-      if (detailImage) detailImage.src = payload.image || 'images/products/default-product.svg';
-      if (detailCategory) detailCategory.textContent = payload.category || 'General';
-      if (detailCode) detailCode.textContent = payload.sku || '';
-      if (detailName) detailName.textContent = payload.name || '';
-      if (detailDescription) detailDescription.textContent = payload.description || 'Descripción pendiente';
-      if (detailPrice) detailPrice.textContent = money(payload.price || 0);
-
-      const stock = toNumber(payload.stock);
-      if (detailStock) {
-        detailStock.className = `stock-badge ${stock <= 10 ? 'stock-low' : 'stock-ok'}`;
-        detailStock.textContent = stock <= 10 ? `Stock bajo: ${stock}` : `Stock: ${stock}`;
-      }
-
-      detailModal.classList.add('open');
-      detailModal.setAttribute('aria-hidden', 'false');
-    };
-
-    const closeProductDetail = () => {
-      if (!detailModal) return;
-      detailModal.classList.remove('open');
-      detailModal.setAttribute('aria-hidden', 'true');
-    };
-
     document.querySelectorAll('[data-add-product]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const product = {
@@ -372,42 +306,6 @@
           unit_price: toNumber(btn.dataset.price)
         };
         addToCart(product);
-      });
-    });
-
-    document.querySelectorAll('[data-view-product]').forEach((btn) => {
-      btn.addEventListener('click', (event) => {
-        event.preventDefault();
-        const card = btn.closest('[data-product-card]');
-        openProductDetail({
-          sku: btn.dataset.sku,
-          name: btn.dataset.name,
-          description: btn.dataset.description,
-          category: btn.dataset.category,
-          stock: btn.dataset.stock,
-          price: toNumber(btn.dataset.price),
-          image: btn.dataset.image
-        }, card);
-      });
-    });
-
-    if (closeDetailBtn) {
-      closeDetailBtn.addEventListener('click', closeProductDetail);
-    }
-
-    if (detailModal) {
-      detailModal.addEventListener('click', (event) => {
-        if (event.target === detailModal) closeProductDetail();
-      });
-    }
-
-    document.querySelectorAll('[data-fav-product]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const product = {
-          sku: btn.dataset.sku,
-          name: btn.dataset.name
-        };
-        toggleFavorite(product);
       });
     });
 
@@ -472,7 +370,6 @@
   document.addEventListener('DOMContentLoaded', () => {
     setupProductGalleries();
     setupHandlers();
-    renderFavoriteButtons();
     updateCartBadge();
     renderCart();
   });
