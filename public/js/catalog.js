@@ -154,6 +154,11 @@
     return `TCK-${stamp.slice(-8)}`;
   }
 
+  function formatProductCodeForTicket(rawSku) {
+    const sku = String(rawSku || '').trim();
+    return sku.replace(/^XLS-/i, '');
+  }
+
   function drawTicketPdf(format) {
     const cart = getCart();
     if (cart.length === 0) {
@@ -220,7 +225,7 @@
       });
 
       doc.setFontSize(9);
-      doc.text(`Codigo: ${String(item.sku || 'N/A')}`, 10, y);
+      doc.text(`Codigo: ${formatProductCodeForTicket(item.sku || 'N/A')}`, 10, y);
       doc.text(`Precio: ${money(lineTotal)}`, 70, y, { align: 'right' });
       y += 4;
       doc.setDrawColor(200);
