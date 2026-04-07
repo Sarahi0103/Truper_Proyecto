@@ -145,8 +145,7 @@
   function getTicketMeta() {
     const body = document.body;
     return {
-      clientCode: (body?.dataset?.clientCode || 'PUBLICO').trim(),
-      clientNumber: (body?.dataset?.clientNumber || '0').trim()
+      clientCode: (body?.dataset?.clientCode || 'PUBLICO').trim()
     };
   }
 
@@ -193,8 +192,6 @@
     y += 5;
     doc.text(`Fecha: ${date}`, 10, y);
     y += 5;
-    doc.text(`Numero cliente: ${meta.clientNumber}`, 10, y);
-    y += 5;
     doc.text(`Codigo cliente: ${meta.clientCode}`, 10, y);
     y += 6;
 
@@ -203,29 +200,33 @@
     y += 5;
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Producto', 10, y);
-    doc.text('Codigo', isA4 ? 110 : 38, y);
-    doc.text('Precio', isA4 ? 160 : 58, y, { align: 'right' });
-    y += 4;
+    doc.text('Detalle de productos', 10, y);
+    y += 5;
     doc.setFont('helvetica', 'normal');
 
     cart.forEach((item) => {
+      if (y > 180) {
+        doc.addPage();
+        y = 12;
+      }
+
       const lineTotal = toNumber(item.unit_price) * toNumber(item.quantity);
       const lineText = `${item.name} x${item.quantity}`;
-      const wrapped = doc.splitTextToSize(lineText, isA4 ? 95 : 25);
+      const wrapped = doc.splitTextToSize(lineText, isA4 ? 95 : 58);
 
       wrapped.forEach((line) => {
         doc.text(line, 10, y);
         y += 4;
       });
 
-      doc.text(String(item.sku || 'N/A'), isA4 ? 110 : 38, y - 4);
-      doc.text(money(lineTotal), isA4 ? 160 : 58, y - 4, { align: 'right' });
-
-      if (y > (isA4 ? 275 : 195)) {
-        doc.addPage();
-        y = 12;
-      }
+      doc.setFontSize(9);
+      doc.text(`Codigo: ${String(item.sku || 'N/A')}`, 10, y);
+      doc.text(`Precio: ${money(lineTotal)}`, 70, y, { align: 'right' });
+      y += 4;
+      doc.setDrawColor(200);
+      doc.line(10, y, 70, y);
+      y += 4;
+      doc.setFontSize(10);
     });
 
     y += 2;
