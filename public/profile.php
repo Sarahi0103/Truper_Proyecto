@@ -44,6 +44,12 @@ if (db_column_exists('users', 'loyalty_points')) {
     $selectParts[] = '0 AS loyalty_points';
 }
 
+if (db_column_exists('users', 'user_code')) {
+    $selectParts[] = 'user_code';
+} else {
+    $selectParts[] = "'' AS user_code";
+}
+
 $stmt = $pdo->prepare("SELECT " . implode(', ', $selectParts) . " FROM users WHERE id = ?");
 $stmt->execute([$_SESSION['user_id']]);
 $profile = $stmt->fetch() ?: [];
@@ -107,6 +113,12 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                                 <label>Email</label>
                                 <input type="email" name="email" value="<?php echo htmlspecialchars($profile['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" disabled>
                                 <small class="text-muted">No se puede cambiar el email</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Código único de cliente</label>
+                                <input type="text" value="<?php echo htmlspecialchars($profile['user_code'] ?? 'No asignado', ENT_QUOTES, 'UTF-8'); ?>" disabled>
+                                <small class="text-muted">Usa este código para identificación rápida</small>
                             </div>
 
                             <div class="form-group">

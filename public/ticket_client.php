@@ -10,11 +10,12 @@ if ($id <= 0) {
     exit;
 }
 
-$sql = "SELECT o.*, c.user_id, u.first_name, u.last_name
-        FROM orders o
-        JOIN clients c ON c.id = o.client_id
-        JOIN users u ON u.id = c.user_id
-        WHERE o.id = ?";
+$userCodeSelect = db_column_exists('users', 'user_code') ? 'COALESCE(u.user_code, \'\') AS user_code' : "'' AS user_code";
+$sql = "SELECT o.*, c.user_id, u.first_name, u.last_name, {$userCodeSelect}
+    FROM orders o
+    JOIN clients c ON c.id = o.client_id
+    JOIN users u ON u.id = c.user_id
+    WHERE o.id = ?";
 $stmt = $pdo->prepare($sql);
 $stmt->execute([$id]);
 $order = $stmt->fetch();
@@ -61,6 +62,7 @@ $items = $itemsStmt->fetchAll();
     <div class="row"><strong>Folio:</strong> <?php echo htmlspecialchars($order['order_number'], ENT_QUOTES, 'UTF-8'); ?></div>
     <div class="row"><strong>Fecha:</strong> <?php echo htmlspecialchars($order['created_at'] ?? $order['order_date'], ENT_QUOTES, 'UTF-8'); ?></div>
     <div class="row"><strong>Cliente:</strong> <?php echo htmlspecialchars(($order['first_name'] ?? '') . ' ' . ($order['last_name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></div>
+    <div class="row"><strong>Código cliente:</strong> <?php echo htmlspecialchars(($order['user_code'] ?? '') !== '' ? $order['user_code'] : 'N/A', ENT_QUOTES, 'UTF-8'); ?></div>
     <div class="line"></div>
     <?php foreach ($items as $it): ?>
         <div class="row"><?php echo htmlspecialchars($it['name'], ENT_QUOTES, 'UTF-8'); ?></div>
