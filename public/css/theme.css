@@ -298,6 +298,85 @@ textarea:focus,
     color: var(--theme-accent);
 }
 
+:root[data-theme="dark"] .catalog-hero {
+    background: linear-gradient(135deg, #121212 0%, #1a1a1a 100%);
+    border-color: #2a2a2a;
+}
+
+:root[data-theme="dark"] .catalog-shell {
+    background: #101010;
+    border-color: #2d2d2d;
+}
+
+:root[data-theme="dark"] .catalog-categories-top,
+:root[data-theme="dark"] .catalog-toolbar,
+:root[data-theme="dark"] .catalog-filters {
+    background: #171717;
+    border-color: #2f2f2f;
+}
+
+:root[data-theme="dark"] .catalog-categories-title,
+:root[data-theme="dark"] .product-code-label,
+:root[data-theme="dark"] .product-spec,
+:root[data-theme="dark"] .variant-pill,
+:root[data-theme="dark"] .stock-badge,
+:root[data-theme="dark"] .text-muted {
+    color: #d4d4d4;
+}
+
+:root[data-theme="dark"] .product-title,
+:root[data-theme="dark"] .catalog-price,
+:root[data-theme="dark"] .cart-total,
+:root[data-theme="dark"] #cartDrawer h3,
+:root[data-theme="dark"] #cartDrawer strong {
+    color: #f5f5f5;
+}
+
+:root[data-theme="dark"] .product-card-min {
+    background: #161616;
+    border-color: #2f2f2f;
+}
+
+:root[data-theme="dark"] .product-card-min:hover {
+    border-color: var(--theme-accent);
+    box-shadow: 0 16px 30px rgba(0, 0, 0, 0.45);
+}
+
+:root[data-theme="dark"] .catalog-search,
+:root[data-theme="dark"] .catalog-filters input,
+:root[data-theme="dark"] .catalog-filters select {
+    background: #0f172a;
+    color: #f8fafc;
+    border-color: #344154;
+}
+
+:root[data-theme="dark"] .catalog-search::placeholder,
+:root[data-theme="dark"] .catalog-filters input::placeholder {
+    color: #94a3b8;
+}
+
+:root[data-theme="dark"] .btn-ghost {
+    color: #d1d5db;
+    border-color: #3a3a3a;
+    background: transparent;
+}
+
+:root[data-theme="dark"] .btn-ghost:hover,
+:root[data-theme="dark"] .btn-ghost.active {
+    color: #ffffff;
+    border-color: var(--theme-accent);
+    background: rgba(255, 138, 31, 0.14);
+}
+
+:root[data-theme="dark"] .cart-drawer {
+    background: #121212;
+    border-left-color: #2d2d2d;
+}
+
+:root[data-theme="dark"] .cart-item {
+    border-bottom-color: #2c2c2c;
+}
+
 .catalog-tag,
 .module-badge,
 .stock-badge,
