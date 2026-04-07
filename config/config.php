@@ -195,6 +195,42 @@ function db_column_exists($table_name, $column_name) {
     }
 }
 
+function ensure_xlsx_products_seeded() {
+    static $alreadyChecked = false;
+    if ($alreadyChecked) {
+        return;
+    }
+    $alreadyChecked = true;
+
+    global $pdo;
+
+    if (!db_table_exists('products')) {
+        return;
+    }
+
+    $seedPath = __DIR__ . '/../db/PRODUCTOS_XLSX_IMPORT.sql';
+    if (!file_exists($seedPath)) {
+        return;
+    }
+
+    try {
+        $stmt = $pdo->query("SELECT COUNT(*) FROM products WHERE sku LIKE 'XLS-%'");
+        $existing = (int)$stmt->fetchColumn();
+        if ($existing > 0) {
+            return;
+        }
+
+        $sql = file_get_contents($seedPath);
+        if ($sql === false || trim($sql) === '') {
+            return;
+        }
+
+        $pdo->exec($sql);
+    } catch (Exception $e) {
+        error_log('No fue posible autoimportar productos XLS: ' . $e->getMessage());
+    }
+}
+
 function route_by_role($role) {
     if ($role === 'admin') {
         return '/admin_supply.php';

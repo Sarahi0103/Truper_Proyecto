@@ -1,6 +1,8 @@
 <?php
 require_once '../config/config.php';
 
+ensure_xlsx_products_seeded();
+
 $products = [];
 try {
     $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS technical_specs TEXT");
