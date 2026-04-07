@@ -102,6 +102,26 @@ function store_product_image(array $file): string {
     return 'images/products/' . $filename;
 }
 
+function normalize_uploaded_files(array $files): array {
+    if (!isset($files['name']) || !is_array($files['name'])) {
+        return [$files];
+    }
+
+    $normalized = [];
+    $count = count($files['name']);
+    for ($index = 0; $index < $count; $index += 1) {
+        $normalized[] = [
+            'name' => $files['name'][$index] ?? '',
+            'type' => $files['type'][$index] ?? '',
+            'tmp_name' => $files['tmp_name'][$index] ?? '',
+            'error' => $files['error'][$index] ?? UPLOAD_ERR_NO_FILE,
+            'size' => $files['size'][$index] ?? 0,
+        ];
+    }
+
+    return $normalized;
+}
+
 function create_product_compatible($pdo, array $payload): void {
     $columns = [];
     $values = [];
@@ -250,6 +270,14 @@ try {
             $imageUrl = sanitize($_POST['image_url'] ?? ($input['image_url'] ?? 'images/products/default-product.svg'));
             if (isset($_FILES['image'])) {
                 $imageUrl = store_product_image($_FILES['image']);
+            } elseif (isset($_FILES['images']) && is_array($_FILES['images']['name'] ?? null)) {
+                $uploadedFiles = normalize_uploaded_files($_FILES['images']);
+                foreach ($uploadedFiles as $uploadedFile) {
+                    if (($uploadedFile['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
+                        $imageUrl = store_product_image($uploadedFile);
+                        break;
+                    }
+                }
             }
 
             create_product_compatible($pdo, [
@@ -281,6 +309,40 @@ try {
                     'price' => $price,
                     'image_url' => $imageUrl
                 ]
+            ];
+            break;
+
+        case 'product-image-upload':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $uploaded = [];
+            $fileInput = $_FILES['images'] ?? $_FILES['image'] ?? null;
+            if (!$fileInput) {
+                $response = ['success' => false, 'message' => 'Selecciona una o varias imágenes'];
+                break;
+            }
+
+            $files = isset($fileInput['name']) && is_array($fileInput['name']) ? normalize_uploaded_files($fileInput) : [$fileInput];
+            foreach ($files as $file) {
+                if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                    continue;
+                }
+                $uploaded[] = store_product_image($file);
+            }
+
+            if (empty($uploaded)) {
+                $response = ['success' => false, 'message' => 'No se pudieron subir las imágenes'];
+                break;
+            }
+
+            $response = [
+                'success' => true,
+                'message' => 'Imágenes cargadas correctamente',
+                'images' => list_available_product_images($pdo),
+                'uploaded' => $uploaded
             ];
             break;
 

@@ -83,7 +83,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <p class="text-muted">Registra nuevos productos y opcionalmente sube su imagen.</p>
 
                 <div class="grid grid-3">
-                    <div class="form-group"><label>SKU</label><input id="newProductSku" type="text" maxlength="100"></div>
+                    <div class="form-group"><label>Código del producto</label><input id="newProductSku" type="text" maxlength="100"></div>
                     <div class="form-group"><label>Nombre</label><input id="newProductName" type="text" maxlength="255"></div>
                     <div class="form-group"><label>Categoría</label><input id="newProductCategory" type="text" maxlength="100" placeholder="Material eléctrico"></div>
                 </div>
@@ -105,6 +105,18 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     </div>
                 </div>
 
+                <div class="grid grid-2 mt-2">
+                    <div class="form-group">
+                        <label>Subir imagen o varias imágenes</label>
+                        <input id="newProductImages" type="file" accept="image/*" multiple>
+                        <small class="text-muted">Puedes subir una o varias imágenes. Se guardarán en el catálogo de archivos.</small>
+                    </div>
+                    <div class="form-group d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap;">
+                        <button class="btn btn-secondary" type="button" onclick="uploadProductImages()">Cargar imágenes</button>
+                        <button class="btn btn-ghost" type="button" onclick="loadProductImageReferences()">Actualizar opciones</button>
+                    </div>
+                </div>
+
                 <div class="form-group"><label>Descripción</label><textarea id="newProductDescription" rows="3"></textarea></div>
 
                 <button class="btn btn-primary" onclick="createProductByAdmin()">Guardar producto</button>
@@ -114,7 +126,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             <div class="card"><div class="card-body">
                 <h3>Control de Existencias</h3>
                 <table>
-                    <thead><tr><th>SKU</th><th>Producto</th><th>Categoria</th><th>Stock</th><th>Nivel Reorden</th><th>Estatus</th></tr></thead>
+                    <thead><tr><th>Código del producto</th><th>Producto</th><th>Categoria</th><th>Stock</th><th>Nivel Reorden</th><th>Estatus</th></tr></thead>
                     <tbody id="stockRows"><tr><td colspan="6">Cargando...</td></tr></tbody>
                 </table>
             </div></div>
@@ -561,6 +573,57 @@ async function loadProductImageReferences() {
 
     if (Array.from(select.options).some((o) => o.value === current)) {
         select.value = current;
+    }
+}
+
+async function uploadProductImages() {
+    const input = document.getElementById('newProductImages');
+    const resultBox = document.getElementById('productCreateResult');
+
+    if (!input || !input.files || input.files.length === 0) {
+        if (resultBox) {
+            resultBox.innerHTML = '<div class="alert alert-error">Selecciona una o varias imágenes para cargar</div>';
+        }
+        return;
+    }
+
+    const formData = new FormData();
+    Array.from(input.files).forEach((file) => {
+        formData.append('images[]', file);
+    });
+
+    try {
+        const response = await fetch('/api/admin_supply.php?action=product-image-upload', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        const data = await response.json();
+        if (!data || !data.success) {
+            if (resultBox) {
+                resultBox.innerHTML = `<div class="alert alert-error">${escapeHtml((data && data.message) ? data.message : 'No fue posible cargar las imágenes')}</div>`;
+            }
+            return;
+        }
+
+        if (resultBox) {
+            resultBox.innerHTML = `<div class="alert alert-success">${escapeHtml(data.message || 'Imágenes cargadas correctamente')}</div>`;
+        }
+
+        input.value = '';
+        await loadProductImageReferences();
+
+        const select = document.getElementById('newProductImageRef');
+        if (select && Array.isArray(data.uploaded) && data.uploaded.length > 0) {
+            select.value = data.uploaded[0];
+        }
+    } catch (error) {
+        if (resultBox) {
+            resultBox.innerHTML = '<div class="alert alert-error">Error al cargar imágenes</div>';
+        }
     }
 }
 
