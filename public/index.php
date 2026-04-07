@@ -48,7 +48,24 @@ function normalize_product_code($sku) {
     return preg_replace('/^XLS-/i', '', $sku);
 }
 
-function resolve_image_by_product_code($code) {
+function image_priority_score($fileName) {
+    $name = strtoupper((string)pathinfo($fileName, PATHINFO_FILENAME));
+    if (strpos($name, '+') === false) {
+        return 0;
+    }
+    if (preg_match('/\+FC1$/', $name)) {
+        return 1;
+    }
+    if (preg_match('/\+E1$/', $name)) {
+        return 2;
+    }
+    if (preg_match('/\+D1$/', $name)) {
+        return 3;
+    }
+    return 9;
+}
+
+function resolve_images_by_product_code($code) {
     static $cache = null;
     if ($cache === null) {
         $cache = [];
@@ -65,15 +82,25 @@ function resolve_image_by_product_code($code) {
                 }
                 $matches = glob($fullDir . '/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', GLOB_BRACE);
                 if (!empty($matches)) {
-                    $fileName = basename($matches[0]);
-                    $cache[$dir] = 'images/products/by_code/' . $dir . '/' . $fileName;
+                    usort($matches, function ($a, $b) {
+                        $scoreA = image_priority_score($a);
+                        $scoreB = image_priority_score($b);
+                        if ($scoreA === $scoreB) {
+                            return strcmp((string)$a, (string)$b);
+                        }
+                        return $scoreA <=> $scoreB;
+                    });
+
+                    $cache[$dir] = array_map(function ($path) use ($dir) {
+                        return 'images/products/by_code/' . $dir . '/' . basename($path);
+                    }, $matches);
                 }
             }
         }
     }
 
     $code = trim((string)$code);
-    return $cache[$code] ?? null;
+    return $cache[$code] ?? [];
 }
 
 if (count($products) < 10) {
@@ -181,10 +208,12 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                         $rawSku = (string)($product['sku'] ?? '');
                         $displaySku = normalize_product_code($rawSku);
                         $imagePath = !empty($product['image_url']) ? $product['image_url'] : 'images/products/default-product.svg';
-                        if ($imagePath === 'images/products/default-product.svg') {
-                            $byCodeImage = resolve_image_by_product_code($displaySku);
-                            if (!empty($byCodeImage)) {
-                                $imagePath = $byCodeImage;
+                        $galleryImages = resolve_images_by_product_code($displaySku);
+                        if (empty($galleryImages)) {
+                            $galleryImages = [$imagePath];
+                        } elseif (!empty($product['image_url']) && $product['image_url'] !== 'images/products/default-product.svg') {
+                            if (!in_array($product['image_url'], $galleryImages, true)) {
+                                array_unshift($galleryImages, $product['image_url']);
                             }
                         }
                         $variants = [];
@@ -203,8 +232,19 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                         data-category="<?php echo htmlspecialchars($product['category'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
                         data-price="<?php echo (float)$product['unit_price']; ?>"
                         data-stock="<?php echo $stock; ?>">
-                        <div class="product-media">
-                            <img src="<?php echo htmlspecialchars($imagePath, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?>" loading="lazy">
+                        <div class="product-media" data-product-gallery>
+                            <?php foreach ($galleryImages as $idx => $galleryImage): ?>
+                                <img
+                                    class="product-gallery-image <?php echo $idx === 0 ? 'active' : ''; ?>"
+                                    src="<?php echo htmlspecialchars($galleryImage, ENT_QUOTES, 'UTF-8'); ?>"
+                                    alt="<?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    loading="lazy">
+                            <?php endforeach; ?>
+                            <?php if (count($galleryImages) > 1): ?>
+                                <button type="button" class="gallery-nav gallery-prev" data-gallery-prev aria-label="Imagen anterior">&#10094;</button>
+                                <button type="button" class="gallery-nav gallery-next" data-gallery-next aria-label="Imagen siguiente">&#10095;</button>
+                                <div class="gallery-counter"><span data-gallery-current>1</span>/<?php echo count($galleryImages); ?></div>
+                            <?php endif; ?>
                         </div>
                         <div class="product-content">
                             <div class="catalog-tag"><?php echo htmlspecialchars($product['category'] ?: 'General', ENT_QUOTES, 'UTF-8'); ?></div>

@@ -282,6 +282,46 @@
     });
   }
 
+  function setupProductGalleries() {
+    document.querySelectorAll('[data-product-gallery]').forEach((gallery) => {
+      const images = Array.from(gallery.querySelectorAll('.product-gallery-image'));
+      if (images.length <= 1) return;
+
+      let currentIndex = 0;
+      const currentEl = gallery.querySelector('[data-gallery-current]');
+      const prevBtn = gallery.querySelector('[data-gallery-prev]');
+      const nextBtn = gallery.querySelector('[data-gallery-next]');
+
+      const render = () => {
+        images.forEach((img, idx) => {
+          img.classList.toggle('active', idx === currentIndex);
+        });
+        if (currentEl) currentEl.textContent = String(currentIndex + 1);
+      };
+
+      const move = (delta) => {
+        currentIndex = (currentIndex + delta + images.length) % images.length;
+        render();
+      };
+
+      if (prevBtn) {
+        prevBtn.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          move(-1);
+        });
+      }
+
+      if (nextBtn) {
+        nextBtn.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          move(1);
+        });
+      }
+    });
+  }
+
   function setupHandlers() {
     document.querySelectorAll('[data-add-product]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -364,6 +404,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    setupProductGalleries();
     setupHandlers();
     renderFavoriteButtons();
     updateCartBadge();

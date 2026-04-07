@@ -1315,6 +1315,8 @@ footer {
 .product-media {
     aspect-ratio: 4 / 3;
     background: #f7f7f7;
+    position: relative;
+    overflow: hidden;
 }
 
 .product-media img {
@@ -1327,6 +1329,55 @@ footer {
 
 .product-media {
     cursor: default;
+}
+
+.product-gallery-image {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+.product-gallery-image.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.gallery-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    border: none;
+    background: rgba(0, 0, 0, 0.45);
+    color: #fff;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.gallery-prev {
+    left: 8px;
+}
+
+.gallery-next {
+    right: 8px;
+}
+
+.gallery-counter {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 12px;
+    z-index: 2;
 }
 
 .product-content {
