@@ -54,8 +54,8 @@ if (is_logged_in()) {
                     <form id="loginForm" action="api/auth.php" method="POST">
                         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
                         <div class="form-group">
-                            <label for="email">Email</label>
-                            <input type="email" id="email" name="email" required placeholder="admin@truper.com" maxlength="255" autocomplete="email">
+                            <label for="email">Email o teléfono</label>
+                            <input type="text" id="email" name="email" required placeholder="admin@truper.com o +52..." maxlength="255" autocomplete="username">
                         </div>
 
                         <div class="form-group">

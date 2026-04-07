@@ -41,6 +41,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             <button class="tab-button active" data-tab="stockTab">Stock</button>
             <button class="tab-button" data-tab="calendarTab">Calendario</button>
             <button class="tab-button" data-tab="supplierOrderTab">Orden Proveedor</button>
+            <button class="tab-button" data-tab="clientsTab">Clientes</button>
             <button class="tab-button" data-tab="historyTab">Historico</button>
         </div>
 
@@ -91,6 +92,31 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     <thead><tr><th>Folio</th><th>Proveedor</th><th>Recepcion</th><th>Total</th><th>Ticket</th></tr></thead>
                     <tbody id="supplierRows"><tr><td colspan="5">Cargando...</td></tr></tbody>
                 </table>
+            </div></div>
+        </section>
+
+        <section id="clientsTab" class="tab-content">
+            <div class="card"><div class="card-body">
+                <h3>Registrar Cliente (Admin)</h3>
+                <p class="text-muted">Crea clientes y genera su código único para identificación rápida.</p>
+
+                <div class="grid grid-2">
+                    <div class="form-group"><label>Nombre</label><input id="clientFirstName" type="text"></div>
+                    <div class="form-group"><label>Apellido</label><input id="clientLastName" type="text"></div>
+                </div>
+                <div class="grid grid-2">
+                    <div class="form-group"><label>Teléfono (para login)</label><input id="clientPhone" type="text" placeholder="+52 33..."></div>
+                    <div class="form-group"><label>Email (opcional)</label><input id="clientEmail" type="email" placeholder="cliente@email.com"></div>
+                </div>
+                <div class="grid grid-2">
+                    <div class="form-group"><label>Contraseña inicial</label><input id="clientPassword" type="password" minlength="8"></div>
+                    <div class="form-group"><label>Empresa (opcional)</label><input id="clientCompany" type="text"></div>
+                </div>
+                <div class="form-group"><label>Fecha de nacimiento (opcional)</label><input id="clientBirthdate" type="date"></div>
+
+                <button class="btn btn-primary" onclick="createClientByAdmin()">Registrar cliente</button>
+
+                <div id="clientCreateResult" class="mt-3"></div>
             </div></div>
         </section>
 
@@ -232,6 +258,40 @@ async function loadHistory() {
         <td>${escapeHtml(i.created_at)}</td>
         <td><small>${escapeHtml(i.data_json || '')}</small></td>
     </tr>`).join('');
+}
+
+async function createClientByAdmin() {
+    const payload = {
+        first_name: document.getElementById('clientFirstName').value,
+        last_name: document.getElementById('clientLastName').value,
+        phone: document.getElementById('clientPhone').value,
+        email: document.getElementById('clientEmail').value,
+        password: document.getElementById('clientPassword').value,
+        company_name: document.getElementById('clientCompany').value,
+        birthdate: document.getElementById('clientBirthdate').value || null
+    };
+
+    const res = await apiCall('/admin_clients.php?action=create', 'POST', payload);
+    const box = document.getElementById('clientCreateResult');
+
+    if (!res || !res.success) {
+        if (box) {
+            box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible registrar al cliente')}</div>`;
+        }
+        return;
+    }
+
+    if (box) {
+        box.innerHTML = `
+            <div class="alert alert-success">
+                Cliente registrado correctamente.<br>
+                <strong>Código único:</strong> ${escapeHtml(res.client.user_code || 'N/A')}<br>
+                <strong>Login con teléfono:</strong> ${escapeHtml(res.client.phone || '')}
+            </div>
+        `;
+    }
+
+    showAlert('Cliente registrado correctamente', 'success');
 }
 
 document.addEventListener('DOMContentLoaded', function () {

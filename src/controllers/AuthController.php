@@ -51,11 +51,13 @@ class AuthController {
             );
             
             $this->createClientIfPossible($user_id, trim((string)($data['company_name'] ?? '')));
+            $userCode = $this->ensureUserCodeForUser($user_id);
             
             return [
                 'success' => true,
                 'message' => 'Registro exitoso. Ya puedes iniciar sesión.',
-                'user_id' => $user_id
+                'user_id' => $user_id,
+                'user_code' => $userCode
             ];
         } catch (PDOException $e) {
             error_log("Error en registro: " . $e->getMessage());
@@ -63,13 +65,14 @@ class AuthController {
         }
     }
     
-    public function login($email, $password) {
+    public function login($identifier, $password) {
         try {
             $this->ensureAuthSchema();
-            $user = $this->safeGetUserByEmail($email);
-            if (!$user && strtolower((string)$email) === 'admin@truper.com' && $password === 'Admin123!') {
+            $identifier = trim((string)$identifier);
+            $user = $this->safeGetUserByIdentifier($identifier);
+            if (!$user && strtolower($identifier) === 'admin@truper.com' && $password === 'Admin123!') {
                 $this->ensureDefaultAdminAccount();
-                $user = $this->safeGetUserByEmail($email);
+                $user = $this->safeGetUserByIdentifier($identifier);
             }
             if (!$user) {
                 return ['success' => false, 'message' => 'Email o contraseña incorrectos'];
@@ -104,7 +107,7 @@ class AuthController {
 
             if (!$passwordOk) {
                 // Compatibilidad: si el admin por defecto existe con hash distinto, permitir bootstrap una sola vez con Admin123!
-                if (($user['role'] ?? '') === 'admin' && strtolower($email) === 'admin@truper.com' && $password === 'Admin123!') {
+                if (($user['role'] ?? '') === 'admin' && strtolower($identifier) === 'admin@truper.com' && $password === 'Admin123!') {
                     $newHash = password_hash('Admin123!', PASSWORD_BCRYPT, ['cost' => 12]);
                     $columnToUpdate = $this->columnExists('users', 'password_hash') ? 'password_hash' : 'password';
                     $update = $this->pdo->prepare("UPDATE users SET {$columnToUpdate} = ? WHERE id = ?");
@@ -121,6 +124,8 @@ class AuthController {
                 $stmtUpgrade = $this->pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ?");
                 $stmtUpgrade->execute([$newHash, $user['id']]);
             }
+
+            $this->ensureUserCodeForUser((int)$user['id']);
             
             if ($this->columnExists('users', 'last_login')) {
                 $stmt = $this->pdo->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
@@ -138,6 +143,7 @@ class AuthController {
             $_SESSION['email'] = $user['email'];
             $_SESSION['role'] = $role;
             $_SESSION['name'] = $name;
+            $_SESSION['phone'] = $user['phone'] ?? null;
             $_SESSION['loyalty_points'] = (int)$points;
             $_SESSION['login_time'] = time();
             
@@ -183,6 +189,27 @@ class AuthController {
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
+    private function getUserByIdentifier($identifier) {
+        $emailTry = strtolower(trim((string)$identifier));
+        $byEmail = $this->getUserByEmail($emailTry);
+        if ($byEmail) {
+            return $byEmail;
+        }
+
+        if (!$this->columnExists('users', 'phone')) {
+            return null;
+        }
+
+        $phoneNormalized = $this->normalizePhone($identifier);
+        if ($phoneNormalized === '') {
+            return null;
+        }
+
+        $stmt = $this->pdo->prepare("SELECT * FROM users WHERE regexp_replace(COALESCE(phone, ''), '[^0-9]+', '', 'g') = ? LIMIT 1");
+        $stmt->execute([$phoneNormalized]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
     private function safeGetUserByEmail($email) {
         try {
             return $this->getUserByEmail($email);
@@ -190,6 +217,19 @@ class AuthController {
             $this->ensureAuthSchema();
             try {
                 return $this->getUserByEmail($email);
+            } catch (Exception $ignored) {
+                return null;
+            }
+        }
+    }
+
+    private function safeGetUserByIdentifier($identifier) {
+        try {
+            return $this->getUserByIdentifier($identifier);
+        } catch (Exception $e) {
+            $this->ensureAuthSchema();
+            try {
+                return $this->getUserByIdentifier($identifier);
             } catch (Exception $ignored) {
                 return null;
             }
@@ -250,15 +290,27 @@ class AuthController {
             return;
         }
         try {
-            $stmtA = $this->pdo->prepare("INSERT INTO clients (user_id, company_name) VALUES (?, ?)");
-            $stmtA->execute([$userId, $companyName]);
+            $clientCode = $this->ensureUserCodeForUser((int)$userId);
+            if ($this->columnExists('clients', 'client_code')) {
+                $stmtA = $this->pdo->prepare("INSERT INTO clients (user_id, company_name, client_code) VALUES (?, ?, ?)");
+                $stmtA->execute([$userId, $companyName, $clientCode]);
+            } else {
+                $stmtA = $this->pdo->prepare("INSERT INTO clients (user_id, company_name) VALUES (?, ?)");
+                $stmtA->execute([$userId, $companyName]);
+            }
             return;
         } catch (Exception $e) {
             // fallback
         }
         try {
-            $stmtB = $this->pdo->prepare("INSERT INTO clients (user_id, company_name, is_wholesale, credit_limit, credit_available) VALUES (?, ?, false, 0, 0)");
-            $stmtB->execute([$userId, $companyName !== '' ? $companyName : 'Cliente']);
+            $clientCode = $this->ensureUserCodeForUser((int)$userId);
+            if ($this->columnExists('clients', 'client_code')) {
+                $stmtB = $this->pdo->prepare("INSERT INTO clients (user_id, company_name, client_code, is_wholesale, credit_limit, credit_available) VALUES (?, ?, ?, false, 0, 0)");
+                $stmtB->execute([$userId, $companyName !== '' ? $companyName : 'Cliente', $clientCode]);
+            } else {
+                $stmtB = $this->pdo->prepare("INSERT INTO clients (user_id, company_name, is_wholesale, credit_limit, credit_available) VALUES (?, ?, false, 0, 0)");
+                $stmtB->execute([$userId, $companyName !== '' ? $companyName : 'Cliente']);
+            }
         } catch (Exception $e) {
             // No bloquear el registro por falla en tabla auxiliar
         }
@@ -299,11 +351,13 @@ class AuthController {
 
     private function ensureAuthSchema() {
         try {
+            $this->pdo->exec("CREATE EXTENSION IF NOT EXISTS pgcrypto");
             $this->pdo->exec("CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 email VARCHAR(255) UNIQUE NOT NULL,
                 password_hash VARCHAR(255),
                 password VARCHAR(255),
+                user_code VARCHAR(32) UNIQUE,
                 first_name VARCHAR(120),
                 last_name VARCHAR(120),
                 name VARCHAR(255),
@@ -325,11 +379,62 @@ class AuthController {
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER UNIQUE REFERENCES users(id) ON DELETE CASCADE,
                 company_name VARCHAR(255),
+                client_code VARCHAR(32),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )");
+
+            $this->pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS user_code VARCHAR(32)");
+            $this->pdo->exec("ALTER TABLE clients ADD COLUMN IF NOT EXISTS client_code VARCHAR(32)");
         } catch (Exception $e) {
             // Evita interrumpir la app si el usuario de BD no tiene permisos DDL.
+        }
+    }
+
+    private function normalizePhone($value) {
+        return preg_replace('/\D+/', '', (string)$value) ?? '';
+    }
+
+    private function generateUserCode() {
+        $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        $part = '';
+        for ($i = 0; $i < 8; $i++) {
+            $part .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+        }
+        return 'CLI-' . $part;
+    }
+
+    private function ensureUserCodeForUser($userId) {
+        if (!$this->columnExists('users', 'user_code')) {
+            return 'CLI-' . str_pad((string)$userId, 8, '0', STR_PAD_LEFT);
+        }
+
+        try {
+            $stmt = $this->pdo->prepare("SELECT user_code FROM users WHERE id = ? LIMIT 1");
+            $stmt->execute([$userId]);
+            $existing = $stmt->fetchColumn();
+            if (!empty($existing)) {
+                return (string)$existing;
+            }
+
+            $tries = 0;
+            do {
+                $tries++;
+                $code = $this->generateUserCode();
+                $check = $this->pdo->prepare("SELECT 1 FROM users WHERE user_code = ? LIMIT 1");
+                $check->execute([$code]);
+                $exists = (bool)$check->fetchColumn();
+            } while ($exists && $tries < 10);
+
+            if (empty($code)) {
+                $code = 'CLI-' . str_pad((string)$userId, 8, '0', STR_PAD_LEFT);
+            }
+
+            $update = $this->pdo->prepare("UPDATE users SET user_code = ? WHERE id = ?");
+            $update->execute([$code, $userId]);
+            return $code;
+        } catch (Exception $e) {
+            return 'CLI-' . str_pad((string)$userId, 8, '0', STR_PAD_LEFT);
         }
     }
 }
