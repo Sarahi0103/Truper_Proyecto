@@ -27,6 +27,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
     </div>
     <div class="user-menu">
         <div class="user-info"><div class="user-name"><?php echo $user_name; ?></div><div class="user-role">Admin</div></div>
+        <a href="index.php" class="btn btn-small btn-ghost">Ver portada</a>
         <button class="btn-logout" onclick="window.location.href='api/auth.php?action=logout'">Cerrar Sesion</button>
     </div>
 </header>
