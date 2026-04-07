@@ -43,6 +43,39 @@ $demoProducts = [
     ['id' => 1010, 'name' => 'Cargador Rápido 20V', 'sku' => 'TRUP-010', 'unit_price' => 699, 'category' => 'Accesorios', 'description' => 'Carga rápida para baterías de litio.', 'technical_specs' => 'Entrada 127V | Salida 20V | Protección térmica', 'stock_quantity' => 38, 'image_url' => 'images/products/default-product.svg', 'variants_json' => '["Estándar", "Rápido"]']
 ];
 
+function normalize_product_code($sku) {
+    $sku = (string)$sku;
+    return preg_replace('/^XLS-/i', '', $sku);
+}
+
+function resolve_image_by_product_code($code) {
+    static $cache = null;
+    if ($cache === null) {
+        $cache = [];
+        $baseDir = __DIR__ . '/images/products/by_code';
+        if (is_dir($baseDir)) {
+            $dirs = scandir($baseDir);
+            foreach ($dirs as $dir) {
+                if ($dir === '.' || $dir === '..') {
+                    continue;
+                }
+                $fullDir = $baseDir . '/' . $dir;
+                if (!is_dir($fullDir)) {
+                    continue;
+                }
+                $matches = glob($fullDir . '/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', GLOB_BRACE);
+                if (!empty($matches)) {
+                    $fileName = basename($matches[0]);
+                    $cache[$dir] = 'images/products/by_code/' . $dir . '/' . $fileName;
+                }
+            }
+        }
+    }
+
+    $code = trim((string)$code);
+    return $cache[$code] ?? null;
+}
+
 if (count($products) < 10) {
     $existingSkus = [];
     foreach ($products as $item) {
@@ -145,7 +178,15 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
             <div class="catalog-grid-min">
                 <?php foreach ($products as $product): ?>
                     <?php
+                        $rawSku = (string)($product['sku'] ?? '');
+                        $displaySku = normalize_product_code($rawSku);
                         $imagePath = !empty($product['image_url']) ? $product['image_url'] : 'images/products/default-product.svg';
+                        if ($imagePath === 'images/products/default-product.svg') {
+                            $byCodeImage = resolve_image_by_product_code($displaySku);
+                            if (!empty($byCodeImage)) {
+                                $imagePath = $byCodeImage;
+                            }
+                        }
                         $variants = [];
                         if (!empty($product['variants_json'])) {
                             $decoded = json_decode($product['variants_json'], true);
@@ -158,7 +199,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                     <article class="product-card-min"
                         data-product-card
                         data-name="<?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?>"
-                        data-sku="<?php echo htmlspecialchars($product['sku'], ENT_QUOTES, 'UTF-8'); ?>"
+                        data-sku="<?php echo htmlspecialchars($displaySku, ENT_QUOTES, 'UTF-8'); ?>"
                         data-category="<?php echo htmlspecialchars($product['category'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
                         data-price="<?php echo (float)$product['unit_price']; ?>"
                         data-stock="<?php echo $stock; ?>">
@@ -168,7 +209,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                         <div class="product-content">
                             <div class="catalog-tag"><?php echo htmlspecialchars($product['category'] ?: 'General', ENT_QUOTES, 'UTF-8'); ?></div>
                             <h3 class="product-title"><?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?></h3>
-                            <div class="text-muted">SKU: <?php echo htmlspecialchars($product['sku'], ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div class="text-muted">Codigo del producto: <?php echo htmlspecialchars($displaySku, ENT_QUOTES, 'UTF-8'); ?></div>
                             <p class="product-spec"><?php echo htmlspecialchars($product['description'] ?: 'Descripción pendiente', ENT_QUOTES, 'UTF-8'); ?></p>
                             <div>
                                 <?php if (!empty($variants)): ?>
@@ -188,15 +229,15 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                                     type="button"
                                     class="btn btn-ghost btn-small"
                                     data-fav-product
-                                    data-fav-sku="<?php echo htmlspecialchars($product['sku'], ENT_QUOTES, 'UTF-8'); ?>"
-                                    data-sku="<?php echo htmlspecialchars($product['sku'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-fav-sku="<?php echo htmlspecialchars($displaySku, ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-sku="<?php echo htmlspecialchars($displaySku, ENT_QUOTES, 'UTF-8'); ?>"
                                     data-name="<?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?>">Favoritos</button>
                                 <button
                                     type="button"
                                     class="btn btn-primary btn-small"
                                     data-add-product
                                     data-id="<?php echo (int)$product['id']; ?>"
-                                    data-sku="<?php echo htmlspecialchars($product['sku'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-sku="<?php echo htmlspecialchars($displaySku, ENT_QUOTES, 'UTF-8'); ?>"
                                     data-name="<?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?>"
                                     data-price="<?php echo (float)$product['unit_price']; ?>">Agregar</button>
                             </div>
