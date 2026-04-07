@@ -37,6 +37,16 @@ function ensure_admin_supply_tables($pdo): void {
         created_by INTEGER REFERENCES users(id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS product_suppliers (
+        id SERIAL PRIMARY KEY,
+        product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        supplier_name VARCHAR(180) NOT NULL,
+        supplier_sku VARCHAR(100),
+        unit_cost DECIMAL(12,2) NOT NULL DEFAULT 0,
+        created_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
 }
 
 ensure_admin_supply_tables($pdo);
@@ -162,6 +172,43 @@ function create_product_compatible($pdo, array $payload): void {
 
 ensure_products_extra_columns($pdo);
 
+function list_available_product_images($pdo): array {
+    $images = ['images/products/default-product.svg'];
+
+    $dir = __DIR__ . '/../images/products';
+    if (is_dir($dir)) {
+        $entries = scandir($dir);
+        if (is_array($entries)) {
+            foreach ($entries as $name) {
+                if ($name === '.' || $name === '..') {
+                    continue;
+                }
+                $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+                if (in_array($ext, ['svg', 'png', 'jpg', 'jpeg', 'webp', 'gif'], true)) {
+                    $images[] = 'images/products/' . $name;
+                }
+            }
+        }
+    }
+
+    try {
+        if (db_column_exists('products', 'image_url')) {
+            $stmt = $pdo->query("SELECT DISTINCT image_url FROM products WHERE image_url IS NOT NULL AND image_url <> '' LIMIT 500");
+            $rows = $stmt->fetchAll();
+            foreach ($rows as $row) {
+                if (!empty($row['image_url'])) {
+                    $images[] = (string)$row['image_url'];
+                }
+            }
+        }
+    } catch (Exception $ignored) {
+    }
+
+    $images = array_values(array_unique($images));
+    sort($images);
+    return $images;
+}
+
 $response = ['success' => false, 'message' => 'Accion no reconocida'];
 
 try {
@@ -172,14 +219,14 @@ try {
                 break;
             }
 
-            $sku = sanitize($_POST['sku'] ?? '');
-            $name = sanitize($_POST['name'] ?? '');
-            $category = sanitize($_POST['category'] ?? 'General');
-            $description = sanitize($_POST['description'] ?? '');
-            $barcode = sanitize($_POST['barcode'] ?? '');
-            $price = (float)($_POST['price'] ?? 0);
-            $stockQty = (int)($_POST['stock_quantity'] ?? 50);
-            $reorder = (int)($_POST['reorder_level'] ?? 10);
+            $sku = sanitize($_POST['sku'] ?? ($input['sku'] ?? ''));
+            $name = sanitize($_POST['name'] ?? ($input['name'] ?? ''));
+            $category = sanitize($_POST['category'] ?? ($input['category'] ?? 'General'));
+            $description = sanitize($_POST['description'] ?? ($input['description'] ?? ''));
+            $barcode = sanitize($_POST['barcode'] ?? ($input['barcode'] ?? ''));
+            $price = (float)($_POST['price'] ?? ($input['price'] ?? 0));
+            $stockQty = (int)($_POST['stock_quantity'] ?? ($input['stock_quantity'] ?? 50));
+            $reorder = (int)($_POST['reorder_level'] ?? ($input['reorder_level'] ?? 10));
 
             if ($sku === '' || $name === '') {
                 $response = ['success' => false, 'message' => 'SKU y nombre son obligatorios'];
@@ -200,7 +247,7 @@ try {
             } catch (Exception $ignoredCheck) {
             }
 
-            $imageUrl = 'images/products/default-product.svg';
+            $imageUrl = sanitize($_POST['image_url'] ?? ($input['image_url'] ?? 'images/products/default-product.svg'));
             if (isset($_FILES['image'])) {
                 $imageUrl = store_product_image($_FILES['image']);
             }
@@ -235,6 +282,58 @@ try {
                     'image_url' => $imageUrl
                 ]
             ];
+            break;
+
+        case 'product-images':
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+            $response = ['success' => true, 'images' => list_available_product_images($pdo)];
+            break;
+
+        case 'supplier-product-create':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+            $productId = (int)($input['product_id'] ?? 0);
+            $supplierName = sanitize($input['supplier_name'] ?? '');
+            $supplierSku = sanitize($input['supplier_sku'] ?? '');
+            $unitCost = (float)($input['unit_cost'] ?? 0);
+
+            if ($productId <= 0 || $supplierName === '' || $unitCost < 0) {
+                $response = ['success' => false, 'message' => 'Datos incompletos para asignar proveedor'];
+                break;
+            }
+
+            $stmt = $pdo->prepare("INSERT INTO product_suppliers (product_id, supplier_name, supplier_sku, unit_cost, created_by) VALUES (?, ?, ?, ?, ?)");
+            $stmt->execute([$productId, $supplierName, $supplierSku, $unitCost, $_SESSION['user_id']]);
+            $response = ['success' => true, 'message' => 'Asignación producto-proveedor registrada'];
+            break;
+
+        case 'supplier-products-list':
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+            $stmt = $pdo->query("SELECT ps.id, ps.product_id, p.sku, p.name AS product_name, ps.supplier_name, ps.supplier_sku, ps.unit_cost FROM product_suppliers ps JOIN products p ON p.id = ps.product_id ORDER BY ps.supplier_name ASC, p.name ASC");
+            $response = ['success' => true, 'items' => $stmt->fetchAll()];
+            break;
+
+        case 'supplier-products-by-supplier':
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+            $supplierName = sanitize($_GET['supplier_name'] ?? '');
+            if ($supplierName === '') {
+                $response = ['success' => true, 'items' => []];
+                break;
+            }
+            $stmt = $pdo->prepare("SELECT ps.id, ps.product_id, p.sku, p.name AS product_name, ps.supplier_name, ps.supplier_sku, ps.unit_cost FROM product_suppliers ps JOIN products p ON p.id = ps.product_id WHERE ps.supplier_name = ? ORDER BY p.name ASC");
+            $stmt->execute([$supplierName]);
+            $response = ['success' => true, 'items' => $stmt->fetchAll()];
             break;
 
         case 'stock':
@@ -287,15 +386,50 @@ try {
             }
 
             $total = 0;
+            $normalizedItems = [];
             foreach ($items as $it) {
                 $qty = (int)($it['quantity'] ?? 0);
                 $cost = (float)($it['estimated_cost'] ?? 0);
+                if ($qty <= 0) {
+                    continue;
+                }
+
+                $supplierProductId = (int)($it['supplier_product_id'] ?? 0);
+                $sku = sanitize($it['sku'] ?? '');
+                $productName = sanitize($it['product_name'] ?? '');
+
+                if ($supplierProductId > 0) {
+                    $sp = $pdo->prepare("SELECT p.sku, p.name AS product_name, ps.supplier_sku FROM product_suppliers ps JOIN products p ON p.id = ps.product_id WHERE ps.id = ? LIMIT 1");
+                    $sp->execute([$supplierProductId]);
+                    $spRow = $sp->fetch();
+                    if ($spRow) {
+                        $sku = (string)($spRow['sku'] ?? $sku);
+                        $productName = (string)($spRow['product_name'] ?? $productName);
+                    }
+                }
+
+                if ($sku === '' && $productName === '') {
+                    continue;
+                }
+
                 $total += $qty * $cost;
+                $normalizedItems[] = [
+                    'supplier_product_id' => $supplierProductId,
+                    'sku' => $sku,
+                    'product_name' => $productName,
+                    'quantity' => $qty,
+                    'estimated_cost' => $cost
+                ];
+            }
+
+            if (count($normalizedItems) === 0) {
+                $response = ['success' => false, 'message' => 'Agrega al menos un item valido'];
+                break;
             }
 
             $folio = 'PROV-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
             $stmt = $pdo->prepare("INSERT INTO supplier_orders (folio, supplier_name, expected_date, items_json, total_estimated, created_by) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$folio, $supplier_name, $expected_date, json_encode($items, JSON_UNESCAPED_UNICODE), $total, $_SESSION['user_id']]);
+            $stmt->execute([$folio, $supplier_name, $expected_date, json_encode($normalizedItems, JSON_UNESCAPED_UNICODE), $total, $_SESSION['user_id']]);
             $orderId = (int)$pdo->lastInsertId();
 
             $h = $pdo->prepare("INSERT INTO transaction_history (transaction_type, reference_folio, data_json, created_by) VALUES ('supplier_order', ?, ?, ?)");

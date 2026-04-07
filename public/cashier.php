@@ -11,6 +11,12 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cajon de Dinero - Truper Platform</title>
     <link rel="stylesheet" href="css/styles.css">
+    <style>
+      .cash-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+      .metric { border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px; background: #fff; }
+      .metric-label { font-size: 12px; color: #6b7280; }
+      .metric-value { font-size: 18px; font-weight: 700; color: #111827; }
+    </style>
 </head>
 <body>
 <header>
@@ -66,23 +72,48 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
         <div class="card mt-3"><div class="card-body">
             <h3>Estatus actual</h3>
             <div id="cashierStatus" class="text-muted">Consultando...</div>
+            <div id="cashierMetrics" class="cash-metrics mt-2"></div>
         </div></div>
     </div>
 </main>
 <script src="js/main.js"></script>
 <script>
+function formatMoney(value) {
+  return `$${Number(value || 0).toFixed(2)}`;
+}
+
+function renderMetrics(summary) {
+  const box = document.getElementById('cashierMetrics');
+  if (!box) return;
+  if (!summary) {
+    box.innerHTML = '<div class="text-muted">Sin datos de resumen</div>';
+    return;
+  }
+
+  box.innerHTML = [
+    { label: 'Efectivo esperado en caja', value: formatMoney(summary.cash_expected) },
+    { label: 'Ventas del dia', value: formatMoney(summary.sales_today) },
+    { label: 'Cobros pendientes', value: formatMoney(summary.pending_collections) },
+    { label: 'Pagos a proveedor pendientes', value: formatMoney(summary.pending_supplier_payments) },
+    { label: 'Ganancia real estimada', value: formatMoney(summary.real_profit) },
+    { label: 'Margen de ganancia', value: `${Number(summary.profit_margin_pct || 0).toFixed(2)}%` }
+  ].map((m) => `<div class="metric"><div class="metric-label">${m.label}</div><div class="metric-value">${m.value}</div></div>`).join('');
+}
+
 async function refreshStatus() {
-  const res = await apiCall('/cashier.php?action=status');
+  const res = await apiCall('/cashier.php?action=summary');
   const box = document.getElementById('cashierStatus');
   if (!res || !res.success) {
     box.textContent = 'No fue posible consultar estatus';
+    renderMetrics(null);
     return;
   }
   if (!res.open_session) {
     box.textContent = 'Caja cerrada';
-    return;
+  } else {
+    box.textContent = `Caja abierta desde ${res.open_session.opened_at} con monto inicial ${res.open_session.opening_amount}`;
   }
-  box.textContent = `Caja abierta desde ${res.open_session.opened_at} con monto inicial ${res.open_session.opening_amount}`;
+  renderMetrics(res.summary || null);
 }
 
 async function openDrawer() {

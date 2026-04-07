@@ -11,6 +11,17 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Abastecimiento - Truper Platform</title>
     <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .grid-4 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+        .calendar-weekdays,
+        .calendar-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+        .calendar-weekday { text-align: center; font-weight: 700; color: #6b7280; font-size: 12px; }
+        .calendar-day { border: 1px solid #e5e7eb; border-radius: 10px; min-height: 58px; padding: 6px; background: #fff; }
+        .calendar-day-empty { background: #f9fafb; border-style: dashed; }
+        .calendar-day-number { font-weight: 700; font-size: 13px; color: #111827; }
+        .calendar-day-visits { margin-top: 4px; font-size: 11px; color: #b45309; }
+        .calendar-day-has-visits { border-color: #f59e0b; background: #fffbeb; }
+    </style>
 </head>
 <body>
 <header>
@@ -81,7 +92,13 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
 
                 <div class="grid grid-2">
                     <div class="form-group"><label>Código de barras (opcional)</label><input id="newProductBarcode" type="text" maxlength="100"></div>
-                    <div class="form-group"><label>Imagen (opcional)</label><input id="newProductImage" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>
+                    <div class="form-group">
+                        <label>Imagen de referencia</label>
+                        <select id="newProductImageRef">
+                            <option value="images/products/default-product.svg">Imagen por defecto</option>
+                        </select>
+                        <small class="text-muted">Selecciona una imagen ya existente del sitio.</small>
+                    </div>
                 </div>
 
                 <div class="form-group"><label>Descripción</label><textarea id="newProductDescription" rows="3"></textarea></div>
@@ -109,25 +126,48 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     <button class="btn btn-primary" onclick="createVisit()">Guardar visita</button>
                 </div></div>
                 <div class="card"><div class="card-body">
-                    <h3>Agenda</h3>
-                    <div id="calendarList" class="text-muted">Cargando...</div>
+                    <h3>Calendario mensual</h3>
+                    <div class="d-flex justify-between align-center">
+                        <button class="btn btn-small btn-ghost" onclick="changeCalendarMonth(-1)">Mes anterior</button>
+                        <strong id="calendarMonthLabel">Mes</strong>
+                        <button class="btn btn-small btn-ghost" onclick="changeCalendarMonth(1)">Mes siguiente</button>
+                    </div>
+                    <div id="calendarGrid" class="mt-2"></div>
+                    <div id="calendarList" class="text-muted mt-2">Cargando...</div>
                 </div></div>
             </div>
         </section>
 
         <section id="supplierOrderTab" class="tab-content">
+            <div class="card mb-3"><div class="card-body">
+                <h3>Asignar producto a proveedor</h3>
+                <p class="text-muted">Un mismo producto puede estar ligado a varios proveedores.</p>
+                <div class="grid grid-4">
+                    <div class="form-group">
+                        <label>Producto</label>
+                        <select id="spProduct"></select>
+                    </div>
+                    <div class="form-group"><label>Proveedor</label><input id="spSupplier" type="text" placeholder="Proveedor A"></div>
+                    <div class="form-group"><label>SKU proveedor (opcional)</label><input id="spSupplierSku" type="text"></div>
+                    <div class="form-group"><label>Costo unitario</label><input id="spUnitCost" type="number" min="0" step="0.01" value="0"></div>
+                </div>
+                <button class="btn btn-primary" onclick="createSupplierProductLink()">Guardar asignación</button>
+                <div id="supplierProductResult" class="mt-2"></div>
+                <div id="supplierProductList" class="mt-2 text-muted">Cargando asignaciones...</div>
+            </div></div>
+
             <div class="card"><div class="card-body">
                 <h3>Orden de Proveedor (ticket logistica)</h3>
                 <div class="grid grid-2">
                     <div class="form-group"><label>Proveedor</label><input id="poSupplier" type="text"></div>
                     <div class="form-group"><label>Fecha recepcion</label><input id="poDate" type="date"></div>
                 </div>
-                <div class="grid grid-3">
-                    <div class="form-group"><label>SKU</label><input id="poSku" type="text"></div>
+                <div class="grid grid-4">
+                    <div class="form-group"><label>Producto proveedor</label><select id="poMappedProduct"></select></div>
                     <div class="form-group"><label>Cantidad</label><input id="poQty" type="number" min="1" value="1"></div>
                     <div class="form-group"><label>Costo estimado</label><input id="poCost" type="number" min="0" step="0.01" value="0"></div>
+                    <div class="form-group"><label>&nbsp;</label><button class="btn btn-secondary" onclick="addMappedProductToOrder()">Agregar item</button></div>
                 </div>
-                <button class="btn btn-secondary" onclick="addPoItem()">Agregar item</button>
                 <div id="poItems" class="mt-2"></div>
                 <button class="btn btn-primary mt-2" onclick="createSupplierOrder()">Generar orden y ticket</button>
 
@@ -218,26 +258,111 @@ async function createVisit() {
     loadCalendar();
 }
 
-async function loadCalendar() {
-    const res = await apiCall('/admin_supply.php?action=calendar-list');
-    const box = document.getElementById('calendarList');
-    if (!res || !res.success || !Array.isArray(res.items) || res.items.length === 0) {
-        box.innerHTML = '<p class="text-muted">Sin visitas registradas.</p>';
-        return;
-    }
-    box.innerHTML = res.items.map(i => `<div class="task-item"><strong>${escapeHtml(i.supplier_name)}</strong><div>${escapeHtml(i.visit_datetime)}</div><div class="text-muted">${escapeHtml(i.notes || '')}</div></div>`).join('');
+let calendarVisits = [];
+let calendarMonthCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+function formatDateTimeLocal(dateValue) {
+    const d = new Date(dateValue);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleString('es-MX', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }
 
-function addPoItem() {
-    const sku = document.getElementById('poSku').value.trim();
-    const quantity = Number(document.getElementById('poQty').value || 0);
-    const estimated_cost = Number(document.getElementById('poCost').value || 0);
-    if (!sku || quantity <= 0) {
-        showAlert('SKU y cantidad son obligatorios', 'warning');
+function renderCalendarMonth() {
+    const label = document.getElementById('calendarMonthLabel');
+    const grid = document.getElementById('calendarGrid');
+    const list = document.getElementById('calendarList');
+    if (!label || !grid || !list) return;
+
+    const year = calendarMonthCursor.getFullYear();
+    const month = calendarMonthCursor.getMonth();
+    label.textContent = calendarMonthCursor.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+
+    const firstDay = new Date(year, month, 1);
+    const startWeekDay = (firstDay.getDay() + 6) % 7;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const visitMap = {};
+    calendarVisits.forEach((visit) => {
+        const d = new Date(visit.visit_datetime);
+        if (Number.isNaN(d.getTime())) return;
+        if (d.getFullYear() !== year || d.getMonth() !== month) return;
+        const key = d.getDate();
+        if (!visitMap[key]) visitMap[key] = [];
+        visitMap[key].push(visit);
+    });
+
+    const weekNames = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+    let html = '<div class="calendar-weekdays">' + weekNames.map(w => `<div class="calendar-weekday">${w}</div>`).join('') + '</div>';
+    html += '<div class="calendar-days">';
+
+    for (let i = 0; i < startWeekDay; i += 1) {
+        html += '<div class="calendar-day calendar-day-empty"></div>';
+    }
+
+    for (let day = 1; day <= daysInMonth; day += 1) {
+        const count = (visitMap[day] || []).length;
+        html += `<div class="calendar-day ${count > 0 ? 'calendar-day-has-visits' : ''}">`;
+        html += `<div class="calendar-day-number">${day}</div>`;
+        if (count > 0) {
+            html += `<div class="calendar-day-visits">${count} visita${count > 1 ? 's' : ''}</div>`;
+        }
+        html += '</div>';
+    }
+
+    html += '</div>';
+    grid.innerHTML = html;
+
+    const monthVisits = calendarVisits.filter((visit) => {
+        const d = new Date(visit.visit_datetime);
+        return !Number.isNaN(d.getTime()) && d.getFullYear() === year && d.getMonth() === month;
+    }).sort((a, b) => new Date(a.visit_datetime) - new Date(b.visit_datetime));
+
+    if (monthVisits.length === 0) {
+        list.innerHTML = '<p class="text-muted">Sin visitas para este mes.</p>';
         return;
     }
-    supplierOrderItems.push({ sku, quantity, estimated_cost });
-    document.getElementById('poSku').value = '';
+
+    list.innerHTML = monthVisits.map(i => `<div class="task-item"><strong>${escapeHtml(i.supplier_name)}</strong><div>${escapeHtml(formatDateTimeLocal(i.visit_datetime))}</div><div class="text-muted">${escapeHtml(i.notes || '')}</div></div>`).join('');
+}
+
+function changeCalendarMonth(offset) {
+    calendarMonthCursor = new Date(calendarMonthCursor.getFullYear(), calendarMonthCursor.getMonth() + offset, 1);
+    renderCalendarMonth();
+}
+
+async function loadCalendar() {
+    const res = await apiCall('/admin_supply.php?action=calendar-list');
+    if (!res || !res.success || !Array.isArray(res.items)) {
+        calendarVisits = [];
+        renderCalendarMonth();
+        return;
+    }
+    calendarVisits = res.items;
+    renderCalendarMonth();
+}
+
+function addMappedProductToOrder() {
+    const select = document.getElementById('poMappedProduct');
+    const quantity = Number(document.getElementById('poQty').value || 0);
+    const estimated_cost = Number(document.getElementById('poCost').value || 0);
+
+    if (!select || !select.value || quantity <= 0) {
+        showAlert('Selecciona producto proveedor y cantidad', 'warning');
+        return;
+    }
+
+    const opt = select.options[select.selectedIndex];
+    const supplier_product_id = Number(opt.value || 0);
+    const product_name = opt.getAttribute('data-product-name') || '';
+    const sku = opt.getAttribute('data-sku') || '';
+
+    supplierOrderItems.push({ supplier_product_id, product_name, sku, quantity, estimated_cost });
     renderPoItems();
 }
 
@@ -247,12 +372,82 @@ function renderPoItems() {
         box.innerHTML = '<p class="text-muted">No hay items</p>';
         return;
     }
-    box.innerHTML = '<ul>' + supplierOrderItems.map((i, idx) => `<li>${escapeHtml(i.sku)} | ${i.quantity} | $${i.estimated_cost.toFixed(2)} <button class="btn btn-small btn-danger" onclick="removePoItem(${idx})">Quitar</button></li>`).join('') + '</ul>';
+    box.innerHTML = '<ul>' + supplierOrderItems.map((i, idx) => `<li>${escapeHtml(i.product_name || i.sku)} | ${i.quantity} | $${Number(i.estimated_cost || 0).toFixed(2)} <button class="btn btn-small btn-danger" onclick="removePoItem(${idx})">Quitar</button></li>`).join('') + '</ul>';
 }
 
 function removePoItem(index) {
     supplierOrderItems = supplierOrderItems.filter((_, i) => i !== index);
     renderPoItems();
+}
+
+async function loadSupplierProducts() {
+    const res = await apiCall('/admin_supply.php?action=supplier-products-list');
+    const listBox = document.getElementById('supplierProductList');
+    const productSelect = document.getElementById('spProduct');
+
+    if (productSelect) {
+        const stockRes = await apiCall('/admin_supply.php?action=stock');
+        if (stockRes && stockRes.success && Array.isArray(stockRes.items)) {
+            productSelect.innerHTML = '<option value="">Selecciona producto...</option>' + stockRes.items
+                .map((p) => `<option value="${Number(p.id)}">${escapeHtml(p.sku)} | ${escapeHtml(p.name)}</option>`)
+                .join('');
+        }
+    }
+
+    if (!res || !res.success || !Array.isArray(res.items)) {
+        if (listBox) listBox.innerHTML = '<p class="text-muted">Sin asignaciones.</p>';
+        return;
+    }
+
+    if (listBox) {
+        if (res.items.length === 0) {
+            listBox.innerHTML = '<p class="text-muted">Sin asignaciones.</p>';
+        } else {
+            listBox.innerHTML = '<ul>' + res.items.map((i) => `<li>${escapeHtml(i.supplier_name)} -> ${escapeHtml(i.sku)} ${escapeHtml(i.product_name || '')} (${escapeHtml(i.supplier_sku || 'sin SKU')}) $${Number(i.unit_cost || 0).toFixed(2)}</li>`).join('') + '</ul>';
+        }
+    }
+}
+
+async function createSupplierProductLink() {
+    const payload = {
+        product_id: Number(document.getElementById('spProduct').value || 0),
+        supplier_name: document.getElementById('spSupplier').value,
+        supplier_sku: document.getElementById('spSupplierSku').value,
+        unit_cost: Number(document.getElementById('spUnitCost').value || 0)
+    };
+
+    const resultBox = document.getElementById('supplierProductResult');
+    const res = await apiCall('/admin_supply.php?action=supplier-product-create', 'POST', payload);
+    if (!res || !res.success) {
+        if (resultBox) resultBox.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible guardar')}</div>`;
+        return;
+    }
+
+    if (resultBox) resultBox.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Asignacion guardada')}</div>`;
+    await loadSupplierProducts();
+    await loadMappedProductsBySupplier();
+}
+
+async function loadMappedProductsBySupplier() {
+    const supplier = document.getElementById('poSupplier').value.trim();
+    const select = document.getElementById('poMappedProduct');
+    if (!select) return;
+
+    if (!supplier) {
+        select.innerHTML = '<option value="">Captura proveedor...</option>';
+        return;
+    }
+
+    const res = await apiCall(`/admin_supply.php?action=supplier-products-by-supplier&supplier_name=${encodeURIComponent(supplier)}`);
+    if (!res || !res.success || !Array.isArray(res.items) || res.items.length === 0) {
+        select.innerHTML = '<option value="">Sin productos para proveedor</option>';
+        return;
+    }
+
+    select.innerHTML = '<option value="">Selecciona producto...</option>' + res.items.map((i) => {
+        const label = `${i.sku} | ${i.product_name} | ${i.supplier_sku || 'sin SKU prov.'}`;
+        return `<option value="${Number(i.id)}" data-product-name="${escapeHtml(i.product_name)}" data-sku="${escapeHtml(i.sku)}">${escapeHtml(label)}</option>`;
+    }).join('');
 }
 
 async function createSupplierOrder() {
@@ -338,52 +533,59 @@ async function createClientByAdmin() {
     showAlert('Cliente registrado correctamente', 'success');
 }
 
-async function createProductByAdmin() {
-    const formData = new FormData();
-    formData.append('sku', document.getElementById('newProductSku').value || '');
-    formData.append('name', document.getElementById('newProductName').value || '');
-    formData.append('category', document.getElementById('newProductCategory').value || '');
-    formData.append('description', document.getElementById('newProductDescription').value || '');
-    formData.append('price', document.getElementById('newProductPrice').value || '0');
-    formData.append('stock_quantity', document.getElementById('newProductStock').value || '50');
-    formData.append('reorder_level', document.getElementById('newProductReorder').value || '10');
-    formData.append('barcode', document.getElementById('newProductBarcode').value || '');
+async function loadProductImageReferences() {
+    const select = document.getElementById('newProductImageRef');
+    if (!select) return;
 
-    const imageInput = document.getElementById('newProductImage');
-    if (imageInput && imageInput.files && imageInput.files[0]) {
-        formData.append('image', imageInput.files[0]);
+    const res = await apiCall('/admin_supply.php?action=product-images');
+    if (!res || !res.success || !Array.isArray(res.images)) {
+        return;
     }
+
+    const current = select.value;
+    select.innerHTML = '';
+    res.images.forEach((img) => {
+        const option = document.createElement('option');
+        option.value = img;
+        option.textContent = img;
+        select.appendChild(option);
+    });
+
+    if (Array.from(select.options).some((o) => o.value === current)) {
+        select.value = current;
+    }
+}
+
+async function createProductByAdmin() {
+    const payload = {
+        sku: document.getElementById('newProductSku').value || '',
+        name: document.getElementById('newProductName').value || '',
+        category: document.getElementById('newProductCategory').value || '',
+        description: document.getElementById('newProductDescription').value || '',
+        price: document.getElementById('newProductPrice').value || '0',
+        stock_quantity: document.getElementById('newProductStock').value || '50',
+        reorder_level: document.getElementById('newProductReorder').value || '10',
+        barcode: document.getElementById('newProductBarcode').value || '',
+        image_url: document.getElementById('newProductImageRef').value || 'images/products/default-product.svg'
+    };
 
     const box = document.getElementById('productCreateResult');
 
-    try {
-        const response = await fetch('/api/admin_supply.php?action=product-create', {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
-
-        const res = await response.json();
-        if (!res || !res.success) {
-            if (box) {
-                box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible registrar el producto')}</div>`;
-            }
-            return;
-        }
-
+    const res = await apiCall('/admin_supply.php?action=product-create', 'POST', payload);
+    if (!res || !res.success) {
         if (box) {
-            box.innerHTML = `<div class="alert alert-success">Producto registrado correctamente: <strong>${escapeHtml(res.product.sku || '')}</strong></div>`;
+            box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible registrar el producto')}</div>`;
         }
-
-        showAlert('Producto registrado correctamente', 'success');
-        loadStock();
-    } catch (err) {
-        if (box) {
-            box.innerHTML = '<div class="alert alert-error">Error al registrar el producto</div>';
-        }
+        return;
     }
+
+    if (box) {
+        box.innerHTML = `<div class="alert alert-success">Producto registrado correctamente: <strong>${escapeHtml(res.product.sku || '')}</strong></div>`;
+    }
+
+    showAlert('Producto registrado correctamente', 'success');
+    loadStock();
+    loadSupplierProducts();
 }
 
 function goToClientsTab() {
@@ -402,8 +604,17 @@ document.addEventListener('DOMContentLoaded', function () {
     renderPoItems();
     loadStock();
     loadCalendar();
+    loadSupplierProducts();
+    loadMappedProductsBySupplier();
     loadSupplierOrders();
     loadHistory();
+    loadProductImageReferences();
+
+    const supplierInput = document.getElementById('poSupplier');
+    if (supplierInput) {
+        supplierInput.addEventListener('change', loadMappedProductsBySupplier);
+        supplierInput.addEventListener('blur', loadMappedProductsBySupplier);
+    }
 });
 </script>
 </body>

@@ -10,6 +10,19 @@ $input = json_decode(file_get_contents('php://input'), true);
 
 $response = [];
 
+function table_exists(PDO $pdo, string $tableName): bool {
+    $stmt = $pdo->prepare("SELECT to_regclass(?) AS reg");
+    $stmt->execute([$tableName]);
+    $row = $stmt->fetch();
+    return !empty($row['reg']);
+}
+
+function column_exists(PDO $pdo, string $tableName, string $columnName): bool {
+    $stmt = $pdo->prepare("SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = ? AND column_name = ? LIMIT 1");
+    $stmt->execute([$tableName, $columnName]);
+    return (bool)$stmt->fetchColumn();
+}
+
 try {
     $pdo->exec("CREATE TABLE IF NOT EXISTS cash_drawer_sessions (
         id SERIAL PRIMARY KEY,
@@ -111,6 +124,57 @@ try {
             $stmt = $pdo->prepare("UPDATE cash_drawer_sessions SET closed_by=?, closed_at=NOW(), closing_amount=?, expected_amount=?, difference_amount=?, status='closed', notes=? WHERE id=?");
             $stmt->execute([$_SESSION['user_id'], $closing, $expected, $difference, sanitize($input['notes'] ?? ''), $session['id']]);
             $response = ['success' => true, 'message' => 'Caja cerrada', 'expected_amount' => $expected, 'difference_amount' => $difference];
+            break;
+
+        case 'summary':
+            require_admin();
+            $stmt = $pdo->prepare("SELECT * FROM cash_drawer_sessions WHERE status='open' ORDER BY opened_at DESC LIMIT 1");
+            $stmt->execute();
+            $open = $stmt->fetch();
+
+            $movementNet = 0.0;
+            if ($open) {
+                $stmt = $pdo->prepare("SELECT COALESCE(SUM(CASE WHEN movement_type IN ('in','sale') THEN amount ELSE -amount END),0) total FROM cash_drawer_movements WHERE session_id = ?");
+                $stmt->execute([$open['id']]);
+                $movementNet = (float)($stmt->fetch()['total'] ?? 0);
+            }
+
+            $salesToday = 0.0;
+            $pendingCollections = 0.0;
+            if (table_exists($pdo, 'public.orders')) {
+                $ordersTotalColumn = column_exists($pdo, 'orders', 'total_amount') ? 'total_amount' : 'total';
+                $stmt = $pdo->query("SELECT COALESCE(SUM($ordersTotalColumn),0) AS total FROM orders WHERE DATE(created_at) = CURRENT_DATE");
+                $salesToday = (float)($stmt->fetch()['total'] ?? 0);
+
+                if (column_exists($pdo, 'orders', 'payment_status')) {
+                    $stmt = $pdo->query("SELECT COALESCE(SUM($ordersTotalColumn),0) AS total FROM orders WHERE payment_status IN ('pending','partial')");
+                    $pendingCollections = (float)($stmt->fetch()['total'] ?? 0);
+                }
+            }
+
+            $pendingSupplierPayments = 0.0;
+            if (table_exists($pdo, 'public.supplier_orders')) {
+                $stmt = $pdo->query("SELECT COALESCE(SUM(total_estimated),0) AS total FROM supplier_orders WHERE status IN ('pending','created')");
+                $pendingSupplierPayments = (float)($stmt->fetch()['total'] ?? 0);
+            }
+
+            $cashExpected = $open ? (float)$open['opening_amount'] + $movementNet : 0.0;
+            $realProfit = $salesToday - $pendingSupplierPayments;
+            $profitMarginPct = $salesToday > 0 ? ($realProfit / $salesToday) * 100 : 0;
+
+            $response = [
+                'success' => true,
+                'open_session' => $open ?: null,
+                'summary' => [
+                    'movement_net' => $movementNet,
+                    'cash_expected' => $cashExpected,
+                    'sales_today' => $salesToday,
+                    'pending_collections' => $pendingCollections,
+                    'pending_supplier_payments' => $pendingSupplierPayments,
+                    'real_profit' => $realProfit,
+                    'profit_margin_pct' => $profitMarginPct
+                ]
+            ];
             break;
 
         case 'status':
