@@ -173,7 +173,7 @@
     const meta = getTicketMeta();
     const total = cart.reduce((sum, item) => sum + toNumber(item.unit_price) * toNumber(item.quantity), 0);
 
-    const isA4 = format === 'a4';
+    const isA4 = false;
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({
       orientation: 'portrait',
@@ -320,8 +320,6 @@
 
     const ticketBtn = document.getElementById('printTicket');
     if (ticketBtn) ticketBtn.addEventListener('click', () => drawTicketPdf('thermal'));
-    const ticketA4Btn = document.getElementById('printTicketA4');
-    if (ticketA4Btn) ticketA4Btn.addEventListener('click', () => drawTicketPdf('a4'));
 
     const clearBtn = document.getElementById('clearCart');
     if (clearBtn) {

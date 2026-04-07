@@ -221,7 +221,6 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
             </div>
             <div class="btn-group">
                 <button id="printTicket" class="btn btn-primary">⬇️ Descargar Ticket</button>
-                <button id="printTicketA4" class="btn btn-ghost">📄 Formato A4</button>
                 <button id="clearCart" class="btn btn-secondary">🗑️ Vaciar Carrito</button>
             </div>
         </div>
@@ -230,7 +229,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
     <footer>
         <div class="footer-bottom">&copy; 2026 Truper Platform</div>
     </footer>
-    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="js/jspdf.umd.min.js"></script>
     <script src="js/main.js"></script>
     <script src="js/catalog.js"></script>
 </body>
