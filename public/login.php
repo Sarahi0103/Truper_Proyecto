@@ -1,6 +1,6 @@
 <?php
 require_once '../config/config.php';
-if (is_logged_in()) {
+if (is_logged_in() && (($_SESSION['role'] ?? '') !== 'admin')) {
     header('Location: /orders.php?tab=newOrder');
     exit;
 }
@@ -10,7 +10,7 @@ if (is_logged_in()) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iniciar Sesión - Truper Platform</title>
+    <title>Iniciar Sesión Cliente - Truper Platform</title>
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="auth-page">
@@ -33,13 +33,19 @@ if (is_logged_in()) {
                         <a href="index.php" class="auth-back-link">← Volver a productos</a>
                     </div>
                     <div class="login-header">
-                        <h1 class="login-title">Iniciar Sesión</h1>
-                        <p class="login-subtitle">Accede a tu cuenta de Truper Platform</p>
+                        <h1 class="login-title">Iniciar Sesión Cliente</h1>
+                        <p class="login-subtitle">Accede con tu código único y tu fecha de nacimiento</p>
                     </div>
 
             <?php if (isset($_GET['registered'])): ?>
                 <div class="alert alert-success">
-                    Registro exitoso. Ahora inicia sesión.
+                    Registro exitoso. Ahora inicia sesión con tu código y fecha de nacimiento.
+                </div>
+            <?php endif; ?>
+
+            <?php if (!empty($_GET['code'])): ?>
+                <div class="alert alert-success">
+                    Tu código de cliente es: <strong><?php echo htmlspecialchars($_GET['code'], ENT_QUOTES, 'UTF-8'); ?></strong>
                 </div>
             <?php endif; ?>
 
@@ -56,19 +62,19 @@ if (is_logged_in()) {
                 </div>
             <?php endif; ?>
 
-                    <form id="loginForm" action="api/auth.php" method="POST">
+                    <form id="loginForm" action="api/auth.php?action=client-login" method="POST">
                         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
                         <div class="form-group">
-                            <label for="email">Email o teléfono</label>
-                            <input type="text" id="email" name="email" required placeholder="tu@email.com o +52..." maxlength="255" autocomplete="username">
+                            <label for="code">Código de cliente</label>
+                            <input type="text" id="code" name="code" required placeholder="CLI-XXXXXXXX" maxlength="32" autocomplete="username">
                         </div>
 
                         <div class="form-group">
-                            <label for="password">Contraseña</label>
-                            <input type="password" id="password" name="password" required placeholder="Tu contraseña" minlength="8" autocomplete="current-password">
+                            <label for="birthdate">Fecha de nacimiento</label>
+                            <input type="date" id="birthdate" name="birthdate" required autocomplete="bday">
                         </div>
 
-                        <button type="submit" class="btn btn-primary btn-block">Iniciar Sesión</button>
+                        <button type="submit" class="btn btn-primary btn-block">Ingresar</button>
                     </form>
 
                     <div class="form-group mt-3">

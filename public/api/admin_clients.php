@@ -24,12 +24,16 @@ try {
             $lastName = sanitize($input['last_name'] ?? '');
             $phone = sanitize($input['phone'] ?? '');
             $email = sanitize($input['email'] ?? '');
-            $password = (string)($input['password'] ?? '');
             $companyName = sanitize($input['company_name'] ?? '');
             $birthdate = $input['birthdate'] ?? null;
 
-            if ($firstName === '' || $lastName === '' || $phone === '' || $password === '') {
-                $response = ['success' => false, 'message' => 'Nombre, apellido, teléfono y contraseña son obligatorios'];
+            if ($firstName === '' || $lastName === '' || $phone === '') {
+                $response = ['success' => false, 'message' => 'Nombre, apellido y teléfono son obligatorios'];
+                break;
+            }
+
+            if (empty($birthdate)) {
+                $response = ['success' => false, 'message' => 'La fecha de nacimiento es obligatoria'];
                 break;
             }
 
@@ -41,8 +45,6 @@ try {
 
             $result = $auth->register([
                 'email' => $email,
-                'password' => $password,
-                'confirm_password' => $password,
                 'first_name' => $firstName,
                 'last_name' => $lastName,
                 'phone' => $phone,

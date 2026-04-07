@@ -52,8 +52,6 @@ try {
 
             $response = $auth->register([
                 'email' => sanitize($_POST['email'] ?? ''),
-                'password' => $_POST['password'] ?? '',
-                'confirm_password' => $_POST['confirm_password'] ?? '',
                 'first_name' => sanitize($_POST['first_name'] ?? ''),
                 'last_name' => sanitize($_POST['last_name'] ?? ''),
                 'phone' => sanitize($_POST['phone'] ?? ''),
@@ -63,7 +61,40 @@ try {
 
             if ($response['success']) {
                 auth_rate_limit_reset($registerKey);
-                $response['redirect'] = '/login.php?registered=1';
+                $redirect = '/login.php?registered=1';
+                if (!empty($response['user_code'])) {
+                    $redirect .= '&code=' . rawurlencode((string)$response['user_code']);
+                }
+                $response['redirect'] = $redirect;
+            }
+            break;
+
+        case 'client-login':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+                $response = ['success' => false, 'message' => 'Sesión inválida. Recarga la página.'];
+                break;
+            }
+
+            $loginKey = 'client_login_attempts_' . hash('sha256', strtolower(trim((string)($_POST['code'] ?? ''))) . '_' . getTrusSIDBug());
+            if (!auth_rate_limit_check($loginKey, 6, 900)) {
+                $response = ['success' => false, 'message' => 'Demasiados intentos. Intenta en 15 minutos.'];
+                break;
+            }
+
+            $response = $auth->loginByClientCode(
+                sanitize($_POST['code'] ?? ''),
+                $_POST['birthdate'] ?? ''
+            );
+
+            if ($response['success']) {
+                auth_rate_limit_reset($loginKey);
+                log_action($_SESSION['user_id'], 'LOGIN_CLIENT', 'Inicio de sesión de cliente por código', getTrusSIDBug());
+                $response['redirect'] = route_by_role($_SESSION['role'] ?? 'client');
             }
             break;
 

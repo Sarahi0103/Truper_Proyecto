@@ -17,17 +17,15 @@ class AuthController {
             if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
                 return ['success' => false, 'message' => 'Email inválido'];
             }
-            
-            if (strlen($data['password']) < 8) {
-                return ['success' => false, 'message' => 'Contraseña debe tener al menos 8 caracteres'];
+
+            $birthdate = !empty($data['birthdate']) ? $data['birthdate'] : null;
+            if (empty($birthdate)) {
+                return ['success' => false, 'message' => 'La fecha de nacimiento es obligatoria'];
             }
 
-            if (!preg_match('/[A-Za-z]/', $data['password']) || !preg_match('/\d/', $data['password'])) {
-                return ['success' => false, 'message' => 'La contraseña debe incluir letras y números'];
-            }
-            
-            if ($data['password'] !== $data['confirm_password']) {
-                return ['success' => false, 'message' => 'Las contraseñas no coinciden'];
+            $password = trim((string)($data['password'] ?? ''));
+            if ($password === '') {
+                $password = bin2hex(random_bytes(12));
             }
             
             $existing = $this->getUserByEmail($data['email']);
@@ -39,7 +37,7 @@ class AuthController {
             $lastName = trim((string)($data['last_name'] ?? ''));
             $fullName = trim($firstName . ' ' . $lastName);
 
-            $password_hash = password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => 12]);
+            $password_hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
             $user_id = $this->registerWithFallbackStrategies(
                 $data['email'],
                 $password_hash,
@@ -47,7 +45,7 @@ class AuthController {
                 $lastName,
                 $fullName,
                 trim((string)($data['phone'] ?? '')),
-                !empty($data['birthdate']) ? $data['birthdate'] : null
+                $birthdate
             );
             
             $this->createClientIfPossible($user_id, trim((string)($data['company_name'] ?? '')));
@@ -59,7 +57,7 @@ class AuthController {
                 'user_id' => $user_id,
                 'user_code' => $userCode
             ];
-        } catch (PDOException $e) {
+        } catch (Exception $e) {
             error_log("Error en registro: " . $e->getMessage());
             return ['success' => false, 'message' => 'Error al registrar. Intenta de nuevo.'];
         }
@@ -154,6 +152,90 @@ class AuthController {
             ];
         } catch (PDOException $e) {
             error_log("Error en login: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Error al iniciar sesión'];
+        }
+    }
+
+    public function loginByClientCode($userCode, $birthdate) {
+        try {
+            $this->ensureAuthSchema();
+            $userCode = trim((string)$userCode);
+            $birthdate = trim((string)$birthdate);
+
+            if ($userCode === '' || $birthdate === '') {
+                return ['success' => false, 'message' => 'Código de cliente y fecha de nacimiento son obligatorios'];
+            }
+
+            $birthColumn = null;
+            if ($this->columnExists('users', 'birthdate')) {
+                $birthColumn = 'birthdate';
+            } elseif ($this->columnExists('users', 'birthday')) {
+                $birthColumn = 'birthday';
+            }
+
+            if ($birthColumn === null) {
+                return ['success' => false, 'message' => 'No se encontró la columna de fecha de nacimiento'];
+            }
+
+            $stmt = $this->pdo->prepare("SELECT * FROM users WHERE user_code = ? LIMIT 1");
+            $stmt->execute([$userCode]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+
+            if (!$user) {
+                return ['success' => false, 'message' => 'Código de cliente incorrecto'];
+            }
+
+            if (($user['role'] ?? 'client') !== 'client') {
+                return ['success' => false, 'message' => 'Este acceso es solo para clientes'];
+            }
+
+            if (array_key_exists('is_active', $user) && !$this->isTruthy($user['is_active'])) {
+                return ['success' => false, 'message' => 'Tu cuenta está desactivada'];
+            }
+            if (array_key_exists('active', $user) && !$this->isTruthy($user['active'])) {
+                return ['success' => false, 'message' => 'Tu cuenta está desactivada'];
+            }
+
+            $storedBirthdate = trim((string)($user[$birthColumn] ?? ''));
+            if ($storedBirthdate === '') {
+                return ['success' => false, 'message' => 'Tu cuenta no tiene fecha de nacimiento registrada'];
+            }
+
+            $providedDate = substr($birthdate, 0, 10);
+            $storedDate = substr($storedBirthdate, 0, 10);
+            if ($providedDate !== $storedDate) {
+                return ['success' => false, 'message' => 'Fecha de nacimiento incorrecta'];
+            }
+
+            $this->ensureUserCodeForUser((int)$user['id']);
+
+            if ($this->columnExists('users', 'last_login')) {
+                $stmtLogin = $this->pdo->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
+                $stmtLogin->execute([$user['id']]);
+            }
+
+            $role = $user['role'] ?? 'client';
+            $name = trim((string)(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')));
+            if ($name === '') {
+                $name = $user['name'] ?? $user['email'];
+            }
+            $points = $user['loyalty_points'] ?? ($user['points'] ?? 0);
+
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['email'] = $user['email'];
+            $_SESSION['role'] = $role;
+            $_SESSION['name'] = $name;
+            $_SESSION['phone'] = $user['phone'] ?? null;
+            $_SESSION['loyalty_points'] = (int)$points;
+            $_SESSION['login_time'] = time();
+
+            return [
+                'success' => true,
+                'message' => 'Bienvenido ' . $name,
+                'role' => $role
+            ];
+        } catch (PDOException $e) {
+            error_log("Error en login de cliente: " . $e->getMessage());
             return ['success' => false, 'message' => 'Error al iniciar sesión'];
         }
     }

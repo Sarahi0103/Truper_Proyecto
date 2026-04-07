@@ -10,7 +10,7 @@ if (is_logged_in()) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registrarse - Truper Platform</title>
+    <title>Registro de Cliente - Truper Platform</title>
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="auth-page register-auth-page">
@@ -18,8 +18,8 @@ if (is_logged_in()) {
         <div class="auth-shell register-shell">
             <aside class="auth-side">
                 <div class="login-logo"><img src="images/truper-logo.svg" alt="Truper" style="height: 46px;"></div>
-                <h2>Únete a Truper</h2>
-                <p>Crea tu cuenta para gestionar pedidos, consultar historial y acceder a beneficios exclusivos.</p>
+                <h2>Registro de Cliente</h2>
+                <p>Crea tu cuenta con fecha de nacimiento obligatoria. Tu código único se usará para iniciar sesión.</p>
                 <ul>
                     <li>Historial y seguimiento de pedidos</li>
                     <li>Programa de puntos y promociones</li>
@@ -34,7 +34,7 @@ if (is_logged_in()) {
                     </div>
                     <div class="login-header" style="margin-bottom: 1rem;">
                         <h1 class="login-title">Crear Cuenta</h1>
-                        <p class="login-subtitle">Registro rápido para clientes con beneficios y seguimiento de pedidos.</p>
+                        <p class="login-subtitle">Registro rápido para clientes. No necesitas contraseña.</p>
                     </div>
 
                     <?php if (isset($_GET['error'])): ?>
@@ -73,17 +73,6 @@ if (is_logged_in()) {
                         <div class="form-group">
                             <label for="company_name">Empresa (Opcional)</label>
                             <input type="text" id="company_name" name="company_name">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="password">Contraseña</label>
-                            <input type="password" id="password" name="password" required minlength="8" autocomplete="new-password" pattern="(?=.*[A-Za-z])(?=.*\d).{8,}" title="Debe incluir al menos 8 caracteres, letras y números">
-                            <small class="text-muted">Mínimo 8 caracteres, con letras y números</small>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="confirm_password">Confirmar Contraseña</label>
-                            <input type="password" id="confirm_password" name="confirm_password" required autocomplete="new-password">
                         </div>
 
                         <div class="form-group register-full">

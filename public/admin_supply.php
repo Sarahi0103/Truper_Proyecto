@@ -37,6 +37,23 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
         <h1>Panel de Abastecimiento</h1>
         <p class="text-muted">Control de existencias, calendario de proveedores, ordenes de compra y historico.</p>
 
+        <div class="grid grid-2 mt-3">
+            <div class="card">
+                <div class="card-body">
+                    <h3>Acceso rápido a clientes</h3>
+                    <p class="text-muted">Registrar y consultar el acceso del cliente sin usar contraseña.</p>
+                    <button class="btn btn-primary" onclick="goToClientsTab()">Ir al registro de cliente</button>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <h3>Inicio de sesión del cliente</h3>
+                    <p class="text-muted">El cliente entra con código único y fecha de nacimiento obligatoria.</p>
+                    <a class="btn btn-secondary" href="login.php">Abrir inicio de sesión</a>
+                </div>
+            </div>
+        </div>
+
         <div class="tabs mt-3">
             <button class="tab-button active" data-tab="stockTab">Stock</button>
             <button class="tab-button" data-tab="calendarTab">Calendario</button>
@@ -109,10 +126,11 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     <div class="form-group"><label>Email (opcional)</label><input id="clientEmail" type="email" placeholder="cliente@email.com"></div>
                 </div>
                 <div class="grid grid-2">
-                    <div class="form-group"><label>Contraseña inicial</label><input id="clientPassword" type="password" minlength="8"></div>
                     <div class="form-group"><label>Empresa (opcional)</label><input id="clientCompany" type="text"></div>
+                    <div class="form-group"><label>Fecha de nacimiento</label><input id="clientBirthdate" type="date" required></div>
                 </div>
-                <div class="form-group"><label>Fecha de nacimiento (opcional)</label><input id="clientBirthdate" type="date"></div>
+
+                <p class="text-muted">El cliente iniciará sesión con su código único y su fecha de nacimiento.</p>
 
                 <button class="btn btn-primary" onclick="createClientByAdmin()">Registrar cliente</button>
 
@@ -266,7 +284,6 @@ async function createClientByAdmin() {
         last_name: document.getElementById('clientLastName').value,
         phone: document.getElementById('clientPhone').value,
         email: document.getElementById('clientEmail').value,
-        password: document.getElementById('clientPassword').value,
         company_name: document.getElementById('clientCompany').value,
         birthdate: document.getElementById('clientBirthdate').value || null
     };
@@ -292,6 +309,17 @@ async function createClientByAdmin() {
     }
 
     showAlert('Cliente registrado correctamente', 'success');
+}
+
+function goToClientsTab() {
+    const tabButton = document.querySelector('[data-tab="clientsTab"]');
+    if (tabButton) {
+        tabButton.click();
+    }
+    const section = document.getElementById('clientsTab');
+    if (section) {
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function () {
