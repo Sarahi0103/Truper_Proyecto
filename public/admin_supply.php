@@ -200,6 +200,8 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <h3>Registrar Cliente (Admin)</h3>
                 <p class="text-muted">Crea clientes y genera su código único para identificación rápida.</p>
 
+                <input type="hidden" id="clientEditId" value="">
+
                 <div class="grid grid-2">
                     <div class="form-group"><label>Nombre</label><input id="clientFirstName" type="text"></div>
                     <div class="form-group"><label>Apellido</label><input id="clientLastName" type="text"></div>
@@ -215,9 +217,17 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
 
                 <p class="text-muted">El cliente iniciará sesión con su código único y su fecha de nacimiento.</p>
 
-                <button class="btn btn-primary" onclick="createClientByAdmin()">Registrar cliente</button>
+                <div class="d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="saveClientByAdmin()" id="clientSaveButton">Registrar cliente</button>
+                    <button class="btn btn-secondary" type="button" onclick="resetClientForm()">Limpiar formulario</button>
+                </div>
 
                 <div id="clientCreateResult" class="mt-3"></div>
+            </div></div>
+
+            <div class="card mt-3"><div class="card-body">
+                <h3>Clientes registrados</h3>
+                <div id="clientListResult" class="text-muted">Cargando clientes...</div>
             </div></div>
         </section>
 
@@ -245,6 +255,120 @@ function escapeHtml(v) {
 
 function displayProductCode(rawSku) {
     return String(rawSku || '').replace(/^XLS-/i, '');
+}
+
+function displayClientCode(rawCode) {
+    return String(rawCode || '').replace(/\D+/g, '');
+}
+
+function resetClientForm() {
+    document.getElementById('clientEditId').value = '';
+    document.getElementById('clientFirstName').value = '';
+    document.getElementById('clientLastName').value = '';
+    document.getElementById('clientPhone').value = '';
+    document.getElementById('clientEmail').value = '';
+    document.getElementById('clientCompany').value = '';
+    document.getElementById('clientBirthdate').value = '';
+
+    const button = document.getElementById('clientSaveButton');
+    if (button) {
+        button.textContent = 'Registrar cliente';
+    }
+
+    const box = document.getElementById('clientCreateResult');
+    if (box) {
+        box.innerHTML = '';
+    }
+}
+
+function fillClientForm(client) {
+    if (!client) return;
+
+    document.getElementById('clientEditId').value = client.id || '';
+    document.getElementById('clientFirstName').value = client.first_name || '';
+    document.getElementById('clientLastName').value = client.last_name || '';
+    document.getElementById('clientPhone').value = client.phone || '';
+    document.getElementById('clientEmail').value = client.email || '';
+    document.getElementById('clientCompany').value = client.company_name || '';
+    document.getElementById('clientBirthdate').value = (client.birthdate || '').slice(0, 10);
+
+    const button = document.getElementById('clientSaveButton');
+    if (button) {
+        button.textContent = 'Actualizar cliente';
+    }
+}
+
+function fillClientFormFromButton(buttonEl) {
+    if (!buttonEl) return;
+
+    const encoded = buttonEl.getAttribute('data-client') || '';
+    if (!encoded) return;
+
+    try {
+        const client = JSON.parse(decodeURIComponent(encoded));
+        fillClientForm(client);
+    } catch (error) {
+        showAlert('No fue posible cargar los datos del cliente', 'error');
+    }
+}
+
+function renderClientList(clients) {
+    const box = document.getElementById('clientListResult');
+    if (!box) return;
+
+    if (!Array.isArray(clients) || clients.length === 0) {
+        box.innerHTML = '<p class="text-muted">No hay clientes registrados.</p>';
+        return;
+    }
+
+    box.innerHTML = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Cliente</th>
+                    <th>Código único</th>
+                    <th>Teléfono</th>
+                    <th>Email</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${clients.map((client) => {
+                    const fullName = `${client.first_name || ''} ${client.last_name || ''}`.trim();
+                    const code = displayClientCode(client.user_code || '');
+                    const statusLabel = Number(client.is_active) ? 'Activo' : 'Inactivo';
+                    return `
+                        <tr>
+                            <td>${escapeHtml(fullName || 'Sin nombre')}</td>
+                            <td>${escapeHtml(code || 'Sin código')}</td>
+                            <td>${escapeHtml(client.phone || '')}</td>
+                            <td>${escapeHtml(client.email || '')}</td>
+                            <td>${Number(client.is_active) ? '<span class="badge badge-success">Activo</span>' : '<span class="badge badge-danger">Inactivo</span>'}</td>
+                            <td>
+                                <button class="btn btn-small btn-secondary" type="button" data-client="${escapeHtml(encodeURIComponent(JSON.stringify(client)))}" onclick="fillClientFormFromButton(this)">Editar</button>
+                                <button class="btn btn-small btn-danger" type="button" onclick="deleteClientByAdmin(${Number(client.id)})">Eliminar</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+async function loadClients() {
+    const box = document.getElementById('clientListResult');
+    const response = await apiCall('/admin_clients.php?action=list', 'GET', null, { silent: true });
+
+    if (!response || !response.success || !Array.isArray(response.clients)) {
+        if (box) {
+            box.innerHTML = '<p class="text-muted">No fue posible cargar clientes.</p>';
+        }
+        return;
+    }
+
+    renderClientList(response.clients);
 }
 
 async function loadStock() {
@@ -520,8 +644,10 @@ async function loadHistory() {
     </tr>`).join('');
 }
 
-async function createClientByAdmin() {
+async function saveClientByAdmin() {
+    const clientId = document.getElementById('clientEditId').value || '';
     const payload = {
+        id: clientId,
         first_name: document.getElementById('clientFirstName').value,
         last_name: document.getElementById('clientLastName').value,
         phone: document.getElementById('clientPhone').value,
@@ -530,7 +656,8 @@ async function createClientByAdmin() {
         birthdate: document.getElementById('clientBirthdate').value || null
     };
 
-    const res = await apiCall('/admin_clients.php?action=create', 'POST', payload);
+    const action = clientId ? 'update' : 'create';
+    const res = await apiCall(`/admin_clients.php?action=${action}`, 'POST', payload);
     const box = document.getElementById('clientCreateResult');
 
     if (!res || !res.success) {
@@ -541,16 +668,44 @@ async function createClientByAdmin() {
     }
 
     if (box) {
+        const code = displayClientCode(res.client.user_code || '');
         box.innerHTML = `
             <div class="alert alert-success">
-                Cliente registrado correctamente.<br>
-                <strong>Código único:</strong> ${escapeHtml(res.client.user_code || 'N/A')}<br>
+                Cliente ${clientId ? 'actualizado' : 'registrado'} correctamente.<br>
+                <strong>Código único:</strong> ${escapeHtml(code || 'N/A')}<br>
                 <strong>Login con teléfono:</strong> ${escapeHtml(res.client.phone || '')}
             </div>
         `;
     }
 
-    showAlert('Cliente registrado correctamente', 'success');
+    showAlert(clientId ? 'Cliente actualizado correctamente' : 'Cliente registrado correctamente', 'success');
+    resetClientForm();
+    loadClients();
+}
+
+async function deleteClientByAdmin(clientId) {
+    if (!clientId) return;
+
+    if (!confirm('¿Deseas eliminar este cliente? Esta acción no se puede deshacer.')) {
+        return;
+    }
+
+    const res = await apiCall('/admin_clients.php?action=delete', 'POST', { id: clientId });
+    const box = document.getElementById('clientCreateResult');
+
+    if (!res || !res.success) {
+        if (box) {
+            box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible eliminar el cliente')}</div>`;
+        }
+        return;
+    }
+
+    if (box) {
+        box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Cliente eliminado correctamente')}</div>`;
+    }
+
+    resetClientForm();
+    loadClients();
 }
 
 async function loadProductImageReferences() {
@@ -680,6 +835,7 @@ document.addEventListener('DOMContentLoaded', function () {
     loadSupplierOrders();
     loadHistory();
     loadProductImageReferences();
+    loadClients();
 
     const supplierInput = document.getElementById('poSupplier');
     if (supplierInput) {

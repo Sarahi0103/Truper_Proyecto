@@ -478,24 +478,19 @@ class AuthController {
     }
 
     private function generateUserCode() {
-        $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-        $part = '';
-        for ($i = 0; $i < 8; $i++) {
-            $part .= $alphabet[random_int(0, strlen($alphabet) - 1)];
-        }
-        return 'CLI-' . $part;
+        return (string)random_int(100000000, 999999999);
     }
 
     private function ensureUserCodeForUser($userId) {
         if (!$this->columnExists('users', 'user_code')) {
-            return 'CLI-' . str_pad((string)$userId, 8, '0', STR_PAD_LEFT);
+            return str_pad((string)$userId, 9, '0', STR_PAD_LEFT);
         }
 
         try {
             $stmt = $this->pdo->prepare("SELECT user_code FROM users WHERE id = ? LIMIT 1");
             $stmt->execute([$userId]);
             $existing = $stmt->fetchColumn();
-            if (!empty($existing)) {
+            if (!empty($existing) && preg_match('/^[0-9]+$/', (string)$existing)) {
                 return (string)$existing;
             }
 
@@ -509,14 +504,14 @@ class AuthController {
             } while ($exists && $tries < 10);
 
             if (empty($code)) {
-                $code = 'CLI-' . str_pad((string)$userId, 8, '0', STR_PAD_LEFT);
+                $code = str_pad((string)$userId, 9, '0', STR_PAD_LEFT);
             }
 
             $update = $this->pdo->prepare("UPDATE users SET user_code = ? WHERE id = ?");
             $update->execute([$code, $userId]);
             return $code;
         } catch (Exception $e) {
-            return 'CLI-' . str_pad((string)$userId, 8, '0', STR_PAD_LEFT);
+            return str_pad((string)$userId, 9, '0', STR_PAD_LEFT);
         }
     }
 }
