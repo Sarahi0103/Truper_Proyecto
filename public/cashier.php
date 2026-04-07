@@ -14,9 +14,9 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
     <link rel="stylesheet" href="css/theme.css">
     <style>
       .cash-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
-      .metric { border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px; background: #fff; }
-      .metric-label { font-size: 12px; color: #6b7280; }
-      .metric-value { font-size: 18px; font-weight: 700; color: #111827; }
+      .metric { border: 1px solid var(--ui-border); border-radius: 10px; padding: 10px; background: var(--ui-surface); }
+      .metric-label { font-size: 12px; color: var(--ui-text-muted); }
+      .metric-value { font-size: 18px; font-weight: 700; color: var(--ui-text); }
     </style>
 </head>
 <body>

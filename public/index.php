@@ -157,6 +157,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                 <?php if ($isAdmin): ?><a href="/admin_supply.php">Abastecimiento</a><?php endif; ?>
                 <?php if ($isLogged): ?>
                     <a href="/orders.php">Pedidos</a>
+                    <a href="/account.php">Mi Cuenta</a>
                     <a href="/wholesale.php">Mayoreo</a>
                     <?php if ($isAdmin): ?><a href="/cashier.php">Caja</a><?php endif; ?>
                     <a href="/dashboard.php">Dashboard</a>
@@ -189,7 +190,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
             </div>
 
             <div class="catalog-toolbar">
-                <input id="catalogSearch" class="catalog-search" type="text" placeholder="Buscar por nombre, SKU o categoría...">
+                <input id="catalogSearch" class="catalog-search" type="text" placeholder="Buscar por nombre, código o categoría...">
             </div>
 
             <div class="catalog-filters">
@@ -315,19 +316,6 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
     <script src="js/main.js"></script>
     <script src="js/catalog.js"></script>
     <script>
-        // Tema oscuro/claro
-        function initTheme() {
-            const saved = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', saved);
-        }
-
-        function toggleTheme() {
-            const current = document.documentElement.getAttribute('data-theme') || 'light';
-            const newTheme = current === 'light' ? 'dark' : 'light';
-            document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-        }
-
         // Compartir por WhatsApp
         document.addEventListener('DOMContentLoaded', function() {
             const shareBtn = document.getElementById('shareWhatsApp');
@@ -351,8 +339,6 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                     window.open(whatsappUrl, '_blank');
                 });
             }
-
-            initTheme();
         });
     </script>
 </body>

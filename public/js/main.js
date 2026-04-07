@@ -9,6 +9,51 @@ const APP = {
     timeout: 5000
 };
 
+function getThemePreference() {
+    return localStorage.getItem('theme') || 'light';
+}
+
+function setThemePreference(theme) {
+    const next = theme === 'dark' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+
+    const toggleLabel = document.querySelector('[data-theme-toggle-label]');
+    if (toggleLabel) {
+        toggleLabel.textContent = next === 'dark' ? 'Modo oscuro' : 'Modo claro';
+    }
+}
+
+function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme') || getThemePreference();
+    setThemePreference(current === 'dark' ? 'light' : 'dark');
+}
+
+function ensureThemeToggleButton() {
+    if (document.querySelector('.theme-toggle')) return;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'theme-toggle';
+    wrap.innerHTML = '<button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo claro</span></button>';
+    document.body.appendChild(wrap);
+
+    const btn = wrap.querySelector('[data-theme-toggle-btn]');
+    if (btn) btn.addEventListener('click', toggleTheme);
+}
+
+function initThemeSystem() {
+    setThemePreference(getThemePreference());
+    ensureThemeToggleButton();
+
+    const existingButtons = document.querySelectorAll('.theme-toggle button');
+    existingButtons.forEach((btn) => {
+        if (!btn.__themeBound) {
+            btn.addEventListener('click', toggleTheme);
+            btn.__themeBound = true;
+        }
+    });
+}
+
 /**
  * Mostrar alerta
  */
@@ -160,6 +205,7 @@ document.addEventListener('click', function(e) {
  * Inicializar cuando el DOM está listo
  */
 document.addEventListener('DOMContentLoaded', function() {
+    initThemeSystem();
     loadUserData();
     setupTabs();
     

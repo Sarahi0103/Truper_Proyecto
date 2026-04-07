@@ -12,49 +12,29 @@ $user_id = (int)$_SESSION['user_id'];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mi Cuenta - Truper Platform</title>
     <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/theme.css">
     <style>
-        :root[data-theme="dark"] {
-            --bg-primary: #1a1a1a;
-            --bg-secondary: #242424;
-            --text-primary: #e0e0e0;
-            --text-secondary: #b0b0b0;
-            --border-color: #404040;
-        }
-
-        [data-theme="light"] {
-            --bg-primary: #ffffff;
-            --bg-secondary: #f5f5f5;
-            --text-primary: #333333;
-            --text-secondary: #666666;
-            --border-color: #dddddd;
-        }
-
-        body { background: var(--bg-primary); color: var(--text-primary); transition: background 0.3s, color 0.3s; }
-        .card { background: var(--bg-secondary); border-color: var(--border-color); }
-        input, select, textarea { background: var(--bg-primary); color: var(--text-primary); border-color: var(--border-color); }
-        .theme-toggle { position: fixed; top: 20px; left: 20px; z-index: 1000; }
-        .theme-toggle button { background: var(--color-primary); color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
         .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 15px 0; }
-        .metric-box { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; text-align: center; }
-        .metric-value { font-size: 20px; font-weight: 700; color: var(--color-primary); }
+        .metric-box { background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: 8px; padding: 15px; text-align: center; }
+        .metric-value { font-size: 20px; font-weight: 700; color: var(--color-naranja); }
         .metric-label { font-size: 12px; color: var(--text-secondary); margin-top: 5px; }
 
-        .week-row { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; }
+        .week-row { background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: 8px; padding: 12px; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; }
         .week-period { font-weight: 600; color: var(--text-primary); }
         .week-amount { color: var(--color-warning); font-weight: 700; }
         .week-status-pending { color: #f59e0b; }
         .week-status-partial { color: #3b82f6; }
         .week-status-paid { color: #10b981; }
 
-        .quote-item { background: var(--bg-secondary); border-left: 4px solid var(--color-primary); padding: 10px; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; }
+        .quote-item { background: var(--ui-surface); border-left: 4px solid var(--color-naranja); padding: 10px; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; }
         .quote-info { flex: 1; }
         .quote-qty { font-weight: 600; }
         .quote-remove { background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; }
 
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th { background: var(--bg-secondary); padding: 10px; text-align: left; font-weight: 600; border-bottom: 2px solid var(--border-color); }
-        td { padding: 10px; border-bottom: 1px solid var(--border-color); }
-        tr:hover { background: var(--bg-secondary); }
+        th { background: var(--ui-surface-soft); padding: 10px; text-align: left; font-weight: 600; border-bottom: 2px solid var(--ui-border); }
+        td { padding: 10px; border-bottom: 1px solid var(--ui-border); }
+        tr:hover { background: var(--ui-surface-soft); }
 
         .alert { padding: 12px; border-radius: 6px; margin: 10px 0; }
         .alert-info { background: #dbeafe; color: #0c4a6e; border-left: 4px solid #0284c7; }
@@ -193,19 +173,6 @@ $user_id = (int)$_SESSION['user_id'];
 
 <script src="js/main.js"></script>
 <script>
-// Tema oscuro/claro
-function initTheme() {
-    const saved = localStorage.getItem('theme') || 'light';
-    document.documentElement.setAttribute('data-theme', saved);
-}
-
-function toggleTheme() {
-    const current = document.documentElement.getAttribute('data-theme') || 'light';
-    const newTheme = current === 'light' ? 'dark' : 'light';
-    document.documentElement.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
-}
-
 function setupTabs() {
     document.querySelectorAll('.tab-button').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -442,7 +409,6 @@ async function loadPreviousQuotes() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    initTheme();
     setupTabs();
     loadCreditSummary();
     loadWeeklySummary();

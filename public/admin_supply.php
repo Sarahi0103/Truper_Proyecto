@@ -16,10 +16,10 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
         .grid-4 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
         .calendar-weekdays,
         .calendar-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-        .calendar-weekday { text-align: center; font-weight: 700; color: #6b7280; font-size: 12px; }
-        .calendar-day { border: 1px solid #e5e7eb; border-radius: 10px; min-height: 58px; padding: 6px; background: #fff; }
-        .calendar-day-empty { background: #f9fafb; border-style: dashed; }
-        .calendar-day-number { font-weight: 700; font-size: 13px; color: #111827; }
+        .calendar-weekday { text-align: center; font-weight: 700; color: var(--ui-text-muted); font-size: 12px; }
+        .calendar-day { border: 1px solid var(--ui-border); border-radius: 10px; min-height: 58px; padding: 6px; background: var(--ui-surface); }
+        .calendar-day-empty { background: var(--ui-surface-soft); border-style: dashed; }
+        .calendar-day-number { font-weight: 700; font-size: 13px; color: var(--ui-text); }
         .calendar-day-visits { margin-top: 4px; font-size: 11px; color: #b45309; }
         .calendar-day-has-visits { border-color: #f59e0b; background: #fffbeb; }
     </style>

@@ -9,33 +9,43 @@
 /* Variables por defecto (tema claro) */
 :root[data-theme="light"],
 :root:not([data-theme]) {
-    --bg-primary: #ffffff;
-    --bg-secondary: #f5f5f5;
-    --bg-tertiary: #fafafa;
-    --text-primary: #1a1a1a;
-    --text-secondary: #666666;
-    --text-tertiary: #999999;
-    --border-color: #dddddd;
+    --bg-primary: #f3f4f6;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #f8fafc;
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --text-tertiary: #94a3b8;
+    --border-color: #e5e7eb;
     --input-bg: #ffffff;
-    --input-border: #e0e0e0;
+    --input-border: #d1d5db;
     --shadow-light: rgba(0, 0, 0, 0.05);
-    --shadow-medium: rgba(0, 0, 0, 0.1);
+    --shadow-medium: rgba(17, 24, 39, 0.12);
 }
 
 /* Variables para tema oscuro */
 :root[data-theme="dark"] {
     color-scheme: dark;
-    --bg-primary: #0f172a;
-    --bg-secondary: #1e293b;
-    --bg-tertiary: #334155;
-    --text-primary: #f1f5f9;
-    --text-secondary: #cbd5e1;
+    --bg-primary: #0b1220;
+    --bg-secondary: #121a2b;
+    --bg-tertiary: #1b2538;
+    --text-primary: #e5e7eb;
+    --text-secondary: #a7b0c0;
     --text-tertiary: #94a3b8;
-    --border-color: #475569;
-    --input-bg: #1e293b;
-    --input-border: #334155;
+    --border-color: #2b364b;
+    --input-bg: #10192a;
+    --input-border: #31405a;
     --shadow-light: rgba(0, 0, 0, 0.2);
-    --shadow-medium: rgba(0, 0, 0, 0.3);
+    --shadow-medium: rgba(0, 0, 0, 0.45);
+}
+
+:root {
+    --ui-bg: var(--bg-primary);
+    --ui-surface: var(--bg-secondary);
+    --ui-surface-soft: var(--bg-tertiary);
+    --ui-border: var(--border-color);
+    --ui-text: var(--text-primary);
+    --ui-text-muted: var(--text-secondary);
+    --ui-shadow: 0 8px 24px var(--shadow-medium);
 }
 
 /* Aplicar variables a elementos HTML */
@@ -61,7 +71,7 @@ nav a:not(.active) {
 }
 
 nav a:hover {
-    color: var(--color-primary) !important;
+    color: var(--color-naranja) !important;
 }
 
 /* Tarjetas (cards) */
@@ -208,7 +218,7 @@ tr:hover {
 }
 
 .theme-toggle button {
-    background: var(--color-primary);
+    background: var(--color-naranja);
     color: white;
     border: none;
     padding: 8px 12px;
@@ -266,7 +276,7 @@ tr:hover {
 
 /* Transiciones suaves */
 * {
-    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
 }
 
 input, select, textarea, button {
