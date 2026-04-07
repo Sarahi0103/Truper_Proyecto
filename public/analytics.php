@@ -66,9 +66,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                         <div style="margin-bottom: 1.5rem;">
                             <label>Seleccionar Año:</label>
                             <select id="yearFilter" onchange="loadPurchaseStats()">
-                                <option value="2024">2024</option>
-                                <option value="2023">2023</option>
-                                <option value="2022">2022</option>
+                                <option value="">Cargando años...</option>
                             </select>
                         </div>
                         <div id="purchaseStatsContainer"></div>
@@ -177,8 +175,26 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             }
         }
 
+        async function loadAvailableYears() {
+            const yearFilter = document.getElementById('yearFilter');
+            if (!yearFilter) return;
+
+            const response = await apiCall('/analytics.php?action=available-years');
+            const years = Array.isArray(response?.years) ? response.years : [];
+
+            if (years.length === 0) {
+                const currentYear = new Date().getFullYear();
+                yearFilter.innerHTML = `<option value="${currentYear}">${currentYear}</option>`;
+                return;
+            }
+
+            yearFilter.innerHTML = years
+                .map((year) => `<option value="${year}">${year}</option>`)
+                .join('');
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
-            loadPurchaseStats();
+            loadAvailableYears().then(loadPurchaseStats);
         });
     </script>
 </body>

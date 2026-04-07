@@ -31,6 +31,34 @@ try {
             $response = ['success' => true, 'stats' => $stats];
             break;
 
+        case 'available-years':
+            require_admin();
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            $years = [];
+            try {
+                $stmt = $pdo->query("SELECT DISTINCT YEAR(created_at) AS year_value FROM orders WHERE created_at IS NOT NULL ORDER BY year_value DESC");
+                $rows = $stmt ? $stmt->fetchAll() : [];
+                foreach ($rows as $row) {
+                    $yearValue = (int)($row['year_value'] ?? 0);
+                    if ($yearValue > 0) {
+                        $years[] = $yearValue;
+                    }
+                }
+            } catch (Exception $ignored) {
+                $years = [];
+            }
+
+            if (empty($years)) {
+                $years[] = (int)date('Y');
+            }
+
+            $response = ['success' => true, 'years' => array_values(array_unique($years))];
+            break;
+
         case 'predictions':
             require_admin();
             if ($method !== 'GET') {
