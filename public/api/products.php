@@ -13,6 +13,17 @@ header('Content-Type: application/json');
 $action = $_GET['action'] ?? null;
 $method = $_SERVER['REQUEST_METHOD'];
 
+function display_product_code($sku) {
+    return preg_replace('/^\s*XLS-/i', '', (string)$sku);
+}
+
+function normalize_product_sku_for_response(array $product) {
+    if (array_key_exists('sku', $product)) {
+        $product['sku'] = display_product_code($product['sku']);
+    }
+    return $product;
+}
+
 $productModel = new Product($pdo);
 $response = [];
 
@@ -34,6 +45,9 @@ try {
             $product = $productModel->getByBarcode($barcode);
             
             if ($product) {
+                if (is_array($product)) {
+                    $product = normalize_product_sku_for_response($product);
+                }
                 $response = ['success' => true, 'product' => $product];
             } else {
                 $response = ['success' => false, 'message' => 'Producto no encontrado'];
@@ -54,6 +68,9 @@ try {
             }
 
             $products = $productModel->search($term);
+            if (is_array($products)) {
+                $products = array_map('normalize_product_sku_for_response', $products);
+            }
             $response = ['success' => true, 'products' => $products];
             break;
 
@@ -123,12 +140,16 @@ try {
                         return [
                             'id' => $p['id'],
                             'name' => $p['name'],
-                            'sku' => $p['sku'],
+                            'sku' => display_product_code($p['sku']),
                             'unit_price' => $p['unit_price'],
                             'category' => $p['category']
                         ];
                     }, $products);
                 }
+            }
+
+            if (is_array($products)) {
+                $products = array_map('normalize_product_sku_for_response', $products);
             }
             
             $response = ['success' => true, 'products' => $products];

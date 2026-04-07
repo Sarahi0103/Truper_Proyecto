@@ -7,7 +7,7 @@ let currentTotal = 0;
 let selectedOrderId = null;
 
 function displayProductCode(rawSku) {
-    return String(rawSku || '').replace(/^XLS-/i, '');
+    return String(rawSku || '').replace(/^\s*XLS-/i, '').trim();
 }
 
 /**
