@@ -190,6 +190,16 @@ header {
     margin-left: auto;
 }
 
+.header-actions {
+    margin-left: auto;
+}
+
+.header-actions .btn-small {
+    padding: 0.55rem 1rem;
+    font-size: 0.92rem;
+    border-radius: 999px;
+}
+
 .user-info {
     text-align: right;
 }

@@ -65,11 +65,13 @@ $isAdmin = (($_SESSION['role'] ?? '') === 'admin');
                     <a href="/wholesale.php">Mayoreo</a>
                     <?php if ($isAdmin): ?><a href="/cashier.php">Caja</a><?php endif; ?>
                     <a href="/dashboard.php">Dashboard</a>
-                <?php else: ?>
-                    <a href="/login.php">Iniciar Sesión</a>
-                    <a href="/register.php">Registrarse</a>
                 <?php endif; ?>
             </nav>
+            <?php if (!$isLogged): ?>
+                <div class="header-actions">
+                    <a href="/admin_login.php" class="btn btn-primary btn-small">Solo para administradores</a>
+                </div>
+            <?php endif; ?>
         </div>
     </header>
 
