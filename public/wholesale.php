@@ -14,6 +14,7 @@ $column_count = $is_admin ? 7 : 5;
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mayoreo - Truper Platform</title>
     <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/theme.css">
 </head>
 <body>
 <header>

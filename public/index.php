@@ -146,9 +146,6 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
     <link rel="stylesheet" href="css/theme.css">
 </head>
 <body class="catalog-minimal" data-client-code="<?php echo htmlspecialchars($clientTicketCode, ENT_QUOTES, 'UTF-8'); ?>" data-client-number="<?php echo htmlspecialchars($clientTicketNumber, ENT_QUOTES, 'UTF-8'); ?>">
-    <div class="theme-toggle">
-        <button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo claro</span></button>
-    </div>
     <header>
         <div class="header-content">
             <a href="/" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
@@ -163,11 +160,14 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                     <a href="/dashboard.php">Dashboard</a>
                 <?php endif; ?>
             </nav>
-            <?php if (!$isLogged): ?>
-                <div class="header-actions">
-                    <a href="/admin_login.php" class="btn btn-primary btn-small">Solo para administradores</a>
+            <div class="header-actions">
+                <div class="theme-toggle">
+                    <button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo claro</span></button>
                 </div>
-            <?php endif; ?>
+                <?php if (!$isLogged): ?>
+                    <a href="/admin_login.php" class="btn btn-primary btn-small">Solo para administradores</a>
+                <?php endif; ?>
+            </div>
         </div>
     </header>
 
@@ -297,8 +297,8 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
             </div>
             <div class="btn-group" style="flex-direction: column; gap: 8px;">
                 <button id="printTicket" class="btn btn-primary">⬇️ Descargar Ticket</button>
-                <button id="shareWhatsApp" class="btn btn-secondary" style="background: #25D366; border-color: #25D366;">📱 Compartir por WhatsApp</button>
-                <button id="clearCart" class="btn btn-secondary">🗑️ Vaciar Carrito</button>
+                <button id="shareWhatsApp" class="btn btn-secondary">📱 Compartir por WhatsApp</button>
+                <button id="clearCart" class="btn btn-ghost">🗑️ Vaciar Carrito</button>
             </div>
         </div>
     </aside>
@@ -315,13 +315,13 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
             const shareBtn = document.getElementById('shareWhatsApp');
             if (shareBtn) {
                 shareBtn.addEventListener('click', function() {
-                    const items = JSON.parse(localStorage.getItem('cart') || '[]');
+                    const items = JSON.parse(localStorage.getItem('truper_cart') || '[]');
                     if (items.length === 0) {
                         alert('El carrito está vacío');
                         return;
                     }
 
-                    const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                    const total = items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
                     let message = 'Solicito cotización de los siguientes productos:\\n\\n';
                     items.forEach(item => {
                         message += `• ${item.quantity} x ${item.name}\\n`;

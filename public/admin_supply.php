@@ -20,7 +20,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
         .calendar-day { border: 1px solid var(--ui-border); border-radius: 10px; min-height: 58px; padding: 6px; background: var(--ui-surface); }
         .calendar-day-empty { background: var(--ui-surface-soft); border-style: dashed; }
         .calendar-day-number { font-weight: 700; font-size: 13px; color: var(--ui-text); }
-        .calendar-day-visits { margin-top: 4px; font-size: 11px; color: #b45309; }
+        .calendar-day-visits { margin-top: 4px; font-size: 11px; color: var(--color-naranja); }
         .calendar-day-has-visits { border-color: #f59e0b; background: #fffbeb; }
     </style>
 </head>

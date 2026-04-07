@@ -12,6 +12,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'employee', ENT_QUOTES, 'UTF-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tareas - Truper Platform</title>
     <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/theme.css">
     <link rel="stylesheet" href="css/dashboard.css">
 </head>
 <body>

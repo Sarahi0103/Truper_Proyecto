@@ -20,23 +20,23 @@
 }
 
 .status-pending {
-    background-color: #FFF3CD;
-    color: #856404;
+    background-color: rgba(255, 127, 0, 0.08);
+    color: var(--color-negro);
 }
 
 .status-paid {
-    background-color: #D4EDDA;
-    color: #155724;
+    background-color: rgba(17, 17, 17, 0.06);
+    color: var(--color-negro);
 }
 
 .status-partial {
-    background-color: #D1ECF1;
-    color: #0C5460;
+    background-color: rgba(255, 127, 0, 0.12);
+    color: var(--color-negro);
 }
 
 .status-cancelled {
-    background-color: #F8D7DA;
-    color: #721C24;
+    background-color: rgba(17, 17, 17, 0.1);
+    color: var(--color-negro);
 }
 
 .order-item {
@@ -80,7 +80,7 @@
 .chart-placeholder {
     width: 100%;
     height: 100%;
-    background-color: var(--color-gris-claro);
+    background-color: var(--ui-surface-soft);
     border-radius: 4px;
     display: flex;
     align-items: center;
@@ -105,8 +105,8 @@
     align-items: center;
     padding: 1rem;
     border: 1px solid var(--color-gris);
-    border-radius: 4px;
-    background-color: var(--color-gris-claro);
+    border-radius: 12px;
+    background-color: var(--ui-surface);
 }
 
 .product-card input {
@@ -119,18 +119,18 @@
 }
 
 .btn-remove {
-    background-color: var(--color-error);
+    background-color: var(--color-negro);
     color: white;
     border: none;
     padding: 0.5rem 1rem;
-    border-radius: 4px;
+    border-radius: 999px;
     cursor: pointer;
 }
 
 .order-summary {
-    background-color: var(--color-gris-claro);
+    background-color: var(--ui-surface-soft);
     padding: 1.5rem;
-    border-radius: 4px;
+    border-radius: 12px;
     margin-top: 2rem;
 }
 
@@ -156,8 +156,8 @@
     border-left: 4px solid var(--color-naranja);
     background-color: var(--color-blanco);
     margin-bottom: 1rem;
-    border-radius: 4px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    box-shadow: 0 8px 18px rgba(17, 24, 39, 0.06);
 }
 
 .task-header {
@@ -173,15 +173,15 @@
 }
 
 .task-priority-high {
-    border-left-color: var(--color-error);
+    border-left-color: var(--color-negro);
 }
 
 .task-priority-medium {
-    border-left-color: var(--color-advertencia);
+    border-left-color: var(--color-naranja);
 }
 
 .task-priority-low {
-    border-left-color: var(--color-info);
+    border-left-color: var(--color-gris-oscuro);
 }
 
 .priority-badge {
@@ -193,18 +193,18 @@
 }
 
 .priority-high {
-    background-color: #F8D7DA;
-    color: #721C24;
+    background-color: rgba(17, 17, 17, 0.08);
+    color: var(--color-negro);
 }
 
 .priority-medium {
-    background-color: #FFF3CD;
-    color: #856404;
+    background-color: rgba(255, 127, 0, 0.12);
+    color: var(--color-negro);
 }
 
 .priority-low {
-    background-color: #D1ECF1;
-    color: #0C5460;
+    background-color: rgba(107, 114, 128, 0.12);
+    color: var(--color-negro);
 }
 
 .task-details {
@@ -241,10 +241,10 @@
 .modal-content {
     background-color: var(--color-blanco);
     padding: 2rem;
-    border-radius: 8px;
+    border-radius: 16px;
     width: 90%;
     max-width: 500px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    box-shadow: 0 14px 32px rgba(0,0,0,0.16);
 }
 
 .modal-header {

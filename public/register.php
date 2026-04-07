@@ -12,6 +12,7 @@ if (is_logged_in()) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro de Cliente - Truper Platform</title>
     <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/theme.css">
 </head>
 <body class="auth-page register-auth-page">
     <div class="login-container">
@@ -28,6 +29,9 @@ if (is_logged_in()) {
             </aside>
 
             <div class="auth-form-wrap">
+                <div class="theme-toggle">
+                    <button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo claro</span></button>
+                </div>
                 <div class="login-box register-box">
                     <div class="auth-back-row">
                         <a href="index.php" class="auth-back-link">← Volver a productos</a>
@@ -89,7 +93,7 @@ if (is_logged_in()) {
 
                     <div class="form-group mt-3">
                         <p class="text-center">¿Ya tienes cuenta? 
-                            <a href="login.php" style="color: #FF7F00; text-decoration: none; font-weight: bold;">Inicia sesión</a>
+                            <a href="login.php" style="color: var(--color-naranja); text-decoration: none; font-weight: bold;">Inicia sesión</a>
                         </p>
                     </div>
                 </div>

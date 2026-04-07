@@ -29,6 +29,9 @@ if (is_logged_in() && (($_SESSION['role'] ?? '') !== 'admin')) {
             </aside>
 
             <div class="auth-form-wrap">
+                <div class="theme-toggle">
+                    <button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo claro</span></button>
+                </div>
                 <div class="login-box">
                     <div class="auth-back-row">
                         <a href="index.php" class="auth-back-link" onclick="if (window.history.length > 1) { window.history.back(); return false; }">← Volver a la página anterior</a>
@@ -80,14 +83,14 @@ if (is_logged_in() && (($_SESSION['role'] ?? '') !== 'admin')) {
 
                     <div class="form-group mt-3">
                         <p class="text-center">¿No tienes cuenta? 
-                            <a href="register.php" style="color: #FF7F00; text-decoration: none; font-weight: bold;">
+                            <a href="register.php" style="color: var(--color-naranja); text-decoration: none; font-weight: bold;">
                                 Regístrate aquí
                             </a>
                         </p>
                     </div>
 
                     <div class="form-group">
-                        <p class="text-center text-muted" style="font-size: 0.85rem;">
+                        <p class="text-center text-muted" style="font-size: 0.85rem; color: var(--ui-text-muted);">
                             Admin por defecto: admin@truper.com
                         </p>
                     </div>

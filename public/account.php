@@ -15,38 +15,34 @@ $user_id = (int)$_SESSION['user_id'];
     <link rel="stylesheet" href="css/theme.css">
     <style>
         .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 15px 0; }
-        .metric-box { background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: 8px; padding: 15px; text-align: center; }
+        .metric-box { background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: 14px; padding: 15px; text-align: center; box-shadow: 0 8px 20px rgba(17, 24, 39, 0.05); }
         .metric-value { font-size: 20px; font-weight: 700; color: var(--color-naranja); }
-        .metric-label { font-size: 12px; color: var(--text-secondary); margin-top: 5px; }
+        .metric-label { font-size: 12px; color: var(--ui-text-muted); margin-top: 5px; }
 
-        .week-row { background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: 8px; padding: 12px; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; }
-        .week-period { font-weight: 600; color: var(--text-primary); }
-        .week-amount { color: var(--color-warning); font-weight: 700; }
-        .week-status-pending { color: #f59e0b; }
-        .week-status-partial { color: #3b82f6; }
-        .week-status-paid { color: #10b981; }
+        .week-row { background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: 14px; padding: 12px; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; }
+        .week-period { font-weight: 600; color: var(--ui-text); }
+        .week-amount { color: var(--color-naranja); font-weight: 700; }
+        .week-status-pending { color: var(--ui-text-muted); }
+        .week-status-partial { color: var(--color-naranja); }
+        .week-status-paid { color: var(--ui-text); }
 
-        .quote-item { background: var(--ui-surface); border-left: 4px solid var(--color-naranja); padding: 10px; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; }
+        .quote-item { background: var(--ui-surface); border-left: 4px solid var(--color-naranja); padding: 10px; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; border-radius: 12px; }
         .quote-info { flex: 1; }
         .quote-qty { font-weight: 600; }
-        .quote-remove { background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+        .quote-remove { background: var(--color-negro); color: white; border: none; padding: 4px 8px; border-radius: 999px; cursor: pointer; font-size: 11px; }
 
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th { background: var(--ui-surface-soft); padding: 10px; text-align: left; font-weight: 600; border-bottom: 2px solid var(--ui-border); }
         td { padding: 10px; border-bottom: 1px solid var(--ui-border); }
         tr:hover { background: var(--ui-surface-soft); }
 
-        .alert { padding: 12px; border-radius: 6px; margin: 10px 0; }
-        .alert-info { background: #dbeafe; color: #0c4a6e; border-left: 4px solid #0284c7; }
-        .alert-warning { background: #fef3c7; color: #92400e; border-left: 4px solid #f59e0b; }
-        .alert-success { background: #dcfce7; color: #166534; border-left: 4px solid #22c55e; }
+        .alert { padding: 12px; border-radius: 12px; margin: 10px 0; background: var(--ui-surface); color: var(--ui-text); border-left: 4px solid var(--color-naranja); }
+        .alert-info { background: rgba(255, 127, 0, 0.08); color: var(--ui-text); border-left: 4px solid var(--color-naranja); }
+        .alert-warning { background: rgba(17, 17, 17, 0.06); color: var(--ui-text); border-left: 4px solid var(--color-negro); }
+        .alert-success { background: rgba(255, 127, 0, 0.08); color: var(--ui-text); border-left: 4px solid var(--color-naranja); }
     </style>
 </head>
 <body>
-<div class="theme-toggle">
-    <button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo claro</span></button>
-</div>
-
 <header>
     <div class="header-content">
         <a href="index.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
@@ -58,6 +54,9 @@ $user_id = (int)$_SESSION['user_id'];
         </nav>
     </div>
     <div class="user-menu">
+        <div class="theme-toggle">
+            <button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo claro</span></button>
+        </div>
         <div class="user-info"><div class="user-name"><?php echo $user_name; ?></div></div>
         <button class="btn-logout" onclick="window.location.href='api/auth.php?action=logout'">Cerrar Sesion</button>
     </div>
@@ -151,7 +150,7 @@ $user_id = (int)$_SESSION['user_id'];
                     </div>
 
                     <div id="cartItems"></div>
-                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-color);">
+                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--ui-border);">
                         <div style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 15px;">
                             <span>Total:</span>
                             <span id="cartTotal">$0.00</span>
@@ -234,10 +233,10 @@ async function loadWeeklySummary() {
                 <div class="week-period">${w.week_start} a ${w.week_end}</div>
                 <div class="text-muted">Semana actual</div>
             </div>
-            <div style="text-align: right;">
-                <div>Consumido: <span style="color: var(--color-primary);">${formatMoney(w.total_consumed)}</span></div>
+                <div style="text-align: right;">
+                <div>Consumido: <span style="color: var(--color-naranja);">${formatMoney(w.total_consumed)}</span></div>
                 <div>Adeudado: <span class="week-${w.payment_status}">${formatMoney(w.total_owed)}</span></div>
-                <div style="font-size: 11px; color: var(--text-secondary);">Estado: ${w.payment_status}</div>
+                <div style="font-size: 11px; color: var(--ui-text-muted);">Estado: ${w.payment_status}</div>
             </div>
         </div>
     `;
@@ -326,7 +325,7 @@ function renderCart() {
                 <div class="quote-item">
                     <div class="quote-info">
                         <div class="quote-qty">${item.quantity}x ${item.name}</div>
-                        <div style="font-size: 12px; color: var(--text-secondary);">$${item.price.toFixed(2)} c/u</div>
+                        <div style="font-size: 12px; color: var(--ui-text-muted);">$${item.price.toFixed(2)} c/u</div>
                     </div>
                     <div style="text-align: right; margin-right: 10px;">
                         ${formatMoney(subtotal)}
@@ -399,11 +398,11 @@ async function loadPreviousQuotes() {
             <div class="week-row">
                 <div>
                     <div style="font-weight: 600;">${q.created_at}</div>
-                    <div style="font-size: 12px; color: var(--text-secondary);">${q.items_count} producto(s)</div>
+                    <div style="font-size: 12px; color: var(--ui-text-muted);">${q.items_count} producto(s)</div>
                 </div>
                 <div style="text-align: right;">
                     <div>${formatMoney(q.total_amount)}</div>
-                    <div style="font-size: 11px;"><span style="background: var(--color-warning); color: white; padding: 2px 6px; border-radius: 3px;">${q.status}</span></div>
+                    <div style="font-size: 11px;"><span style="background: var(--color-naranja); color: white; padding: 2px 6px; border-radius: 999px;">${q.status}</span></div>
                 </div>
             </div>
         `;

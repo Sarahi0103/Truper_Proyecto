@@ -30,23 +30,27 @@ function toggleTheme() {
 }
 
 function ensureThemeToggleButton() {
-    const userMenu = document.querySelector('header .user-menu');
     let wrap = document.querySelector('.theme-toggle');
+    const header = document.querySelector('header');
+    const preferredTargets = [
+        document.querySelector('header .user-menu'),
+        document.querySelector('header .header-actions'),
+        document.querySelector('header .header-content'),
+        document.querySelector('.auth-form-wrap')
+    ].filter(Boolean);
+    const target = preferredTargets[0] || header || document.body;
 
     if (!wrap) {
         wrap = document.createElement('div');
         wrap.className = 'theme-toggle';
         wrap.innerHTML = '<button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo claro</span></button>';
-        if (userMenu) {
-            userMenu.prepend(wrap);
-        } else {
-            document.body.appendChild(wrap);
-        }
-    } else if (userMenu && !wrap.closest('.user-menu')) {
-        userMenu.prepend(wrap);
     }
 
-    wrap.classList.toggle('theme-toggle-inline', Boolean(userMenu));
+    if (target && wrap.parentElement !== target) {
+        target.prepend(wrap);
+    }
+
+    wrap.classList.toggle('theme-toggle-inline', target !== document.body);
 
     const btn = wrap.querySelector('button');
     if (btn && !btn.__themeBound) {
