@@ -9,11 +9,25 @@ try {
     $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url TEXT");
     $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS variants_json TEXT");
 
-    $stmt = $pdo->prepare("SELECT id, name, sku, unit_price, category, description, technical_specs, stock_quantity, image_url, variants_json FROM products WHERE is_active = true ORDER BY name LIMIT 10");
+    $stmt = $pdo->prepare("SELECT id, name, sku, unit_price, category, description, technical_specs, stock_quantity, image_url, variants_json FROM products WHERE is_active = true ORDER BY name LIMIT 200");
     $stmt->execute();
     $products = $stmt->fetchAll();
 } catch (Exception $e) {
     $products = [];
+}
+
+$xlsxSeedProducts = get_xlsx_seed_products();
+if (count($products) < 10 && !empty($xlsxSeedProducts)) {
+    $existingSkus = [];
+    foreach ($products as $item) {
+        $existingSkus[$item['sku'] ?? ''] = true;
+    }
+    foreach ($xlsxSeedProducts as $seed) {
+        if (!isset($existingSkus[$seed['sku']])) {
+            $products[] = $seed;
+            $existingSkus[$seed['sku']] = true;
+        }
+    }
 }
 
 $demoProducts = [

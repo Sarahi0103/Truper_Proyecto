@@ -109,13 +109,26 @@ try {
             }
 
             if (empty($products)) {
-                $products = [
-                    ['id' => 1001, 'name' => 'Taladro Percutor 1/2" 750W', 'sku' => 'TRUP-001', 'unit_price' => 1899, 'category' => 'Herramientas'],
-                    ['id' => 1002, 'name' => 'Juego de Llaves Combinadas 12 pzas', 'sku' => 'TRUP-002', 'unit_price' => 799, 'category' => 'Herramientas'],
-                    ['id' => 1003, 'name' => 'Esmeriladora Angular 4-1/2" 900W', 'sku' => 'TRUP-003', 'unit_price' => 1299, 'category' => 'Eléctrica'],
-                    ['id' => 1004, 'name' => 'Martillo Uña 16 oz', 'sku' => 'TRUP-004', 'unit_price' => 249, 'category' => 'Manual'],
-                    ['id' => 1005, 'name' => 'Pinza de Electricista 8"', 'sku' => 'TRUP-005', 'unit_price' => 329, 'category' => 'Electricidad']
-                ];
+                $seed = get_xlsx_seed_products();
+                if (!empty($seed)) {
+                    if ($category !== '') {
+                        $products = array_values(array_filter($seed, function ($item) use ($category) {
+                            return strcasecmp((string)($item['category'] ?? ''), $category) === 0;
+                        }));
+                    } else {
+                        $products = $seed;
+                    }
+
+                    $products = array_map(function ($p) {
+                        return [
+                            'id' => $p['id'],
+                            'name' => $p['name'],
+                            'sku' => $p['sku'],
+                            'unit_price' => $p['unit_price'],
+                            'category' => $p['category']
+                        ];
+                    }, $products);
+                }
             }
             
             $response = ['success' => true, 'products' => $products];

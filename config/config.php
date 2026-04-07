@@ -195,6 +195,60 @@ function db_column_exists($table_name, $column_name) {
     }
 }
 
+function get_xlsx_seed_products() {
+    static $cache = null;
+    if ($cache !== null) {
+        return $cache;
+    }
+
+    $cache = [];
+    $seedPath = __DIR__ . '/../db/PRODUCTOS_XLSX_IMPORT.sql';
+    if (!file_exists($seedPath)) {
+        return $cache;
+    }
+
+    $lines = file($seedPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    if (!is_array($lines)) {
+        return $cache;
+    }
+
+    $id = 900000;
+    foreach ($lines as $line) {
+        $trimmed = trim($line);
+        if ($trimmed === '' || $trimmed[0] !== '(') {
+            continue;
+        }
+
+        $pattern = "/^\\('((?:[^']|'{2})*)',\\s*'((?:[^']|'{2})*)',\\s*'((?:[^']|'{2})*)',\\s*'((?:[^']|'{2})*)',\\s*([0-9]+(?:\\.[0-9]+)?),\\s*'((?:[^']|'{2})*)'\\),?$/";
+        if (!preg_match($pattern, $trimmed, $m)) {
+            continue;
+        }
+
+        $sku = str_replace("''", "'", $m[1]);
+        $name = str_replace("''", "'", $m[2]);
+        $description = str_replace("''", "'", $m[3]);
+        $category = str_replace("''", "'", $m[4]);
+        $price = (float)$m[5];
+        $barcode = str_replace("''", "'", $m[6]);
+
+        $cache[] = [
+            'id' => $id++,
+            'sku' => $sku,
+            'name' => $name !== '' ? $name : $description,
+            'description' => $description,
+            'category' => $category,
+            'unit_price' => $price,
+            'barcode' => $barcode,
+            'technical_specs' => 'N/A',
+            'stock_quantity' => 50,
+            'image_url' => 'images/products/default-product.svg',
+            'variants_json' => '[]'
+        ];
+    }
+
+    return $cache;
+}
+
 function ensure_xlsx_products_seeded() {
     static $alreadyChecked = false;
     if ($alreadyChecked) {
@@ -213,6 +267,11 @@ function ensure_xlsx_products_seeded() {
         return;
     }
 
+    $seedProducts = get_xlsx_seed_products();
+    if (empty($seedProducts)) {
+        return;
+    }
+
     try {
         $stmt = $pdo->query("SELECT COUNT(*) FROM products WHERE sku LIKE 'XLS-%'");
         $existing = (int)$stmt->fetchColumn();
@@ -222,12 +281,34 @@ function ensure_xlsx_products_seeded() {
 
         $sql = file_get_contents($seedPath);
         if ($sql === false || trim($sql) === '') {
-            return;
+            throw new Exception('SQL seed vacío');
         }
 
         $pdo->exec($sql);
     } catch (Exception $e) {
         error_log('No fue posible autoimportar productos XLS: ' . $e->getMessage());
+
+        foreach ($seedProducts as $p) {
+            try {
+                $stmtA = $pdo->prepare("INSERT INTO products (sku, name, description, category, unit_price, barcode, stock_quantity, reorder_level, is_active) VALUES (?, ?, ?, ?, ?, ?, 50, 10, true) ON CONFLICT (sku) DO NOTHING");
+                $stmtA->execute([$p['sku'], $p['name'], $p['description'], $p['category'], $p['unit_price'], $p['barcode']]);
+                continue;
+            } catch (Exception $ignoredA) {
+            }
+
+            try {
+                $stmtB = $pdo->prepare("INSERT INTO products (sku, name, description, category, unit_price, barcode, stock_quantity, reorder_level, is_active) VALUES (?, ?, ?, ?, ?, ?, 50, 10, true)");
+                $stmtB->execute([$p['sku'], $p['name'], $p['description'], $p['category'], $p['unit_price'], $p['barcode']]);
+                continue;
+            } catch (Exception $ignoredB) {
+            }
+
+            try {
+                $stmtC = $pdo->prepare("INSERT IGNORE INTO products (sku, name, description, category, sell_price, barcode, active) VALUES (?, ?, ?, ?, ?, ?, 1)");
+                $stmtC->execute([$p['sku'], $p['name'], $p['description'], $p['category'], $p['unit_price'], $p['barcode']]);
+            } catch (Exception $ignoredC) {
+            }
+        }
     }
 }
 
