@@ -229,6 +229,32 @@ function list_available_product_images($pdo): array {
     return $images;
 }
 
+function list_stock_products_compatible($pdo): array {
+    $queries = [];
+
+    if (db_column_exists('products', 'is_active')) {
+        $queries[] = "SELECT id, sku, name, category, stock_quantity, reorder_level, COALESCE(unit_price, sell_price, 0) AS unit_price, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE is_active = true ORDER BY stock_quantity ASC, name ASC LIMIT 500";
+    }
+    if (db_column_exists('products', 'active')) {
+        $queries[] = "SELECT id, sku, name, category, stock_quantity, reorder_level, COALESCE(unit_price, sell_price, 0) AS unit_price, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE active = 1 ORDER BY stock_quantity ASC, name ASC LIMIT 500";
+    }
+
+    $queries[] = "SELECT id, sku, name, category, stock_quantity, reorder_level, COALESCE(unit_price, sell_price, 0) AS unit_price, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products ORDER BY stock_quantity ASC, name ASC LIMIT 500";
+
+    foreach ($queries as $sql) {
+        try {
+            $stmt = $pdo->query($sql);
+            $items = $stmt ? $stmt->fetchAll() : [];
+            if (is_array($items) && count($items) > 0) {
+                return $items;
+            }
+        } catch (Exception $ignored) {
+        }
+    }
+
+    return [];
+}
+
 $response = ['success' => false, 'message' => 'Accion no reconocida'];
 
 try {
@@ -403,8 +429,7 @@ try {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];
                 break;
             }
-            $stmt = $pdo->query("SELECT id, sku, name, category, stock_quantity, reorder_level, unit_price, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE is_active = true ORDER BY stock_quantity ASC, name ASC");
-            $items = $stmt->fetchAll();
+            $items = list_stock_products_compatible($pdo);
             $response = ['success' => true, 'items' => $items];
             break;
 
