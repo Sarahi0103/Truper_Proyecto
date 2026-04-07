@@ -153,6 +153,27 @@ thead th,
     color: var(--theme-text-muted);
 }
 
+:root[data-theme="dark"] h1,
+:root[data-theme="dark"] h2,
+:root[data-theme="dark"] h3,
+:root[data-theme="dark"] h4,
+:root[data-theme="dark"] h5,
+:root[data-theme="dark"] h6,
+:root[data-theme="dark"] label,
+:root[data-theme="dark"] strong {
+    color: var(--theme-text);
+}
+
+:root[data-theme="dark"] .text-muted,
+:root[data-theme="dark"] .auth-back-link,
+:root[data-theme="dark"] .login-subtitle,
+:root[data-theme="dark"] .metric-label,
+:root[data-theme="dark"] .catalog-categories-title,
+:root[data-theme="dark"] .task-details,
+:root[data-theme="dark"] .order-date {
+    color: var(--theme-text-muted);
+}
+
 .tabs {
     background: var(--theme-surface-strong);
 }
@@ -371,6 +392,11 @@ tbody td,
     border-color: var(--theme-border);
 }
 
+:root[data-theme="dark"] .calendar-day-has-visits {
+    border-color: var(--theme-accent);
+    background: rgba(255, 138, 31, 0.1);
+}
+
 .theme-toggle,
 .theme-toggle.theme-toggle-inline {
     display: inline-flex;
@@ -427,4 +453,3 @@ tbody td,
         width: 100%;
     }
 }
-*** End Patch

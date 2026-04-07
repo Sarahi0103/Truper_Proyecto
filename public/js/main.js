@@ -89,10 +89,11 @@ function showAlert(message, type = 'info') {
 /**
  * Hacer petición AJAX
  */
-async function apiCall(endpoint, method = 'GET', data = null) {
+async function apiCall(endpoint, method = 'GET', data = null, options = {}) {
+    const silent = Boolean(options.silent);
     try {
         const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-        const options = {
+        const fetchOptions = {
             method: method,
             headers: {
                 'Content-Type': 'application/json',
@@ -101,10 +102,10 @@ async function apiCall(endpoint, method = 'GET', data = null) {
         };
         
         if (data && (method === 'POST' || method === 'PUT')) {
-            options.body = JSON.stringify(data);
+            fetchOptions.body = JSON.stringify(data);
         }
         
-        const response = await fetch(`${APP.apiUrl}${normalizedEndpoint}`, options);
+        const response = await fetch(`${APP.apiUrl}${normalizedEndpoint}`, fetchOptions);
         
         if (!response.ok) {
             throw new Error(`Error ${response.status}: ${response.statusText}`);
@@ -113,7 +114,9 @@ async function apiCall(endpoint, method = 'GET', data = null) {
         return await response.json();
     } catch (error) {
         console.error('API Error:', error);
-        showAlert('Error al procesar la solicitud. Intenta de nuevo.', 'error');
+        if (!silent) {
+            showAlert('Error al procesar la solicitud. Intenta de nuevo.', 'error');
+        }
         return null;
     }
 }

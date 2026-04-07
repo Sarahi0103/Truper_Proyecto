@@ -21,7 +21,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
         .calendar-day-empty { background: var(--ui-surface-soft); border-style: dashed; }
         .calendar-day-number { font-weight: 700; font-size: 13px; color: var(--ui-text); }
         .calendar-day-visits { margin-top: 4px; font-size: 11px; color: var(--color-naranja); }
-        .calendar-day-has-visits { border-color: #f59e0b; background: #fffbeb; }
+        .calendar-day-has-visits { border-color: var(--color-naranja); background: var(--theme-accent-soft); }
     </style>
 </head>
 <body>
@@ -232,7 +232,7 @@ function escapeHtml(v) {
 }
 
 async function loadStock() {
-    const res = await apiCall('/admin_supply.php?action=stock');
+    const res = await apiCall('/admin_supply.php?action=stock', 'GET', null, { silent: true });
     const body = document.getElementById('stockRows');
     if (!res || !res.success || !Array.isArray(res.items)) {
         body.innerHTML = '<tr><td colspan="6">Sin datos</td></tr>';
@@ -341,7 +341,7 @@ function changeCalendarMonth(offset) {
 }
 
 async function loadCalendar() {
-    const res = await apiCall('/admin_supply.php?action=calendar-list');
+    const res = await apiCall('/admin_supply.php?action=calendar-list', 'GET', null, { silent: true });
     if (!res || !res.success || !Array.isArray(res.items)) {
         calendarVisits = [];
         renderCalendarMonth();
@@ -385,12 +385,12 @@ function removePoItem(index) {
 }
 
 async function loadSupplierProducts() {
-    const res = await apiCall('/admin_supply.php?action=supplier-products-list');
+    const res = await apiCall('/admin_supply.php?action=supplier-products-list', 'GET', null, { silent: true });
     const listBox = document.getElementById('supplierProductList');
     const productSelect = document.getElementById('spProduct');
 
     if (productSelect) {
-        const stockRes = await apiCall('/admin_supply.php?action=stock');
+        const stockRes = await apiCall('/admin_supply.php?action=stock', 'GET', null, { silent: true });
         if (stockRes && stockRes.success && Array.isArray(stockRes.items)) {
             productSelect.innerHTML = '<option value="">Selecciona producto...</option>' + stockRes.items
                 .map((p) => `<option value="${Number(p.id)}">${escapeHtml(p.sku)} | ${escapeHtml(p.name)}</option>`)
@@ -442,7 +442,7 @@ async function loadMappedProductsBySupplier() {
         return;
     }
 
-    const res = await apiCall(`/admin_supply.php?action=supplier-products-by-supplier&supplier_name=${encodeURIComponent(supplier)}`);
+    const res = await apiCall(`/admin_supply.php?action=supplier-products-by-supplier&supplier_name=${encodeURIComponent(supplier)}`, 'GET', null, { silent: true });
     if (!res || !res.success || !Array.isArray(res.items) || res.items.length === 0) {
         select.innerHTML = '<option value="">Sin productos para proveedor</option>';
         return;
@@ -474,7 +474,7 @@ async function createSupplierOrder() {
 }
 
 async function loadSupplierOrders() {
-    const res = await apiCall('/admin_supply.php?action=supplier-order-list');
+    const res = await apiCall('/admin_supply.php?action=supplier-order-list', 'GET', null, { silent: true });
     const body = document.getElementById('supplierRows');
     if (!res || !res.success || !Array.isArray(res.items) || res.items.length === 0) {
         body.innerHTML = '<tr><td colspan="5">Sin ordenes</td></tr>';
@@ -490,7 +490,7 @@ async function loadSupplierOrders() {
 }
 
 async function loadHistory() {
-    const res = await apiCall('/admin_supply.php?action=history');
+    const res = await apiCall('/admin_supply.php?action=history', 'GET', null, { silent: true });
     const body = document.getElementById('historyRows');
     if (!res || !res.success || !Array.isArray(res.items) || res.items.length === 0) {
         body.innerHTML = '<tr><td colspan="4">Sin registros</td></tr>';
@@ -541,7 +541,7 @@ async function loadProductImageReferences() {
     const select = document.getElementById('newProductImageRef');
     if (!select) return;
 
-    const res = await apiCall('/admin_supply.php?action=product-images');
+    const res = await apiCall('/admin_supply.php?action=product-images', 'GET', null, { silent: true });
     if (!res || !res.success || !Array.isArray(res.images)) {
         return;
     }
