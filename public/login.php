@@ -30,7 +30,7 @@ if (is_logged_in() && (($_SESSION['role'] ?? '') !== 'admin')) {
             <div class="auth-form-wrap">
                 <div class="login-box">
                     <div class="auth-back-row">
-                        <a href="index.php" class="auth-back-link">← Volver a productos</a>
+                        <a href="index.php" class="auth-back-link" onclick="if (window.history.length > 1) { window.history.back(); return false; }">← Volver a la página anterior</a>
                     </div>
                     <div class="login-header">
                         <h1 class="login-title">Iniciar Sesión Cliente</h1>
