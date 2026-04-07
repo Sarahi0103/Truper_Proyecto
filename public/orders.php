@@ -101,6 +101,13 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
                         <div class="form-section">
                             <h3>Seleccionar Productos</h3>
                             <input type="text" id="productSearch" placeholder="Buscar productos..." onkeyup="searchProducts()" style="padding: 0.5rem; margin-bottom: 1rem; width: 100%;">
+                            <select id="productCategoryFilter" onchange="loadProducts()" style="padding: 0.5rem; margin-bottom: 1rem; width: 100%; max-width: 360px;">
+                                <option value="">Todas las categorías</option>
+                                <option value="material-electrico">Material eléctrico</option>
+                                <option value="fontaneria">Fontanería</option>
+                                <option value="cerrajeria">Cerrajería</option>
+                                <option value="herreria">Herrería</option>
+                            </select>
                             
                             <table>
                                 <thead>

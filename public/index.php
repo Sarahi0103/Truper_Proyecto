@@ -44,6 +44,21 @@ if (count($products) < 10) {
 
 $isLogged = is_logged_in();
 $isAdmin = (($_SESSION['role'] ?? '') === 'admin');
+$clientTicketCode = 'PUBLICO';
+$clientTicketNumber = $isLogged ? (string)($_SESSION['user_id'] ?? '0') : '0';
+
+if ($isLogged && db_column_exists('users', 'user_code')) {
+    try {
+        $stmtUserCode = $pdo->prepare("SELECT COALESCE(user_code, '') AS user_code FROM users WHERE id = ? LIMIT 1");
+        $stmtUserCode->execute([$_SESSION['user_id']]);
+        $userData = $stmtUserCode->fetch();
+        if (!empty($userData['user_code'])) {
+            $clientTicketCode = (string)$userData['user_code'];
+        }
+    } catch (Exception $ignored) {
+        $clientTicketCode = 'PUBLICO';
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -53,7 +68,7 @@ $isAdmin = (($_SESSION['role'] ?? '') === 'admin');
     <title>Truper - Catálogo de Productos</title>
     <link rel="stylesheet" href="css/styles.css">
 </head>
-<body class="catalog-minimal">
+<body class="catalog-minimal" data-client-code="<?php echo htmlspecialchars($clientTicketCode, ENT_QUOTES, 'UTF-8'); ?>" data-client-number="<?php echo htmlspecialchars($clientTicketNumber, ENT_QUOTES, 'UTF-8'); ?>">
     <header>
         <div class="header-content">
             <a href="/" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
@@ -199,6 +214,7 @@ $isAdmin = (($_SESSION['role'] ?? '') === 'admin');
     <footer>
         <div class="footer-bottom">&copy; 2026 Truper Platform</div>
     </footer>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="js/main.js"></script>
     <script src="js/catalog.js"></script>
 </body>

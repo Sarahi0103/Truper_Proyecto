@@ -252,6 +252,29 @@ function getStatusLabel(status) {
     return labels[status] || status || 'N/A';
 }
 
+function normalizeCategoryText(value) {
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+}
+
+function categoryMatches(productCategory, selectedFilter) {
+    if (!selectedFilter) return true;
+
+    const normalized = normalizeCategoryText(productCategory);
+    const categoryMap = {
+        'material-electrico': ['material electrico', 'electrica', 'electricidad', 'electrico'],
+        'fontaneria': ['fontaneria'],
+        'cerrajeria': ['cerrajeria'],
+        'herreria': ['herreria']
+    };
+
+    const candidates = categoryMap[selectedFilter] || [];
+    return candidates.some(term => normalized.includes(term));
+}
+
 async function loadOrders() {
     const response = await apiCall('/orders.php?action=list');
     const ordersList = document.getElementById('ordersList');
@@ -285,6 +308,7 @@ async function loadOrders() {
 async function loadProducts() {
     const response = await apiCall('/products.php?action=list');
     const productsList = document.getElementById('productsList');
+    const selectedCategory = document.getElementById('productCategoryFilter')?.value || '';
     if (!productsList) return;
 
     if (!response || !response.success || !Array.isArray(response.products)) {
@@ -292,12 +316,14 @@ async function loadProducts() {
         return;
     }
 
-    if (response.products.length === 0) {
+    const filteredProducts = response.products.filter(product => categoryMatches(product.category, selectedCategory));
+
+    if (filteredProducts.length === 0) {
         productsList.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No hay productos registrados</td></tr>';
         return;
     }
 
-    productsList.innerHTML = response.products.map(product => `
+    productsList.innerHTML = filteredProducts.map(product => `
         <tr>
             <td>${product.name}</td>
             <td>${product.sku}</td>

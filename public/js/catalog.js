@@ -142,49 +142,105 @@
     });
   }
 
-  function drawTicketWindow(format) {
+  function getTicketMeta() {
+    const body = document.body;
+    return {
+      clientCode: (body?.dataset?.clientCode || 'PUBLICO').trim(),
+      clientNumber: (body?.dataset?.clientNumber || '0').trim()
+    };
+  }
+
+  function createTicketFolio(dateObj) {
+    const stamp = String(dateObj.getTime());
+    return `TCK-${stamp.slice(-8)}`;
+  }
+
+  function drawTicketPdf(format) {
     const cart = getCart();
     if (cart.length === 0) {
       if (window.showAlert) window.showAlert('No hay productos en el carrito', 'warning');
       return;
     }
 
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+      if (window.showAlert) window.showAlert('No se pudo generar el PDF en este momento', 'error');
+      return;
+    }
+
     const now = new Date();
-    const folio = `TCK-${now.getTime().toString().slice(-8)}`;
+    const folio = createTicketFolio(now);
     const date = now.toLocaleString('es-MX');
-    const rows = cart.map((item) => {
-      const line = toNumber(item.unit_price) * toNumber(item.quantity);
-      return `<div>${item.name}<br>${item.quantity} x ${money(item.unit_price)} = ${money(line)}</div>`;
-    }).join('<br>');
+    const meta = getTicketMeta();
     const total = cart.reduce((sum, item) => sum + toNumber(item.unit_price) * toNumber(item.quantity), 0);
 
     const isA4 = format === 'a4';
-    const html = `
-      <html><head><title>Ticket ${folio}</title>
-      <style>
-        body{font-family:monospace;margin:0;padding:10px}
-        .ticket-print{width:${isA4 ? '760px' : '280px'};margin:${isA4 ? '0 auto' : '0'}}
-        .ticket-print h2{text-align:center;font-size:14px;margin-bottom:8px}
-        .line{border-top:1px dashed #000;margin:6px 0}
-      </style></head>
-      <body onload="window.print()">
-        <div class="ticket-print">
-          <h2>TRUPER</h2>
-          <div>Folio: ${folio}</div>
-          <div>Fecha: ${date}</div>
-          <div class="line"></div>
-          ${rows}
-          <div class="line"></div>
-          <div><strong>Total: ${money(total)}</strong></div>
-          <div>Gracias por su compra</div>
-        </div>
-      </body></html>`;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: isA4 ? 'a4' : [210, 80]
+    });
 
-    const win = window.open('', '_blank', 'width=360,height=720');
-    if (win) {
-      win.document.open();
-      win.document.write(html);
-      win.document.close();
+    let y = 12;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('TRUPER - TICKET', 10, y);
+    y += 8;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text(`Codigo ticket: ${folio}`, 10, y);
+    y += 5;
+    doc.text(`Fecha: ${date}`, 10, y);
+    y += 5;
+    doc.text(`Numero cliente: ${meta.clientNumber}`, 10, y);
+    y += 5;
+    doc.text(`Codigo cliente: ${meta.clientCode}`, 10, y);
+    y += 6;
+
+    doc.setDrawColor(120);
+    doc.line(10, y, isA4 ? 200 : 70, y);
+    y += 5;
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Producto', 10, y);
+    doc.text('Codigo', isA4 ? 110 : 38, y);
+    doc.text('Precio', isA4 ? 160 : 58, y, { align: 'right' });
+    y += 4;
+    doc.setFont('helvetica', 'normal');
+
+    cart.forEach((item) => {
+      const lineTotal = toNumber(item.unit_price) * toNumber(item.quantity);
+      const lineText = `${item.name} x${item.quantity}`;
+      const wrapped = doc.splitTextToSize(lineText, isA4 ? 95 : 25);
+
+      wrapped.forEach((line) => {
+        doc.text(line, 10, y);
+        y += 4;
+      });
+
+      doc.text(String(item.sku || 'N/A'), isA4 ? 110 : 38, y - 4);
+      doc.text(money(lineTotal), isA4 ? 160 : 58, y - 4, { align: 'right' });
+
+      if (y > (isA4 ? 275 : 195)) {
+        doc.addPage();
+        y = 12;
+      }
+    });
+
+    y += 2;
+    doc.line(10, y, isA4 ? 200 : 70, y);
+    y += 6;
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Total: ${money(total)}`, isA4 ? 160 : 58, y, { align: 'right' });
+    y += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.text('Gracias por su compra', 10, y);
+
+    doc.save(`ticket-${folio}.pdf`);
+
+    if (window.showAlert) {
+      window.showAlert('Ticket PDF generado correctamente', 'success');
     }
   }
 
@@ -263,9 +319,9 @@
     if (closeBtn && drawer) closeBtn.addEventListener('click', () => drawer.classList.remove('open'));
 
     const ticketBtn = document.getElementById('printTicket');
-    if (ticketBtn) ticketBtn.addEventListener('click', () => drawTicketWindow('thermal'));
+    if (ticketBtn) ticketBtn.addEventListener('click', () => drawTicketPdf('thermal'));
     const ticketA4Btn = document.getElementById('printTicketA4');
-    if (ticketA4Btn) ticketA4Btn.addEventListener('click', () => drawTicketWindow('a4'));
+    if (ticketA4Btn) ticketA4Btn.addEventListener('click', () => drawTicketPdf('a4'));
 
     const clearBtn = document.getElementById('clearCart');
     if (clearBtn) {
