@@ -1226,6 +1226,27 @@ footer {
     box-shadow: 0 6px 18px rgba(17, 24, 39, 0.06);
 }
 
+.catalog-categories-top {
+    margin-bottom: 1rem;
+    padding: 0.9rem;
+    border-radius: 10px;
+    border: 1px solid #eceff3;
+    background: #f8fafc;
+}
+
+.catalog-categories-title {
+    font-size: 0.9rem;
+    color: #475569;
+    margin-bottom: 0.55rem;
+    font-weight: 600;
+}
+
+.catalog-categories-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
 .catalog-toolbar {
     display: flex;
     justify-content: center;
@@ -1475,6 +1496,11 @@ footer {
 @media (max-width: 768px) {
     .catalog-toolbar {
         grid-template-columns: 1fr;
+    }
+
+    .catalog-categories-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
     }
 
     .catalog-filters {

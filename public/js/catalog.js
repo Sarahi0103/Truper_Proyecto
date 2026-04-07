@@ -36,6 +36,14 @@
     return Number.isFinite(n) ? n : 0;
   }
 
+  function normalizeCategory(value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
   function money(v) {
     return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(toNumber(v));
   }
@@ -315,6 +323,29 @@
         if (stock) stock.value = '';
         if (price) price.value = '';
         applyFilters();
+      });
+    }
+
+    const quickCategoryButtons = document.querySelectorAll('[data-quick-category]');
+    if (quickCategoryButtons.length > 0) {
+      quickCategoryButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const targetLabel = btn.dataset.quickCategory || '';
+          const select = document.getElementById('filterCategory');
+          if (select) {
+            if (targetLabel === '') {
+              select.value = '';
+            } else {
+              const wanted = normalizeCategory(targetLabel);
+              const match = Array.from(select.options).find((opt) => normalizeCategory(opt.value) === wanted || normalizeCategory(opt.textContent) === wanted);
+              select.value = match ? match.value : '';
+            }
+          }
+
+          quickCategoryButtons.forEach((x) => x.classList.remove('active'));
+          btn.classList.add('active');
+          applyFilters();
+        });
       });
     }
 

@@ -113,6 +113,17 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
         </section>
 
         <section class="catalog-shell">
+            <div class="catalog-categories-top">
+                <div class="catalog-categories-title">Categorías rápidas</div>
+                <div class="catalog-categories-actions">
+                    <button type="button" class="btn btn-ghost btn-small active" data-quick-category="">Todas</button>
+                    <button type="button" class="btn btn-ghost btn-small" data-quick-category="Material eléctrico">Material eléctrico</button>
+                    <button type="button" class="btn btn-ghost btn-small" data-quick-category="Fontanería">Fontanería</button>
+                    <button type="button" class="btn btn-ghost btn-small" data-quick-category="Cerrajería">Cerrajería</button>
+                    <button type="button" class="btn btn-ghost btn-small" data-quick-category="Herrería">Herrería</button>
+                </div>
+            </div>
+
             <div class="catalog-toolbar">
                 <input id="catalogSearch" class="catalog-search" type="text" placeholder="Buscar por nombre, SKU o categoría...">
             </div>
@@ -169,7 +180,6 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                             <h3 class="product-title"><?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?></h3>
                             <div class="text-muted">SKU: <?php echo htmlspecialchars($product['sku'], ENT_QUOTES, 'UTF-8'); ?></div>
                             <p class="product-spec"><?php echo htmlspecialchars($product['description'] ?: 'Descripción pendiente', ENT_QUOTES, 'UTF-8'); ?></p>
-                            <p class="product-spec"><strong>Especificaciones:</strong> <?php echo htmlspecialchars($product['technical_specs'] ?: 'N/A', ENT_QUOTES, 'UTF-8'); ?></p>
                             <div>
                                 <?php if (!empty($variants)): ?>
                                     <?php foreach ($variants as $variant): ?>
