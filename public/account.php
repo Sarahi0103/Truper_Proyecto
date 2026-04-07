@@ -65,8 +65,11 @@ $user_id = (int)$_SESSION['user_id'];
 
 <main>
     <div class="container">
-        <h1>Mi Cuenta</h1>
-        <p class="text-muted">Administra tu crédito, control semanal y cotizaciones.</p>
+        <div class="page-hero">
+            <div class="module-badge module-client"><span class="module-glyph">CL</span>Portal de cliente</div>
+            <h1>Mi Cuenta</h1>
+            <p class="text-muted">Administra tu crédito, control semanal y cotizaciones.</p>
+        </div>
 
         <div class="tabs mt-3">
             <button class="tab-button active" data-tab="creditTab">Estado de Crédito</button>
@@ -78,7 +81,7 @@ $user_id = (int)$_SESSION['user_id'];
         <!-- Estado de Crédito -->
         <section id="creditTab" class="tab-content active">
             <div class="card"><div class="card-body">
-                <h2>Estado de Tu Crédito</h2>
+                <div class="section-header"><span class="section-dot"></span><h2>Estado de Tu Crédito</h2></div>
                 <div id="creditStatus" class="text-muted">Cargando...</div>
                 <div class="metrics-grid">
                     <div class="metric-box">
@@ -105,7 +108,7 @@ $user_id = (int)$_SESSION['user_id'];
         <!-- Control Semanal -->
         <section id="weeklyTab" class="tab-content">
             <div class="card"><div class="card-body">
-                <h2>Control Semanal de Consumo</h2>
+                <div class="section-header"><span class="section-dot"></span><h2>Control Semanal de Consumo</h2></div>
                 <div class="alert alert-info">
                     <strong>Semana actual:</strong> El sistema registra automáticamente tu consumo y deuda semanal.
                 </div>
@@ -118,7 +121,7 @@ $user_id = (int)$_SESSION['user_id'];
         <!-- Pagos -->
         <section id="paymentsTab" class="tab-content">
             <div class="card mb-3"><div class="card-body">
-                <h2>Historial de Pagos</h2>
+                <div class="section-header"><span class="section-dot"></span><h2>Historial de Pagos</h2></div>
                 <table>
                     <thead>
                         <tr>
@@ -140,7 +143,7 @@ $user_id = (int)$_SESSION['user_id'];
         <section id="quotesTab" class="tab-content">
             <div class="grid grid-2">
                 <div class="card"><div class="card-body">
-                    <h2>Crear Cotización para WhatsApp</h2>
+                    <div class="section-header"><span class="section-dot"></span><h2>Crear Cotización para WhatsApp</h2></div>
                     <p class="text-muted">Selecciona productos del catálogo y comparte el carrito vía WhatsApp.</p>
                     
                     <div class="alert alert-info">
@@ -163,7 +166,7 @@ $user_id = (int)$_SESSION['user_id'];
                 </div></div>
 
                 <div class="card"><div class="card-body">
-                    <h2>Cotizaciones Anteriores</h2>
+                    <div class="section-header"><span class="section-dot"></span><h2>Cotizaciones Anteriores</h2></div>
                     <div id="previousQuotes" class="text-muted">Cargando...</div>
                 </div></div>
             </div>

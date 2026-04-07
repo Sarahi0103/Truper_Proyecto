@@ -173,6 +173,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
 
     <main>
         <section class="catalog-hero">
+            <div class="module-badge module-main"><span class="module-glyph">CT</span>Catálogo principal</div>
             <h1>Catálogo Truper</h1>
             <p>Visualización ágil, sencilla y eficaz con precio, stock, variantes e información técnica.</p>
         </section>

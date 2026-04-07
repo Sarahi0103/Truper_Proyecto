@@ -46,8 +46,11 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
 
 <main>
     <div class="container-fluid">
-        <h1>Panel de Abastecimiento</h1>
-        <p class="text-muted">Control de existencias, calendario de proveedores, ordenes de compra y historico.</p>
+        <div class="page-hero">
+            <div class="module-badge module-admin"><span class="module-glyph">AD</span>Módulo administrativo</div>
+            <h1>Panel de Abastecimiento</h1>
+            <p class="text-muted">Control de existencias, calendario de proveedores, ordenes de compra y historico.</p>
+        </div>
 
         <div class="grid grid-2 mt-3">
             <div class="card">

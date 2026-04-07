@@ -45,8 +45,11 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
 
     <main>
         <div class="container-fluid">
-            <h1>Dashboard</h1>
-            <p class="text-muted">Bienvenido de vuelta a Truper Platform</p>
+            <div class="page-hero">
+                <div class="module-badge module-admin"><span class="module-glyph">DB</span>Vista ejecutiva</div>
+                <h1>Dashboard</h1>
+                <p class="text-muted">Bienvenido de vuelta a Truper Platform</p>
+            </div>
 
             <!-- MÉTRICAS PRINCIPALES -->
             <div class="grid grid-4">
@@ -80,7 +83,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
             <div class="grid grid-2" style="margin-top: 2rem;">
                 <!-- ÓRDENES RECIENTES -->
                 <div class="card">
-                    <div class="card-header">Órdenes Recientes</div>
+                    <div class="card-header context-sales">Órdenes Recientes</div>
                     <div class="card-body">
                         <div id="recentOrders">
                             <p class="text-muted">Cargando...</p>
@@ -93,7 +96,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
 
                 <!-- TOP PRODUCTOS -->
                 <div class="card">
-                    <div class="card-header">Productos Más Vendidos</div>
+                    <div class="card-header context-ops">Productos Más Vendidos</div>
                     <div class="card-body">
                         <div id="topProducts">
                             <p class="text-muted">Cargando...</p>
@@ -104,7 +107,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
 
             <!-- ACCIONES RÁPIDAS -->
             <div class="card" style="margin-top: 2rem;">
-                <div class="card-header">Acciones Rápidas</div>
+                <div class="card-header context-admin">Acciones Rápidas</div>
                 <div class="card-body">
                     <div class="grid grid-4">
                         <a href="orders.php?action=new" class="btn btn-primary" style="text-align: center;">
