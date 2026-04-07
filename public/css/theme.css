@@ -221,9 +221,15 @@ tr:hover {
 /* Selectores de tema en header */
 .theme-toggle {
     position: fixed;
-    top: 20px;
-    left: 20px;
+    top: 84px;
+    right: 16px;
     z-index: 1001;
+}
+
+.theme-toggle.theme-toggle-inline {
+    position: static;
+    margin-right: 0.6rem;
+    z-index: auto;
 }
 
 .theme-toggle button {
@@ -231,9 +237,9 @@ tr:hover {
     color: white;
     border: none;
     padding: 8px 12px;
-    border-radius: 6px;
+    border-radius: 999px;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     box-shadow: 0 2px 8px var(--shadow-medium);
     transition: transform 0.2s, box-shadow 0.2s;

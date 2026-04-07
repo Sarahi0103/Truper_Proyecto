@@ -44,7 +44,7 @@ $user_id = (int)$_SESSION['user_id'];
 </head>
 <body>
 <div class="theme-toggle">
-    <button onclick="toggleTheme()">🌙 Tema</button>
+    <button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo claro</span></button>
 </div>
 
 <header>

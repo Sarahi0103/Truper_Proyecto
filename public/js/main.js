@@ -30,28 +30,35 @@ function toggleTheme() {
 }
 
 function ensureThemeToggleButton() {
-    if (document.querySelector('.theme-toggle')) return;
+    const userMenu = document.querySelector('header .user-menu');
+    let wrap = document.querySelector('.theme-toggle');
 
-    const wrap = document.createElement('div');
-    wrap.className = 'theme-toggle';
-    wrap.innerHTML = '<button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo claro</span></button>';
-    document.body.appendChild(wrap);
+    if (!wrap) {
+        wrap = document.createElement('div');
+        wrap.className = 'theme-toggle';
+        wrap.innerHTML = '<button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo claro</span></button>';
+        if (userMenu) {
+            userMenu.prepend(wrap);
+        } else {
+            document.body.appendChild(wrap);
+        }
+    } else if (userMenu && !wrap.closest('.user-menu')) {
+        userMenu.prepend(wrap);
+    }
 
-    const btn = wrap.querySelector('[data-theme-toggle-btn]');
-    if (btn) btn.addEventListener('click', toggleTheme);
+    wrap.classList.toggle('theme-toggle-inline', Boolean(userMenu));
+
+    const btn = wrap.querySelector('button');
+    if (btn && !btn.__themeBound) {
+        btn.removeAttribute('onclick');
+        btn.addEventListener('click', toggleTheme);
+        btn.__themeBound = true;
+    }
 }
 
 function initThemeSystem() {
     setThemePreference(getThemePreference());
     ensureThemeToggleButton();
-
-    const existingButtons = document.querySelectorAll('.theme-toggle button');
-    existingButtons.forEach((btn) => {
-        if (!btn.__themeBound) {
-            btn.addEventListener('click', toggleTheme);
-            btn.__themeBound = true;
-        }
-    });
 }
 
 /**

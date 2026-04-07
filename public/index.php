@@ -147,7 +147,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
 </head>
 <body class="catalog-minimal" data-client-code="<?php echo htmlspecialchars($clientTicketCode, ENT_QUOTES, 'UTF-8'); ?>" data-client-number="<?php echo htmlspecialchars($clientTicketNumber, ENT_QUOTES, 'UTF-8'); ?>">
     <div class="theme-toggle">
-        <button onclick="toggleTheme()">🌙 Tema</button>
+        <button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo claro</span></button>
     </div>
     <header>
         <div class="header-content">
@@ -231,6 +231,8 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                         data-product-card
                         data-name="<?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?>"
                         data-sku="<?php echo htmlspecialchars($displaySku, ENT_QUOTES, 'UTF-8'); ?>"
+                        data-description="<?php echo htmlspecialchars($product['description'] ?: 'Descripción pendiente', ENT_QUOTES, 'UTF-8'); ?>"
+                        data-image="<?php echo htmlspecialchars($galleryImages[0] ?? 'images/products/default-product.svg', ENT_QUOTES, 'UTF-8'); ?>"
                         data-category="<?php echo htmlspecialchars($product['category'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
                         data-price="<?php echo (float)$product['unit_price']; ?>"
                         data-stock="<?php echo $stock; ?>">
@@ -250,8 +252,8 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                         </div>
                         <div class="product-content">
                             <div class="catalog-tag"><?php echo htmlspecialchars($product['category'] ?: 'General', ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div class="product-code-label"><strong>Código:</strong> <strong><?php echo htmlspecialchars($displaySku, ENT_QUOTES, 'UTF-8'); ?></strong></div>
                             <h3 class="product-title"><?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?></h3>
-                            <div class="text-muted">Codigo del producto: <?php echo htmlspecialchars($displaySku, ENT_QUOTES, 'UTF-8'); ?></div>
                             <p class="product-spec"><?php echo htmlspecialchars($product['description'] ?: 'Descripción pendiente', ENT_QUOTES, 'UTF-8'); ?></p>
                             <div>
                                 <?php if (!empty($variants)): ?>
@@ -266,6 +268,17 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                                 <?php echo $stock <= 10 ? 'Stock bajo: ' : 'Stock: '; ?><?php echo $stock; ?>
                             </span>
                             <div class="catalog-price"><?php echo '$' . number_format((float)$product['unit_price'], 0, ',', '.'); ?></div>
+                            <button
+                                type="button"
+                                class="btn btn-small btn-ghost product-detail-btn"
+                                data-view-product
+                                data-sku="<?php echo htmlspecialchars($displaySku, ENT_QUOTES, 'UTF-8'); ?>"
+                                data-name="<?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                data-description="<?php echo htmlspecialchars($product['description'] ?: 'Descripción pendiente', ENT_QUOTES, 'UTF-8'); ?>"
+                                data-category="<?php echo htmlspecialchars($product['category'] ?: 'General', ENT_QUOTES, 'UTF-8'); ?>"
+                                data-price="<?php echo (float)$product['unit_price']; ?>"
+                                data-stock="<?php echo $stock; ?>"
+                                data-image="<?php echo htmlspecialchars($galleryImages[0] ?? 'images/products/default-product.svg', ENT_QUOTES, 'UTF-8'); ?>">Ver detalle</button>
                             <div class="product-actions">
                                 <button
                                     type="button"
@@ -291,6 +304,24 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
     </main>
 
     <button id="openCart" class="cart-fab">Carrito (<span id="cartCount">0</span>)</button>
+    <div id="productDetailModal" class="product-detail-modal" aria-hidden="true">
+        <div class="product-detail-dialog">
+            <button type="button" id="closeProductDetail" class="product-detail-close">&times;</button>
+            <div class="product-detail-grid">
+                <div class="product-detail-media"><img id="detailImage" src="" alt="Producto"></div>
+                <div>
+                    <div class="catalog-tag" id="detailCategory"></div>
+                    <div class="product-code-label mt-1"><strong>Código:</strong> <strong id="detailCode"></strong></div>
+                    <h2 id="detailName" class="mt-1"></h2>
+                    <p id="detailDescription" class="product-detail-description mt-2"></p>
+                    <div class="d-flex justify-between align-center mt-2">
+                        <span class="stock-badge" id="detailStock"></span>
+                        <strong id="detailPrice" class="catalog-price"></strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <aside id="cartDrawer" class="cart-drawer">
         <div class="d-flex justify-between align-center">
             <h3>Tu Carrito</h3>

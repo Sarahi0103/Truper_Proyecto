@@ -1414,6 +1414,11 @@ footer {
     border-color: #ff7f00;
 }
 
+.product-card-min.product-selected {
+    border-color: #ff7f00;
+    box-shadow: 0 0 0 2px rgba(255, 127, 0, 0.2);
+}
+
 .product-media {
     aspect-ratio: 4 / 3;
     background: #f7f7f7;
@@ -1491,6 +1496,12 @@ footer {
     margin-bottom: 0.35rem;
 }
 
+.product-code-label {
+    font-size: 0.9rem;
+    color: #1f2937;
+    margin-bottom: 0.2rem;
+}
+
 .product-spec {
     font-size: 0.86rem;
     color: #58616d;
@@ -1541,6 +1552,90 @@ footer {
     border-radius: 8px;
     font-weight: 500;
     transition: var(--transition);
+}
+
+.product-detail-btn {
+    width: 100%;
+    margin-top: 0.55rem;
+    border-radius: 8px;
+}
+
+.product-detail-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    z-index: 1200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.product-detail-modal.open {
+    display: flex;
+}
+
+.product-detail-dialog {
+    background: var(--ui-surface);
+    border: 1px solid var(--ui-border);
+    border-radius: 16px;
+    width: min(980px, 100%);
+    max-height: 90vh;
+    overflow: auto;
+    padding: 1rem;
+    position: relative;
+}
+
+.product-detail-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    border: none;
+    background: transparent;
+    font-size: 1.6rem;
+    color: var(--ui-text-muted);
+    cursor: pointer;
+}
+
+.product-detail-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 1rem;
+    align-items: start;
+}
+
+.product-detail-media {
+    background: var(--ui-surface-soft);
+    border: 1px solid var(--ui-border);
+    border-radius: 12px;
+    min-height: 360px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.product-detail-media img {
+    max-width: 100%;
+    max-height: 430px;
+    object-fit: contain;
+}
+
+.product-detail-description {
+    line-height: 1.55;
+    font-size: 0.98rem;
+    color: var(--ui-text);
+    white-space: pre-line;
+}
+
+@media (max-width: 900px) {
+    .product-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .product-detail-media {
+        min-height: 260px;
+    }
 }
 
 .btn-ghost {

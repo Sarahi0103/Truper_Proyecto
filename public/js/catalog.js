@@ -323,6 +323,46 @@
   }
 
   function setupHandlers() {
+    const detailModal = document.getElementById('productDetailModal');
+    const closeDetailBtn = document.getElementById('closeProductDetail');
+
+    const openProductDetail = (payload, card) => {
+      if (!detailModal) return;
+
+      document.querySelectorAll('[data-product-card].product-selected').forEach((x) => x.classList.remove('product-selected'));
+      if (card) card.classList.add('product-selected');
+
+      const detailImage = document.getElementById('detailImage');
+      const detailCategory = document.getElementById('detailCategory');
+      const detailCode = document.getElementById('detailCode');
+      const detailName = document.getElementById('detailName');
+      const detailDescription = document.getElementById('detailDescription');
+      const detailStock = document.getElementById('detailStock');
+      const detailPrice = document.getElementById('detailPrice');
+
+      if (detailImage) detailImage.src = payload.image || 'images/products/default-product.svg';
+      if (detailCategory) detailCategory.textContent = payload.category || 'General';
+      if (detailCode) detailCode.textContent = payload.sku || '';
+      if (detailName) detailName.textContent = payload.name || '';
+      if (detailDescription) detailDescription.textContent = payload.description || 'Descripción pendiente';
+      if (detailPrice) detailPrice.textContent = money(payload.price || 0);
+
+      const stock = toNumber(payload.stock);
+      if (detailStock) {
+        detailStock.className = `stock-badge ${stock <= 10 ? 'stock-low' : 'stock-ok'}`;
+        detailStock.textContent = stock <= 10 ? `Stock bajo: ${stock}` : `Stock: ${stock}`;
+      }
+
+      detailModal.classList.add('open');
+      detailModal.setAttribute('aria-hidden', 'false');
+    };
+
+    const closeProductDetail = () => {
+      if (!detailModal) return;
+      detailModal.classList.remove('open');
+      detailModal.setAttribute('aria-hidden', 'true');
+    };
+
     document.querySelectorAll('[data-add-product]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const product = {
@@ -334,6 +374,32 @@
         addToCart(product);
       });
     });
+
+    document.querySelectorAll('[data-view-product]').forEach((btn) => {
+      btn.addEventListener('click', (event) => {
+        event.preventDefault();
+        const card = btn.closest('[data-product-card]');
+        openProductDetail({
+          sku: btn.dataset.sku,
+          name: btn.dataset.name,
+          description: btn.dataset.description,
+          category: btn.dataset.category,
+          stock: btn.dataset.stock,
+          price: toNumber(btn.dataset.price),
+          image: btn.dataset.image
+        }, card);
+      });
+    });
+
+    if (closeDetailBtn) {
+      closeDetailBtn.addEventListener('click', closeProductDetail);
+    }
+
+    if (detailModal) {
+      detailModal.addEventListener('click', (event) => {
+        if (event.target === detailModal) closeProductDetail();
+      });
+    }
 
     document.querySelectorAll('[data-fav-product]').forEach((btn) => {
       btn.addEventListener('click', () => {
