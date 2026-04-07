@@ -63,6 +63,33 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
         </div>
 
         <section id="stockTab" class="tab-content active">
+            <div class="card mb-3"><div class="card-body">
+                <h3>Agregar Producto</h3>
+                <p class="text-muted">Registra nuevos productos y opcionalmente sube su imagen.</p>
+
+                <div class="grid grid-3">
+                    <div class="form-group"><label>SKU</label><input id="newProductSku" type="text" maxlength="100"></div>
+                    <div class="form-group"><label>Nombre</label><input id="newProductName" type="text" maxlength="255"></div>
+                    <div class="form-group"><label>Categoría</label><input id="newProductCategory" type="text" maxlength="100" placeholder="Material eléctrico"></div>
+                </div>
+
+                <div class="grid grid-3">
+                    <div class="form-group"><label>Precio</label><input id="newProductPrice" type="number" min="0" step="0.01" value="0"></div>
+                    <div class="form-group"><label>Stock inicial</label><input id="newProductStock" type="number" min="0" step="1" value="50"></div>
+                    <div class="form-group"><label>Nivel reorden</label><input id="newProductReorder" type="number" min="0" step="1" value="10"></div>
+                </div>
+
+                <div class="grid grid-2">
+                    <div class="form-group"><label>Código de barras (opcional)</label><input id="newProductBarcode" type="text" maxlength="100"></div>
+                    <div class="form-group"><label>Imagen (opcional)</label><input id="newProductImage" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>
+                </div>
+
+                <div class="form-group"><label>Descripción</label><textarea id="newProductDescription" rows="3"></textarea></div>
+
+                <button class="btn btn-primary" onclick="createProductByAdmin()">Guardar producto</button>
+                <div id="productCreateResult" class="mt-3"></div>
+            </div></div>
+
             <div class="card"><div class="card-body">
                 <h3>Control de Existencias</h3>
                 <table>
@@ -309,6 +336,54 @@ async function createClientByAdmin() {
     }
 
     showAlert('Cliente registrado correctamente', 'success');
+}
+
+async function createProductByAdmin() {
+    const formData = new FormData();
+    formData.append('sku', document.getElementById('newProductSku').value || '');
+    formData.append('name', document.getElementById('newProductName').value || '');
+    formData.append('category', document.getElementById('newProductCategory').value || '');
+    formData.append('description', document.getElementById('newProductDescription').value || '');
+    formData.append('price', document.getElementById('newProductPrice').value || '0');
+    formData.append('stock_quantity', document.getElementById('newProductStock').value || '50');
+    formData.append('reorder_level', document.getElementById('newProductReorder').value || '10');
+    formData.append('barcode', document.getElementById('newProductBarcode').value || '');
+
+    const imageInput = document.getElementById('newProductImage');
+    if (imageInput && imageInput.files && imageInput.files[0]) {
+        formData.append('image', imageInput.files[0]);
+    }
+
+    const box = document.getElementById('productCreateResult');
+
+    try {
+        const response = await fetch('/api/admin_supply.php?action=product-create', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        const res = await response.json();
+        if (!res || !res.success) {
+            if (box) {
+                box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible registrar el producto')}</div>`;
+            }
+            return;
+        }
+
+        if (box) {
+            box.innerHTML = `<div class="alert alert-success">Producto registrado correctamente: <strong>${escapeHtml(res.product.sku || '')}</strong></div>`;
+        }
+
+        showAlert('Producto registrado correctamente', 'success');
+        loadStock();
+    } catch (err) {
+        if (box) {
+            box.innerHTML = '<div class="alert alert-error">Error al registrar el producto</div>';
+        }
+    }
 }
 
 function goToClientsTab() {
