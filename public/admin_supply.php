@@ -215,14 +215,6 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     <div class="form-group"><label>Fecha de nacimiento</label><input id="clientBirthdate" type="date" required></div>
                 </div>
 
-                <div class="form-group">
-                    <label>Estado del usuario</label>
-                    <select id="clientIsActive">
-                        <option value="1" selected>Activo</option>
-                        <option value="0">Inactivo</option>
-                    </select>
-                </div>
-
                 <p class="text-muted">El cliente iniciará sesión con su código único y su fecha de nacimiento.</p>
 
                 <div class="d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap;">
@@ -277,7 +269,6 @@ function resetClientForm() {
     document.getElementById('clientEmail').value = '';
     document.getElementById('clientCompany').value = '';
     document.getElementById('clientBirthdate').value = '';
-    document.getElementById('clientIsActive').value = '1';
 
     const button = document.getElementById('clientSaveButton');
     if (button) {
@@ -300,7 +291,6 @@ function fillClientForm(client) {
     document.getElementById('clientEmail').value = client.email || '';
     document.getElementById('clientCompany').value = client.company_name || '';
     document.getElementById('clientBirthdate').value = (client.birthdate || '').slice(0, 10);
-    document.getElementById('clientIsActive').value = Number(client.is_active) ? '1' : '0';
 
     const button = document.getElementById('clientSaveButton');
     if (button) {
@@ -663,8 +653,7 @@ async function saveClientByAdmin() {
         phone: document.getElementById('clientPhone').value,
         email: document.getElementById('clientEmail').value,
         company_name: document.getElementById('clientCompany').value,
-        birthdate: document.getElementById('clientBirthdate').value || null,
-        is_active: document.getElementById('clientIsActive').value === '1'
+        birthdate: document.getElementById('clientBirthdate').value || null
     };
 
     const endpoint = clientId

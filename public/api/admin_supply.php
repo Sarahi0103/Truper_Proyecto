@@ -415,7 +415,8 @@ try {
             $email = sanitize($input['email'] ?? '');
             $companyName = sanitize($input['company_name'] ?? '');
             $birthdate = $input['birthdate'] ?? null;
-            $isActive = !empty($input['is_active']);
+            $hasIsActive = array_key_exists('is_active', $input);
+            $isActive = $hasIsActive ? !empty($input['is_active']) : null;
 
             if ($clientId <= 0) {
                 $response = ['success' => false, 'message' => 'Cliente inválido'];
@@ -449,8 +450,8 @@ try {
             if (db_column_exists('users', 'phone')) { $sets[] = 'phone = ?'; $vals[] = $phone; }
             if (db_column_exists('users', 'birthdate')) { $sets[] = 'birthdate = ?'; $vals[] = $birthdate; }
             elseif (db_column_exists('users', 'birthday')) { $sets[] = 'birthday = ?'; $vals[] = $birthdate; }
-            if (db_column_exists('users', 'is_active')) { $sets[] = 'is_active = ?'; $vals[] = $isActive; }
-            if (db_column_exists('users', 'active')) { $sets[] = 'active = ?'; $vals[] = $isActive ? 1 : 0; }
+            if ($hasIsActive && db_column_exists('users', 'is_active')) { $sets[] = 'is_active = ?'; $vals[] = $isActive; }
+            if ($hasIsActive && db_column_exists('users', 'active')) { $sets[] = 'active = ?'; $vals[] = $isActive ? 1 : 0; }
             if (db_column_exists('users', 'updated_at')) { $sets[] = 'updated_at = CURRENT_TIMESTAMP'; }
 
             if (empty($sets)) {
@@ -489,7 +490,7 @@ try {
                     'email' => $email,
                     'phone' => $phone,
                     'user_code' => $code,
-                    'is_active' => $isActive
+                    'is_active' => $hasIsActive ? $isActive : null
                 ]
             ];
             break;
