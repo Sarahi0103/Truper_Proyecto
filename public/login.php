@@ -1,8 +1,9 @@
 <?php
 require_once '../config/config.php';
 $return_to = $_GET['return_to'] ?? ($_SESSION['post_login_redirect'] ?? '');
+$force_login_screen = isset($_GET['force']);
 
-if (is_logged_in()) {
+if (is_logged_in() && !$force_login_screen) {
     $role = $_SESSION['role'] ?? 'client';
     header('Location: ' . resolve_post_login_redirect((string)$return_to, $role));
     exit;

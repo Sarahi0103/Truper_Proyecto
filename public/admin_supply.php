@@ -64,7 +64,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <div class="card-body">
                     <h3>Inicio de sesión del cliente</h3>
                     <p class="text-muted">El cliente entra con código único y fecha de nacimiento obligatoria.</p>
-                    <a class="btn btn-secondary" href="login.php">Abrir inicio de sesión</a>
+                    <a class="btn btn-secondary" href="/login.php?force=1">Abrir inicio de sesión</a>
                 </div>
             </div>
         </div>
