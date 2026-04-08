@@ -664,7 +664,8 @@ async function saveClientByAdmin() {
 
     if (!res || !res.success) {
         if (box) {
-            box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : (clientId ? 'No fue posible actualizar al cliente' : 'No fue posible registrar al cliente'))}</div>`;
+            const fallbackMessage = clientId ? 'No fue posible actualizar al cliente' : 'No fue posible registrar al cliente';
+            box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : fallbackMessage)}</div>`;
         }
         return;
     }

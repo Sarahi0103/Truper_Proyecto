@@ -1,11 +1,43 @@
 <?php
 require_once '../../config/config.php';
+ini_set('display_errors', '0');
+ob_start();
+
 require_admin();
 header('Content-Type: application/json');
 
 $action = $_GET['action'] ?? 'stock';
 $method = $_SERVER['REQUEST_METHOD'];
 $input = json_decode(file_get_contents('php://input'), true) ?: [];
+
+set_error_handler(function ($severity, $message, $file, $line) {
+    if (!(error_reporting() & $severity)) {
+        return false;
+    }
+    throw new ErrorException($message, 0, $severity, $file, $line);
+});
+
+function normalize_date_value($value): ?string {
+    $raw = trim((string)$value);
+    if ($raw === '') {
+        return null;
+    }
+
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw)) {
+        return $raw;
+    }
+
+    if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})$/', $raw, $matches)) {
+        return $matches[3] . '-' . $matches[2] . '-' . $matches[1];
+    }
+
+    $ts = strtotime($raw);
+    if ($ts !== false) {
+        return date('Y-m-d', $ts);
+    }
+
+    return null;
+}
 
 function ensure_admin_supply_tables($pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS supplier_calendar (
@@ -414,7 +446,7 @@ try {
             $phone = sanitize($input['phone'] ?? '');
             $email = sanitize($input['email'] ?? '');
             $companyName = sanitize($input['company_name'] ?? '');
-            $birthdate = $input['birthdate'] ?? null;
+            $birthdate = normalize_date_value($input['birthdate'] ?? null);
             $hasIsActive = array_key_exists('is_active', $input);
             $isActive = $hasIsActive ? !empty($input['is_active']) : null;
 
@@ -434,9 +466,15 @@ try {
                 $email = 'cliente.' . $suffix . '@truper.local';
             }
 
-            $checkUser = $pdo->prepare("SELECT id FROM users WHERE id = ? AND role = 'client' LIMIT 1");
-            $checkUser->execute([$clientId]);
-            if (!$checkUser->fetchColumn()) {
+            if (db_column_exists('users', 'role')) {
+                $checkUser = $pdo->prepare("SELECT id FROM users WHERE id = ? AND role = 'client' LIMIT 1");
+                $checkUser->execute([$clientId]);
+            } else {
+                $checkUser = $pdo->prepare("SELECT id FROM users WHERE id = ? LIMIT 1");
+                $checkUser->execute([$clientId]);
+            }
+
+            if (!(int)$checkUser->fetchColumn()) {
                 $response = ['success' => false, 'message' => 'Cliente no encontrado'];
                 break;
             }
@@ -675,9 +713,16 @@ try {
         default:
             $response = ['success' => false, 'message' => 'Accion no reconocida'];
     }
-} catch (Exception $e) {
+} catch (Throwable $e) {
     error_log('admin_supply API error: ' . $e->getMessage());
     $response = ['success' => false, 'message' => 'Error interno del servidor'];
+}
+
+restore_error_handler();
+
+$buffer = ob_get_clean();
+if (!empty($buffer)) {
+    error_log('admin_supply API buffered output: ' . trim($buffer));
 }
 
 echo json_encode($response);
