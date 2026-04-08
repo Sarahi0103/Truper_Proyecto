@@ -667,8 +667,10 @@ async function saveClientByAdmin() {
         is_active: document.getElementById('clientIsActive').value === '1'
     };
 
-    const action = clientId ? 'update' : 'create';
-    const res = await apiCall(`/admin_clients.php?action=${action}`, 'POST', payload);
+    const endpoint = clientId
+        ? '/admin_supply.php?action=client-update'
+        : '/admin_clients.php?action=create';
+    const res = await apiCall(endpoint, 'POST', payload);
     const box = document.getElementById('clientCreateResult');
 
     if (!res || !res.success) {

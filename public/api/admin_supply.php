@@ -255,6 +255,36 @@ function list_stock_products_compatible($pdo): array {
     return [];
 }
 
+function ensure_numeric_client_user_code_admin_supply($pdo, int $userId): string {
+    if (!db_column_exists('users', 'user_code')) {
+        return str_pad((string)$userId, 9, '0', STR_PAD_LEFT);
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT user_code FROM users WHERE id = ? LIMIT 1");
+        $stmt->execute([$userId]);
+        $raw = (string)$stmt->fetchColumn();
+        $digits = preg_replace('/\D+/', '', $raw) ?: '';
+        if ($digits !== '') {
+            if ($digits !== $raw) {
+                $fix = $pdo->prepare("UPDATE users SET user_code = ? WHERE id = ?");
+                $fix->execute([$digits, $userId]);
+            }
+            return $digits;
+        }
+    } catch (Exception $ignored) {
+    }
+
+    $code = (string)random_int(100000000, 999999999);
+    try {
+        $update = $pdo->prepare("UPDATE users SET user_code = ? WHERE id = ?");
+        $update->execute([$code, $userId]);
+    } catch (Exception $ignored) {
+    }
+
+    return $code;
+}
+
 $response = ['success' => false, 'message' => 'Accion no reconocida'];
 
 try {
@@ -369,6 +399,98 @@ try {
                 'message' => 'Imágenes cargadas correctamente',
                 'images' => list_available_product_images($pdo),
                 'uploaded' => $uploaded
+            ];
+            break;
+
+        case 'client-update':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $clientId = (int)($input['id'] ?? 0);
+            $firstName = sanitize($input['first_name'] ?? '');
+            $lastName = sanitize($input['last_name'] ?? '');
+            $phone = sanitize($input['phone'] ?? '');
+            $email = sanitize($input['email'] ?? '');
+            $companyName = sanitize($input['company_name'] ?? '');
+            $birthdate = $input['birthdate'] ?? null;
+            $isActive = !empty($input['is_active']);
+
+            if ($clientId <= 0) {
+                $response = ['success' => false, 'message' => 'Cliente inválido'];
+                break;
+            }
+
+            if ($firstName === '' || $lastName === '' || $phone === '') {
+                $response = ['success' => false, 'message' => 'Nombre, apellido y teléfono son obligatorios'];
+                break;
+            }
+
+            if ($email === '') {
+                $digits = preg_replace('/\D+/', '', $phone);
+                $suffix = $digits !== '' ? substr($digits, -8) : (string)$clientId;
+                $email = 'cliente.' . $suffix . '@truper.local';
+            }
+
+            $checkUser = $pdo->prepare("SELECT id FROM users WHERE id = ? AND role = 'client' LIMIT 1");
+            $checkUser->execute([$clientId]);
+            if (!$checkUser->fetchColumn()) {
+                $response = ['success' => false, 'message' => 'Cliente no encontrado'];
+                break;
+            }
+
+            $sets = [];
+            $vals = [];
+            if (db_column_exists('users', 'first_name')) { $sets[] = 'first_name = ?'; $vals[] = $firstName; }
+            if (db_column_exists('users', 'last_name')) { $sets[] = 'last_name = ?'; $vals[] = $lastName; }
+            if (db_column_exists('users', 'name')) { $sets[] = 'name = ?'; $vals[] = trim($firstName . ' ' . $lastName); }
+            if (db_column_exists('users', 'email')) { $sets[] = 'email = ?'; $vals[] = $email; }
+            if (db_column_exists('users', 'phone')) { $sets[] = 'phone = ?'; $vals[] = $phone; }
+            if (db_column_exists('users', 'birthdate')) { $sets[] = 'birthdate = ?'; $vals[] = $birthdate; }
+            elseif (db_column_exists('users', 'birthday')) { $sets[] = 'birthday = ?'; $vals[] = $birthdate; }
+            if (db_column_exists('users', 'is_active')) { $sets[] = 'is_active = ?'; $vals[] = $isActive; }
+            if (db_column_exists('users', 'active')) { $sets[] = 'active = ?'; $vals[] = $isActive ? 1 : 0; }
+            if (db_column_exists('users', 'updated_at')) { $sets[] = 'updated_at = CURRENT_TIMESTAMP'; }
+
+            if (empty($sets)) {
+                $response = ['success' => false, 'message' => 'No hay columnas para actualizar'];
+                break;
+            }
+
+            $vals[] = $clientId;
+            $stmt = $pdo->prepare('UPDATE users SET ' . implode(', ', $sets) . ' WHERE id = ?');
+            $stmt->execute($vals);
+
+            $code = ensure_numeric_client_user_code_admin_supply($pdo, $clientId);
+
+            if (db_table_exists('clients')) {
+                try {
+                    $clientSets = [];
+                    $clientVals = [];
+                    if (db_column_exists('clients', 'company_name')) { $clientSets[] = 'company_name = ?'; $clientVals[] = $companyName; }
+                    if (db_column_exists('clients', 'client_code')) { $clientSets[] = 'client_code = ?'; $clientVals[] = $code; }
+                    if (db_column_exists('clients', 'updated_at')) { $clientSets[] = 'updated_at = CURRENT_TIMESTAMP'; }
+
+                    if (!empty($clientSets)) {
+                        $clientVals[] = $clientId;
+                        $clientStmt = $pdo->prepare('UPDATE clients SET ' . implode(', ', $clientSets) . ' WHERE user_id = ?');
+                        $clientStmt->execute($clientVals);
+                    }
+                } catch (Exception $ignored) {
+                }
+            }
+
+            $response = [
+                'success' => true,
+                'message' => 'Cliente actualizado correctamente',
+                'client' => [
+                    'id' => $clientId,
+                    'email' => $email,
+                    'phone' => $phone,
+                    'user_code' => $code,
+                    'is_active' => $isActive
+                ]
             ];
             break;
 
