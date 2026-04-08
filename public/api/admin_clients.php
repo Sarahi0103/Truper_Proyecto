@@ -3,6 +3,7 @@ require_once '../../config/config.php';
 require_once '../../src/controllers/AuthController.php';
 
 ini_set('display_errors', '0');
+ob_start();
 
 require_admin();
 header('Content-Type: application/json');
@@ -10,9 +11,14 @@ header('Content-Type: application/json');
 $action = $_GET['action'] ?? 'create';
 $method = $_SERVER['REQUEST_METHOD'];
 $input = json_decode(file_get_contents('php://input'), true) ?: [];
-
-$auth = new AuthController($pdo);
 $response = [];
+
+set_error_handler(function ($severity, $message, $file, $line) {
+    if (!(error_reporting() & $severity)) {
+        return false;
+    }
+    throw new ErrorException($message, 0, $severity, $file, $line);
+});
 
 function numeric_client_code($value): string {
     $digits = preg_replace('/\D+/', '', (string)$value);
@@ -77,6 +83,8 @@ try {
                 $response = ['success' => false, 'message' => 'Método no permitido'];
                 break;
             }
+
+            $auth = new AuthController($pdo);
 
             $firstName = sanitize($input['first_name'] ?? '');
             $lastName = sanitize($input['last_name'] ?? '');
@@ -343,9 +351,16 @@ try {
             $response = ['success' => false, 'message' => 'Acción no reconocida'];
             break;
     }
-} catch (Exception $e) {
+} catch (Throwable $e) {
     error_log('admin_clients API Error: ' . $e->getMessage());
     $response = ['success' => false, 'message' => 'Error del servidor'];
+}
+
+restore_error_handler();
+
+$buffer = ob_get_clean();
+if (!empty($buffer)) {
+    error_log('admin_clients API buffered output: ' . trim($buffer));
 }
 
 echo json_encode($response);
