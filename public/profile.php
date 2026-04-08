@@ -55,6 +55,7 @@ $stmt->execute([$_SESSION['user_id']]);
 $profile = $stmt->fetch() ?: [];
 
 $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8');
+$is_client = (($_SESSION['role'] ?? 'client') === 'client');
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -89,7 +90,9 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
             <div class="tabs">
                 <button class="tab-button active" data-tab="profileInfo">Información Personal</button>
                 <button class="tab-button" data-tab="loyaltyInfo">Puntos de Lealtad</button>
+                <?php if (!$is_client): ?>
                 <button class="tab-button" data-tab="passwordChange">Cambiar Contraseña</button>
+                <?php endif; ?>
             </div>
 
             <!-- INFORMACIÓN PERSONAL -->
@@ -178,6 +181,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
             </div>
 
             <!-- CAMBIAR CONTRASEÑA -->
+            <?php if (!$is_client): ?>
             <div id="passwordChange" class="tab-content">
                 <div class="card">
                     <div class="card-header">Cambiar Contraseña</div>
@@ -204,6 +208,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                     </div>
                 </div>
             </div>
+            <?php endif; ?>
         </div>
     </main>
 

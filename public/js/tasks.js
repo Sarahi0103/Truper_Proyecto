@@ -2,6 +2,9 @@
  * Script para gestión de tareas
  */
 
+const TASKS_ROLE = (window.TRUPER_TASKS_ROLE || 'client').toLowerCase();
+const TASKS_IS_ADMIN = TASKS_ROLE === 'admin';
+
 /**
  * Crear nueva tarea
  */
@@ -110,6 +113,57 @@ function sortTasksByPriority() {
     tasks.forEach(task => container.appendChild(task));
 }
 
+function renderTaskSummary(tasks) {
+    const summary = document.getElementById('taskSummary');
+    if (!summary) return;
+
+    const counts = {
+        total: tasks.length,
+        pending: 0,
+        in_progress: 0,
+        completed: 0,
+        cancelled: 0
+    };
+
+    tasks.forEach((task) => {
+        const status = String(task.status || '').toLowerCase();
+        if (Object.prototype.hasOwnProperty.call(counts, status)) {
+            counts[status] += 1;
+        }
+    });
+
+    summary.innerHTML = `
+        <div class="card"><div class="card-body"><div class="text-muted">Total</div><div style="font-size:1.5rem;font-weight:700;">${counts.total}</div></div></div>
+        <div class="card"><div class="card-body"><div class="text-muted">Pendientes</div><div style="font-size:1.5rem;font-weight:700;">${counts.pending}</div></div></div>
+        <div class="card"><div class="card-body"><div class="text-muted">En Progreso</div><div style="font-size:1.5rem;font-weight:700;">${counts.in_progress}</div></div></div>
+        <div class="card"><div class="card-body"><div class="text-muted">Completadas</div><div style="font-size:1.5rem;font-weight:700;">${counts.completed}</div></div></div>
+    `;
+}
+
+function taskActionButtons(task) {
+    if (TASKS_IS_ADMIN) {
+        return `
+            <button class="btn btn-small btn-secondary" onclick="updateTaskStatus(${task.id}, 'in_progress')">En progreso</button>
+            <button class="btn btn-small btn-success" onclick="updateTaskStatus(${task.id}, 'completed')">Completar</button>
+            <input id="hours_${task.id}" type="number" min="0" step="0.5" placeholder="Horas" style="width: 90px;">
+            <button class="btn btn-small btn-primary" onclick="logTaskHours(${task.id})">Registrar horas</button>
+        `;
+    }
+
+    if (task.status === 'completed') {
+        return '<span class="text-muted">Tarea completada</span>';
+    }
+
+    if (task.status === 'in_progress') {
+        return `
+            <button class="btn btn-small btn-success" onclick="updateTaskStatus(${task.id}, 'completed')">Marcar completada</button>
+            <button class="btn btn-small btn-ghost" onclick="updateTaskStatus(${task.id}, 'pending')">Volver a pendiente</button>
+        `;
+    }
+
+    return `<button class="btn btn-small btn-secondary" onclick="updateTaskStatus(${task.id}, 'in_progress')">Iniciar tarea</button>`;
+}
+
 /**
  * Eliminar tarea
  */
@@ -135,8 +189,13 @@ function getPriorityClass(priority) {
 }
 
 async function loadTasks() {
-    let response = await apiCall('/tasks.php?action=list-all');
-    if (!response || !response.success) {
+    let response;
+    if (TASKS_IS_ADMIN) {
+        response = await apiCall('/tasks.php?action=list-all');
+        if (!response || !response.success) {
+            response = await apiCall('/tasks.php?action=list');
+        }
+    } else {
         response = await apiCall('/tasks.php?action=list');
     }
 
@@ -145,11 +204,16 @@ async function loadTasks() {
 
     if (!response || !response.success || !Array.isArray(response.tasks)) {
         container.innerHTML = '<p class="text-muted">No fue posible cargar tareas.</p>';
+        renderTaskSummary([]);
         return;
     }
 
+    renderTaskSummary(response.tasks);
+
     if (response.tasks.length === 0) {
-        container.innerHTML = '<p class="text-muted">No hay tareas registradas.</p>';
+        container.innerHTML = TASKS_IS_ADMIN
+            ? '<p class="text-muted">No hay tareas registradas.</p>'
+            : '<p class="text-muted">No tienes tareas asignadas por ahora. Cuando un administrador te asigne una, aparecerá aquí.</p>';
         return;
     }
 
@@ -162,10 +226,7 @@ async function loadTasks() {
             <div>${task.description}</div>
             <div class="task-details">Vence: ${task.due_date || 'Sin fecha'} | Estado: ${task.status}</div>
             <div class="task-actions">
-                <button class="btn btn-small btn-secondary" onclick="updateTaskStatus(${task.id}, 'in_progress')">En progreso</button>
-                <button class="btn btn-small btn-success" onclick="updateTaskStatus(${task.id}, 'completed')">Completar</button>
-                <input id="hours_${task.id}" type="number" min="0" step="0.5" placeholder="Horas" style="width: 90px;">
-                <button class="btn btn-small btn-primary" onclick="logTaskHours(${task.id})">Registrar horas</button>
+                ${taskActionButtons(task)}
             </div>
         </div>
     `).join('');
@@ -185,5 +246,7 @@ async function loadAssignees() {
 
 document.addEventListener('DOMContentLoaded', function() {
     loadTasks();
-    loadAssignees();
+    if (TASKS_IS_ADMIN) {
+        loadAssignees();
+    }
 });

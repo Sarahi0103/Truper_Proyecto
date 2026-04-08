@@ -4,6 +4,7 @@ require_login();
 
 $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8');
 $user_role = htmlspecialchars($_SESSION['role'] ?? 'employee', ENT_QUOTES, 'UTF-8');
+$is_admin = (($_SESSION['role'] ?? '') === 'admin');
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -42,13 +43,19 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'employee', ENT_QUOTES, 'UTF-
     <main>
         <div class="container-fluid">
             <div class="d-flex justify-between align-center">
-                <h1>Gestión de Tareas</h1>
-                <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
+                <h1><?php echo $is_admin ? 'Gestión de Tareas' : 'Mis Tareas'; ?></h1>
+                <?php if ($is_admin): ?>
                 <button class="btn btn-primary" onclick="openModal('taskModal')">
                     ➕ Nueva Tarea
                 </button>
                 <?php endif; ?>
             </div>
+
+            <?php if (!$is_admin): ?>
+            <p class="text-muted" style="margin-bottom: 1rem;">Da seguimiento a tus pendientes y marca avances para mantener actualizado tu flujo de trabajo.</p>
+            <?php endif; ?>
+
+            <div id="taskSummary" class="grid grid-4" style="margin-bottom: 1rem;"></div>
 
             <!-- FILTROS -->
             <div class="card" style="margin-bottom: 2rem;">
@@ -64,10 +71,12 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'employee', ENT_QUOTES, 'UTF-
                                 <option value="cancelled">Cancelada</option>
                             </select>
                         </div>
+                        <?php if ($is_admin): ?>
                         <div>
                             <label>Ordenar por Prioridad</label>
                             <button class="btn btn-secondary" onclick="sortTasksByPriority()">Aplicar</button>
                         </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -152,6 +161,9 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'employee', ENT_QUOTES, 'UTF-
     </footer>
 
     <script src="js/main.js"></script>
+    <script>
+        window.TRUPER_TASKS_ROLE = '<?php echo htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'); ?>';
+    </script>
     <script src="js/tasks.js"></script>
     <script>
         function logout() {

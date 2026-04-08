@@ -24,7 +24,7 @@ $column_count = $is_admin ? 7 : 5;
             <a href="index.php">Productos</a>
             <a href="orders.php">Pedidos</a>
             <a href="wholesale.php" class="active">Mayoreo</a>
-            <a href="cashier.php">Caja</a>
+          <?php if ($is_admin): ?><a href="cashier.php">Caja</a><?php endif; ?>
             <a href="profile.php">Perfil</a>
         </nav>
     </div>

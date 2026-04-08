@@ -15,6 +15,7 @@ $input = json_decode(file_get_contents('php://input'), true);
 
 $taskController = new TaskController($pdo);
 $response = [];
+$isAdmin = (($_SESSION['role'] ?? '') === 'admin');
 
 try {
     switch ($action) {
@@ -52,6 +53,16 @@ try {
             $task_id = $input['task_id'] ?? null;
             $status = $input['status'] ?? null;
 
+            if (!$isAdmin) {
+                $check = $pdo->prepare("SELECT assigned_to FROM tasks WHERE id = ? LIMIT 1");
+                $check->execute([$task_id]);
+                $assignedTo = (int)$check->fetchColumn();
+                if ($assignedTo !== (int)($_SESSION['user_id'] ?? 0)) {
+                    $response = ['success' => false, 'message' => 'No puedes actualizar tareas de otro usuario'];
+                    break;
+                }
+            }
+
             $response = $taskController->updateTaskStatus($task_id, $status);
 
             log_action(
@@ -70,6 +81,16 @@ try {
 
             $task_id = $input['task_id'] ?? null;
             $hours = $input['hours'] ?? 0;
+
+            if (!$isAdmin) {
+                $check = $pdo->prepare("SELECT assigned_to FROM tasks WHERE id = ? LIMIT 1");
+                $check->execute([$task_id]);
+                $assignedTo = (int)$check->fetchColumn();
+                if ($assignedTo !== (int)($_SESSION['user_id'] ?? 0)) {
+                    $response = ['success' => false, 'message' => 'No puedes registrar horas en tareas de otro usuario'];
+                    break;
+                }
+            }
 
             $response = $taskController->logTaskHours($task_id, $hours);
             break;

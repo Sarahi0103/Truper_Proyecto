@@ -1,9 +1,10 @@
 <?php
 require_once '../config/config.php';
-require_admin();
+require_login();
 
 $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8');
-$user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8');
+$user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8');
+$is_admin = (($_SESSION['role'] ?? '') === 'admin');
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -24,8 +25,8 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                 <a href="dashboard.php">Dashboard</a>
                 <a href="orders.php">Pedidos</a>
                 <a href="wholesale.php">Mayoreo</a>
-                <a href="cashier.php">Caja</a>
-                <a href="admin_supply.php">Abastecimiento</a>
+                <?php if ($is_admin): ?><a href="cashier.php">Caja</a><?php endif; ?>
+                <?php if ($is_admin): ?><a href="admin_supply.php">Abastecimiento</a><?php endif; ?>
                 <a href="tasks.php">Tareas</a>
                 <a href="analytics.php" class="active">Estadísticas</a>
                 <a href="profile.php">Perfil</a>
@@ -44,19 +45,32 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
     <main>
         <div class="container-fluid">
             <div class="d-flex justify-between align-center">
-                <h1>Estadísticas y Análisis</h1>
+                <h1><?php echo $is_admin ? 'Estadísticas y Análisis' : 'Mis Estadísticas'; ?></h1>
+                <?php if ($is_admin): ?>
                 <button class="btn btn-primary" onclick="exportStats('csv')">
                     📥 Descargar Reporte
                 </button>
+                <?php endif; ?>
             </div>
 
             <!-- TABS -->
             <div class="tabs">
                 <button class="tab-button active" data-tab="purchaseStats">Compras</button>
+                <?php if ($is_admin): ?>
                 <button class="tab-button" data-tab="predictionsTab">Predicciones</button>
                 <button class="tab-button" data-tab="seasonalTab">Temporadas</button>
                 <button class="tab-button" data-tab="clientsTab">Clientes</button>
+                <?php endif; ?>
             </div>
+
+            <?php if (!$is_admin): ?>
+            <div class="grid grid-4" style="margin: 1rem 0 1.5rem;">
+                <div class="card"><div class="card-body"><div class="text-muted">Pedidos Totales</div><div id="myTotalOrders" style="font-size:1.8rem;font-weight:700;">0</div></div></div>
+                <div class="card"><div class="card-body"><div class="text-muted">Total Comprado</div><div id="myTotalSpent" style="font-size:1.8rem;font-weight:700;">$0</div></div></div>
+                <div class="card"><div class="card-body"><div class="text-muted">Ticket Promedio</div><div id="myAvgTicket" style="font-size:1.8rem;font-weight:700;">$0</div></div></div>
+                <div class="card"><div class="card-body"><div class="text-muted">Pedidos Activos</div><div id="myPendingOrders" style="font-size:1.8rem;font-weight:700;">0</div></div></div>
+            </div>
+            <?php endif; ?>
 
             <!-- ESTADÍSTICAS DE COMPRAS -->
             <div id="purchaseStats" class="tab-content active">
@@ -75,6 +89,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             </div>
 
             <!-- PREDICCIONES DEL SISTEMA -->
+            <?php if ($is_admin): ?>
             <div id="predictionsTab" class="tab-content">
                 <div class="card">
                     <div class="card-header">Predicciones de Demanda (IA)</div>
@@ -108,8 +123,10 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                     </div>
                 </div>
             </div>
+            <?php endif; ?>
 
             <!-- WIDGETS INFORMATIVOS -->
+            <?php if ($is_admin): ?>
             <div class="grid grid-2" style="margin-top: 2rem;">
                 <div class="card">
                     <div class="card-header">Información Importante</div>
@@ -138,6 +155,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                     </div>
                 </div>
             </div>
+            <?php endif; ?>
         </div>
     </main>
 
@@ -175,6 +193,22 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             }
         }
 
+        async function loadMySummary() {
+            const response = await apiCall('/analytics.php?action=my-summary');
+            if (!response || !response.summary) return;
+
+            const summary = response.summary;
+            const totalOrders = document.getElementById('myTotalOrders');
+            const totalSpent = document.getElementById('myTotalSpent');
+            const avgTicket = document.getElementById('myAvgTicket');
+            const pendingOrders = document.getElementById('myPendingOrders');
+
+            if (totalOrders) totalOrders.textContent = summary.total_orders || 0;
+            if (totalSpent) totalSpent.textContent = formatCurrency(summary.total_spent || 0);
+            if (avgTicket) avgTicket.textContent = formatCurrency(summary.avg_ticket || 0);
+            if (pendingOrders) pendingOrders.textContent = summary.pending_orders || 0;
+        }
+
         async function loadAvailableYears() {
             const yearFilter = document.getElementById('yearFilter');
             if (!yearFilter) return;
@@ -195,6 +229,9 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
 
         document.addEventListener('DOMContentLoaded', function() {
             loadAvailableYears().then(loadPurchaseStats);
+            <?php if (!$is_admin): ?>
+            loadMySummary();
+            <?php endif; ?>
         });
     </script>
 </body>

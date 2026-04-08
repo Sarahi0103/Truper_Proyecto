@@ -175,17 +175,6 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
 
                             <div class="grid grid-2 mt-3">
                                 <div class="form-group">
-                                    <label for="weatherCondition">Clima (opcional)</label>
-                                    <select id="weatherCondition">
-                                        <option value="">No especificado</option>
-                                        <option value="Soleado">Soleado</option>
-                                        <option value="Lluvia">Lluvia</option>
-                                        <option value="Frio">Frio</option>
-                                        <option value="Calor">Calor</option>
-                                        <option value="Viento">Viento</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
                                     <label for="specialEvent">Fecha o evento especial (opcional)</label>
                                     <input type="text" id="specialEvent" placeholder="Ej. Buen Fin, Navidad, Inicio de obra">
                                 </div>
