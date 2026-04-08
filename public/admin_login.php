@@ -1,8 +1,10 @@
 <?php
 require_once '../config/config.php';
+$return_to = $_GET['return_to'] ?? ($_SESSION['post_login_redirect'] ?? '');
+
 if (is_logged_in()) {
     $role = $_SESSION['role'] ?? 'client';
-    header('Location: ' . ($role === 'admin' ? '/admin_supply.php' : '/orders.php?tab=newOrder'));
+    header('Location: ' . resolve_post_login_redirect((string)$return_to, $role));
     exit;
 }
 ?>
@@ -54,6 +56,7 @@ if (is_logged_in()) {
 
                     <form id="loginForm" action="api/auth.php" method="POST">
                         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
+                        <input type="hidden" name="return_to" value="<?php echo htmlspecialchars((string)$return_to, ENT_QUOTES, 'UTF-8'); ?>">
                         <div class="form-group">
                             <label for="email">Email o teléfono</label>
                             <input type="text" id="email" name="email" required placeholder="admin@truper.com o +52..." maxlength="255" autocomplete="username">

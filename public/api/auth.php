@@ -94,7 +94,10 @@ try {
             if ($response['success']) {
                 auth_rate_limit_reset($loginKey);
                 log_action($_SESSION['user_id'], 'LOGIN_CLIENT', 'Inicio de sesión de cliente por código', getTrusSIDBug());
-                $response['redirect'] = route_by_role($_SESSION['role'] ?? 'client');
+                $role = $_SESSION['role'] ?? 'client';
+                $requested = trim((string)($_POST['return_to'] ?? ($_SESSION['post_login_redirect'] ?? '')));
+                $response['redirect'] = resolve_post_login_redirect($requested, $role);
+                unset($_SESSION['post_login_redirect']);
             }
             break;
 
@@ -128,7 +131,9 @@ try {
                     $response['message'] = ($response['message'] ?? 'Bienvenido') . '. ' . ($engagement['message'] ?? 'Bono de cumpleaños aplicado.');
                 }
                 $role = $_SESSION['role'] ?? 'client';
-                $response['redirect'] = route_by_role($role);
+                $requested = trim((string)($_POST['return_to'] ?? ($_SESSION['post_login_redirect'] ?? '')));
+                $response['redirect'] = resolve_post_login_redirect($requested, $role);
+                unset($_SESSION['post_login_redirect']);
             }
             break;
 

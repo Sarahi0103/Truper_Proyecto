@@ -1,7 +1,10 @@
 <?php
 require_once '../config/config.php';
-if (is_logged_in() && (($_SESSION['role'] ?? '') !== 'admin')) {
-    header('Location: /orders.php?tab=newOrder');
+$return_to = $_GET['return_to'] ?? ($_SESSION['post_login_redirect'] ?? '');
+
+if (is_logged_in()) {
+    $role = $_SESSION['role'] ?? 'client';
+    header('Location: ' . resolve_post_login_redirect((string)$return_to, $role));
     exit;
 }
 ?>
@@ -68,6 +71,7 @@ if (is_logged_in() && (($_SESSION['role'] ?? '') !== 'admin')) {
 
                     <form id="loginForm" action="api/auth.php?action=client-login" method="POST">
                         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
+                        <input type="hidden" name="return_to" value="<?php echo htmlspecialchars((string)$return_to, ENT_QUOTES, 'UTF-8'); ?>">
                         <div class="form-group">
                             <label for="code">Código de cliente</label>
                             <input type="text" id="code" name="code" required placeholder="CLI-XXXXXXXX" maxlength="32" autocomplete="username">

@@ -102,6 +102,67 @@ function is_api_request() {
         || strpos($accept, 'application/json') !== false;
 }
 
+function is_safe_return_path($path) {
+    if (!is_string($path) || $path === '') {
+        return false;
+    }
+    if ($path[0] !== '/') {
+        return false;
+    }
+    if (strpos($path, '//') === 0) {
+        return false;
+    }
+    return true;
+}
+
+function can_role_access_path($role, $path) {
+    $role = (string)$role;
+    if ($role === 'admin') {
+        return true;
+    }
+
+    $adminOnlyPaths = [
+        '/admin_supply.php',
+        '/cashier.php',
+        '/admin_login.php'
+    ];
+
+    foreach ($adminOnlyPaths as $adminPath) {
+        if (strpos($path, $adminPath) === 0) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function resolve_post_login_redirect($requested, $role) {
+    $fallback = route_by_role($role);
+    $requested = trim((string)$requested);
+    if ($requested === '') {
+        return $fallback;
+    }
+
+    $path = parse_url($requested, PHP_URL_PATH) ?: '';
+    $query = parse_url($requested, PHP_URL_QUERY) ?: '';
+    if (!is_safe_return_path($path)) {
+        return $fallback;
+    }
+
+    $blocked = ['/login.php', '/register.php', '/admin_login.php', '/api/auth.php'];
+    foreach ($blocked as $blockedPath) {
+        if (strpos($path, $blockedPath) === 0) {
+            return $fallback;
+        }
+    }
+
+    if (!can_role_access_path($role, $path)) {
+        return $fallback;
+    }
+
+    return $query !== '' ? ($path . '?' . $query) : $path;
+}
+
 function deny_unauthorized($code, $message) {
     if (is_api_request()) {
         http_response_code($code);
@@ -110,9 +171,11 @@ function deny_unauthorized($code, $message) {
         exit;
     }
 
+    $currentUri = $_SERVER['REQUEST_URI'] ?? '/';
+
     if (is_logged_in()) {
         $fallback = '/dashboard.php?error=unauthorized';
-        $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?: '';
+        $currentPath = parse_url($currentUri, PHP_URL_PATH) ?: '';
         $referer = $_SERVER['HTTP_REFERER'] ?? '';
         $refererPath = $referer ? (parse_url($referer, PHP_URL_PATH) ?: '') : '';
 
@@ -126,7 +189,13 @@ function deny_unauthorized($code, $message) {
         exit;
     }
 
-    header("Location: /login.php?error=unauthorized");
+    $currentPath = parse_url($currentUri, PHP_URL_PATH) ?: '';
+    if ($currentPath !== '' && is_safe_return_path($currentPath) && strpos($currentPath, '/login.php') !== 0 && strpos($currentPath, '/admin_login.php') !== 0 && strpos($currentPath, '/register.php') !== 0) {
+        $_SESSION['post_login_redirect'] = $currentUri;
+    }
+
+    $errorType = ((int)$code === 401) ? 'expired' : 'unauthorized';
+    header("Location: /login.php?error={$errorType}");
     exit;
 }
 
