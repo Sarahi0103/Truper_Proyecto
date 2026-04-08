@@ -81,8 +81,6 @@ function ensure_admin_supply_tables($pdo): void {
     )");
 }
 
-ensure_admin_supply_tables($pdo);
-
 function ensure_products_extra_columns($pdo): void {
     try {
         $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS technical_specs TEXT");
@@ -222,7 +220,21 @@ function create_product_compatible($pdo, array $payload): void {
     $stmt->execute($values);
 }
 
-ensure_products_extra_columns($pdo);
+function bootstrap_admin_supply_schema($pdo): void {
+    try {
+        ensure_admin_supply_tables($pdo);
+    } catch (Throwable $e) {
+        error_log('admin_supply bootstrap warning (tables): ' . $e->getMessage());
+    }
+
+    try {
+        ensure_products_extra_columns($pdo);
+    } catch (Throwable $e) {
+        error_log('admin_supply bootstrap warning (product columns): ' . $e->getMessage());
+    }
+}
+
+bootstrap_admin_supply_schema($pdo);
 
 function list_available_product_images($pdo): array {
     $images = ['images/products/default-product.svg'];
