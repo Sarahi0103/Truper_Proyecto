@@ -56,6 +56,37 @@ $profile = $stmt->fetch() ?: [];
 
 $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8');
 $is_client = (($_SESSION['role'] ?? 'client') === 'client');
+$loyalty_points = (int)($profile['loyalty_points'] ?? 0);
+$current_discount_rate = calculateDiscountByPoints($loyalty_points);
+
+$next_goal_points = null;
+if ($loyalty_points < 100) {
+    $next_goal_points = 100;
+} elseif ($loyalty_points < 250) {
+    $next_goal_points = 250;
+} elseif ($loyalty_points < 500) {
+    $next_goal_points = 500;
+} elseif ($loyalty_points < 1000) {
+    $next_goal_points = 1000;
+}
+
+$birthday_text = 'No registrada';
+if (!empty($profile['birthdate'])) {
+    $birthdate_raw = substr((string)$profile['birthdate'], 0, 10);
+    try {
+        $birthdate_obj = new DateTime($birthdate_raw);
+        $months_es = [
+            1 => 'enero', 2 => 'febrero', 3 => 'marzo', 4 => 'abril',
+            5 => 'mayo', 6 => 'junio', 7 => 'julio', 8 => 'agosto',
+            9 => 'septiembre', 10 => 'octubre', 11 => 'noviembre', 12 => 'diciembre'
+        ];
+        $day = (int)$birthdate_obj->format('d');
+        $month = (int)$birthdate_obj->format('m');
+        $birthday_text = $day . ' de ' . ($months_es[$month] ?? $birthdate_obj->format('m'));
+    } catch (Exception $ignored) {
+        $birthday_text = htmlspecialchars($birthdate_raw, ENT_QUOTES, 'UTF-8');
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -156,8 +187,18 @@ $is_client = (($_SESSION['role'] ?? 'client') === 'client');
                     <div class="card-body">
                         <div style="text-align: center; padding: 2rem;">
                             <div style="font-size: 2rem; color: #FF7F00; margin-bottom: 0.5rem;">⭐</div>
-                            <div style="font-size: 2.5rem; font-weight: bold; color: #FF7F00;"><?php echo (int)($profile['loyalty_points'] ?? 0); ?></div>
+                            <div style="font-size: 2.5rem; font-weight: bold; color: #FF7F00;"><?php echo $loyalty_points; ?></div>
                             <div style="color: #666; margin-bottom: 2rem;">Puntos Disponibles</div>
+
+                            <div style="margin-bottom: 1.5rem; padding: 1rem; border-radius: 8px; background: #fff4e7; border: 1px solid #ffd3a5;">
+                                <div style="font-weight: 700; margin-bottom: 0.35rem;">Descuento actual: <?php echo (int)round($current_discount_rate * 100); ?>%</div>
+                                <?php if ($next_goal_points !== null): ?>
+                                <div style="color: #555;">Te faltan <?php echo max(0, $next_goal_points - $loyalty_points); ?> puntos para llegar al siguiente nivel.</div>
+                                <?php else: ?>
+                                <div style="color: #555;">Ya tienes el nivel máximo de descuento por puntos.</div>
+                                <?php endif; ?>
+                                <div style="color: #666; margin-top: 0.5rem; font-size: 0.9rem;">El descuento se aplica automáticamente al confirmar tu pedido.</div>
+                            </div>
 
                             <div style="background-color: #f5f5f5; padding: 1.5rem; border-radius: 8px; text-align: left;">
                                 <h4 style="margin-bottom: 1rem;">Cómo canjear tus puntos:</h4>
@@ -171,10 +212,10 @@ $is_client = (($_SESSION['role'] ?? 'client') === 'client');
 
                             <div style="margin-top: 2rem;">
                                 <h4>Próximo Cumpleaños</h4>
-                                <p>15 de mayo - ¡Recibirás un bono especial! 🎂</p>
+                                <p><?php echo htmlspecialchars($birthday_text, ENT_QUOTES, 'UTF-8'); ?> - ¡Recibirás un bono especial! 🎂</p>
                             </div>
 
-                            <button class="btn btn-primary btn-block mt-3">Usar Descuento</button>
+                            <button class="btn btn-primary btn-block mt-3" type="button" onclick="goToOrdersWithDiscount()">Usar Descuento en Pedido</button>
                         </div>
                     </div>
                 </div>
@@ -227,6 +268,10 @@ $is_client = (($_SESSION['role'] ?? 'client') === 'client');
 
     <script src="js/main.js"></script>
     <script>
+        function goToOrdersWithDiscount() {
+            window.location.href = 'orders.php?tab=newOrder';
+        }
+
         function logout() {
             if (confirm('¿Deseas cerrar sesión?')) {
                 window.location.href = 'api/auth.php?action=logout';
