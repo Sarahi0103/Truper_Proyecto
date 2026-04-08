@@ -110,6 +110,22 @@ function deny_unauthorized($code, $message) {
         exit;
     }
 
+    if (is_logged_in()) {
+        $fallback = '/dashboard.php?error=unauthorized';
+        $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?: '';
+        $referer = $_SERVER['HTTP_REFERER'] ?? '';
+        $refererPath = $referer ? (parse_url($referer, PHP_URL_PATH) ?: '') : '';
+
+        if ($refererPath !== '' && $refererPath !== $currentPath) {
+            $separator = strpos($referer, '?') !== false ? '&' : '?';
+            header('Location: ' . $referer . $separator . 'error=unauthorized');
+            exit;
+        }
+
+        header('Location: ' . $fallback);
+        exit;
+    }
+
     header("Location: /login.php?error=unauthorized");
     exit;
 }
