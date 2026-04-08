@@ -140,12 +140,57 @@ try {
                 $email = 'cliente.' . $suffix . '@truper.local';
             }
 
-            if (db_column_exists('users', 'updated_at')) {
-                $updateUser = $pdo->prepare("UPDATE users SET first_name = ?, last_name = ?, email = ?, phone = ?, birthdate = ?, is_active = ?, active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-            } else {
-                $updateUser = $pdo->prepare("UPDATE users SET first_name = ?, last_name = ?, email = ?, phone = ?, birthdate = ?, is_active = ?, active = ? WHERE id = ?");
+            $userSets = [];
+            $userValues = [];
+
+            if (db_column_exists('users', 'first_name')) {
+                $userSets[] = 'first_name = ?';
+                $userValues[] = $firstName;
             }
-            $updateUser->execute([$firstName, $lastName, $email, $phone, $birthdate, $isActive, $isActive, $clientId]);
+            if (db_column_exists('users', 'last_name')) {
+                $userSets[] = 'last_name = ?';
+                $userValues[] = $lastName;
+            }
+            if (db_column_exists('users', 'name')) {
+                $userSets[] = 'name = ?';
+                $userValues[] = trim($firstName . ' ' . $lastName);
+            }
+            if (db_column_exists('users', 'email')) {
+                $userSets[] = 'email = ?';
+                $userValues[] = $email;
+            }
+            if (db_column_exists('users', 'phone')) {
+                $userSets[] = 'phone = ?';
+                $userValues[] = $phone;
+            }
+            if (db_column_exists('users', 'birthdate')) {
+                $userSets[] = 'birthdate = ?';
+                $userValues[] = $birthdate;
+            } elseif (db_column_exists('users', 'birthday')) {
+                $userSets[] = 'birthday = ?';
+                $userValues[] = $birthdate;
+            }
+            if (db_column_exists('users', 'is_active')) {
+                $userSets[] = 'is_active = ?';
+                $userValues[] = $isActive;
+            }
+            if (db_column_exists('users', 'active')) {
+                $userSets[] = 'active = ?';
+                $userValues[] = $isActive ? 1 : 0;
+            }
+            if (db_column_exists('users', 'updated_at')) {
+                $userSets[] = 'updated_at = CURRENT_TIMESTAMP';
+            }
+
+            if (empty($userSets)) {
+                $response = ['success' => false, 'message' => 'No hay columnas para actualizar en users'];
+                break;
+            }
+
+            $userValues[] = $clientId;
+            $updateSql = 'UPDATE users SET ' . implode(', ', $userSets) . ' WHERE id = ?';
+            $updateUser = $pdo->prepare($updateSql);
+            $updateUser->execute($userValues);
 
             $ensureCode = new ReflectionClass($auth);
             $methodEnsure = $ensureCode->getMethod('ensureUserCodeForUser');
