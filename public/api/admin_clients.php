@@ -2,6 +2,8 @@
 require_once '../../config/config.php';
 require_once '../../src/controllers/AuthController.php';
 
+ini_set('display_errors', '0');
+
 require_admin();
 header('Content-Type: application/json');
 
@@ -15,6 +17,57 @@ $response = [];
 function numeric_client_code($value): string {
     $digits = preg_replace('/\D+/', '', (string)$value);
     return $digits !== '' ? $digits : '';
+}
+
+function ensure_numeric_user_code_for_client($pdo, int $userId): string {
+    if (!db_column_exists('users', 'user_code')) {
+        return str_pad((string)$userId, 9, '0', STR_PAD_LEFT);
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT user_code FROM users WHERE id = ? LIMIT 1");
+        $stmt->execute([$userId]);
+        $rawExisting = (string)$stmt->fetchColumn();
+        $existing = numeric_client_code($rawExisting);
+        if ($existing !== '') {
+            if ($existing !== $rawExisting) {
+                $fix = $pdo->prepare("UPDATE users SET user_code = ? WHERE id = ?");
+                $fix->execute([$existing, $userId]);
+            }
+            return $existing;
+        }
+    } catch (Exception $ignored) {
+    }
+
+    $tries = 0;
+    $newCode = '';
+    while ($tries < 10) {
+        $tries++;
+        $candidate = (string)random_int(100000000, 999999999);
+        try {
+            $check = $pdo->prepare("SELECT 1 FROM users WHERE user_code = ? LIMIT 1");
+            $check->execute([$candidate]);
+            if (!$check->fetchColumn()) {
+                $newCode = $candidate;
+                break;
+            }
+        } catch (Exception $ignored) {
+            $newCode = $candidate;
+            break;
+        }
+    }
+
+    if ($newCode === '') {
+        $newCode = str_pad((string)$userId, 9, '0', STR_PAD_LEFT);
+    }
+
+    try {
+        $update = $pdo->prepare("UPDATE users SET user_code = ? WHERE id = ?");
+        $update->execute([$newCode, $userId]);
+    } catch (Exception $ignored) {
+    }
+
+    return $newCode;
 }
 
 try {
@@ -91,7 +144,25 @@ try {
                 break;
             }
 
-            $stmt = $pdo->query("SELECT u.id, u.first_name, u.last_name, u.email, u.phone, u.birthdate, u.user_code, u.is_active, c.company_name FROM users u LEFT JOIN clients c ON c.user_id = u.id WHERE u.role = 'client' ORDER BY u.created_at DESC LIMIT 200");
+            $selectParts = [
+                'u.id',
+                db_column_exists('users', 'first_name') ? 'u.first_name' : "'' AS first_name",
+                db_column_exists('users', 'last_name') ? 'u.last_name' : "'' AS last_name",
+                db_column_exists('users', 'email') ? 'u.email' : "'' AS email",
+                db_column_exists('users', 'phone') ? 'u.phone' : "'' AS phone",
+                db_column_exists('users', 'birthdate') ? 'u.birthdate' : (db_column_exists('users', 'birthday') ? 'u.birthday AS birthdate' : 'NULL AS birthdate'),
+                db_column_exists('users', 'user_code') ? 'u.user_code' : "'' AS user_code",
+                db_column_exists('users', 'is_active') ? 'u.is_active' : (db_column_exists('users', 'active') ? 'u.active AS is_active' : '1 AS is_active'),
+                (db_table_exists('clients') && db_column_exists('clients', 'company_name')) ? 'c.company_name' : "'' AS company_name"
+            ];
+
+            $orderBy = db_column_exists('users', 'created_at') ? 'u.created_at DESC' : 'u.id DESC';
+            if (db_table_exists('clients')) {
+                $sql = 'SELECT ' . implode(', ', $selectParts) . ' FROM users u LEFT JOIN clients c ON c.user_id = u.id WHERE u.role = \'client\' ORDER BY ' . $orderBy . ' LIMIT 200';
+            } else {
+                $sql = 'SELECT ' . implode(', ', $selectParts) . ' FROM users u WHERE u.role = \'client\' ORDER BY ' . $orderBy . ' LIMIT 200';
+            }
+            $stmt = $pdo->query($sql);
             $clients = $stmt ? $stmt->fetchAll() : [];
 
             $clients = array_map(function ($client) {
@@ -192,10 +263,7 @@ try {
             $updateUser = $pdo->prepare($updateSql);
             $updateUser->execute($userValues);
 
-            $ensureCode = new ReflectionClass($auth);
-            $methodEnsure = $ensureCode->getMethod('ensureUserCodeForUser');
-            $methodEnsure->setAccessible(true);
-            $code = (string)$methodEnsure->invoke($auth, $clientId);
+            $code = ensure_numeric_user_code_for_client($pdo, $clientId);
 
             try {
                     if (db_column_exists('clients', 'client_code')) {
