@@ -324,9 +324,19 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                     }
 
                     const total = items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
-                    let message = 'Hola, solicito cotización de los siguientes productos:\\n\\n';
+                    const now = new Date();
+                    const ticketCode = `TCK-${String(now.getTime()).slice(-8)}`;
+                    const issueDate = now.toLocaleString('es-MX');
+                    const clientCode = document.body?.dataset?.clientCode || 'PUBLICO';
+
+                    let message = 'Hola, envío ticket de cotización.\\n';
+                    message += `Folio: ${ticketCode}\\n`;
+                    message += `Fecha: ${issueDate}\\n`;
+                    message += `Cliente: ${clientCode}\\n\\n`;
+                    message += 'Detalle:\\n';
                     items.forEach(item => {
-                        message += `• ${item.quantity} x ${item.name}\\n`;
+                        const lineTotal = (item.unit_price * item.quantity);
+                        message += `• ${item.quantity} x ${item.name} | $${lineTotal.toFixed(2)}\\n`;
                     });
                     message += `\\nTotal estimado: $${total.toFixed(2)}\\n\\nQuedo atento(a) a disponibilidad y tiempo de entrega.`;
 
