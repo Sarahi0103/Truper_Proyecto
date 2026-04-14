@@ -145,6 +145,7 @@ function ticket_quote_product_code($item) {
         .item-name { font-size: 34px; margin-bottom: 2px; }
         .item-code { font-size: 28px; color: #444; margin-bottom: 2px; }
         .item-line { display: flex; justify-content: space-between; gap: 10px; font-size: 33px; }
+        .item-separator { border-top: 1px solid #dfdfdf; margin: 8px 0 10px; }
         .total-row { text-align: right; font-size: 40px; font-weight: 800; margin-top: 8px; }
         .thanks { margin-top: 12px; font-size: 33px; }
         @media print {
@@ -170,7 +171,7 @@ function ticket_quote_product_code($item) {
     <div class="section-title">Detalle de productos</div>
 
     <?php if (!empty($items)): ?>
-        <?php foreach ($items as $item): ?>
+        <?php foreach ($items as $idx => $item): ?>
             <?php
                 $qty = (int)($item['quantity'] ?? 0);
                 $name = (string)($item['name'] ?? 'Producto');
@@ -184,6 +185,9 @@ function ticket_quote_product_code($item) {
                 <span><?php echo $qty; ?> x $<?php echo ticket_quote_number($price); ?></span>
                 <span>$<?php echo ticket_quote_number($lineTotal); ?></span>
             </div>
+            <?php if ($idx < (count($items) - 1)): ?>
+                <div class="item-separator"></div>
+            <?php endif; ?>
         <?php endforeach; ?>
     <?php endif; ?>
 
