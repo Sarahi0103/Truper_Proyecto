@@ -24,7 +24,7 @@ function normalize_date_value($value): ?string {
     }
 
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw)) {
-        return $raw;
+        $stmt = $pdo->prepare("SELECT 1 FROM products WHERE LOWER(TRIM(COALESCE(sku, ''))) = LOWER(TRIM(?)) LIMIT 1");
     }
 
     if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})$/', $raw, $matches)) {
@@ -37,6 +37,39 @@ function normalize_date_value($value): ?string {
     }
 
     return null;
+}
+
+function normalize_sku_admin_supply($value): string {
+    $sku = strtoupper(trim((string)$value));
+    return preg_replace('/\s+/', '', $sku) ?: '';
+}
+
+function product_sku_exists_admin_supply($pdo, string $sku): bool {
+    if ($sku === '') {
+        return false;
+    }
+
+    try {
+        $stmt = $pdo->prepare('SELECT 1 FROM products WHERE LOWER(TRIM(COALESCE(sku, \''\'))) = LOWER(TRIM(?)) LIMIT 1');
+        $stmt->execute([$sku]);
+        return (bool)$stmt->fetchColumn();
+    } catch (Exception $ignored) {
+        return false;
+    }
+}
+
+function marketplace_sku_exists_admin_supply($pdo, string $sku, int $excludeId = 0): bool {
+    if ($sku === '') {
+        return false;
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT 1 FROM marketplace_ce_products WHERE LOWER(TRIM(COALESCE(sku, ''))) = LOWER(TRIM(?)) AND id <> ? LIMIT 1");
+        $stmt->execute([$sku, max(0, $excludeId)]);
+        return (bool)$stmt->fetchColumn();
+    } catch (Exception $ignored) {
+        return false;
+    }
 }
 
 function ensure_admin_supply_tables($pdo): void {
@@ -391,13 +424,56 @@ $response = ['success' => false, 'message' => 'Accion no reconocida'];
 
 try {
     switch ($action) {
+        case 'product-sku-check':
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $sku = normalize_sku_admin_supply($_GET['sku'] ?? '');
+            if ($sku === '') {
+                $response = ['success' => false, 'message' => 'SKU requerido'];
+                break;
+            }
+
+            $exists = product_sku_exists_admin_supply($pdo, $sku);
+            $response = [
+                'success' => true,
+                'available' => !$exists,
+                'message' => $exists ? 'Ya existe un producto con ese código' : 'Código disponible',
+                'sku' => $sku
+            ];
+            break;
+
+        case 'marketplace-sku-check':
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $sku = normalize_sku_admin_supply($_GET['sku'] ?? '');
+            $id = (int)($_GET['id'] ?? 0);
+            if ($sku === '') {
+                $response = ['success' => false, 'message' => 'SKU requerido'];
+                break;
+            }
+
+            $exists = marketplace_sku_exists_admin_supply($pdo, $sku, $id);
+            $response = [
+                'success' => true,
+                'available' => !$exists,
+                'message' => $exists ? 'Ya existe un artículo CE con ese código' : 'Código disponible',
+                'sku' => $sku
+            ];
+            break;
+
         case 'product-create':
             if ($method !== 'POST') {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];
                 break;
             }
 
-            $sku = sanitize($_POST['sku'] ?? ($input['sku'] ?? ''));
+            $sku = normalize_sku_admin_supply(sanitize($_POST['sku'] ?? ($input['sku'] ?? '')));
             $name = sanitize($_POST['name'] ?? ($input['name'] ?? ''));
             $category = sanitize($_POST['category'] ?? ($input['category'] ?? 'General'));
             $description = sanitize($_POST['description'] ?? ($input['description'] ?? ''));
@@ -415,14 +491,9 @@ try {
                 break;
             }
 
-            try {
-                $check = $pdo->prepare('SELECT 1 FROM products WHERE sku = ? LIMIT 1');
-                $check->execute([$sku]);
-                if ((bool)$check->fetchColumn()) {
-                    $response = ['success' => false, 'message' => 'Ya existe un producto con ese SKU'];
-                    break;
-                }
-            } catch (Exception $ignoredCheck) {
+            if (product_sku_exists_admin_supply($pdo, $sku)) {
+                $response = ['success' => false, 'message' => 'Ya existe un producto con ese código'];
+                break;
             }
 
             $imageUrl = sanitize($_POST['image_url'] ?? ($input['image_url'] ?? 'images/products/default-product.svg'));
@@ -700,7 +771,7 @@ try {
             }
 
             $id = (int)($_POST['id'] ?? ($input['id'] ?? 0));
-            $sku = sanitize($_POST['sku'] ?? ($input['sku'] ?? ''));
+            $sku = normalize_sku_admin_supply(sanitize($_POST['sku'] ?? ($input['sku'] ?? '')));
             $name = sanitize($_POST['name'] ?? ($input['name'] ?? ''));
             $description = trim((string)($_POST['description'] ?? ($input['description'] ?? '')));
             $conditionLabel = sanitize($_POST['condition_label'] ?? ($input['condition_label'] ?? 'Seminuevo'));
@@ -723,10 +794,8 @@ try {
                 $conditionLabel = 'Seminuevo';
             }
 
-            $duplicateStmt = $pdo->prepare("SELECT id FROM marketplace_ce_products WHERE LOWER(sku) = LOWER(?) AND id <> ? LIMIT 1");
-            $duplicateStmt->execute([$sku, $id]);
-            if ($duplicateStmt->fetch()) {
-                $response = ['success' => false, 'message' => 'Ya existe un artículo CE con ese SKU'];
+            if (marketplace_sku_exists_admin_supply($pdo, $sku, $id)) {
+                $response = ['success' => false, 'message' => 'Ya existe un artículo CE con ese código'];
                 break;
             }
 

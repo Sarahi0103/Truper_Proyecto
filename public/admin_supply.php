@@ -1490,10 +1490,33 @@ async function uploadProductImages() {
 }
 
 async function createProductByAdmin() {
+    const skuInput = document.getElementById('newProductSku');
+    const normalizedSku = String((skuInput?.value || '')).trim().toUpperCase().replace(/\s+/g, '');
+    if (skuInput) {
+        skuInput.value = normalizedSku;
+    }
+
+    if (!normalizedSku) {
+        const box = document.getElementById('productCreateResult');
+        if (box) {
+            box.innerHTML = '<div class="alert alert-error">El código del producto es obligatorio.</div>';
+        }
+        return;
+    }
+
+    const skuCheck = await apiCall(`/admin_supply.php?action=product-sku-check&sku=${encodeURIComponent(normalizedSku)}`, 'GET', null, { silent: true });
+    if (!skuCheck || !skuCheck.success || skuCheck.available === false) {
+        const box = document.getElementById('productCreateResult');
+        if (box) {
+            box.innerHTML = `<div class="alert alert-error">${escapeHtml((skuCheck && skuCheck.message) ? skuCheck.message : 'Ese código de producto ya existe.')}</div>`;
+        }
+        return;
+    }
+
     const selectedCategoryOptions = Array.from(document.getElementById('newProductCategory').selectedOptions || []);
     const selectedCategories = selectedCategoryOptions.map((option) => option.value).filter(Boolean);
     const payload = {
-        sku: document.getElementById('newProductSku').value || '',
+        sku: normalizedSku,
         name: document.getElementById('newProductName').value || '',
         category: selectedCategories.join(', '),
         description: document.getElementById('newProductDescription').value || '',
@@ -1628,9 +1651,29 @@ async function loadMarketplaceCeAdmin() {
 }
 
 async function saveMarketplaceCeByAdmin() {
+    const skuInput = document.getElementById('marketplaceSku');
+    const normalizedSku = String((skuInput?.value || '')).trim().toUpperCase().replace(/\s+/g, '');
+    if (skuInput) {
+        skuInput.value = normalizedSku;
+    }
+
+    if (!normalizedSku) {
+        const box = document.getElementById('marketplaceResult');
+        if (box) box.innerHTML = '<div class="alert alert-error">El código SKU CE es obligatorio.</div>';
+        return;
+    }
+
+    const currentId = Number(document.getElementById('marketplaceEditId').value || 0);
+    const skuCheck = await apiCall(`/admin_supply.php?action=marketplace-sku-check&sku=${encodeURIComponent(normalizedSku)}&id=${encodeURIComponent(currentId)}`, 'GET', null, { silent: true });
+    if (!skuCheck || !skuCheck.success || skuCheck.available === false) {
+        const box = document.getElementById('marketplaceResult');
+        if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((skuCheck && skuCheck.message) ? skuCheck.message : 'Ese código SKU CE ya existe.')}</div>`;
+        return;
+    }
+
     const formData = new FormData();
-    formData.append('id', Number(document.getElementById('marketplaceEditId').value || 0));
-    formData.append('sku', document.getElementById('marketplaceSku').value || '');
+    formData.append('id', currentId);
+    formData.append('sku', normalizedSku);
     formData.append('name', document.getElementById('marketplaceName').value || '');
     formData.append('condition_label', document.getElementById('marketplaceCondition').value || 'Seminuevo');
     formData.append('unit_price', document.getElementById('marketplacePrice').value || '0');
@@ -1712,6 +1755,33 @@ document.addEventListener('DOMContentLoaded', function () {
         supplierInput.addEventListener('input', loadMappedProductsBySupplier);
         supplierInput.addEventListener('change', loadMappedProductsBySupplier);
         supplierInput.addEventListener('blur', loadMappedProductsBySupplier);
+    }
+
+    const productSkuInput = document.getElementById('newProductSku');
+    if (productSkuInput) {
+        productSkuInput.addEventListener('blur', async function () {
+            const sku = String(productSkuInput.value || '').trim().toUpperCase().replace(/\s+/g, '');
+            productSkuInput.value = sku;
+            if (!sku) return;
+            const check = await apiCall(`/admin_supply.php?action=product-sku-check&sku=${encodeURIComponent(sku)}`, 'GET', null, { silent: true });
+            if (check && check.success && check.available === false) {
+                showAlert(check.message || 'Ese código de producto ya existe', 'warning');
+            }
+        });
+    }
+
+    const marketplaceSkuInput = document.getElementById('marketplaceSku');
+    if (marketplaceSkuInput) {
+        marketplaceSkuInput.addEventListener('blur', async function () {
+            const sku = String(marketplaceSkuInput.value || '').trim().toUpperCase().replace(/\s+/g, '');
+            const currentId = Number(document.getElementById('marketplaceEditId').value || 0);
+            marketplaceSkuInput.value = sku;
+            if (!sku) return;
+            const check = await apiCall(`/admin_supply.php?action=marketplace-sku-check&sku=${encodeURIComponent(sku)}&id=${encodeURIComponent(currentId)}`, 'GET', null, { silent: true });
+            if (check && check.success && check.available === false) {
+                showAlert(check.message || 'Ese código SKU CE ya existe', 'warning');
+            }
+        });
     }
 
     // Add file input preview handler for homepage update images
