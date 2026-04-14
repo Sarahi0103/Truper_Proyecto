@@ -78,6 +78,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             <button class="tab-button" data-tab="historyTab">Historico</button>
             <button class="tab-button" data-tab="visibilityTab">Visibilidad</button>
             <button class="tab-button" data-tab="pricesTab">Precios</button>
+            <button class="tab-button" data-tab="categoriesTab">Categorías</button>
         </div>
 
         <section id="stockTab" class="tab-content active">
@@ -352,6 +353,39 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     <button class="btn btn-secondary mt-2" onclick="cancelPriceAdjustment()">Cancelar</button>
                 </div>
                 <div id="priceResult" class="mt-2"></div>
+            </div></div>
+        </section>
+
+        <section id="categoriesTab" class="tab-content">
+            <div class="card mb-3"><div class="card-body">
+                <h3>Gestión de Categorías</h3>
+                <p class="text-muted">Administra las categorías disponibles para alta de productos. Esto evita duplicados por errores de escritura.</p>
+
+                <input type="hidden" id="categoryEditId" value="">
+
+                <div class="grid grid-3">
+                    <div class="form-group"><label>Nombre</label><input id="categoryName" type="text" maxlength="120" placeholder="Ej. Material eléctrico"></div>
+                    <div class="form-group"><label>Orden</label><input id="categoryOrder" type="number" min="0" step="1" value="0"></div>
+                    <div class="form-group">
+                        <label>Activa</label>
+                        <select id="categoryActive">
+                            <option value="1">Sí</option>
+                            <option value="0">No</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap;">
+                    <button class="btn btn-primary" type="button" id="categorySaveButton" onclick="saveCategoryByAdmin()">Guardar categoría</button>
+                    <button class="btn btn-secondary" type="button" onclick="resetCategoryForm()">Limpiar formulario</button>
+                </div>
+
+                <div id="categoryResult" class="mt-2"></div>
+            </div></div>
+
+            <div class="card"><div class="card-body">
+                <h3>Categorías registradas</h3>
+                <div id="categoriesList" class="text-muted">Cargando categorías...</div>
             </div></div>
         </section>
     </div>
@@ -1195,6 +1229,127 @@ async function loadProductImageReferences() {
     }
 }
 
+async function loadProductCategories(onlyActive = true) {
+    const categorySelect = document.getElementById('newProductCategory');
+    const categoriesListBox = document.getElementById('categoriesList');
+    const action = `/admin_supply.php?action=categories-list${onlyActive ? '&active=1' : ''}`;
+    const res = await apiCall(action, 'GET', null, { silent: true });
+
+    if (!res || !res.success || !Array.isArray(res.items)) {
+        if (categoriesListBox && !onlyActive) {
+            categoriesListBox.innerHTML = '<p class="text-muted">No fue posible cargar categorías.</p>';
+        }
+        return;
+    }
+
+    if (categorySelect) {
+        categorySelect.innerHTML = '';
+        res.items.forEach((cat) => {
+            const option = document.createElement('option');
+            option.value = cat.name;
+            option.textContent = cat.name;
+            categorySelect.appendChild(option);
+        });
+    }
+
+    if (!onlyActive && categoriesListBox) {
+        if (res.items.length === 0) {
+            categoriesListBox.innerHTML = '<p class="text-muted">No hay categorías registradas.</p>';
+            return;
+        }
+
+        categoriesListBox.innerHTML = `
+            <table>
+                <thead><tr><th>Nombre</th><th>Orden</th><th>Activa</th><th>Acciones</th></tr></thead>
+                <tbody>
+                    ${res.items.map((cat) => `
+                        <tr>
+                            <td>${escapeHtml(cat.name || '')}</td>
+                            <td>${Number(cat.sort_order || 0)}</td>
+                            <td>${Number(cat.is_active) ? '<span class="badge badge-success">Sí</span>' : '<span class="badge badge-danger">No</span>'}</td>
+                            <td>
+                                <button class="btn btn-small btn-secondary" type="button" data-action="edit-category">Editar</button>
+                                <button class="btn btn-small btn-danger" type="button" onclick="deleteCategoryByAdmin(${Number(cat.id || 0)})">Desactivar</button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+
+        // Rebind edit buttons safely without inline payload risks.
+        const rows = categoriesListBox.querySelectorAll('tbody tr');
+        rows.forEach((row, idx) => {
+            const editBtn = row.querySelector('[data-action="edit-category"]');
+            const cat = res.items[idx];
+            if (editBtn && cat) {
+                editBtn.onclick = function () {
+                    fillCategoryForm(cat);
+                };
+            }
+        });
+    }
+}
+
+function resetCategoryForm() {
+    const editId = document.getElementById('categoryEditId');
+    const name = document.getElementById('categoryName');
+    const order = document.getElementById('categoryOrder');
+    const active = document.getElementById('categoryActive');
+    const saveBtn = document.getElementById('categorySaveButton');
+    const box = document.getElementById('categoryResult');
+
+    if (editId) editId.value = '';
+    if (name) name.value = '';
+    if (order) order.value = '0';
+    if (active) active.value = '1';
+    if (saveBtn) saveBtn.textContent = 'Guardar categoría';
+    if (box) box.innerHTML = '';
+}
+
+function fillCategoryForm(category) {
+    if (!category) return;
+    const saveBtn = document.getElementById('categorySaveButton');
+    document.getElementById('categoryEditId').value = category.id || '';
+    document.getElementById('categoryName').value = category.name || '';
+    document.getElementById('categoryOrder').value = String(category.sort_order || 0);
+    document.getElementById('categoryActive').value = Number(category.is_active) ? '1' : '0';
+    if (saveBtn) saveBtn.textContent = 'Actualizar categoría';
+}
+
+async function saveCategoryByAdmin() {
+    const payload = {
+        id: Number(document.getElementById('categoryEditId').value || 0),
+        name: document.getElementById('categoryName').value || '',
+        sort_order: Number(document.getElementById('categoryOrder').value || 0),
+        is_active: document.getElementById('categoryActive').value === '1'
+    };
+    const box = document.getElementById('categoryResult');
+    const res = await apiCall('/admin_supply.php?action=categories-save', 'POST', payload);
+    if (!res || !res.success) {
+        if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible guardar categoría')}</div>`;
+        return;
+    }
+    if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Categoría guardada')}</div>`;
+    resetCategoryForm();
+    loadProductCategories(true);
+    loadProductCategories(false);
+}
+
+async function deleteCategoryByAdmin(id) {
+    if (!id) return;
+    if (!confirm('¿Deseas desactivar esta categoría?')) return;
+    const box = document.getElementById('categoryResult');
+    const res = await apiCall('/admin_supply.php?action=categories-delete', 'POST', { id: id });
+    if (!res || !res.success) {
+        if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible desactivar categoría')}</div>`;
+        return;
+    }
+    if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Categoría desactivada')}</div>`;
+    loadProductCategories(true);
+    loadProductCategories(false);
+}
+
 async function uploadProductImages() {
     const input = document.getElementById('newProductImages');
     const resultBox = document.getElementById('productCreateResult');
@@ -1309,6 +1464,8 @@ document.addEventListener('DOMContentLoaded', function () {
     loadSupplierOrders();
     loadHistory();
     loadProductImageReferences();
+    loadProductCategories(true);
+    loadProductCategories(false);
     loadClients();
     loadHomepageUpdatesAdmin();
 

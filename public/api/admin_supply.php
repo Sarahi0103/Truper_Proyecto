@@ -99,6 +99,27 @@ function ensure_admin_supply_tables($pdo): void {
     try {
         $pdo->exec("ALTER TABLE homepage_updates ADD COLUMN IF NOT EXISTS image_url TEXT");
     } catch (Exception $ignored) {}
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS product_categories (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(120) NOT NULL UNIQUE,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
+
+    // Seed initial categories if table is empty.
+    try {
+        $seedCount = (int)$pdo->query("SELECT COUNT(*) FROM product_categories")->fetchColumn();
+        if ($seedCount === 0) {
+            $seedStmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order, is_active) VALUES (?, ?, true)");
+            $seedStmt->execute(['Material eléctrico', 10]);
+            $seedStmt->execute(['Fontanería', 20]);
+            $seedStmt->execute(['Cerrajería', 30]);
+            $seedStmt->execute(['Herrería', 40]);
+        }
+    } catch (Exception $ignored) {}
     
 }
 
@@ -572,6 +593,73 @@ try {
                 break;
             }
             $response = ['success' => true, 'images' => list_available_product_images($pdo)];
+            break;
+
+        case 'categories-list':
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $onlyActive = isset($_GET['active']) && $_GET['active'] === '1';
+            if ($onlyActive) {
+                $stmt = $pdo->query("SELECT id, name, sort_order, is_active FROM product_categories WHERE is_active = true ORDER BY sort_order ASC, name ASC");
+            } else {
+                $stmt = $pdo->query("SELECT id, name, sort_order, is_active FROM product_categories ORDER BY sort_order ASC, name ASC");
+            }
+            $response = ['success' => true, 'items' => $stmt->fetchAll()];
+            break;
+
+        case 'categories-save':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $id = (int)($input['id'] ?? 0);
+            $name = trim((string)($input['name'] ?? ''));
+            $sortOrder = (int)($input['sort_order'] ?? 0);
+            $isActive = isset($input['is_active']) ? !empty($input['is_active']) : true;
+
+            if ($name === '') {
+                $response = ['success' => false, 'message' => 'El nombre de la categoría es obligatorio'];
+                break;
+            }
+
+            $duplicateStmt = $pdo->prepare("SELECT id FROM product_categories WHERE LOWER(name) = LOWER(?) AND id <> ? LIMIT 1");
+            $duplicateStmt->execute([$name, $id]);
+            if ($duplicateStmt->fetch()) {
+                $response = ['success' => false, 'message' => 'Ya existe una categoría con ese nombre'];
+                break;
+            }
+
+            if ($id > 0) {
+                $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, sort_order = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+                $stmt->execute([$name, $sortOrder, $isActive, $id]);
+                $response = ['success' => true, 'message' => 'Categoría actualizada'];
+            } else {
+                $stmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order, is_active) VALUES (?, ?, ?)");
+                $stmt->execute([$name, $sortOrder, $isActive]);
+                $response = ['success' => true, 'message' => 'Categoría creada'];
+            }
+            break;
+
+        case 'categories-delete':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $id = (int)($input['id'] ?? 0);
+            if ($id <= 0) {
+                $response = ['success' => false, 'message' => 'Categoría inválida'];
+                break;
+            }
+
+            // Soft delete to preserve historical references.
+            $stmt = $pdo->prepare("UPDATE product_categories SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+            $stmt->execute([$id]);
+            $response = ['success' => true, 'message' => 'Categoría desactivada'];
             break;
 
         case 'updates-list':
