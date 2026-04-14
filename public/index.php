@@ -120,6 +120,7 @@ if (count($products) < 10) {
 
 $isLogged = is_logged_in();
 $isAdmin = (($_SESSION['role'] ?? '') === 'admin');
+$whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre los productos y cotizaciones.');
 $clientTicketCode = 'PUBLICO';
 $clientTicketNumber = $isLogged ? (string)($_SESSION['user_id'] ?? '0') : '0';
 
@@ -218,6 +219,7 @@ function homepage_update_label($type) {
                 <div class="theme-toggle">
                     <button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo claro</span></button>
                 </div>
+                <a href="<?php echo htmlspecialchars($whatsappHelpUrl, ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener" class="btn btn-secondary btn-small">Dudas por WhatsApp</a>
                 <?php if (!$isLogged): ?>
                     <a href="/admin_login.php" class="btn btn-primary btn-small">Solo para administradores</a>
                 <?php endif; ?>
@@ -230,7 +232,6 @@ function homepage_update_label($type) {
             <div class="module-badge module-main"><span class="module-glyph">CT</span> Catálogo principal</div>
             <h1>Catálogo Truper</h1>
             <p>Visualización ágil, sencilla y eficaz con precio, stock, variantes e información técnica.</p>
-            <p class="text-muted" style="margin-top: 8px;">Cotizaciones y dudas por WhatsApp: <strong><?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?></strong></p>
             <div style="margin-top: 12px;">
                 <a href="/marketplace_ce.php" class="btn btn-secondary btn-small">Ir a Marketplace CE (segunda mano)</a>
             </div>
