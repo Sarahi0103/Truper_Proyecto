@@ -543,7 +543,7 @@ function homepage_update_label($type) {
                         const lineTotal = (item.unit_price * item.quantity);
                         message += `- ${item.name}\n`;
                         message += `  Codigo: ${code}\n`;
-                        message += `  ${item.quantity} x $${Number(item.unit_price).toFixed(2)} = $${lineTotal.toFixed(2)}\n`;
+                        message += `  ${item.quantity} x $${Number(item.unit_price).toFixed(2)} = $${lineTotal.toFixed(2)}\n\n`;
                     });
                     message += '---------------------------\n';
                     message += `TOTAL: $${total.toFixed(2)}\n`;
