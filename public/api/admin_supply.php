@@ -120,6 +120,22 @@ function ensure_admin_supply_tables($pdo): void {
             $seedStmt->execute(['Herrería', 40]);
         }
     } catch (Exception $ignored) {}
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS marketplace_ce_products (
+        id SERIAL PRIMARY KEY,
+        sku VARCHAR(100) UNIQUE NOT NULL,
+        name VARCHAR(220) NOT NULL,
+        description TEXT NOT NULL,
+        condition_label VARCHAR(80) NOT NULL DEFAULT 'Seminuevo',
+        unit_price DECIMAL(12,2) NOT NULL DEFAULT 0,
+        stock_quantity INTEGER NOT NULL DEFAULT 1,
+        image_url TEXT,
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        created_by INTEGER REFERENCES users(id),
+        updated_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
     
 }
 
@@ -660,6 +676,96 @@ try {
             $stmt = $pdo->prepare("UPDATE product_categories SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
             $stmt->execute([$id]);
             $response = ['success' => true, 'message' => 'Categoría desactivada'];
+            break;
+
+        case 'marketplace-list':
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $onlyActive = isset($_GET['active']) && $_GET['active'] === '1';
+            if ($onlyActive) {
+                $stmt = $pdo->query("SELECT id, sku, name, description, condition_label, unit_price, stock_quantity, image_url, is_active, created_at, updated_at FROM marketplace_ce_products WHERE is_active = true ORDER BY created_at DESC");
+            } else {
+                $stmt = $pdo->query("SELECT id, sku, name, description, condition_label, unit_price, stock_quantity, image_url, is_active, created_at, updated_at FROM marketplace_ce_products ORDER BY created_at DESC");
+            }
+            $response = ['success' => true, 'items' => $stmt->fetchAll()];
+            break;
+
+        case 'marketplace-save':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $id = (int)($_POST['id'] ?? ($input['id'] ?? 0));
+            $sku = sanitize($_POST['sku'] ?? ($input['sku'] ?? ''));
+            $name = sanitize($_POST['name'] ?? ($input['name'] ?? ''));
+            $description = trim((string)($_POST['description'] ?? ($input['description'] ?? '')));
+            $conditionLabel = sanitize($_POST['condition_label'] ?? ($input['condition_label'] ?? 'Seminuevo'));
+            $unitPrice = (float)($_POST['unit_price'] ?? ($input['unit_price'] ?? 0));
+            $stockQuantity = (int)($_POST['stock_quantity'] ?? ($input['stock_quantity'] ?? 1));
+            $isActive = isset($_POST['is_active']) ? !empty($_POST['is_active']) : (isset($input['is_active']) ? !empty($input['is_active']) : true);
+
+            if ($sku === '' || $name === '' || $description === '') {
+                $response = ['success' => false, 'message' => 'SKU, nombre y descripción son obligatorios'];
+                break;
+            }
+
+            if ($unitPrice < 0 || $stockQuantity < 0) {
+                $response = ['success' => false, 'message' => 'Precio o stock inválido'];
+                break;
+            }
+
+            $allowedConditions = ['Seminuevo', 'Usado', 'Reacondicionado'];
+            if (!in_array($conditionLabel, $allowedConditions, true)) {
+                $conditionLabel = 'Seminuevo';
+            }
+
+            $duplicateStmt = $pdo->prepare("SELECT id FROM marketplace_ce_products WHERE LOWER(sku) = LOWER(?) AND id <> ? LIMIT 1");
+            $duplicateStmt->execute([$sku, $id]);
+            if ($duplicateStmt->fetch()) {
+                $response = ['success' => false, 'message' => 'Ya existe un artículo CE con ese SKU'];
+                break;
+            }
+
+            $imageUrl = sanitize($_POST['image_url'] ?? ($input['image_url'] ?? 'images/products/default-product.svg'));
+            if (isset($_FILES['image']) && ($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+                $imageUrl = store_product_image($_FILES['image']);
+            }
+
+            if ($id > 0) {
+                if (!isset($_FILES['image']) || ($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+                    $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET sku = ?, name = ?, description = ?, condition_label = ?, unit_price = ?, stock_quantity = ?, is_active = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+                    $stmt->execute([$sku, $name, $description, $conditionLabel, $unitPrice, max(0, $stockQuantity), $isActive, $_SESSION['user_id'], $id]);
+                } else {
+                    $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET sku = ?, name = ?, description = ?, condition_label = ?, unit_price = ?, stock_quantity = ?, image_url = ?, is_active = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+                    $stmt->execute([$sku, $name, $description, $conditionLabel, $unitPrice, max(0, $stockQuantity), $imageUrl, $isActive, $_SESSION['user_id'], $id]);
+                }
+                $response = ['success' => true, 'message' => 'Artículo CE actualizado'];
+            } else {
+                $stmt = $pdo->prepare("INSERT INTO marketplace_ce_products (sku, name, description, condition_label, unit_price, stock_quantity, image_url, is_active, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$sku, $name, $description, $conditionLabel, $unitPrice, max(0, $stockQuantity), $imageUrl, $isActive, $_SESSION['user_id'], $_SESSION['user_id']]);
+                $response = ['success' => true, 'message' => 'Artículo CE creado'];
+            }
+            break;
+
+        case 'marketplace-delete':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $id = (int)($input['id'] ?? 0);
+            if ($id <= 0) {
+                $response = ['success' => false, 'message' => 'Artículo inválido'];
+                break;
+            }
+
+            $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET is_active = false, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+            $stmt->execute([$_SESSION['user_id'], $id]);
+            $response = ['success' => true, 'message' => 'Artículo CE desactivado'];
             break;
 
         case 'updates-list':

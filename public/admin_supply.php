@@ -79,6 +79,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             <button class="tab-button" data-tab="visibilityTab">Visibilidad</button>
             <button class="tab-button" data-tab="pricesTab">Precios</button>
             <button class="tab-button" data-tab="categoriesTab">Categorías</button>
+            <button class="tab-button" data-tab="marketplaceTab">Marketplace CE</button>
         </div>
 
         <section id="stockTab" class="tab-content active">
@@ -386,6 +387,65 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             <div class="card"><div class="card-body">
                 <h3>Categorías registradas</h3>
                 <div id="categoriesList" class="text-muted">Cargando categorías...</div>
+            </div></div>
+        </section>
+
+        <section id="marketplaceTab" class="tab-content">
+            <div class="card mb-3"><div class="card-body">
+                <h3>Marketplace CE - Gestión de artículos</h3>
+                <p class="text-muted">Administra artículos de segunda mano: producto, condición, precio, stock, imagen y visibilidad.</p>
+
+                <input type="hidden" id="marketplaceEditId" value="">
+
+                <div class="grid grid-3">
+                    <div class="form-group"><label>SKU CE</label><input id="marketplaceSku" type="text" maxlength="100" placeholder="CE-001"></div>
+                    <div class="form-group"><label>Nombre</label><input id="marketplaceName" type="text" maxlength="220"></div>
+                    <div class="form-group">
+                        <label>Condición</label>
+                        <select id="marketplaceCondition">
+                            <option value="Seminuevo">Seminuevo</option>
+                            <option value="Usado">Usado</option>
+                            <option value="Reacondicionado">Reacondicionado</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-3">
+                    <div class="form-group"><label>Precio</label><input id="marketplacePrice" type="number" min="0" step="0.01" value="0"></div>
+                    <div class="form-group"><label>Stock</label><input id="marketplaceStock" type="number" min="0" step="1" value="1"></div>
+                    <div class="form-group">
+                        <label>Visible en Marketplace</label>
+                        <select id="marketplaceActive">
+                            <option value="1">Sí</option>
+                            <option value="0">No</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group"><label>Descripción</label><textarea id="marketplaceDescription" rows="4" maxlength="1800"></textarea></div>
+
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label>Imagen (subir)</label>
+                        <input id="marketplaceImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+                    </div>
+                    <div id="marketplaceImagePreview" style="display:none;">
+                        <p class="text-muted">Vista previa:</p>
+                        <img id="marketplaceImagePreviewImg" src="" alt="Vista previa CE" style="max-width: 280px; border-radius: 8px;">
+                    </div>
+                </div>
+
+                <div class="d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap;">
+                    <button class="btn btn-primary" type="button" id="marketplaceSaveButton" onclick="saveMarketplaceCeByAdmin()">Guardar artículo CE</button>
+                    <button class="btn btn-secondary" type="button" onclick="resetMarketplaceForm()">Limpiar formulario</button>
+                </div>
+
+                <div id="marketplaceResult" class="mt-2"></div>
+            </div></div>
+
+            <div class="card"><div class="card-body">
+                <h3>Artículos CE registrados</h3>
+                <div id="marketplaceList" class="text-muted">Cargando artículos CE...</div>
             </div></div>
         </section>
     </div>
@@ -1443,6 +1503,155 @@ async function createProductByAdmin() {
     loadSupplierProducts();
 }
 
+function resetMarketplaceForm() {
+    document.getElementById('marketplaceEditId').value = '';
+    document.getElementById('marketplaceSku').value = '';
+    document.getElementById('marketplaceName').value = '';
+    document.getElementById('marketplaceCondition').value = 'Seminuevo';
+    document.getElementById('marketplacePrice').value = '0';
+    document.getElementById('marketplaceStock').value = '1';
+    document.getElementById('marketplaceActive').value = '1';
+    document.getElementById('marketplaceDescription').value = '';
+    document.getElementById('marketplaceImage').value = '';
+    const preview = document.getElementById('marketplaceImagePreview');
+    if (preview) preview.style.display = 'none';
+    const saveBtn = document.getElementById('marketplaceSaveButton');
+    if (saveBtn) saveBtn.textContent = 'Guardar artículo CE';
+    const box = document.getElementById('marketplaceResult');
+    if (box) box.innerHTML = '';
+}
+
+function fillMarketplaceForm(item) {
+    if (!item) return;
+    document.getElementById('marketplaceEditId').value = item.id || '';
+    document.getElementById('marketplaceSku').value = item.sku || '';
+    document.getElementById('marketplaceName').value = item.name || '';
+    document.getElementById('marketplaceCondition').value = item.condition_label || 'Seminuevo';
+    document.getElementById('marketplacePrice').value = String(item.unit_price || 0);
+    document.getElementById('marketplaceStock').value = String(item.stock_quantity || 0);
+    document.getElementById('marketplaceActive').value = Number(item.is_active) ? '1' : '0';
+    document.getElementById('marketplaceDescription').value = item.description || '';
+    document.getElementById('marketplaceImage').value = '';
+
+    const preview = document.getElementById('marketplaceImagePreview');
+    const previewImg = document.getElementById('marketplaceImagePreviewImg');
+    if (item.image_url && preview && previewImg) {
+        previewImg.src = item.image_url;
+        preview.style.display = 'block';
+    } else if (preview) {
+        preview.style.display = 'none';
+    }
+
+    const saveBtn = document.getElementById('marketplaceSaveButton');
+    if (saveBtn) saveBtn.textContent = 'Actualizar artículo CE';
+}
+
+async function loadMarketplaceCeAdmin() {
+    const box = document.getElementById('marketplaceList');
+    const res = await apiCall('/admin_supply.php?action=marketplace-list', 'GET', null, { silent: true });
+
+    if (!res || !res.success || !Array.isArray(res.items)) {
+        if (box) box.innerHTML = '<p class="text-muted">No fue posible cargar artículos CE.</p>';
+        return;
+    }
+
+    if (res.items.length === 0) {
+        if (box) box.innerHTML = '<p class="text-muted">No hay artículos CE registrados.</p>';
+        return;
+    }
+
+    box.innerHTML = `
+        <table>
+            <thead>
+                <tr><th>SKU</th><th>Artículo</th><th>Condición</th><th>Precio</th><th>Stock</th><th>Visible</th><th>Acciones</th></tr>
+            </thead>
+            <tbody>
+                ${res.items.map((item) => `
+                    <tr>
+                        <td>${escapeHtml(item.sku || '')}</td>
+                        <td>
+                            <strong>${escapeHtml(item.name || '')}</strong>
+                            <div class="text-muted" style="font-size:12px; max-width:420px;">${escapeHtml(item.description || '')}</div>
+                        </td>
+                        <td>${escapeHtml(item.condition_label || 'Seminuevo')}</td>
+                        <td>$${Number(item.unit_price || 0).toFixed(2)}</td>
+                        <td>${Number(item.stock_quantity || 0)}</td>
+                        <td>${Number(item.is_active) ? '<span class="badge badge-success">Sí</span>' : '<span class="badge badge-danger">No</span>'}</td>
+                        <td>
+                            <button class="btn btn-small btn-secondary" type="button" data-action="edit-marketplace">Editar</button>
+                            <button class="btn btn-small btn-danger" type="button" onclick="deleteMarketplaceCeByAdmin(${Number(item.id || 0)})">Desactivar</button>
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+
+    const rows = box.querySelectorAll('tbody tr');
+    rows.forEach((row, idx) => {
+        const editBtn = row.querySelector('[data-action="edit-marketplace"]');
+        const item = res.items[idx];
+        if (editBtn && item) {
+            editBtn.onclick = function () {
+                fillMarketplaceForm(item);
+            };
+        }
+    });
+}
+
+async function saveMarketplaceCeByAdmin() {
+    const formData = new FormData();
+    formData.append('id', Number(document.getElementById('marketplaceEditId').value || 0));
+    formData.append('sku', document.getElementById('marketplaceSku').value || '');
+    formData.append('name', document.getElementById('marketplaceName').value || '');
+    formData.append('condition_label', document.getElementById('marketplaceCondition').value || 'Seminuevo');
+    formData.append('unit_price', document.getElementById('marketplacePrice').value || '0');
+    formData.append('stock_quantity', document.getElementById('marketplaceStock').value || '1');
+    formData.append('is_active', document.getElementById('marketplaceActive').value === '1' ? '1' : '0');
+    formData.append('description', document.getElementById('marketplaceDescription').value || '');
+
+    const imageInput = document.getElementById('marketplaceImage');
+    if (imageInput && imageInput.files.length > 0) {
+        formData.append('image', imageInput.files[0]);
+    }
+
+    const box = document.getElementById('marketplaceResult');
+    try {
+        const response = await fetch('/api/admin_supply.php?action=marketplace-save', {
+            method: 'POST',
+            body: formData,
+            headers: { 'Accept': 'application/json' }
+        });
+        const res = await response.json();
+
+        if (!res || !res.success) {
+            if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible guardar artículo CE')}</div>`;
+            return;
+        }
+
+        if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Artículo CE guardado')}</div>`;
+        resetMarketplaceForm();
+        loadMarketplaceCeAdmin();
+    } catch (error) {
+        if (box) box.innerHTML = '<div class="alert alert-error">Error de conexión al guardar artículo CE</div>';
+    }
+}
+
+async function deleteMarketplaceCeByAdmin(id) {
+    if (!id) return;
+    if (!confirm('¿Deseas desactivar este artículo CE?')) return;
+
+    const box = document.getElementById('marketplaceResult');
+    const res = await apiCall('/admin_supply.php?action=marketplace-delete', 'POST', { id: id });
+    if (!res || !res.success) {
+        if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible desactivar artículo CE')}</div>`;
+        return;
+    }
+
+    if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Artículo CE desactivado')}</div>`;
+    loadMarketplaceCeAdmin();
+}
+
 function goToClientsTab() {
     const tabButton = document.querySelector('[data-tab="clientsTab"]');
     if (tabButton) {
@@ -1466,6 +1675,7 @@ document.addEventListener('DOMContentLoaded', function () {
     loadProductImageReferences();
     loadProductCategories(true);
     loadProductCategories(false);
+    loadMarketplaceCeAdmin();
     loadClients();
     loadHomepageUpdatesAdmin();
 
@@ -1482,6 +1692,22 @@ document.addEventListener('DOMContentLoaded', function () {
             const preview = document.getElementById('updateImagePreview');
             const previewImg = document.getElementById('updateImagePreviewImg');
             
+            if (e.target.files && e.target.files[0] && preview && previewImg) {
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    previewImg.src = event.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(e.target.files[0]);
+            }
+        });
+    }
+
+    const marketplaceImageInput = document.getElementById('marketplaceImage');
+    if (marketplaceImageInput) {
+        marketplaceImageInput.addEventListener('change', function (e) {
+            const preview = document.getElementById('marketplaceImagePreview');
+            const previewImg = document.getElementById('marketplaceImagePreviewImg');
             if (e.target.files && e.target.files[0] && preview && previewImg) {
                 const reader = new FileReader();
                 reader.onload = function (event) {
