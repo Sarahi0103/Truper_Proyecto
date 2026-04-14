@@ -367,7 +367,6 @@ function homepage_update_label($type) {
                                     data-sku="<?php echo htmlspecialchars($displaySku, ENT_QUOTES, 'UTF-8'); ?>"
                                     data-name="<?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?>"
                                     data-price="<?php echo (float)$product['unit_price']; ?>">Agregar</button>
-                                <a href="product_detail.php?id=<?php echo (int)$product['id']; ?>" class="btn btn-secondary btn-small">Detalles</a>
                             </div>
                         </div>
                     </article>
