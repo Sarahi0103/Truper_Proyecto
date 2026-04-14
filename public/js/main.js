@@ -33,9 +33,9 @@ function ensureThemeToggleButton() {
     let wrap = document.querySelector('.theme-toggle');
     const header = document.querySelector('header');
     const preferredTargets = [
-        document.querySelector('header .user-menu'),
-        document.querySelector('header .header-actions'),
         document.querySelector('header .header-content'),
+        document.querySelector('header .header-actions'),
+        document.querySelector('header .user-menu'),
         document.querySelector('.auth-form-wrap')
     ].filter(Boolean);
     const target = preferredTargets[0] || header || document.body;

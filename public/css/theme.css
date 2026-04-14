@@ -485,7 +485,8 @@ tbody td,
 }
 
 .theme-toggle {
-    margin-left: auto;
+    margin-left: 0;
+    margin-right: 0.75rem;
 }
 
 .auth-form-wrap .theme-toggle {

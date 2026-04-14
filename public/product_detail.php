@@ -23,6 +23,23 @@ if (!$product) {
 $rawSku = (string)($product['sku'] ?? '');
 $displaySku = preg_replace('/^XLS-/i', '', $rawSku);
 
+function image_priority_score($fileName): int {
+    $name = strtoupper((string)pathinfo($fileName, PATHINFO_FILENAME));
+    if (strpos($name, '+') === false) {
+        return 0;
+    }
+    if (preg_match('/\+FC1$/', $name)) {
+        return 1;
+    }
+    if (preg_match('/\+E1$/', $name)) {
+        return 2;
+    }
+    if (preg_match('/\+D1$/', $name)) {
+        return 3;
+    }
+    return 9;
+}
+
 $imagePath = !empty($product['image_url']) ? $product['image_url'] : 'images/products/default-product.svg';
 $galleryImages = [];
 
@@ -580,16 +597,34 @@ $stock = (int)($product['stock_quantity'] ?? 0);
         });
     })();
 
-    // Reuse cart functionality from catalog.js
+    // Persist add-to-cart from detail page.
     document.querySelectorAll('[data-add-product]').forEach((btn) => {
         btn.addEventListener('click', function () {
-            if (typeof addToCart === 'function') {
-                addToCart({
+            const storageKey = 'truper_cart';
+            let cart = [];
+            try {
+                cart = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            } catch (_) {
+                cart = [];
+            }
+
+            const sku = this.dataset.sku;
+            const existing = cart.find((item) => item.sku === sku);
+            if (existing) {
+                existing.quantity = Number(existing.quantity || 1) + 1;
+            } else {
+                cart.push({
                     id: this.dataset.id,
                     sku: this.dataset.sku,
                     name: this.dataset.name,
-                    unit_price: this.dataset.price,
+                    unit_price: Number(this.dataset.price || 0),
+                    quantity: 1
                 });
+            }
+
+            localStorage.setItem(storageKey, JSON.stringify(cart));
+            if (typeof showAlert === 'function') {
+                showAlert('Producto agregado al carrito', 'success');
             }
         });
     });

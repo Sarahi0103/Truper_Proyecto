@@ -88,7 +88,16 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <div class="grid grid-3">
                     <div class="form-group"><label>Código del producto</label><input id="newProductSku" type="text" maxlength="100"></div>
                     <div class="form-group"><label>Nombre</label><input id="newProductName" type="text" maxlength="255"></div>
-                    <div class="form-group"><label>Categoría</label><input id="newProductCategory" type="text" maxlength="100" placeholder="Material eléctrico"></div>
+                    <div class="form-group">
+                        <label>Categorías (selección múltiple)</label>
+                        <select id="newProductCategory" multiple size="4">
+                            <option value="Material eléctrico">Material eléctrico</option>
+                            <option value="Fontanería">Fontanería</option>
+                            <option value="Cerrajería">Cerrajería</option>
+                            <option value="Herrería">Herrería</option>
+                        </select>
+                        <small class="text-muted">Usa Ctrl/Cmd para seleccionar múltiples categorías.</small>
+                    </div>
                 </div>
 
                 <div class="grid grid-3">
@@ -1238,10 +1247,12 @@ async function uploadProductImages() {
 }
 
 async function createProductByAdmin() {
+    const selectedCategoryOptions = Array.from(document.getElementById('newProductCategory').selectedOptions || []);
+    const selectedCategories = selectedCategoryOptions.map((option) => option.value).filter(Boolean);
     const payload = {
         sku: document.getElementById('newProductSku').value || '',
         name: document.getElementById('newProductName').value || '',
-        category: document.getElementById('newProductCategory').value || '',
+        category: selectedCategories.join(', '),
         description: document.getElementById('newProductDescription').value || '',
         price: document.getElementById('newProductPrice').value || '0',
         stock_quantity: document.getElementById('newProductStock').value || '50',
@@ -1249,6 +1260,14 @@ async function createProductByAdmin() {
         barcode: document.getElementById('newProductBarcode').value || '',
         image_url: document.getElementById('newProductImageRef').value || 'images/products/default-product.svg'
     };
+
+    if (selectedCategories.length === 0) {
+        const box = document.getElementById('productCreateResult');
+        if (box) {
+            box.innerHTML = '<div class="alert alert-error">Selecciona al menos una categoría para el producto.</div>';
+        }
+        return;
+    }
 
     const box = document.getElementById('productCreateResult');
 

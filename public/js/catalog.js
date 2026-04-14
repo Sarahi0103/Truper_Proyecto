@@ -248,11 +248,15 @@
       const name = (card.dataset.name || '').toLowerCase();
       const sku = (card.dataset.sku || '').toLowerCase();
       const cardCategory = card.dataset.category || '';
+      const categoryTokens = String(cardCategory)
+        .split(',')
+        .map((x) => normalizeCategory(x))
+        .filter(Boolean);
       const price = toNumber(card.dataset.price);
       const stock = toNumber(card.dataset.stock);
 
       const textMatch = `${name} ${sku} ${cardCategory.toLowerCase()}`.includes(query);
-      const categoryMatch = !category || normalizeCategory(cardCategory) === normalizeCategory(category);
+      const categoryMatch = !category || categoryTokens.includes(normalizeCategory(category));
       const priceMatch = maxPrice === null || price <= maxPrice;
       const stockMatch = !stockMode || (stockMode === 'available' ? stock > 0 : stock <= 10);
 
