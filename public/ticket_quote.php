@@ -66,14 +66,47 @@ function ticket_quote_number($value) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ticket de cotización <?php echo htmlspecialchars($folio, ENT_QUOTES, 'UTF-8'); ?></title>
     <style>
-        body { font-family: monospace; margin: 0; padding: 10px; background: #fff; color: #111; }
-        .ticket { width: <?php echo $format === 'a4' ? '760px' : '300px'; ?>; margin: 0 auto; }
-        h1 { text-align: center; font-size: 18px; margin: 0 0 8px; }
-        .line { border-top: 1px dashed #000; margin: 8px 0; }
-        .row { margin-bottom: 5px; }
-        .format-switch { text-align: center; margin-bottom: 8px; }
-        .total { font-size: 16px; }
-        @media print { .format-switch { display: none; } }
+        body {
+            margin: 0;
+            padding: 16px;
+            background: #ececec;
+            color: #111;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        .ticket {
+            width: <?php echo $format === 'a4' ? '760px' : '340px'; ?>;
+            margin: 0 auto;
+            background: #ffffff;
+            border: 1px solid #d9d9d9;
+            border-radius: 6px;
+            padding: 14px;
+            box-sizing: border-box;
+        }
+        h1 {
+            text-align: left;
+            font-size: 38px;
+            margin: 0 0 12px;
+            font-weight: 800;
+            letter-spacing: 0.2px;
+        }
+        .line { border-top: 1px solid #c8c8c8; margin: 12px 0; }
+        .row { margin-bottom: 6px; font-size: 34px; }
+        .format-switch { text-align: center; margin-bottom: 10px; }
+        .format-switch a { color: #1d4ed8; }
+        .section-title {
+            font-size: 36px;
+            font-weight: 700;
+            margin: 4px 0 8px;
+        }
+        .item-name { font-size: 34px; margin-bottom: 2px; }
+        .item-line { display: flex; justify-content: space-between; gap: 10px; font-size: 33px; }
+        .total-row { text-align: right; font-size: 40px; font-weight: 800; margin-top: 8px; }
+        .thanks { margin-top: 12px; font-size: 33px; }
+        @media print {
+            .format-switch { display: none; }
+            body { background: #fff; padding: 0; }
+            .ticket { border: none; border-radius: 0; width: 100%; }
+        }
     </style>
     <script src="/js/jspdf.umd.min.js"></script>
 </head>
@@ -86,15 +119,14 @@ function ticket_quote_number($value) {
         |
         <a href="#" onclick="downloadTicketPdf(); return false;">Descargar PDF</a>
     </div>
-    <h1>TICKET COTIZACION</h1>
+    <h1>TRUPER - TICKET</h1>
     <div class="row"><strong>Folio:</strong> <?php echo htmlspecialchars($folio, ENT_QUOTES, 'UTF-8'); ?></div>
     <div class="row"><strong>Fecha:</strong> <?php echo htmlspecialchars($issuedAt, ENT_QUOTES, 'UTF-8'); ?></div>
     <div class="row"><strong>Cliente:</strong> <?php echo htmlspecialchars($client, ENT_QUOTES, 'UTF-8'); ?></div>
     <div class="line"></div>
+    <div class="section-title">Detalle de productos</div>
 
-    <?php if (empty($items)): ?>
-        <div class="row">Sin partidas en este ticket.</div>
-    <?php else: ?>
+    <?php if (!empty($items)): ?>
         <?php foreach ($items as $item): ?>
             <?php
                 $qty = (int)($item['quantity'] ?? 0);
@@ -102,13 +134,17 @@ function ticket_quote_number($value) {
                 $price = (float)($item['price'] ?? ($item['unit_price'] ?? 0));
                 $lineTotal = $qty * $price;
             ?>
-            <div class="row"><?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?></div>
-            <div class="row"><?php echo $qty; ?> x $<?php echo ticket_quote_number($price); ?> = $<?php echo ticket_quote_number($lineTotal); ?></div>
-            <div class="line"></div>
+            <div class="item-name"><?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?></div>
+            <div class="item-line">
+                <span><?php echo $qty; ?> x $<?php echo ticket_quote_number($price); ?></span>
+                <span>$<?php echo ticket_quote_number($lineTotal); ?></span>
+            </div>
         <?php endforeach; ?>
     <?php endif; ?>
 
-    <div class="row total"><strong>Total: $<?php echo ticket_quote_number($total); ?></strong></div>
+    <div class="line"></div>
+    <div class="total-row">Total: $<?php echo ticket_quote_number($total); ?></div>
+    <div class="thanks">Gracias por su compra</div>
 </div>
 <script>
 const ticketData = {
@@ -132,26 +168,28 @@ function downloadTicketPdf() {
     const doc = new jsPDF({ unit: 'mm', format: [80, 180] });
     let y = 8;
 
-    doc.setFont('courier', 'bold');
-    doc.setFontSize(12);
-    doc.text('TICKET COTIZACION', 40, y, { align: 'center' });
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('TRUPER - TICKET', 6, y);
     y += 7;
-    doc.setFont('courier', 'normal');
-    doc.setFontSize(9);
-    doc.text('Folio: ' + ticketData.folio, 6, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text('Codigo ticket: ' + ticketData.folio, 6, y);
     y += 5;
     doc.text('Fecha: ' + ticketData.issuedAt, 6, y);
     y += 5;
-    doc.text('Cliente: ' + ticketData.client, 6, y);
+    doc.text('Codigo cliente: ' + ticketData.client, 6, y);
     y += 4;
     doc.line(6, y, 74, y);
     y += 5;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('Detalle de productos', 6, y);
+    y += 5;
+    doc.setFont('helvetica', 'normal');
 
     const items = Array.isArray(ticketData.items) ? ticketData.items : [];
-    if (items.length === 0) {
-        doc.text('Sin partidas en este ticket.', 6, y);
-        y += 6;
-    } else {
+    if (items.length > 0) {
         items.forEach((item) => {
             const qty = Number(item.quantity || 0);
             const name = String(item.name || 'Producto');
@@ -161,16 +199,21 @@ function downloadTicketPdf() {
             const productLine = name.length > 36 ? name.slice(0, 36) + '...' : name;
             doc.text(productLine, 6, y);
             y += 4;
-            doc.text(qty + ' x ' + money(unitPrice) + ' = ' + money(lineTotal), 6, y);
+            doc.text(qty + ' x ' + money(unitPrice), 6, y);
+            doc.text(money(lineTotal), 74, y, { align: 'right' });
             y += 5;
         });
     }
 
     doc.line(6, y, 74, y);
     y += 6;
-    doc.setFont('courier', 'bold');
-    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
     doc.text('TOTAL: ' + money(ticketData.total), 74, y, { align: 'right' });
+    y += 7;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text('Gracias por su compra', 6, y);
 
     doc.save('ticket-' + ticketData.folio + '.pdf');
 }
