@@ -179,6 +179,42 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
             <p class="text-muted" style="margin-top: 8px;">Cotizaciones y dudas por WhatsApp: <strong><?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?></strong></p>
         </section>
 
+        <section class="promo-carousel" aria-label="Noticias y promociones">
+            <div class="promo-head">
+                <div>
+                    <div class="module-badge module-main"><span class="module-glyph">NT</span> Noticias y promociones</div>
+                    <h2>Novedades del punto de venta</h2>
+                    <p>Información destacada con rotación automática para mantener la portada activa y útil.</p>
+                </div>
+                <div class="promo-controls">
+                    <button type="button" class="btn btn-ghost btn-small" data-promo-prev aria-label="Anterior">Anterior</button>
+                    <button type="button" class="btn btn-ghost btn-small" data-promo-next aria-label="Siguiente">Siguiente</button>
+                </div>
+            </div>
+
+            <div class="promo-viewport" data-promo-viewport>
+                <div class="promo-track" data-promo-track>
+                    <article class="promo-slide" data-promo-slide>
+                        <span class="promo-kicker">Promocion semanal</span>
+                        <h3>Combo de herramientas electricas con precio especial</h3>
+                        <p>Consulta disponibilidad por WhatsApp y recibe confirmación de stock para entrega rápida.</p>
+                    </article>
+                    <article class="promo-slide" data-promo-slide>
+                        <span class="promo-kicker">Evento</span>
+                        <h3>Capacitación técnica para instaladores este viernes</h3>
+                        <p>Incluye demostración de productos y recomendaciones de uso en material eléctrico y herrería.</p>
+                    </article>
+                    <article class="promo-slide" data-promo-slide>
+                        <span class="promo-kicker">Noticia</span>
+                        <h3>Nuevos ingresos en fontanería y cerrajería</h3>
+                        <p>Ya disponibles nuevas variantes de producto con ficha técnica y precio actualizado en catálogo.</p>
+                    </article>
+                </div>
+            </div>
+
+            <div class="promo-dots" data-promo-dots></div>
+        </section>
+
         <section class="catalog-shell">
             <div class="catalog-categories-top">
                 <div class="catalog-categories-title">Categorías</div>
@@ -314,6 +350,107 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
         // Compartir por WhatsApp
         document.addEventListener('DOMContentLoaded', function() {
             const companyWhatsApp = '<?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?>';
+
+            // Carrusel de noticias/promociones
+            const promoTrack = document.querySelector('[data-promo-track]');
+            const promoViewport = document.querySelector('[data-promo-viewport]');
+            const promoSlides = Array.from(document.querySelectorAll('[data-promo-slide]'));
+            const promoDotsHost = document.querySelector('[data-promo-dots]');
+            const prevPromoBtn = document.querySelector('[data-promo-prev]');
+            const nextPromoBtn = document.querySelector('[data-promo-next]');
+
+            let promoIndex = 0;
+            let promoTimer = null;
+            const promoDelay = 5000;
+
+            function renderPromoDots() {
+                if (!promoDotsHost || promoSlides.length <= 1) return;
+                promoDotsHost.innerHTML = promoSlides.map((_, idx) =>
+                    `<button type="button" class="promo-dot ${idx === 0 ? 'active' : ''}" data-promo-dot="${idx}" aria-label="Ir a noticia ${idx + 1}"></button>`
+                ).join('');
+
+                promoDotsHost.querySelectorAll('[data-promo-dot]').forEach((dot) => {
+                    dot.addEventListener('click', function () {
+                        promoIndex = Number(this.getAttribute('data-promo-dot')) || 0;
+                        updatePromo();
+                        restartPromoAuto();
+                    });
+                });
+            }
+
+            function updatePromo() {
+                if (!promoTrack || promoSlides.length === 0) return;
+                promoTrack.style.transform = `translateX(-${promoIndex * 100}%)`;
+
+                if (!promoDotsHost) return;
+                promoDotsHost.querySelectorAll('.promo-dot').forEach((dot, idx) => {
+                    dot.classList.toggle('active', idx === promoIndex);
+                });
+            }
+
+            function nextPromo() {
+                promoIndex = (promoIndex + 1) % promoSlides.length;
+                updatePromo();
+            }
+
+            function prevPromo() {
+                promoIndex = (promoIndex - 1 + promoSlides.length) % promoSlides.length;
+                updatePromo();
+            }
+
+            function startPromoAuto() {
+                if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || promoSlides.length <= 1) {
+                    return;
+                }
+                stopPromoAuto();
+                promoTimer = window.setInterval(nextPromo, promoDelay);
+            }
+
+            function stopPromoAuto() {
+                if (promoTimer) {
+                    window.clearInterval(promoTimer);
+                    promoTimer = null;
+                }
+            }
+
+            function restartPromoAuto() {
+                stopPromoAuto();
+                startPromoAuto();
+            }
+
+            if (promoSlides.length > 0) {
+                renderPromoDots();
+                updatePromo();
+                startPromoAuto();
+
+                if (prevPromoBtn) {
+                    prevPromoBtn.addEventListener('click', function () {
+                        prevPromo();
+                        restartPromoAuto();
+                    });
+                }
+
+                if (nextPromoBtn) {
+                    nextPromoBtn.addEventListener('click', function () {
+                        nextPromo();
+                        restartPromoAuto();
+                    });
+                }
+
+                if (promoViewport) {
+                    promoViewport.addEventListener('mouseenter', stopPromoAuto);
+                    promoViewport.addEventListener('mouseleave', startPromoAuto);
+                }
+
+                document.addEventListener('visibilitychange', function () {
+                    if (document.hidden) {
+                        stopPromoAuto();
+                    } else {
+                        startPromoAuto();
+                    }
+                });
+            }
+
             const shareBtn = document.getElementById('shareWhatsApp');
             if (shareBtn) {
                 shareBtn.addEventListener('click', function() {

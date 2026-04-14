@@ -1522,6 +1522,119 @@ footer {
     box-shadow: 0 6px 18px rgba(17, 24, 39, 0.06);
 }
 
+.promo-carousel {
+    background: linear-gradient(135deg, #111111 0%, #2a2a2a 58%, #ff7f00 180%);
+    border: 1px solid rgba(255, 127, 0, 0.35);
+    border-radius: 14px;
+    padding: 1rem;
+    margin-bottom: 1.25rem;
+    color: #ffffff;
+}
+
+.promo-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.8rem;
+    margin-bottom: 0.8rem;
+}
+
+.promo-head h2 {
+    margin: 0.3rem 0 0.35rem;
+    color: #ffffff;
+}
+
+.promo-head p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.86);
+    font-size: 0.92rem;
+}
+
+.promo-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.promo-controls .btn-ghost {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.28);
+    color: #ffffff;
+}
+
+.promo-controls .btn-ghost:hover {
+    background: rgba(255, 127, 0, 0.2);
+    border-color: rgba(255, 127, 0, 0.6);
+}
+
+.promo-viewport {
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.promo-track {
+    display: flex;
+    width: 100%;
+    transition: transform 0.45s ease;
+}
+
+.promo-slide {
+    min-width: 100%;
+    padding: 1rem 1rem 1.1rem;
+}
+
+.promo-kicker {
+    display: inline-block;
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: rgba(255, 127, 0, 0.28);
+    border: 1px solid rgba(255, 127, 0, 0.55);
+    color: #fff4e6;
+    border-radius: 999px;
+    padding: 0.2rem 0.55rem;
+    margin-bottom: 0.55rem;
+}
+
+.promo-slide h3 {
+    margin: 0 0 0.45rem;
+    font-size: 1.12rem;
+    color: #ffffff;
+}
+
+.promo-slide p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 0.93rem;
+    line-height: 1.45;
+}
+
+.promo-dots {
+    display: flex;
+    justify-content: center;
+    gap: 0.45rem;
+    margin-top: 0.75rem;
+}
+
+.promo-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.58);
+    background: rgba(255, 255, 255, 0.18);
+    cursor: pointer;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.promo-dot.active {
+    background: #ff7f00;
+    border-color: #ff7f00;
+    transform: scale(1.08);
+}
+
 .catalog-categories-top {
     margin-bottom: 1rem;
     padding: 0.9rem;
@@ -1952,6 +2065,22 @@ footer {
 }
 
 @media (max-width: 768px) {
+    .promo-head {
+        flex-direction: column;
+    }
+
+    .promo-controls {
+        width: 100%;
+    }
+
+    .promo-controls .btn {
+        flex: 1;
+    }
+
+    .promo-slide {
+        padding: 0.95rem;
+    }
+
     .catalog-toolbar {
         grid-template-columns: 1fr;
     }
