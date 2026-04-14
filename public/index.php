@@ -538,12 +538,15 @@ function homepage_update_label($type) {
                     message += `Cliente: ${clientCode}\n`;
                     message += '---------------------------\n';
                     message += 'PRODUCTOS:\n';
-                    items.forEach(item => {
+                    items.forEach((item, idx) => {
                         const code = String(item.sku || '').replace(/^XLS-/i, '') || 'N/A';
                         const lineTotal = (item.unit_price * item.quantity);
                         message += `- ${item.name}\n`;
                         message += `  Codigo: ${code}\n`;
-                        message += `  ${item.quantity} x $${Number(item.unit_price).toFixed(2)} = $${lineTotal.toFixed(2)}\n\n`;
+                        message += `  ${item.quantity} x $${Number(item.unit_price).toFixed(2)} = $${lineTotal.toFixed(2)}\n`;
+                        if (idx < (items.length - 1)) {
+                            message += '---------------------------\n';
+                        }
                     });
                     message += '---------------------------\n';
                     message += `TOTAL: $${total.toFixed(2)}\n`;

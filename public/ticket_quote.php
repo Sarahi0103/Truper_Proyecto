@@ -235,7 +235,7 @@ function downloadTicketPdf() {
 
     const items = Array.isArray(ticketData.items) ? ticketData.items : [];
     if (items.length > 0) {
-        items.forEach((item) => {
+        items.forEach((item, idx) => {
             const qty = Number(item.quantity || 0);
             const name = String(item.name || 'Producto');
             const code = String(item.sku || item.code || item.product_code || ((item.product_id || 0) ? ('ID-' + item.product_id) : 'N/A'));
@@ -252,6 +252,12 @@ function downloadTicketPdf() {
             doc.text(qty + ' x ' + money(unitPrice), 6, y);
             doc.text(money(lineTotal), 74, y, { align: 'right' });
             y += 5;
+
+            if (idx < (items.length - 1)) {
+                doc.setDrawColor(220);
+                doc.line(6, y - 1, 74, y - 1);
+                y += 2;
+            }
         });
     }
 
