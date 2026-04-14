@@ -20,7 +20,8 @@ async function createTask() {
         description: document.getElementById('taskDescription').value,
         assigned_to: document.getElementById('assignTo').value,
         due_date: document.getElementById('dueDate').value,
-        priority: document.getElementById('priority').value
+        priority: document.getElementById('priority').value,
+        estimated_hours: document.getElementById('estimatedHours')?.value || null
     };
     
     const response = await apiCall('/tasks.php?action=create', 'POST', taskData);
@@ -225,6 +226,7 @@ async function loadTasks() {
             </div>
             <div>${task.description}</div>
             <div class="task-details">Vence: ${task.due_date || 'Sin fecha'} | Estado: ${task.status}</div>
+            <div class="task-details">Horas estimadas: ${task.estimated_hours ?? '-'} | Horas reales: ${task.actual_hours ?? '-'}</div>
             <div class="task-actions">
                 ${taskActionButtons(task)}
             </div>

@@ -162,8 +162,35 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
     <script src="js/main.js"></script>
     <script src="js/analytics.js"></script>
     <script>
+        async function loadRecentOrders() {
+            const box = document.getElementById('recentOrders');
+            if (!box) return;
+
+            const response = await apiCall('/orders.php?action=list');
+            if (!response || !response.success || !Array.isArray(response.orders)) {
+                box.innerHTML = '<p class="text-muted">No fue posible cargar órdenes recientes.</p>';
+                return;
+            }
+
+            const rows = response.orders.slice(0, 5);
+            if (rows.length === 0) {
+                box.innerHTML = '<p class="text-muted">Aún no hay órdenes registradas.</p>';
+                return;
+            }
+
+            box.innerHTML = rows.map((order) => {
+                const amount = Number(order.total_amount || 0).toFixed(2);
+                return '<div class="task-item">'
+                    + '<strong>' + (order.order_number || 'Sin folio') + '</strong>'
+                    + '<div class="text-muted">Estado: ' + (order.status || 'pending') + ' | Pago: ' + (order.payment_status || 'pending') + '</div>'
+                    + '<div>$' + amount + '</div>'
+                    + '</div>';
+            }).join('');
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             loadDashboardMetrics();
+            loadRecentOrders();
         });
 
         function logout() {

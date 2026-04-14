@@ -235,7 +235,7 @@ async function loadWeeklySummary() {
             </div>
                 <div style="text-align: right;">
                 <div>Consumido: <span style="color: var(--color-naranja);">${formatMoney(w.total_consumed)}</span></div>
-                <div>Adeudado: <span class="week-${w.payment_status}">${formatMoney(w.total_owed)}</span></div>
+                <div>Adeudado: <span class="week-status-${w.payment_status}">${formatMoney(w.total_owed)}</span></div>
                 <div style="font-size: 11px; color: var(--ui-text-muted);">Estado: ${w.payment_status}</div>
             </div>
         </div>
@@ -393,7 +393,14 @@ async function loadPreviousQuotes() {
     }
 
     const html = quotes.map(q => {
-        const data = typeof q.quote_data === 'string' ? JSON.parse(q.quote_data) : q.quote_data;
+        let data = q.quote_data;
+        if (typeof data === 'string') {
+            try {
+                data = JSON.parse(data);
+            } catch (e) {
+                data = [];
+            }
+        }
         return `
             <div class="week-row">
                 <div>

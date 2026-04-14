@@ -54,6 +54,17 @@ $stmt = $pdo->prepare("SELECT " . implode(', ', $selectParts) . " FROM users WHE
 $stmt->execute([$_SESSION['user_id']]);
 $profile = $stmt->fetch() ?: [];
 
+$company_name = '';
+if (db_table_exists('clients') && db_column_exists('clients', 'company_name')) {
+    try {
+        $stmtCompany = $pdo->prepare("SELECT COALESCE(company_name, '') AS company_name FROM clients WHERE user_id = ? LIMIT 1");
+        $stmtCompany->execute([$_SESSION['user_id']]);
+        $company_name = (string)($stmtCompany->fetchColumn() ?? '');
+    } catch (Exception $ignored) {
+        $company_name = '';
+    }
+}
+
 $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8');
 $is_client = (($_SESSION['role'] ?? 'client') === 'client');
 $loyalty_points = (int)($profile['loyalty_points'] ?? 0);
@@ -166,7 +177,7 @@ if (!empty($profile['birthdate'])) {
 
                             <div class="form-group">
                                 <label>Empresa</label>
-                                <input type="text" name="company_name" value="Mi Empresa">
+                                <input type="text" name="company_name" value="<?php echo htmlspecialchars($company_name, ENT_QUOTES, 'UTF-8'); ?>">
                             </div>
 
                             <div class="form-group">

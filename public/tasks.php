@@ -132,7 +132,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
 
                     <div class="form-group">
                         <label>Horas Estimadas</label>
-                        <input type="number" placeholder="0.00" min="0" step="0.5">
+                        <input type="number" id="estimatedHours" placeholder="0.00" min="0" step="0.5">
                     </div>
                 </form>
             </div>

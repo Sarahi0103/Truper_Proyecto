@@ -5,6 +5,7 @@
 let currentCart = [];
 let currentTotal = 0;
 let selectedOrderId = null;
+const ORDERS_IS_ADMIN = !!window.TRUPER_ORDERS_IS_ADMIN;
 
 function displayProductCode(rawSku) {
     return String(rawSku || '').replace(/^\s*XLS-/i, '').trim();
@@ -300,7 +301,7 @@ async function loadOrders() {
             <td>${getStatusLabel(order.payment_status)}</td>
             <td>${getStatusLabel(order.status)}</td>
             <td>
-                <button class="btn btn-small btn-secondary" onclick="openPaymentModal(${order.id})">Pagar</button>
+                ${ORDERS_IS_ADMIN ? `<button class="btn btn-small btn-secondary" onclick="openPaymentModal(${order.id})">Pagar</button>` : ''}
                 <a class="btn btn-small btn-primary" href="/ticket_client.php?id=${order.id}" target="_blank">Ticket</a>
             </td>
         </tr>

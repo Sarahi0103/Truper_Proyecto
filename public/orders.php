@@ -244,6 +244,9 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
     </footer>
 
     <script src="js/main.js"></script>
+    <script>
+        window.TRUPER_ORDERS_IS_ADMIN = <?php echo (($_SESSION['role'] ?? '') === 'admin') ? 'true' : 'false'; ?>;
+    </script>
     <script src="js/orders.js"></script>
     <script src="js/barcode-scanner.js"></script>
     <script>

@@ -10,14 +10,14 @@ class TaskController {
         $this->pdo = $pdo;
     }
     
-    public function createTask($title, $description, $assigned_to, $assigned_by, $due_date, $priority = 'medium') {
+    public function createTask($title, $description, $assigned_to, $assigned_by, $due_date, $priority = 'medium', $estimated_hours = null) {
         try {
             $task_number = 'TSK-' . date('Y') . '-' . strtoupper(substr(uniqid(), -5));
             
-            $stmt = $this->pdo->prepare("
-                INSERT INTO tasks (task_number, title, description, assigned_to, assigned_by, due_date, priority, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
-            ");
+                $stmt = $this->pdo->prepare("
+                    INSERT INTO tasks (task_number, title, description, assigned_to, assigned_by, due_date, priority, estimated_hours, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+                ");
             
             $stmt->execute([
                 $task_number,
@@ -26,7 +26,8 @@ class TaskController {
                 $assigned_to,
                 $assigned_by,
                 $due_date,
-                $priority
+                    $priority,
+                    $estimated_hours !== null ? (float)$estimated_hours : null
             ]);
             
             return [

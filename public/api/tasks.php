@@ -33,7 +33,8 @@ try {
                 $input['assigned_to'] ?? null,
                 $_SESSION['user_id'],
                 $input['due_date'] ?? null,
-                $input['priority'] ?? 'medium'
+                    $input['priority'] ?? 'medium',
+                    $input['estimated_hours'] ?? null
             );
 
             log_action(
@@ -126,14 +127,27 @@ try {
                 break;
             }
 
-            $stmt = $pdo->prepare("
-                SELECT id, first_name, last_name, role
-                FROM users
-                WHERE role IN ('employee', 'admin') AND is_active = true
-                ORDER BY first_name, last_name
-            ");
-            $stmt->execute();
-            $response = ['success' => true, 'users' => $stmt->fetchAll()];
+                $queries = [
+                    "SELECT id, COALESCE(first_name, '') AS first_name, COALESCE(last_name, '') AS last_name, role FROM users WHERE role IN ('employee', 'admin') AND is_active = true ORDER BY first_name, last_name",
+                    "SELECT id, COALESCE(first_name, '') AS first_name, COALESCE(last_name, '') AS last_name, role FROM users WHERE role IN ('employee', 'admin') AND active = 1 ORDER BY first_name, last_name",
+                    "SELECT id, COALESCE(first_name, '') AS first_name, COALESCE(last_name, '') AS last_name, role FROM users WHERE role IN ('employee', 'admin') ORDER BY first_name, last_name"
+                ];
+
+                $users = [];
+                foreach ($queries as $sql) {
+                    try {
+                        $stmt = $pdo->prepare($sql);
+                        $stmt->execute();
+                        $users = $stmt->fetchAll();
+                        if (is_array($users)) {
+                            break;
+                        }
+                    } catch (Exception $ignored) {
+                        $users = [];
+                    }
+                }
+
+                $response = ['success' => true, 'users' => $users];
             break;
 
         case 'delete':

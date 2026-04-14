@@ -64,6 +64,12 @@ try {
             $stmt = $pdo->prepare('UPDATE users SET ' . implode(', ', $sets) . ' WHERE id = ?');
             $stmt->execute($values);
 
+            if (db_table_exists('clients') && db_column_exists('clients', 'company_name') && array_key_exists('company_name', $_POST)) {
+                $companyName = sanitize($_POST['company_name'] ?? '');
+                $stmtClient = $pdo->prepare('UPDATE clients SET company_name = ? WHERE user_id = ?');
+                $stmtClient->execute([$companyName, $_SESSION['user_id']]);
+            }
+
             $response = ['success' => true, 'message' => 'Perfil actualizado exitosamente'];
             
             log_action(
