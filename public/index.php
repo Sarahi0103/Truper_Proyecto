@@ -523,6 +523,7 @@ function homepage_update_label($type) {
                     const clientCode = document.body?.dataset?.clientCode || 'PUBLICO';
                     const safeItems = items.map(item => ({
                         name: item.name,
+                        sku: String(item.sku || '').replace(/^XLS-/i, ''),
                         quantity: Number(item.quantity || 0),
                         price: Number(item.unit_price || 0)
                     }));
@@ -537,8 +538,10 @@ function homepage_update_label($type) {
                     message += '---------------------------\n';
                     message += 'PRODUCTOS:\n';
                     items.forEach(item => {
+                        const code = String(item.sku || '').replace(/^XLS-/i, '') || 'N/A';
                         const lineTotal = (item.unit_price * item.quantity);
                         message += `- ${item.name}\n`;
+                        message += `  Codigo: ${code}\n`;
                         message += `  ${item.quantity} x $${Number(item.unit_price).toFixed(2)} = $${lineTotal.toFixed(2)}\n`;
                     });
                     message += '---------------------------\n';

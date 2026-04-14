@@ -58,6 +58,27 @@ function ticket_quote_number($value) {
     return number_format((float)$value, 2, '.', '');
 }
 
+function ticket_quote_product_code($item) {
+    if (!is_array($item)) {
+        return 'N/A';
+    }
+
+    $candidates = [
+        $item['sku'] ?? '',
+        $item['code'] ?? '',
+        $item['product_code'] ?? ''
+    ];
+    foreach ($candidates as $candidate) {
+        $value = trim((string)$candidate);
+        if ($value !== '') {
+            return preg_replace('/^XLS-/i', '', $value);
+        }
+    }
+
+    $productId = (int)($item['product_id'] ?? 0);
+    return $productId > 0 ? ('ID-' . $productId) : 'N/A';
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -99,6 +120,7 @@ function ticket_quote_number($value) {
             margin: 4px 0 8px;
         }
         .item-name { font-size: 34px; margin-bottom: 2px; }
+        .item-code { font-size: 28px; color: #444; margin-bottom: 2px; }
         .item-line { display: flex; justify-content: space-between; gap: 10px; font-size: 33px; }
         .total-row { text-align: right; font-size: 40px; font-weight: 800; margin-top: 8px; }
         .thanks { margin-top: 12px; font-size: 33px; }
@@ -132,9 +154,11 @@ function ticket_quote_number($value) {
                 $qty = (int)($item['quantity'] ?? 0);
                 $name = (string)($item['name'] ?? 'Producto');
                 $price = (float)($item['price'] ?? ($item['unit_price'] ?? 0));
+                $code = ticket_quote_product_code($item);
                 $lineTotal = $qty * $price;
             ?>
             <div class="item-name"><?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?></div>
+            <div class="item-code">Código: <?php echo htmlspecialchars($code, ENT_QUOTES, 'UTF-8'); ?></div>
             <div class="item-line">
                 <span><?php echo $qty; ?> x $<?php echo ticket_quote_number($price); ?></span>
                 <span>$<?php echo ticket_quote_number($lineTotal); ?></span>
@@ -193,12 +217,17 @@ function downloadTicketPdf() {
         items.forEach((item) => {
             const qty = Number(item.quantity || 0);
             const name = String(item.name || 'Producto');
+            const code = String(item.sku || item.code || item.product_code || ((item.product_id || 0) ? ('ID-' + item.product_id) : 'N/A'));
             const unitPrice = Number(item.price ?? item.unit_price ?? 0);
             const lineTotal = qty * unitPrice;
 
             const productLine = name.length > 36 ? name.slice(0, 36) + '...' : name;
             doc.text(productLine, 6, y);
             y += 4;
+            doc.setFontSize(9);
+            doc.text('Codigo: ' + code.replace(/^XLS-/i, ''), 6, y);
+            y += 4;
+            doc.setFontSize(10);
             doc.text(qty + ' x ' + money(unitPrice), 6, y);
             doc.text(money(lineTotal), 74, y, { align: 'right' });
             y += 5;
