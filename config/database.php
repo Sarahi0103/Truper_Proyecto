@@ -30,6 +30,10 @@ define('DB_NAME', $dbName);
 define('DB_USER', $dbUser);
 define('DB_PASS', $dbPass);
 
+// Inicializacion automatica de esquema (primer arranque)
+define('AUTO_DB_INIT', strtolower((string)(getenv('AUTO_DB_INIT') ?: 'true')) !== 'false');
+define('AUTO_DB_INIT_SCHEMA_FILE', __DIR__ . '/../database.sql');
+
 // Configuración de seguridad
 define('SESSION_TIMEOUT', 1800); // 30 minutos
 define('MAX_LOGIN_ATTEMPTS', 5);
@@ -39,6 +43,41 @@ define('LOCKOUT_TIME', 900); // 15 minutos
 define('APP_NAME', 'Truper Platform');
 define('APP_VERSION', '1.0.0');
 define('APP_URL', getenv('APP_URL') ?: 'http://localhost/truper_platform');
+
+function truper_db_table_exists(PDO $pdo, string $tableName): bool {
+    $stmt = $pdo->prepare("SELECT to_regclass(?)");
+    $stmt->execute([$tableName]);
+    return $stmt->fetchColumn() !== null;
+}
+
+function truper_db_bootstrap_schema(PDO $pdo): void {
+    if (!AUTO_DB_INIT) {
+        return;
+    }
+
+    // Si ya existe users, asumimos esquema inicializado.
+    if (truper_db_table_exists($pdo, 'public.users')) {
+        return;
+    }
+
+    if (!file_exists(AUTO_DB_INIT_SCHEMA_FILE)) {
+        error_log('AUTO_DB_INIT activo pero no se encontro archivo de esquema: ' . AUTO_DB_INIT_SCHEMA_FILE);
+        return;
+    }
+
+    $sql = file_get_contents(AUTO_DB_INIT_SCHEMA_FILE);
+    if ($sql === false || trim($sql) === '') {
+        error_log('AUTO_DB_INIT activo pero el archivo de esquema esta vacio.');
+        return;
+    }
+
+    try {
+        $pdo->exec($sql);
+    } catch (Exception $e) {
+        error_log('Fallo AUTO_DB_INIT: ' . $e->getMessage());
+        throw $e;
+    }
+}
 
 // Conectar a PostgreSQL
 try {
@@ -52,6 +91,9 @@ try {
             PDO::ATTR_TIMEOUT => 5
         ]
     );
+
+    // Primer arranque: crea tablas e inserts base automaticamente.
+    truper_db_bootstrap_schema($pdo);
 } catch (PDOException $e) {
     error_log("Error de conexión a DB: " . $e->getMessage());
     die("Error al conectar a la base de datos. Por favor intente más tarde.");

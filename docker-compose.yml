@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15
+    container_name: truper-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: truper_platform
+      POSTGRES_USER: truper_admin
+      POSTGRES_PASSWORD: Truper123!
+    ports:
+      - "5433:5432"
+    volumes:
+      - truper_db_data:/var/lib/postgresql/data
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: truper-web
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      PORT: 8088
+      APP_ENV: development
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8088
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: truper_platform
+      DB_USER: truper_admin
+      DB_PASS: Truper123!
+      AUTO_DB_INIT: "true"
+    ports:
+      - "8088:8088"
+
+volumes:
+  truper_db_data:

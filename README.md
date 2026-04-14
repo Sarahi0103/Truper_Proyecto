@@ -24,6 +24,27 @@
 
 ## 📦 Instalación
 
+### Opcion recomendada (Docker con persistencia y auto-esquema)
+
+Esta opcion deja la base de datos persistente y crea el esquema automaticamente en el primer arranque.
+
+```bash
+# Desde la raiz del proyecto
+docker compose up -d --build
+```
+
+Servicios:
+- Web: `http://localhost:8088`
+- PostgreSQL: `localhost:5433`
+
+Persistencia:
+- Los datos viven en el volumen `truper_db_data`.
+- Reiniciar contenedores no borra la informacion.
+
+Auto inicializacion del esquema:
+- La app ejecuta `database.sql` automaticamente si no detecta la tabla `users`.
+- Variable de control: `AUTO_DB_INIT=true`.
+
 ### 1. Preparar Base de Datos
 
 ```bash
@@ -43,6 +64,9 @@ CREATE DATABASE truper_platform OWNER truper_admin;
 # Importar schema
 \i database.sql
 ```
+
+Nota:
+- Si usas Docker Compose, este paso es opcional porque el esquema se inicializa automaticamente al primer arranque.
 
 ### 2. Configurar PHP
 
