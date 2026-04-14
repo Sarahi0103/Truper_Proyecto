@@ -527,19 +527,23 @@ function homepage_update_label($type) {
                         price: Number(item.unit_price || 0)
                     }));
                     const encodedItems = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(safeItems)))));
-                    const ticketUrl = `${window.location.origin}/ticket_quote.php?folio=${encodeURIComponent(ticketCode)}&issued_at=${encodeURIComponent(issueDate)}&client=${encodeURIComponent(clientCode)}&total=${encodeURIComponent(total.toFixed(2))}&items=${encodedItems}`;
+                    const ticketUrl = `${window.location.origin}/ticket_quote.php?folio=${encodeURIComponent(ticketCode)}&total=${encodeURIComponent(total.toFixed(2))}&items=${encodedItems}&format=thermal&auto_pdf=1`;
 
-                    let message = 'Hola, envío ticket de cotización.\\n';
-                    message += `Folio: ${ticketCode}\\n`;
-                    message += `Fecha: ${issueDate}\\n`;
-                    message += `Cliente: ${clientCode}\\n\\n`;
-                    message += 'Detalle:\\n';
+                    let message = 'TRUPER - COTIZACION\n';
+                    message += '===========================\n';
+                    message += `Folio: ${ticketCode}\n`;
+                    message += `Fecha: ${issueDate}\n`;
+                    message += `Cliente: ${clientCode}\n`;
+                    message += '---------------------------\n';
+                    message += 'PRODUCTOS:\n';
                     items.forEach(item => {
                         const lineTotal = (item.unit_price * item.quantity);
-                        message += `• ${item.quantity} x ${item.name} | $${lineTotal.toFixed(2)}\\n`;
+                        message += `- ${item.name}\n`;
+                        message += `  ${item.quantity} x $${Number(item.unit_price).toFixed(2)} = $${lineTotal.toFixed(2)}\n`;
                     });
-                    message += `\\nTotal estimado: $${total.toFixed(2)}\\n`;
-                    message += `Ticket web: ${ticketUrl}\\n\\n`;
+                    message += '---------------------------\n';
+                    message += `TOTAL: $${total.toFixed(2)}\n`;
+                    message += `PDF/Ticket: ${ticketUrl}\n\n`;
                     message += 'Quedo atento(a) a disponibilidad y tiempo de entrega.';
 
                     const encodedMsg = encodeURIComponent(message);
