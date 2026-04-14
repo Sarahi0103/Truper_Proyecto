@@ -57,6 +57,16 @@ function whatsapp_url($message, $phone = null) {
     return "https://wa.me/{$digits}?text={$encoded}";
 }
 
+function app_base_url() {
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || ((int)($_SERVER['SERVER_PORT'] ?? 80) === 443)
+        || (strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https');
+
+    $scheme = $isHttps ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    return $scheme . '://' . $host;
+}
+
 function validate_email($email) {
     return filter_var($email, FILTER_VALIDATE_EMAIL);
 }

@@ -328,6 +328,13 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                     const ticketCode = `TCK-${String(now.getTime()).slice(-8)}`;
                     const issueDate = now.toLocaleString('es-MX');
                     const clientCode = document.body?.dataset?.clientCode || 'PUBLICO';
+                    const safeItems = items.map(item => ({
+                        name: item.name,
+                        quantity: Number(item.quantity || 0),
+                        price: Number(item.unit_price || 0)
+                    }));
+                    const encodedItems = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(safeItems)))));
+                    const ticketUrl = `${window.location.origin}/ticket_quote.php?folio=${encodeURIComponent(ticketCode)}&issued_at=${encodeURIComponent(issueDate)}&client=${encodeURIComponent(clientCode)}&total=${encodeURIComponent(total.toFixed(2))}&items=${encodedItems}`;
 
                     let message = 'Hola, envío ticket de cotización.\\n';
                     message += `Folio: ${ticketCode}\\n`;
@@ -338,7 +345,9 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                         const lineTotal = (item.unit_price * item.quantity);
                         message += `• ${item.quantity} x ${item.name} | $${lineTotal.toFixed(2)}\\n`;
                     });
-                    message += `\\nTotal estimado: $${total.toFixed(2)}\\n\\nQuedo atento(a) a disponibilidad y tiempo de entrega.`;
+                    message += `\\nTotal estimado: $${total.toFixed(2)}\\n`;
+                    message += `Ticket web: ${ticketUrl}\\n\\n`;
+                    message += 'Quedo atento(a) a disponibilidad y tiempo de entrega.';
 
                     const encodedMsg = encodeURIComponent(message);
                     const whatsappUrl = `https://wa.me/${companyWhatsApp}?text=${encodedMsg}`;
