@@ -204,6 +204,7 @@ function homepage_update_label($type) {
             <a href="/" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
             <nav class="nav-menu">
                 <a href="/" class="active">Productos</a>
+                <a href="/marketplace_ce.php">Marketplace CE</a>
                 <?php if ($isAdmin): ?><a href="/admin_supply.php">Abastecimiento</a><?php endif; ?>
                 <?php if ($isLogged): ?>
                     <a href="/orders.php">Pedidos</a>
@@ -230,6 +231,9 @@ function homepage_update_label($type) {
             <h1>Catálogo Truper</h1>
             <p>Visualización ágil, sencilla y eficaz con precio, stock, variantes e información técnica.</p>
             <p class="text-muted" style="margin-top: 8px;">Cotizaciones y dudas por WhatsApp: <strong><?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?></strong></p>
+            <div style="margin-top: 12px;">
+                <a href="/marketplace_ce.php" class="btn btn-secondary btn-small">Ir a Marketplace CE (segunda mano)</a>
+            </div>
         </section>
 
         <section class="promo-carousel" aria-label="Noticias y promociones">
