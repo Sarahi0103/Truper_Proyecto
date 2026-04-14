@@ -33,7 +33,10 @@ async function createTask() {
         setTimeout(() => {
             location.reload();
         }, 1000);
+        return;
     }
+
+    showAlert((response && response.message) ? response.message : 'No fue posible crear la tarea', 'error');
 }
 
 /**
