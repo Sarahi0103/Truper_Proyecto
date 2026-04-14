@@ -95,10 +95,35 @@ function marketplace_sku_exists_admin_supply($pdo, string $sku, int $excludeId =
     return normalized_sku_exists_in_table_admin_supply($pdo, 'marketplace_ce_products', $sku, $excludeId);
 }
 
+function seed_sku_exists_admin_supply(string $sku): bool {
+    if ($sku === '' || !function_exists('get_xlsx_seed_products')) {
+        return false;
+    }
+
+    try {
+        $items = get_xlsx_seed_products();
+        if (!is_array($items)) {
+            return false;
+        }
+
+        foreach ($items as $item) {
+            $seedSku = normalize_sku_admin_supply($item['sku'] ?? '');
+            if ($seedSku !== '' && $seedSku === $sku) {
+                return true;
+            }
+        }
+    } catch (Exception $ignored) {
+        return false;
+    }
+
+    return false;
+}
+
 function sku_usage_admin_supply($pdo, string $sku, int $excludeMarketplaceId = 0): array {
     return [
         'in_products' => product_sku_exists_admin_supply($pdo, $sku),
         'in_marketplace' => marketplace_sku_exists_admin_supply($pdo, $sku, $excludeMarketplaceId),
+        'in_seed' => seed_sku_exists_admin_supply($sku),
     ];
 }
 
@@ -477,12 +502,14 @@ try {
             }
 
             $usage = sku_usage_admin_supply($pdo, $sku, 0);
-            $exists = $usage['in_products'] || $usage['in_marketplace'];
+            $exists = $usage['in_products'] || $usage['in_marketplace'] || $usage['in_seed'];
             $message = 'Código disponible';
             if ($exists) {
                 $message = $usage['in_products']
                     ? 'Ya existe un producto con ese código'
-                    : 'Ya existe un artículo CE con ese código';
+                    : ($usage['in_marketplace']
+                        ? 'Ya existe un artículo CE con ese código'
+                        : 'Ese código ya existe en el catálogo base');
             }
             $response = [
                 'success' => true,
@@ -516,12 +543,14 @@ try {
             }
 
             $usage = sku_usage_admin_supply($pdo, $sku, $id);
-            $exists = $usage['in_products'] || $usage['in_marketplace'];
+            $exists = $usage['in_products'] || $usage['in_marketplace'] || $usage['in_seed'];
             $message = 'Código disponible';
             if ($exists) {
                 $message = $usage['in_marketplace']
                     ? 'Ya existe un artículo CE con ese código'
-                    : 'Ya existe un producto con ese código';
+                    : ($usage['in_products']
+                        ? 'Ya existe un producto con ese código'
+                        : 'Ese código ya existe en el catálogo base');
             }
             $response = [
                 'success' => true,
@@ -560,12 +589,14 @@ try {
             }
 
             $usage = sku_usage_admin_supply($pdo, $sku, 0);
-            if ($usage['in_products'] || $usage['in_marketplace']) {
+            if ($usage['in_products'] || $usage['in_marketplace'] || $usage['in_seed']) {
                 $response = [
                     'success' => false,
                     'message' => $usage['in_products']
                         ? 'Ya existe un producto con ese código'
-                        : 'Ese código ya está registrado en Marketplace CE'
+                        : ($usage['in_marketplace']
+                            ? 'Ese código ya está registrado en Marketplace CE'
+                            : 'Ese código ya existe en el catálogo base')
                 ];
                 break;
             }
@@ -873,12 +904,14 @@ try {
             }
 
             $usage = sku_usage_admin_supply($pdo, $sku, $id);
-            if ($usage['in_products'] || $usage['in_marketplace']) {
+            if ($usage['in_products'] || $usage['in_marketplace'] || $usage['in_seed']) {
                 $response = [
                     'success' => false,
                     'message' => $usage['in_marketplace']
                         ? 'Ya existe un artículo CE con ese código'
-                        : 'Ese código ya está registrado en productos'
+                        : ($usage['in_products']
+                            ? 'Ese código ya está registrado en productos'
+                            : 'Ese código ya existe en el catálogo base')
                 ];
                 break;
             }
