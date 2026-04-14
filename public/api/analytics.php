@@ -172,12 +172,25 @@ try {
             if (is_admin_user()) {
                 $years = [];
                 try {
-                    $stmt = $pdo->query("SELECT DISTINCT YEAR(created_at) AS year_value FROM orders WHERE created_at IS NOT NULL ORDER BY year_value DESC");
-                    $rows = $stmt ? $stmt->fetchAll() : [];
-                    foreach ($rows as $row) {
-                        $yearValue = (int)($row['year_value'] ?? 0);
-                        if ($yearValue > 0) {
-                            $years[] = $yearValue;
+                    $queries = [
+                        "SELECT DISTINCT YEAR(created_at) AS year_value FROM orders WHERE created_at IS NOT NULL ORDER BY year_value DESC",
+                        "SELECT DISTINCT EXTRACT(YEAR FROM created_at) AS year_value FROM orders WHERE created_at IS NOT NULL ORDER BY year_value DESC"
+                    ];
+
+                    foreach ($queries as $sql) {
+                        try {
+                            $stmt = $pdo->query($sql);
+                            $rows = $stmt ? $stmt->fetchAll() : [];
+                            foreach ($rows as $row) {
+                                $yearValue = (int)($row['year_value'] ?? 0);
+                                if ($yearValue > 0) {
+                                    $years[] = $yearValue;
+                                }
+                            }
+                            if (!empty($years)) {
+                                break;
+                            }
+                        } catch (Exception $ignoredQuery) {
                         }
                     }
                 } catch (Exception $ignored) {
@@ -269,6 +282,10 @@ try {
             $report = [];
             foreach ($stats as $row) {
                 $season = $row['season'] ?: 'Sin temporada';
+                $productName = (string)($row['name'] ?? ('Producto #' . ($row['product_id'] ?? 'N/A')));
+                $amount = (float)($row['total_amount'] ?? 0);
+                $quantity = (int)($row['total_quantity'] ?? 0);
+
                 if (!isset($report[$season])) {
                     $report[$season] = [
                         'total_amount' => 0,
@@ -278,7 +295,26 @@ try {
                     ];
                 }
 
-                $report[$season]['total_quantity'] += (int) ($row['total_quantity'] ?? 0);
+                $report[$season]['total_amount'] += $amount;
+                $report[$season]['total_quantity'] += $quantity;
+                if (!isset($report[$season]['top_products'][$productName])) {
+                    $report[$season]['top_products'][$productName] = 0;
+                }
+                $report[$season]['top_products'][$productName] += $quantity;
+            }
+
+            foreach ($report as $season => $seasonData) {
+                arsort($seasonData['top_products']);
+                $top = [];
+                $count = 0;
+                foreach ($seasonData['top_products'] as $name => $qty) {
+                    $top[] = ['name' => $name, 'quantity' => (int)$qty];
+                    $count++;
+                    if ($count >= 5) {
+                        break;
+                    }
+                }
+                $report[$season]['top_products'] = $top;
             }
             $response = ['success' => true, 'report' => $report];
             break;
@@ -290,22 +326,29 @@ try {
                 break;
             }
 
-            $stmt = $pdo->prepare("
+            $firstNameExpr = db_column_exists('users', 'first_name') ? "COALESCE(u.first_name, '')" : "''";
+            $lastNameExpr = db_column_exists('users', 'last_name') ? "COALESCE(u.last_name, '')" : "''";
+            $nameExpr = "TRIM(" . $firstNameExpr . " || ' ' || " . $lastNameExpr . ")";
+            $pointsExpr = db_column_exists('users', 'loyalty_points') ? "COALESCE(u.loyalty_points, 0)" : (db_column_exists('users', 'points') ? "COALESCE(u.points, 0)" : "0");
+            $activeExpr = db_column_exists('users', 'is_active') ? "COALESCE(u.is_active, true)" : (db_column_exists('users', 'active') ? "(COALESCE(u.active, 1) = 1)" : "true");
+
+            $sql = "
                 SELECT
                     u.id,
-                    CONCAT(u.first_name, ' ', u.last_name) AS name,
-                    u.loyalty_points,
-                    u.is_active,
+                    " . $nameExpr . " AS name,
+                    " . $pointsExpr . " AS loyalty_points,
+                    " . $activeExpr . " AS is_active,
                     COALESCE(COUNT(o.id), 0) AS order_count,
                     COALESCE(SUM(o.total_amount), 0) AS total_spent
                 FROM users u
                 LEFT JOIN clients c ON c.user_id = u.id
                 LEFT JOIN orders o ON o.client_id = c.id
                 WHERE u.role = 'client'
-                GROUP BY u.id, u.first_name, u.last_name, u.loyalty_points, u.is_active
+                GROUP BY u.id, " . $nameExpr . ", " . $pointsExpr . ", " . $activeExpr . "
                 ORDER BY total_spent DESC
                 LIMIT 100
-            ");
+            ";
+            $stmt = $pdo->prepare($sql);
             $stmt->execute();
 
             $response = ['success' => true, 'clients' => $stmt->fetchAll()];

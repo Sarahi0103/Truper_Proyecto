@@ -12,6 +12,10 @@ class OrderController {
     
     public function createOrder($client_id, $items, $is_wholesale = false, $context = []) {
         try {
+            if (empty($items) || !is_array($items)) {
+                return ['success' => false, 'message' => 'No hay productos en el pedido'];
+            }
+
             $this->ensureTransactionHistoryTable();
             $this->pdo->beginTransaction();
             
@@ -19,26 +23,48 @@ class OrderController {
             $order_number = 'ORD-' . date('Y') . '-' . strtoupper(substr(uniqid(), -6));
             
             $total_amount = 0;
+            $normalizedItems = [];
             
             // Calcular total
             foreach ($items as $item) {
-                $product = $this->getProduct($item['product_id']);
-                $unit_price = calculateProductPrice($product['unit_price'], $item['quantity'], $is_wholesale);
-                $subtotal = $unit_price * $item['quantity'];
+                $productId = $this->extractProductId($item);
+                $quantity = (int)($item['quantity'] ?? 0);
+
+                if ($productId <= 0 || $quantity <= 0) {
+                    throw new Exception('Item de pedido inválido');
+                }
+
+                $product = $this->getProduct($productId);
+                if (!$product) {
+                    throw new Exception('Producto no encontrado: ' . $productId);
+                }
+
+                $unit_price = calculateProductPrice((float)$product['unit_price'], $quantity, (bool)$is_wholesale);
+                $subtotal = $unit_price * $quantity;
                 
                 // Aplicar descuento por cantidad
                 $discount = 0;
-                if ($item['quantity'] >= 100) {
+                if ($quantity >= 100) {
                     $discount = 0.15; // 15% descuento
-                } elseif ($item['quantity'] >= 50) {
+                } elseif ($quantity >= 50) {
                     $discount = 0.10; // 10%
-                } elseif ($item['quantity'] >= 20) {
+                } elseif ($quantity >= 20) {
                     $discount = 0.05; // 5%
                 }
                 
                 $item_discount = $subtotal * $discount;
                 $line_total = $subtotal - $item_discount;
                 $total_amount += $line_total;
+
+                $normalizedItems[] = [
+                    'product_id' => $productId,
+                    'quantity' => $quantity,
+                    'unit_price' => $unit_price,
+                    'subtotal' => $subtotal,
+                    'discount_percentage' => $discount * 100,
+                    'discount_amount' => $item_discount,
+                    'line_total' => $line_total,
+                ];
             }
             
             // Aplicar descuento por puntos de lealtad
@@ -64,30 +90,44 @@ class OrderController {
             $order_id = $this->pdo->lastInsertId();
             
             // Agregar items a la orden
-            foreach ($items as $item) {
-                $product = $this->getProduct($item['product_id']);
-                $unit_price = calculateProductPrice($product['unit_price'], $item['quantity'], $is_wholesale);
-                
-                $stmt = $this->pdo->prepare("
-                    INSERT INTO order_items (order_id, product_id, quantity, unit_price, subtotal, line_total)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ");
-                
-                $stmt->execute([
+            $hasDiscountPercentage = $this->columnExists('order_items', 'discount_percentage');
+            $hasDiscountAmount = $this->columnExists('order_items', 'discount_amount');
+
+            foreach ($normalizedItems as $item) {
+                $columns = ['order_id', 'product_id', 'quantity', 'unit_price', 'subtotal'];
+                $values = ['?', '?', '?', '?', '?'];
+                $params = [
                     $order_id,
                     $item['product_id'],
                     $item['quantity'],
-                    $unit_price,
-                    $unit_price * $item['quantity'],
-                    $unit_price * $item['quantity']
-                ]);
+                    $item['unit_price'],
+                    $item['subtotal']
+                ];
+
+                if ($hasDiscountPercentage) {
+                    $columns[] = 'discount_percentage';
+                    $values[] = '?';
+                    $params[] = $item['discount_percentage'];
+                }
+
+                if ($hasDiscountAmount) {
+                    $columns[] = 'discount_amount';
+                    $values[] = '?';
+                    $params[] = $item['discount_amount'];
+                }
+
+                $columns[] = 'line_total';
+                $values[] = '?';
+                $params[] = $item['line_total'];
+
+                $stmt = $this->pdo->prepare("INSERT INTO order_items (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $values) . ")");
+                $stmt->execute($params);
                 
                 // Actualizar estadísticas de compra
-                $lineTotal = $unit_price * $item['quantity'];
                 $this->updatePurchaseStatistics(
                     $item['product_id'],
                     $item['quantity'],
-                    $lineTotal,
+                    $item['line_total'],
                     $context['weather_condition'] ?? null,
                     $context['special_event'] ?? null
                 );
@@ -111,7 +151,9 @@ class OrderController {
                 'ticket_url' => '/ticket_client.php?id=' . $order_id
             ];
         } catch (Exception $e) {
-            $this->pdo->rollBack();
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
             error_log("Error creando orden: " . $e->getMessage());
             return ['success' => false, 'message' => 'Error al crear la orden'];
         }
@@ -207,7 +249,30 @@ class OrderController {
             WHERE c.id = ?
         ");
         $stmt->execute([$client_id]);
-        return $stmt->fetch();
+        $client = $stmt->fetch();
+        return $client ?: ['loyalty_points' => 0];
+    }
+
+    private function extractProductId($item) {
+        if (!is_array($item)) {
+            return 0;
+        }
+
+        if (isset($item['product_id'])) {
+            return (int)$item['product_id'];
+        }
+
+        if (isset($item['productId'])) {
+            return (int)$item['productId'];
+        }
+
+        return 0;
+    }
+
+    private function columnExists($table, $column) {
+        $stmt = $this->pdo->prepare("SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = ? AND column_name = ?)");
+        $stmt->execute([$table, $column]);
+        return (bool)$stmt->fetchColumn();
     }
     
     private function updatePurchaseStatistics($product_id, $quantity, $amount, $weather_condition = null, $special_event = null) {
