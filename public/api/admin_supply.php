@@ -24,7 +24,7 @@ function normalize_date_value($value): ?string {
     }
 
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw)) {
-        $stmt = $pdo->prepare("SELECT 1 FROM products WHERE LOWER(TRIM(COALESCE(sku, ''))) = LOWER(TRIM(?)) LIMIT 1");
+        return $raw;
     }
 
     if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})$/', $raw, $matches)) {
@@ -40,8 +40,12 @@ function normalize_date_value($value): ?string {
 }
 
 function normalize_sku_admin_supply($value): string {
-    $sku = strtoupper(trim((string)$value));
-    return preg_replace('/\s+/', '', $sku) ?: '';
+    $sku = trim((string)$value);
+    return preg_replace('/\D+/', '', $sku) ?: '';
+}
+
+function is_valid_numeric_sku_admin_supply(string $sku): bool {
+    return (bool)preg_match('/^\d{5}$/', $sku);
 }
 
 function product_sku_exists_admin_supply($pdo, string $sku): bool {
@@ -436,6 +440,16 @@ try {
                 break;
             }
 
+            if (!is_valid_numeric_sku_admin_supply($sku)) {
+                $response = [
+                    'success' => true,
+                    'available' => false,
+                    'message' => 'El código debe tener exactamente 5 números',
+                    'sku' => $sku
+                ];
+                break;
+            }
+
             $exists = product_sku_exists_admin_supply($pdo, $sku);
             $response = [
                 'success' => true,
@@ -455,6 +469,16 @@ try {
             $id = (int)($_GET['id'] ?? 0);
             if ($sku === '') {
                 $response = ['success' => false, 'message' => 'SKU requerido'];
+                break;
+            }
+
+            if (!is_valid_numeric_sku_admin_supply($sku)) {
+                $response = [
+                    'success' => true,
+                    'available' => false,
+                    'message' => 'El código debe tener exactamente 5 números',
+                    'sku' => $sku
+                ];
                 break;
             }
 
@@ -484,6 +508,10 @@ try {
 
             if ($sku === '' || $name === '') {
                 $response = ['success' => false, 'message' => 'SKU y nombre son obligatorios'];
+                break;
+            }
+            if (!is_valid_numeric_sku_admin_supply($sku)) {
+                $response = ['success' => false, 'message' => 'El código del producto debe tener exactamente 5 números'];
                 break;
             }
             if ($price < 0) {
@@ -781,6 +809,10 @@ try {
 
             if ($sku === '' || $name === '' || $description === '') {
                 $response = ['success' => false, 'message' => 'SKU, nombre y descripción son obligatorios'];
+                break;
+            }
+            if (!is_valid_numeric_sku_admin_supply($sku)) {
+                $response = ['success' => false, 'message' => 'El código SKU CE debe tener exactamente 5 números'];
                 break;
             }
 

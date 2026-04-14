@@ -88,7 +88,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <p class="text-muted">Registra nuevos productos y opcionalmente sube su imagen.</p>
 
                 <div class="grid grid-3">
-                    <div class="form-group"><label>Código del producto</label><input id="newProductSku" type="text" maxlength="100"></div>
+                    <div class="form-group"><label>Código del producto (5 números)</label><input id="newProductSku" type="text" maxlength="5" inputmode="numeric" pattern="\d{5}" placeholder="Ej. 23032"></div>
                     <div class="form-group"><label>Nombre</label><input id="newProductName" type="text" maxlength="255"></div>
                     <div class="form-group">
                         <label>Categorías (selección múltiple)</label>
@@ -398,7 +398,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <input type="hidden" id="marketplaceEditId" value="">
 
                 <div class="grid grid-3">
-                    <div class="form-group"><label>SKU CE</label><input id="marketplaceSku" type="text" maxlength="100" placeholder="CE-001"></div>
+                    <div class="form-group"><label>SKU CE (5 números)</label><input id="marketplaceSku" type="text" maxlength="5" inputmode="numeric" pattern="\d{5}" placeholder="Ej. 24061"></div>
                     <div class="form-group"><label>Nombre</label><input id="marketplaceName" type="text" maxlength="220"></div>
                     <div class="form-group">
                         <label>Condición</label>
@@ -463,6 +463,10 @@ function escapeHtml(v) {
 
 function displayProductCode(rawSku) {
     return String(rawSku || '').replace(/^XLS-/i, '');
+}
+
+function normalizeNumericSku(rawValue) {
+    return String(rawValue || '').replace(/\D+/g, '').slice(0, 5);
 }
 
 function displayProductLabel(rawSku, name) {
@@ -1491,15 +1495,15 @@ async function uploadProductImages() {
 
 async function createProductByAdmin() {
     const skuInput = document.getElementById('newProductSku');
-    const normalizedSku = String((skuInput?.value || '')).trim().toUpperCase().replace(/\s+/g, '');
+    const normalizedSku = normalizeNumericSku(skuInput?.value || '');
     if (skuInput) {
         skuInput.value = normalizedSku;
     }
 
-    if (!normalizedSku) {
+    if (!/^\d{5}$/.test(normalizedSku)) {
         const box = document.getElementById('productCreateResult');
         if (box) {
-            box.innerHTML = '<div class="alert alert-error">El código del producto es obligatorio.</div>';
+            box.innerHTML = '<div class="alert alert-error">El código del producto debe tener exactamente 5 números.</div>';
         }
         return;
     }
@@ -1652,14 +1656,14 @@ async function loadMarketplaceCeAdmin() {
 
 async function saveMarketplaceCeByAdmin() {
     const skuInput = document.getElementById('marketplaceSku');
-    const normalizedSku = String((skuInput?.value || '')).trim().toUpperCase().replace(/\s+/g, '');
+    const normalizedSku = normalizeNumericSku(skuInput?.value || '');
     if (skuInput) {
         skuInput.value = normalizedSku;
     }
 
-    if (!normalizedSku) {
+    if (!/^\d{5}$/.test(normalizedSku)) {
         const box = document.getElementById('marketplaceResult');
-        if (box) box.innerHTML = '<div class="alert alert-error">El código SKU CE es obligatorio.</div>';
+        if (box) box.innerHTML = '<div class="alert alert-error">El código SKU CE debe tener exactamente 5 números.</div>';
         return;
     }
 
@@ -1759,10 +1763,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const productSkuInput = document.getElementById('newProductSku');
     if (productSkuInput) {
+        productSkuInput.addEventListener('input', function () {
+            productSkuInput.value = normalizeNumericSku(productSkuInput.value);
+        });
         productSkuInput.addEventListener('blur', async function () {
-            const sku = String(productSkuInput.value || '').trim().toUpperCase().replace(/\s+/g, '');
+            const sku = normalizeNumericSku(productSkuInput.value || '');
             productSkuInput.value = sku;
             if (!sku) return;
+            if (!/^\d{5}$/.test(sku)) {
+                showAlert('El código del producto debe tener exactamente 5 números', 'warning');
+                return;
+            }
             const check = await apiCall(`/admin_supply.php?action=product-sku-check&sku=${encodeURIComponent(sku)}`, 'GET', null, { silent: true });
             if (check && check.success && check.available === false) {
                 showAlert(check.message || 'Ese código de producto ya existe', 'warning');
@@ -1772,11 +1783,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const marketplaceSkuInput = document.getElementById('marketplaceSku');
     if (marketplaceSkuInput) {
+        marketplaceSkuInput.addEventListener('input', function () {
+            marketplaceSkuInput.value = normalizeNumericSku(marketplaceSkuInput.value);
+        });
         marketplaceSkuInput.addEventListener('blur', async function () {
-            const sku = String(marketplaceSkuInput.value || '').trim().toUpperCase().replace(/\s+/g, '');
+            const sku = normalizeNumericSku(marketplaceSkuInput.value || '');
             const currentId = Number(document.getElementById('marketplaceEditId').value || 0);
             marketplaceSkuInput.value = sku;
             if (!sku) return;
+            if (!/^\d{5}$/.test(sku)) {
+                showAlert('El código SKU CE debe tener exactamente 5 números', 'warning');
+                return;
+            }
             const check = await apiCall(`/admin_supply.php?action=marketplace-sku-check&sku=${encodeURIComponent(sku)}&id=${encodeURIComponent(currentId)}`, 'GET', null, { silent: true });
             if (check && check.success && check.available === false) {
                 showAlert(check.message || 'Ese código SKU CE ya existe', 'warning');
