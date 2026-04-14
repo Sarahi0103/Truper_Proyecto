@@ -85,6 +85,7 @@ function ensure_admin_supply_tables($pdo): void {
         update_type VARCHAR(20) NOT NULL DEFAULT 'noticia',
         title VARCHAR(220) NOT NULL,
         body TEXT NOT NULL,
+        image_url TEXT,
         sort_order INTEGER NOT NULL DEFAULT 0,
         is_active BOOLEAN NOT NULL DEFAULT true,
         created_by INTEGER REFERENCES users(id),
@@ -93,6 +94,12 @@ function ensure_admin_supply_tables($pdo): void {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         CHECK (update_type IN ('noticia', 'promocion', 'evento'))
     )");
+    
+    // Add image_url column if it doesn't exist (migration for existing tables)
+    try {
+        $pdo->exec("ALTER TABLE homepage_updates ADD COLUMN IF NOT EXISTS image_url TEXT");
+    } catch (Exception $ignored) {}
+    
 }
 
 function ensure_products_extra_columns($pdo): void {
@@ -575,9 +582,9 @@ try {
 
             $onlyActive = isset($_GET['active']) && $_GET['active'] === '1';
             if ($onlyActive) {
-                $stmt = $pdo->query("SELECT id, update_type, title, body, sort_order, is_active, created_at, updated_at FROM homepage_updates WHERE is_active = true ORDER BY sort_order ASC, id DESC LIMIT 40");
+                $stmt = $pdo->query("SELECT id, update_type, title, body, image_url, sort_order, is_active, created_at, updated_at FROM homepage_updates WHERE is_active = true ORDER BY sort_order ASC, id DESC LIMIT 40");
             } else {
-                $stmt = $pdo->query("SELECT id, update_type, title, body, sort_order, is_active, created_at, updated_at FROM homepage_updates ORDER BY sort_order ASC, id DESC LIMIT 120");
+                $stmt = $pdo->query("SELECT id, update_type, title, body, image_url, sort_order, is_active, created_at, updated_at FROM homepage_updates ORDER BY sort_order ASC, id DESC LIMIT 120");
             }
 
             $response = ['success' => true, 'items' => $stmt->fetchAll()];
@@ -606,13 +613,30 @@ try {
                 break;
             }
 
+            // Handle image upload if present
+            $imageUrl = null;
+            if (isset($_FILES['image']) && $_FILES['image']['error'] !== UPLOAD_ERR_NO_FILE) {
+                try {
+                    $imageUrl = store_product_image($_FILES['image']);
+                } catch (Exception $e) {
+                    $response = ['success' => false, 'message' => 'Error al cargar imagen: ' . $e->getMessage()];
+                    break;
+                }
+            }
+
             if ($id > 0) {
-                $stmt = $pdo->prepare("UPDATE homepage_updates SET update_type = ?, title = ?, body = ?, sort_order = ?, is_active = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-                $stmt->execute([$type, $title, $body, $sortOrder, $isActive, $_SESSION['user_id'], $id]);
+                // If updating, preserve existing image if no new one is provided
+                if ($imageUrl === null) {
+                    $stmt = $pdo->prepare("UPDATE homepage_updates SET update_type = ?, title = ?, body = ?, sort_order = ?, is_active = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+                    $stmt->execute([$type, $title, $body, $sortOrder, $isActive, $_SESSION['user_id'], $id]);
+                } else {
+                    $stmt = $pdo->prepare("UPDATE homepage_updates SET update_type = ?, title = ?, body = ?, image_url = ?, sort_order = ?, is_active = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+                    $stmt->execute([$type, $title, $body, $imageUrl, $sortOrder, $isActive, $_SESSION['user_id'], $id]);
+                }
                 $response = ['success' => true, 'message' => 'Publicacion actualizada'];
             } else {
-                $stmt = $pdo->prepare("INSERT INTO homepage_updates (update_type, title, body, sort_order, is_active, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$type, $title, $body, $sortOrder, $isActive, $_SESSION['user_id'], $_SESSION['user_id']]);
+                $stmt = $pdo->prepare("INSERT INTO homepage_updates (update_type, title, body, image_url, sort_order, is_active, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$type, $title, $body, $imageUrl, $sortOrder, $isActive, $_SESSION['user_id'], $_SESSION['user_id']]);
                 $response = ['success' => true, 'message' => 'Publicacion creada'];
             }
             break;

@@ -1583,6 +1583,16 @@ footer {
 .promo-slide {
     min-width: 100%;
     padding: 1rem 1rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.promo-image {
+    width: 100%;
+    max-height: 280px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
 }
 
 .promo-kicker {
@@ -2079,6 +2089,10 @@ footer {
 
     .promo-slide {
         padding: 0.95rem;
+    }
+
+    .promo-image {
+        max-height: 200px;
     }
 
     .catalog-toolbar {

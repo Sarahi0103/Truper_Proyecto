@@ -164,6 +164,11 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
 
                 <div class="form-group"><label>Título</label><input id="updateTitle" type="text" maxlength="220"></div>
                 <div class="form-group"><label>Contenido</label><textarea id="updateBody" rows="4" maxlength="1200"></textarea></div>
+                <div class="form-group"><label>Imagen (opcional)</label><input id="updateImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></div>
+                <div id="updateImagePreview" style="display: none; margin-top: 1rem;">
+                    <p class="text-muted">Imagen previa:</p>
+                    <img id="updateImagePreviewImg" src="" alt="Vista previa" style="max-width: 300px; border-radius: 8px; margin-top: 0.5rem;">
+                </div>
 
                 <div class="d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap;">
                     <button class="btn btn-primary" type="button" onclick="saveHomepageUpdate()" id="updateSaveButton">Guardar publicación</button>
@@ -321,6 +326,12 @@ function resetUpdateForm() {
     document.getElementById('updateActive').value = '1';
     document.getElementById('updateTitle').value = '';
     document.getElementById('updateBody').value = '';
+    document.getElementById('updateImage').value = '';
+
+    const preview = document.getElementById('updateImagePreview');
+    if (preview) {
+        preview.style.display = 'none';
+    }
 
     const button = document.getElementById('updateSaveButton');
     if (button) {
@@ -341,6 +352,16 @@ function fillUpdateForm(update) {
     document.getElementById('updateActive').value = Number(update.is_active) ? '1' : '0';
     document.getElementById('updateTitle').value = update.title || '';
     document.getElementById('updateBody').value = update.body || '';
+    document.getElementById('updateImage').value = '';
+
+    const preview = document.getElementById('updateImagePreview');
+    const previewImg = document.getElementById('updateImagePreviewImg');
+    if (update.image_url && preview && previewImg) {
+        previewImg.src = update.image_url;
+        preview.style.display = 'block';
+    } else if (preview) {
+        preview.style.display = 'none';
+    }
 
     const button = document.getElementById('updateSaveButton');
     if (button) {
@@ -406,25 +427,42 @@ async function loadHomepageUpdatesAdmin() {
 }
 
 async function saveHomepageUpdate() {
-    const payload = {
-        id: Number(document.getElementById('updateEditId').value || 0),
-        update_type: document.getElementById('updateType').value,
-        sort_order: Number(document.getElementById('updateOrder').value || 0),
-        is_active: document.getElementById('updateActive').value === '1',
-        title: document.getElementById('updateTitle').value,
-        body: document.getElementById('updateBody').value
-    };
-
-    const box = document.getElementById('updateResult');
-    const res = await apiCall('/admin_supply.php?action=updates-save', 'POST', payload);
-    if (!res || !res.success) {
-        if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible guardar')}</div>`;
-        return;
+    // Use FormData to support file uploads
+    const formData = new FormData();
+    formData.append('id', Number(document.getElementById('updateEditId').value || 0));
+    formData.append('update_type', document.getElementById('updateType').value);
+    formData.append('sort_order', Number(document.getElementById('updateOrder').value || 0));
+    formData.append('is_active', document.getElementById('updateActive').value === '1');
+    formData.append('title', document.getElementById('updateTitle').value);
+    formData.append('body', document.getElementById('updateBody').value);
+    
+    const imageInput = document.getElementById('updateImage');
+    if (imageInput && imageInput.files.length > 0) {
+        formData.append('image', imageInput.files[0]);
     }
 
-    if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Publicación guardada')}</div>`;
-    resetUpdateForm();
-    loadHomepageUpdatesAdmin();
+    const box = document.getElementById('updateResult');
+    try {
+        const response = await fetch('/admin_supply.php?action=updates-save', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        const res = await response.json();
+        
+        if (!res || !res.success) {
+            if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible guardar')}</div>`;
+            return;
+        }
+        
+        if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Publicación guardada')}</div>`;
+        resetUpdateForm();
+        loadHomepageUpdatesAdmin();
+    } catch (error) {
+        if (box) box.innerHTML = `<div class="alert alert-error">Error de conexión: ${escapeHtml(error.message)}</div>`;
+    }
 }
 
 async function deleteHomepageUpdate(id) {
@@ -1026,6 +1064,24 @@ document.addEventListener('DOMContentLoaded', function () {
     if (supplierInput) {
         supplierInput.addEventListener('change', loadMappedProductsBySupplier);
         supplierInput.addEventListener('blur', loadMappedProductsBySupplier);
+    }
+
+    // Add file input preview handler for homepage update images
+    const imageInput = document.getElementById('updateImage');
+    if (imageInput) {
+        imageInput.addEventListener('change', function (e) {
+            const preview = document.getElementById('updateImagePreview');
+            const previewImg = document.getElementById('updateImagePreviewImg');
+            
+            if (e.target.files && e.target.files[0] && preview && previewImg) {
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    previewImg.src = event.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(e.target.files[0]);
+            }
+        });
     }
 });
 </script>

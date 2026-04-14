@@ -249,6 +249,9 @@ function homepage_update_label($type) {
                 <div class="promo-track" data-promo-track>
                     <?php foreach ($homepageUpdates as $update): ?>
                         <article class="promo-slide" data-promo-slide>
+                            <?php if (!empty($update['image_url'])): ?>
+                                <img src="<?php echo htmlspecialchars($update['image_url'], ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($update['title'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="promo-image">
+                            <?php endif; ?>
                             <span class="promo-kicker"><?php echo htmlspecialchars(homepage_update_label($update['update_type'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span>
                             <h3><?php echo htmlspecialchars((string)($update['title'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></h3>
                             <p><?php echo htmlspecialchars((string)($update['body'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></p>
