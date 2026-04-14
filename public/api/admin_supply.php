@@ -48,18 +48,43 @@ function is_valid_numeric_sku_admin_supply(string $sku): bool {
     return (bool)preg_match('/^\d{5}$/', $sku);
 }
 
+function normalized_sku_exists_in_table_admin_supply($pdo, string $table, string $sku, int $excludeId = 0): bool {
+    if ($sku === '') {
+        return false;
+    }
+
+    if (!in_array($table, ['products', 'marketplace_ce_products'], true)) {
+        return false;
+    }
+
+    try {
+        if ($table === 'marketplace_ce_products' && $excludeId > 0) {
+            $stmt = $pdo->prepare("SELECT id, sku FROM marketplace_ce_products WHERE id <> ?");
+            $stmt->execute([max(0, $excludeId)]);
+        } else {
+            $stmt = $pdo->query("SELECT id, sku FROM {$table}");
+        }
+
+        $rows = $stmt ? $stmt->fetchAll() : [];
+        foreach ($rows as $row) {
+            $existingSku = normalize_sku_admin_supply($row['sku'] ?? '');
+            if ($existingSku !== '' && $existingSku === $sku) {
+                return true;
+            }
+        }
+
+        return false;
+    } catch (Exception $ignored) {
+        return false;
+    }
+}
+
 function product_sku_exists_admin_supply($pdo, string $sku): bool {
     if ($sku === '') {
         return false;
     }
 
-    try {
-        $stmt = $pdo->prepare("SELECT 1 FROM products WHERE LOWER(TRIM(COALESCE(sku, ''))) = LOWER(TRIM(?)) LIMIT 1");
-        $stmt->execute([$sku]);
-        return (bool)$stmt->fetchColumn();
-    } catch (Exception $ignored) {
-        return false;
-    }
+    return normalized_sku_exists_in_table_admin_supply($pdo, 'products', $sku);
 }
 
 function marketplace_sku_exists_admin_supply($pdo, string $sku, int $excludeId = 0): bool {
@@ -67,13 +92,14 @@ function marketplace_sku_exists_admin_supply($pdo, string $sku, int $excludeId =
         return false;
     }
 
-    try {
-        $stmt = $pdo->prepare("SELECT 1 FROM marketplace_ce_products WHERE LOWER(TRIM(COALESCE(sku, ''))) = LOWER(TRIM(?)) AND id <> ? LIMIT 1");
-        $stmt->execute([$sku, max(0, $excludeId)]);
-        return (bool)$stmt->fetchColumn();
-    } catch (Exception $ignored) {
-        return false;
-    }
+    return normalized_sku_exists_in_table_admin_supply($pdo, 'marketplace_ce_products', $sku, $excludeId);
+}
+
+function sku_usage_admin_supply($pdo, string $sku, int $excludeMarketplaceId = 0): array {
+    return [
+        'in_products' => product_sku_exists_admin_supply($pdo, $sku),
+        'in_marketplace' => marketplace_sku_exists_admin_supply($pdo, $sku, $excludeMarketplaceId),
+    ];
 }
 
 function ensure_admin_supply_tables($pdo): void {
@@ -450,11 +476,18 @@ try {
                 break;
             }
 
-            $exists = product_sku_exists_admin_supply($pdo, $sku);
+            $usage = sku_usage_admin_supply($pdo, $sku, 0);
+            $exists = $usage['in_products'] || $usage['in_marketplace'];
+            $message = 'Código disponible';
+            if ($exists) {
+                $message = $usage['in_products']
+                    ? 'Ya existe un producto con ese código'
+                    : 'Ya existe un artículo CE con ese código';
+            }
             $response = [
                 'success' => true,
                 'available' => !$exists,
-                'message' => $exists ? 'Ya existe un producto con ese código' : 'Código disponible',
+                'message' => $message,
                 'sku' => $sku
             ];
             break;
@@ -482,11 +515,18 @@ try {
                 break;
             }
 
-            $exists = marketplace_sku_exists_admin_supply($pdo, $sku, $id);
+            $usage = sku_usage_admin_supply($pdo, $sku, $id);
+            $exists = $usage['in_products'] || $usage['in_marketplace'];
+            $message = 'Código disponible';
+            if ($exists) {
+                $message = $usage['in_marketplace']
+                    ? 'Ya existe un artículo CE con ese código'
+                    : 'Ya existe un producto con ese código';
+            }
             $response = [
                 'success' => true,
                 'available' => !$exists,
-                'message' => $exists ? 'Ya existe un artículo CE con ese código' : 'Código disponible',
+                'message' => $message,
                 'sku' => $sku
             ];
             break;
@@ -519,8 +559,14 @@ try {
                 break;
             }
 
-            if (product_sku_exists_admin_supply($pdo, $sku)) {
-                $response = ['success' => false, 'message' => 'Ya existe un producto con ese código'];
+            $usage = sku_usage_admin_supply($pdo, $sku, 0);
+            if ($usage['in_products'] || $usage['in_marketplace']) {
+                $response = [
+                    'success' => false,
+                    'message' => $usage['in_products']
+                        ? 'Ya existe un producto con ese código'
+                        : 'Ese código ya está registrado en Marketplace CE'
+                ];
                 break;
             }
 
@@ -826,8 +872,14 @@ try {
                 $conditionLabel = 'Seminuevo';
             }
 
-            if (marketplace_sku_exists_admin_supply($pdo, $sku, $id)) {
-                $response = ['success' => false, 'message' => 'Ya existe un artículo CE con ese código'];
+            $usage = sku_usage_admin_supply($pdo, $sku, $id);
+            if ($usage['in_products'] || $usage['in_marketplace']) {
+                $response = [
+                    'success' => false,
+                    'message' => $usage['in_marketplace']
+                        ? 'Ya existe un artículo CE con ese código'
+                        : 'Ese código ya está registrado en productos'
+                ];
                 break;
             }
 
