@@ -465,6 +465,15 @@ function displayProductCode(rawSku) {
     return String(rawSku || '').replace(/^XLS-/i, '');
 }
 
+function displayProductLabel(rawSku, name) {
+    const code = displayProductCode(rawSku);
+    const cleanName = String(name || '').trim();
+    if (code && cleanName) {
+        return `${code} | ${cleanName}`;
+    }
+    return code || cleanName || 'Sin producto';
+}
+
 function displayClientCode(rawCode) {
     return String(rawCode || '').replace(/\D+/g, '');
 }
@@ -1071,7 +1080,7 @@ function renderPoItems() {
         box.innerHTML = '<p class="text-muted">No hay items</p>';
         return;
     }
-    box.innerHTML = '<ul>' + supplierOrderItems.map((i, idx) => `<li>${escapeHtml(i.product_name || displayProductCode(i.sku))} | ${i.quantity} | $${Number(i.estimated_cost || 0).toFixed(2)} <button class="btn btn-small btn-danger" onclick="removePoItem(${idx})">Quitar</button></li>`).join('') + '</ul>';
+    box.innerHTML = '<ul>' + supplierOrderItems.map((i, idx) => `<li>${escapeHtml(displayProductLabel(i.sku, i.product_name))} | ${i.quantity} | $${Number(i.estimated_cost || 0).toFixed(2)} <button class="btn btn-small btn-danger" onclick="removePoItem(${idx})">Quitar</button></li>`).join('') + '</ul>';
 }
 
 function removePoItem(index) {
@@ -1085,11 +1094,30 @@ async function loadSupplierProducts() {
     const productSelect = document.getElementById('spProduct');
 
     if (productSelect) {
-        const stockRes = await apiCall('/admin_supply.php?action=stock', 'GET', null, { silent: true });
-        if (stockRes && stockRes.success && Array.isArray(stockRes.items)) {
-            productSelect.innerHTML = '<option value="">Selecciona producto...</option>' + stockRes.items
-                .map((p) => `<option value="${Number(p.id)}">${escapeHtml(displayProductCode(p.sku))} | ${escapeHtml(p.name)}</option>`)
+        productSelect.innerHTML = '<option value="">Cargando productos...</option>';
+
+        const sources = [
+            { endpoint: '/admin_supply.php?action=stock', key: 'items' },
+            { endpoint: '/products.php?action=list-all', key: 'items' },
+            { endpoint: '/products.php?action=list', key: 'products' }
+        ];
+
+        let products = [];
+        for (const source of sources) {
+            const sourceRes = await apiCall(source.endpoint, 'GET', null, { silent: true });
+            const items = sourceRes && sourceRes.success && Array.isArray(sourceRes[source.key]) ? sourceRes[source.key] : [];
+            if (items.length > 0) {
+                products = items;
+                break;
+            }
+        }
+
+        if (products.length > 0) {
+            productSelect.innerHTML = '<option value="">Selecciona producto...</option>' + products
+                .map((p) => `<option value="${Number(p.id)}">${escapeHtml(displayProductLabel(p.sku, p.name))}</option>`)
                 .join('');
+        } else {
+            productSelect.innerHTML = '<option value="">No hay productos disponibles</option>';
         }
     }
 
@@ -1102,7 +1130,7 @@ async function loadSupplierProducts() {
         if (res.items.length === 0) {
             listBox.innerHTML = '<p class="text-muted">Sin asignaciones.</p>';
         } else {
-            listBox.innerHTML = '<ul>' + res.items.map((i) => `<li>${escapeHtml(i.supplier_name)} -> ${escapeHtml(displayProductCode(i.sku))} ${escapeHtml(i.product_name || '')} (${escapeHtml(i.supplier_sku || 'sin SKU')}) $${Number(i.unit_cost || 0).toFixed(2)}</li>`).join('') + '</ul>';
+            listBox.innerHTML = '<ul>' + res.items.map((i) => `<li>${escapeHtml(i.supplier_name)} -> ${escapeHtml(displayProductLabel(i.sku, i.product_name))} (${escapeHtml(i.supplier_sku || 'sin SKU')}) $${Number(i.unit_cost || 0).toFixed(2)}</li>`).join('') + '</ul>';
         }
     }
 }
@@ -1144,7 +1172,7 @@ async function loadMappedProductsBySupplier() {
     }
 
     select.innerHTML = '<option value="">Selecciona producto...</option>' + res.items.map((i) => {
-        const label = `${displayProductCode(i.sku)} | ${i.product_name} | ${i.supplier_sku || 'sin SKU prov.'}`;
+        const label = `${displayProductLabel(i.sku, i.product_name)} | ${i.supplier_sku || 'sin SKU prov.'}`;
         return `<option value="${Number(i.id)}" data-product-name="${escapeHtml(i.product_name)}" data-sku="${escapeHtml(i.sku)}">${escapeHtml(label)}</option>`;
     }).join('');
 }
@@ -1681,6 +1709,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const supplierInput = document.getElementById('poSupplier');
     if (supplierInput) {
+        supplierInput.addEventListener('input', loadMappedProductsBySupplier);
         supplierInput.addEventListener('change', loadMappedProductsBySupplier);
         supplierInput.addEventListener('blur', loadMappedProductsBySupplier);
     }

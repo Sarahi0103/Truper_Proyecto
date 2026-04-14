@@ -891,7 +891,7 @@ try {
                 $response = ['success' => true, 'items' => []];
                 break;
             }
-            $stmt = $pdo->prepare("SELECT ps.id, ps.product_id, p.sku, p.name AS product_name, ps.supplier_name, ps.supplier_sku, ps.unit_cost FROM product_suppliers ps JOIN products p ON p.id = ps.product_id WHERE ps.supplier_name = ? ORDER BY p.name ASC");
+            $stmt = $pdo->prepare("SELECT ps.id, ps.product_id, p.sku, p.name AS product_name, ps.supplier_name, ps.supplier_sku, ps.unit_cost FROM product_suppliers ps JOIN products p ON p.id = ps.product_id WHERE LOWER(TRIM(ps.supplier_name)) = LOWER(TRIM(?)) ORDER BY p.name ASC");
             $stmt->execute([$supplierName]);
             $response = ['success' => true, 'items' => $stmt->fetchAll()];
             break;
