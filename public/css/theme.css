@@ -281,11 +281,10 @@ textarea:focus,
 }
 
 .catalog-hero {
-    background:
-        linear-gradient(135deg, rgba(0, 0, 0, 0.92), rgba(20, 20, 20, 0.98));
-    color: #ffffff;
-    border: 1px solid #1f1f1f;
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    color: var(--theme-text);
+    border: 1px solid var(--theme-border);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
 }
 
 .catalog-hero h1,
@@ -298,14 +297,134 @@ textarea:focus,
     color: var(--theme-accent);
 }
 
+.catalog-hero p {
+    color: var(--theme-text-muted);
+}
+
+.catalog-hero .module-badge {
+    background: var(--theme-accent-soft);
+    border-color: rgba(255, 127, 0, 0.28);
+    color: #b45309;
+}
+
+.promo-carousel {
+    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+    color: var(--theme-text);
+    border: 1px solid var(--theme-border);
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
+}
+
+.promo-head h2,
+.promo-slide h3 {
+    color: var(--theme-text);
+}
+
+.promo-head p,
+.promo-slide p {
+    color: var(--theme-text-muted);
+}
+
+.promo-controls .btn-ghost {
+    background: #ffffff;
+    border-color: var(--theme-border);
+    color: var(--theme-text);
+}
+
+.promo-controls .btn-ghost:hover {
+    background: var(--theme-accent-soft);
+    border-color: rgba(255, 127, 0, 0.55);
+    color: #b45309;
+}
+
+.promo-viewport {
+    border-color: var(--theme-border);
+    background: #ffffff;
+}
+
+.promo-kicker {
+    background: var(--theme-accent-soft);
+    border-color: rgba(255, 127, 0, 0.45);
+    color: #b45309;
+}
+
+.promo-dot {
+    border-color: #cbd5e1;
+    background: #e2e8f0;
+}
+
+.auth-side p,
+.auth-side li {
+    color: var(--theme-text-muted);
+}
+
 :root[data-theme="dark"] .catalog-hero {
     background: linear-gradient(135deg, #121212 0%, #1a1a1a 100%);
     border-color: #2a2a2a;
 }
 
+:root[data-theme="dark"] .catalog-hero p {
+    color: #d4d4d4;
+}
+
+:root[data-theme="dark"] .catalog-hero .module-badge {
+    background: rgba(255, 138, 31, 0.18);
+    border-color: rgba(255, 138, 31, 0.4);
+    color: #ffd8b0;
+}
+
+:root[data-theme="dark"] .promo-carousel {
+    background: linear-gradient(135deg, #111111 0%, #2a2a2a 58%, #ff7f00 180%);
+    border-color: rgba(255, 127, 0, 0.35);
+    color: #ffffff;
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme="dark"] .promo-head h2,
+:root[data-theme="dark"] .promo-slide h3 {
+    color: #ffffff;
+}
+
+:root[data-theme="dark"] .promo-head p,
+:root[data-theme="dark"] .promo-slide p {
+    color: rgba(255, 255, 255, 0.88);
+}
+
+:root[data-theme="dark"] .promo-controls .btn-ghost {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.28);
+    color: #ffffff;
+}
+
+:root[data-theme="dark"] .promo-controls .btn-ghost:hover {
+    background: rgba(255, 127, 0, 0.2);
+    border-color: rgba(255, 127, 0, 0.6);
+    color: #ffffff;
+}
+
+:root[data-theme="dark"] .promo-viewport {
+    border-color: rgba(255, 255, 255, 0.16);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+:root[data-theme="dark"] .promo-kicker {
+    background: rgba(255, 127, 0, 0.28);
+    border-color: rgba(255, 127, 0, 0.55);
+    color: #fff4e6;
+}
+
+:root[data-theme="dark"] .promo-dot {
+    border-color: rgba(255, 255, 255, 0.58);
+    background: rgba(255, 255, 255, 0.18);
+}
+
 :root[data-theme="dark"] .catalog-shell {
     background: #101010;
     border-color: #2d2d2d;
+}
+
+:root[data-theme="dark"] .auth-side p,
+:root[data-theme="dark"] .auth-side li {
+    color: #d5d7dc;
 }
 
 :root[data-theme="dark"] .catalog-categories-top,
