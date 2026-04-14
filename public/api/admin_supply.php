@@ -50,7 +50,7 @@ function product_sku_exists_admin_supply($pdo, string $sku): bool {
     }
 
     try {
-        $stmt = $pdo->prepare('SELECT 1 FROM products WHERE LOWER(TRIM(COALESCE(sku, \''\'))) = LOWER(TRIM(?)) LIMIT 1');
+        $stmt = $pdo->prepare("SELECT 1 FROM products WHERE LOWER(TRIM(COALESCE(sku, ''))) = LOWER(TRIM(?)) LIMIT 1");
         $stmt->execute([$sku]);
         return (bool)$stmt->fetchColumn();
     } catch (Exception $ignored) {
