@@ -4,6 +4,7 @@ require_once '../config/config.php';
 $quoteId = (int)($_GET['quote_id'] ?? 0);
 $folio = trim((string)($_GET['folio'] ?? 'COT-000000'));
 $issuedAt = trim((string)($_GET['issued_at'] ?? date('Y-m-d H:i')));
+$issuedAtFromDbUtc = false;
 $client = trim((string)($_GET['client'] ?? 'PUBLICO'));
 $total = (float)($_GET['total'] ?? 0);
 $format = (($_GET['format'] ?? 'thermal') === 'a4') ? 'a4' : 'thermal';
@@ -31,6 +32,7 @@ if ($quoteId > 0) {
         if ($rowQuote) {
             $folio = $folio !== 'COT-000000' ? $folio : ('COT-' . str_pad((string)$quoteId, 6, '0', STR_PAD_LEFT));
             $issuedAt = !empty($rowQuote['created_at']) ? (string)$rowQuote['created_at'] : $issuedAt;
+            $issuedAtFromDbUtc = !empty($rowQuote['created_at']);
             $total = (float)($rowQuote['total_amount'] ?? $total);
 
             $decodedQuoteItems = json_decode((string)($rowQuote['quote_data'] ?? '[]'), true);
@@ -57,6 +59,27 @@ if ($quoteId > 0) {
 function ticket_quote_number($value) {
     return number_format((float)$value, 2, '.', '');
 }
+
+function ticket_quote_datetime_display($value, $fromUtc = false) {
+    $raw = trim((string)$value);
+    if ($raw === '') {
+        return date('Y-m-d H:i');
+    }
+
+    try {
+        if ($fromUtc) {
+            $dt = new DateTime($raw, new DateTimeZone('UTC'));
+        } else {
+            $dt = new DateTime($raw);
+        }
+        $dt->setTimezone(new DateTimeZone('America/Mexico_City'));
+        return $dt->format('Y-m-d H:i');
+    } catch (Exception $ignored) {
+        return $raw;
+    }
+}
+
+$issuedAt = ticket_quote_datetime_display($issuedAt, $issuedAtFromDbUtc);
 
 function ticket_quote_product_code($item) {
     if (!is_array($item)) {
@@ -135,8 +158,6 @@ function ticket_quote_product_code($item) {
 <body>
 <div class="ticket">
     <div class="format-switch">
-        <a href="/ticket_quote.php?<?php echo http_build_query(['quote_id' => $quoteId, 'folio' => $folio, 'issued_at' => $issuedAt, 'client' => $client, 'total' => ticket_quote_number($total), 'items' => rawurlencode(base64_encode(json_encode($items, JSON_UNESCAPED_UNICODE))), 'format' => 'thermal', 'auto_pdf' => $autoPdf ? '1' : '0']); ?>">Térmico</a> |
-        <a href="/ticket_quote.php?<?php echo http_build_query(['quote_id' => $quoteId, 'folio' => $folio, 'issued_at' => $issuedAt, 'client' => $client, 'total' => ticket_quote_number($total), 'items' => rawurlencode(base64_encode(json_encode($items, JSON_UNESCAPED_UNICODE))), 'format' => 'a4', 'auto_pdf' => $autoPdf ? '1' : '0']); ?>">A4</a> |
         <a href="#" onclick="window.print(); return false;">Imprimir</a>
         |
         <a href="#" onclick="downloadTicketPdf(); return false;">Descargar PDF</a>

@@ -520,6 +520,7 @@ function homepage_update_label($type) {
                     const now = new Date();
                     const ticketCode = `TCK-${String(now.getTime()).slice(-8)}`;
                     const issueDate = now.toLocaleString('es-MX');
+                    const issueDateIso = now.toISOString();
                     const clientCode = document.body?.dataset?.clientCode || 'PUBLICO';
                     const safeItems = items.map(item => ({
                         name: item.name,
@@ -528,7 +529,7 @@ function homepage_update_label($type) {
                         price: Number(item.unit_price || 0)
                     }));
                     const encodedItems = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(safeItems)))));
-                    const ticketUrl = `${window.location.origin}/ticket_quote.php?folio=${encodeURIComponent(ticketCode)}&total=${encodeURIComponent(total.toFixed(2))}&items=${encodedItems}&format=thermal&auto_pdf=1`;
+                    const ticketUrl = `${window.location.origin}/ticket_quote.php?folio=${encodeURIComponent(ticketCode)}&issued_at=${encodeURIComponent(issueDateIso)}&client=${encodeURIComponent(clientCode)}&total=${encodeURIComponent(total.toFixed(2))}&items=${encodedItems}&format=thermal&auto_pdf=1`;
 
                     let message = 'TRUPER - COTIZACION\n';
                     message += '===========================\n';
