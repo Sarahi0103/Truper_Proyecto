@@ -4,6 +4,7 @@ require_login();
 
 $user_name = htmlspecialchars($_SESSION['name'] ?? 'Cliente', ENT_QUOTES, 'UTF-8');
 $user_id = (int)$_SESSION['user_id'];
+$company_whatsapp = htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8');
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -146,7 +147,7 @@ $user_id = (int)$_SESSION['user_id'];
                     <p class="text-muted">Selecciona productos del catálogo y comparte el carrito vía WhatsApp.</p>
                     
                     <div class="alert alert-info">
-                        Tu número de empresa será usado para enviar la cotización.
+                        Las cotizaciones y dudas se envían por WhatsApp al <strong><?php echo $company_whatsapp; ?></strong>.
                     </div>
 
                     <div id="cartItems"></div>
@@ -364,7 +365,7 @@ async function shareViaWhatsApp() {
     const res = await apiCall('/client_account.php?action=whatsapp-quote', 'POST', {
         items: cart,
         total: total,
-        whatsapp_phone: ''
+        whatsapp_phone: '<?php echo $company_whatsapp; ?>'
     });
 
     if (!res || !res.success) {

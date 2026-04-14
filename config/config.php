@@ -30,9 +30,31 @@ header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-i
 // Incluir base de datos
 $pdo = include __DIR__ . '/database.php';
 
+// Contacto principal para cotizaciones y dudas por WhatsApp.
+define('COMPANY_WHATSAPP_PHONE', getenv('COMPANY_WHATSAPP_PHONE') ?: '3317915887');
+
 // Funciones de utilidad
 function sanitize($data) {
     return htmlspecialchars(trim($data), ENT_QUOTES, 'UTF-8');
+}
+
+function whatsapp_phone_digits($phone = null) {
+    $raw = $phone;
+    if ($raw === null || trim((string)$raw) === '') {
+        $raw = COMPANY_WHATSAPP_PHONE;
+    }
+
+    $digits = preg_replace('/\D+/', '', (string)$raw);
+    if ($digits === '') {
+        $digits = '3317915887';
+    }
+    return $digits;
+}
+
+function whatsapp_url($message, $phone = null) {
+    $digits = whatsapp_phone_digits($phone);
+    $encoded = rawurlencode((string)$message);
+    return "https://wa.me/{$digits}?text={$encoded}";
 }
 
 function validate_email($email) {

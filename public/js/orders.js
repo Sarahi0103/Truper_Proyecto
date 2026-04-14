@@ -4,8 +4,7 @@
 
 let currentCart = [];
 let currentTotal = 0;
-let selectedOrderId = null;
-const ORDERS_IS_ADMIN = !!window.TRUPER_ORDERS_IS_ADMIN;
+const COMPANY_WHATSAPP = String(window.TRUPER_COMPANY_WHATSAPP || '3317915887');
 
 function displayProductCode(rawSku) {
     return String(rawSku || '').replace(/^\s*XLS-/i, '').trim();
@@ -142,61 +141,35 @@ async function createOrder() {
     const specialEvent = document.getElementById('specialEvent')?.value || null;
     const notes = document.getElementById('orderNotes')?.value || null;
     
+    const quoteItems = currentCart.map(item => ({
+        product_id: item.productId,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity
+    }));
+
     const orderData = {
-        items: currentCart,
+        items: quoteItems,
+        total: currentTotal,
+        whatsapp_phone: COMPANY_WHATSAPP,
         is_wholesale: isWholesale,
         special_event: specialEvent,
         notes: notes
     };
     
-    const response = await apiCall('/orders.php?action=create', 'POST', orderData);
+    const response = await apiCall('/client_account.php?action=whatsapp-quote', 'POST', orderData);
     
     if (response && response.success) {
-        showAlert(response.message, 'success');
-        if (response.ticket_url) {
-            window.open(response.ticket_url, '_blank');
+        showAlert('Cotizacion enviada. Abriendo WhatsApp...', 'success');
+        if (response.whatsapp_url) {
+            window.open(response.whatsapp_url, '_blank');
         }
         currentCart = [];
         updateCartUI();
-        
-        setTimeout(() => {
-            window.location.href = '/orders.php';
-        }, 1500);
-    }
-}
-
-/**
- * Registrar pago
- */
-async function recordPayment(orderId) {
-    const effectiveOrderId = orderId || selectedOrderId;
-    const amount = parseFloat(document.getElementById('paymentAmount')?.value || 0);
-    const method = document.getElementById('paymentMethod')?.value || 'cash';
-    
-    if (amount <= 0) {
-        showAlert('Ingresa un monto válido', 'warning');
         return;
     }
-    
-    const paymentData = {
-        order_id: effectiveOrderId,
-        amount: amount,
-        payment_method: method,
-        reference: document.getElementById('paymentReference')?.value || null
-    };
-    
-    const response = await apiCall('/orders.php?action=payment', 'POST', paymentData);
-    
-    if (response && response.success) {
-        showAlert(response.message, 'success');
-        document.getElementById('paymentForm').reset();
-        closeModal('paymentModal');
-        
-        // Recargar información de la orden
-        setTimeout(() => {
-            location.reload();
-        }, 1000);
-    }
+
+    showAlert((response && response.message) ? response.message : 'No se pudo crear la cotizacion', 'error');
 }
 
 /**
@@ -226,11 +199,6 @@ function filterOrders() {
             row.style.display = 'none';
         }
     });
-}
-
-function openPaymentModal(orderId) {
-    selectedOrderId = orderId;
-    openModal('paymentModal');
 }
 
 function searchOrders() {
@@ -298,10 +266,9 @@ async function loadOrders() {
             <td>${order.order_number}</td>
             <td>${formatDate(order.created_at)}</td>
             <td>${formatCurrency(order.total_amount)}</td>
-            <td>${getStatusLabel(order.payment_status)}</td>
+            <td>WhatsApp</td>
             <td>${getStatusLabel(order.status)}</td>
             <td>
-                ${ORDERS_IS_ADMIN ? `<button class="btn btn-small btn-secondary" onclick="openPaymentModal(${order.id})">Pagar</button>` : ''}
                 <a class="btn btn-small btn-primary" href="/ticket_client.php?id=${order.id}" target="_blank">Ticket</a>
             </td>
         </tr>

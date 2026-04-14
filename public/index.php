@@ -176,6 +176,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
             <div class="module-badge module-main"><span class="module-glyph">CT</span> Catálogo principal</div>
             <h1>Catálogo Truper</h1>
             <p>Visualización ágil, sencilla y eficaz con precio, stock, variantes e información técnica.</p>
+            <p class="text-muted" style="margin-top: 8px;">Cotizaciones y dudas por WhatsApp: <strong><?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?></strong></p>
         </section>
 
         <section class="catalog-shell">
@@ -297,7 +298,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
             </div>
             <div class="btn-group" style="flex-direction: column; gap: 8px;">
                 <button id="printTicket" class="btn btn-primary">⬇️ Descargar Ticket</button>
-                <button id="shareWhatsApp" class="btn btn-secondary">📱 Compartir por WhatsApp</button>
+                <button id="shareWhatsApp" class="btn btn-secondary">📱 Enviar cotización por WhatsApp</button>
                 <button id="clearCart" class="btn btn-ghost">🗑️ Vaciar Carrito</button>
             </div>
         </div>
@@ -312,6 +313,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
     <script>
         // Compartir por WhatsApp
         document.addEventListener('DOMContentLoaded', function() {
+            const companyWhatsApp = '<?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?>';
             const shareBtn = document.getElementById('shareWhatsApp');
             if (shareBtn) {
                 shareBtn.addEventListener('click', function() {
@@ -322,14 +324,14 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                     }
 
                     const total = items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
-                    let message = 'Solicito cotización de los siguientes productos:\\n\\n';
+                    let message = 'Hola, solicito cotización de los siguientes productos:\\n\\n';
                     items.forEach(item => {
                         message += `• ${item.quantity} x ${item.name}\\n`;
                     });
-                    message += `\\nTotal estimado: $${total.toFixed(2)}\\n\\n¿Pueden confirmar disponibilidad y tiempo de entrega?`;
+                    message += `\\nTotal estimado: $${total.toFixed(2)}\\n\\nQuedo atento(a) a disponibilidad y tiempo de entrega.`;
 
                     const encodedMsg = encodeURIComponent(message);
-                    const whatsappUrl = `https://wa.me/?text=${encodedMsg}`;
+                    const whatsappUrl = `https://wa.me/${companyWhatsApp}?text=${encodedMsg}`;
                     window.open(whatsappUrl, '_blank');
                 });
             }

@@ -43,7 +43,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
             <div class="d-flex justify-between align-center">
                 <h1>Gestión de Pedidos</h1>
                 <a href="#newOrder" onclick="document.querySelector('[data-tab=\'newOrder\']').click(); return false;" class="btn btn-primary">
-                    ➕ Nuevo Pedido
+                    ➕ Nueva Cotización
                 </a>
             </div>
 
@@ -56,7 +56,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
             <!-- MIS ÓRDENES -->
             <div id="myOrders" class="tab-content">
                 <div class="card">
-                    <div class="card-header">Mi Historial de Pedidos</div>
+                    <div class="card-header">Mi Historial de Solicitudes</div>
                     <div class="card-body">
                         <div style="margin-bottom: 1rem;">
                             <input type="text" id="orderSearch" placeholder="Buscar orden..." onkeyup="searchOrders()" style="padding: 0.5rem; width: 200px;">
@@ -76,8 +76,8 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
                                 <tr>
                                     <th>Número de Orden</th>
                                     <th>Fecha</th>
-                                    <th>Total</th>
-                                    <th>Estado Pago</th>
+                                    <th>Total estimado</th>
+                                    <th>Seguimiento</th>
                                     <th>Estado Orden</th>
                                     <th>Acciones</th>
                                 </tr>
@@ -95,8 +95,11 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
             <!-- CREAR NUEVO PEDIDO -->
             <div id="newOrder" class="tab-content active">
                 <div class="card">
-                    <div class="card-header">Crear Nuevo Pedido</div>
+                    <div class="card-header">Crear Nueva Cotización</div>
                     <div class="card-body">
+                        <div class="alert alert-info" style="margin-bottom: 1rem;">
+                            Este portal no procesa pagos en línea. Las cotizaciones y dudas se envían por WhatsApp al <strong><?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?></strong>.
+                        </div>
                         <div class="form-section">
                             <h3>Seleccionar Productos</h3>
                             <input type="text" id="productSearch" placeholder="Buscar productos..." onkeyup="searchProducts()" style="padding: 0.5rem; margin-bottom: 1rem; width: 100%;">
@@ -157,7 +160,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
                                     <span>$0</span>
                                 </div>
                                 <div class="summary-row total">
-                                    <span>Total a Pagar:</span>
+                                    <span>Total estimado:</span>
                                     <span id="cartTotal">$0</span>
                                 </div>
                             </div>
@@ -182,7 +185,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
 
                             <div class="btn-group mt-4">
                                 <button type="button" class="btn btn-secondary" onclick="clearCart()">Limpiar Carrito</button>
-                                <button type="button" class="btn btn-primary" onclick="createOrder()">Confirmar Pedido</button>
+                                <button type="button" class="btn btn-primary" onclick="createOrder()">Enviar Cotización por WhatsApp</button>
                             </div>
                         </div>
                     </div>
@@ -190,41 +193,6 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
             </div>
         </div>
     </main>
-
-    <!-- MODAL DE PAGO -->
-    <div id="paymentModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">Registrar Pago</h2>
-                <button class="modal-close" onclick="closeModal('paymentModal')">×</button>
-            </div>
-            <div class="modal-body">
-                <form id="paymentForm">
-                    <div class="form-group">
-                        <label>Monto a Pagar</label>
-                        <input type="number" id="paymentAmount" placeholder="0.00" min="0" step="0.01" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Método de Pago</label>
-                        <select id="paymentMethod" required>
-                            <option value="cash">Efectivo</option>
-                            <option value="card">Tarjeta</option>
-                            <option value="transfer">Transferencia</option>
-                            <option value="check">Cheque</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Número de Referencia (Opcional)</label>
-                        <input type="text" id="paymentReference" placeholder="Ej: número de cheque o transferencia">
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('paymentModal')">Cancelar</button>
-                <button type="button" class="btn btn-primary" onclick="recordPayment()">Registrar Pago</button>
-            </div>
-        </div>
-    </div>
 
     <!-- FOOTER -->
     <footer>
@@ -245,7 +213,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
 
     <script src="js/main.js"></script>
     <script>
-        window.TRUPER_ORDERS_IS_ADMIN = <?php echo (($_SESSION['role'] ?? '') === 'admin') ? 'true' : 'false'; ?>;
+        window.TRUPER_COMPANY_WHATSAPP = '<?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?>';
     </script>
     <script src="js/orders.js"></script>
     <script src="js/barcode-scanner.js"></script>
