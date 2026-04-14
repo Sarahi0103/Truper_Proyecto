@@ -88,7 +88,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <p class="text-muted">Registra nuevos productos y opcionalmente sube su imagen.</p>
 
                 <div class="grid grid-3">
-                    <div class="form-group"><label>Código del producto (5 números)</label><input id="newProductSku" type="text" maxlength="5" inputmode="numeric" pattern="\d{5}" placeholder="Ej. 23032"></div>
+                    <div class="form-group"><label>Código del producto (5 números)</label><input id="newProductSku" type="text" maxlength="5" inputmode="numeric" pattern="\d{5}" placeholder="Ej. 23032"><small id="newProductSkuStatus" class="text-muted">Debe ser único y de 5 números.</small></div>
                     <div class="form-group"><label>Nombre</label><input id="newProductName" type="text" maxlength="255"></div>
                     <div class="form-group">
                         <label>Categorías (selección múltiple)</label>
@@ -398,7 +398,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <input type="hidden" id="marketplaceEditId" value="">
 
                 <div class="grid grid-3">
-                    <div class="form-group"><label>SKU CE (5 números)</label><input id="marketplaceSku" type="text" maxlength="5" inputmode="numeric" pattern="\d{5}" placeholder="Ej. 24061"></div>
+                    <div class="form-group"><label>SKU CE (5 números)</label><input id="marketplaceSku" type="text" maxlength="5" inputmode="numeric" pattern="\d{5}" placeholder="Ej. 24061"><small id="marketplaceSkuStatus" class="text-muted">Debe ser único y de 5 números.</small></div>
                     <div class="form-group"><label>Nombre</label><input id="marketplaceName" type="text" maxlength="220"></div>
                     <div class="form-group">
                         <label>Condición</label>
@@ -467,6 +467,66 @@ function displayProductCode(rawSku) {
 
 function normalizeNumericSku(rawValue) {
     return String(rawValue || '').replace(/\D+/g, '').slice(0, 5);
+}
+
+const skuCheckVersion = { product: 0, marketplace: 0 };
+
+function setSkuStatus(statusId, message, tone = 'muted') {
+    const el = document.getElementById(statusId);
+    if (!el) return;
+    el.textContent = message;
+    if (tone === 'success') {
+        el.style.color = '#15803d';
+    } else if (tone === 'error') {
+        el.style.color = '#b91c1c';
+    } else if (tone === 'warning') {
+        el.style.color = '#b45309';
+    } else {
+        el.style.color = 'var(--ui-text-muted)';
+    }
+}
+
+async function validateSkuAvailability(kind) {
+    const isMarketplace = kind === 'marketplace';
+    const skuInput = document.getElementById(isMarketplace ? 'marketplaceSku' : 'newProductSku');
+    const statusId = isMarketplace ? 'marketplaceSkuStatus' : 'newProductSkuStatus';
+    const sku = normalizeNumericSku(skuInput?.value || '');
+    if (skuInput) skuInput.value = sku;
+
+    if (!sku) {
+        setSkuStatus(statusId, 'Debe ser único y de 5 números.', 'muted');
+        return false;
+    }
+
+    if (!/^\d{5}$/.test(sku)) {
+        setSkuStatus(statusId, 'El código debe tener exactamente 5 números.', 'warning');
+        return false;
+    }
+
+    setSkuStatus(statusId, 'Verificando disponibilidad...', 'muted');
+    const version = ++skuCheckVersion[kind];
+    const currentId = isMarketplace ? Number(document.getElementById('marketplaceEditId').value || 0) : 0;
+    const endpoint = isMarketplace
+        ? `/admin_supply.php?action=marketplace-sku-check&sku=${encodeURIComponent(sku)}&id=${encodeURIComponent(currentId)}`
+        : `/admin_supply.php?action=product-sku-check&sku=${encodeURIComponent(sku)}`;
+
+    const check = await apiCall(endpoint, 'GET', null, { silent: true });
+    if (version !== skuCheckVersion[kind]) {
+        return false;
+    }
+
+    if (!check || !check.success) {
+        setSkuStatus(statusId, 'No se pudo validar el código. Intenta de nuevo.', 'warning');
+        return false;
+    }
+
+    if (check.available === false) {
+        setSkuStatus(statusId, check.message || 'Código ya registrado.', 'error');
+        return false;
+    }
+
+    setSkuStatus(statusId, 'Código disponible.', 'success');
+    return true;
 }
 
 function displayProductLabel(rawSku, name) {
@@ -1505,14 +1565,15 @@ async function createProductByAdmin() {
         if (box) {
             box.innerHTML = '<div class="alert alert-error">El código del producto debe tener exactamente 5 números.</div>';
         }
+        setSkuStatus('newProductSkuStatus', 'El código debe tener exactamente 5 números.', 'warning');
         return;
     }
 
-    const skuCheck = await apiCall(`/admin_supply.php?action=product-sku-check&sku=${encodeURIComponent(normalizedSku)}`, 'GET', null, { silent: true });
-    if (!skuCheck || !skuCheck.success || skuCheck.available === false) {
+    const skuOk = await validateSkuAvailability('product');
+    if (!skuOk) {
         const box = document.getElementById('productCreateResult');
         if (box) {
-            box.innerHTML = `<div class="alert alert-error">${escapeHtml((skuCheck && skuCheck.message) ? skuCheck.message : 'Ese código de producto ya existe.')}</div>`;
+            box.innerHTML = '<div class="alert alert-error">No fue posible guardar: código inválido o duplicado.</div>';
         }
         return;
     }
@@ -1574,6 +1635,7 @@ function resetMarketplaceForm() {
     if (saveBtn) saveBtn.textContent = 'Guardar artículo CE';
     const box = document.getElementById('marketplaceResult');
     if (box) box.innerHTML = '';
+    setSkuStatus('marketplaceSkuStatus', 'Debe ser único y de 5 números.', 'muted');
 }
 
 function fillMarketplaceForm(item) {
@@ -1599,6 +1661,7 @@ function fillMarketplaceForm(item) {
 
     const saveBtn = document.getElementById('marketplaceSaveButton');
     if (saveBtn) saveBtn.textContent = 'Actualizar artículo CE';
+    validateSkuAvailability('marketplace');
 }
 
 async function loadMarketplaceCeAdmin() {
@@ -1664,17 +1727,18 @@ async function saveMarketplaceCeByAdmin() {
     if (!/^\d{5}$/.test(normalizedSku)) {
         const box = document.getElementById('marketplaceResult');
         if (box) box.innerHTML = '<div class="alert alert-error">El código SKU CE debe tener exactamente 5 números.</div>';
+        setSkuStatus('marketplaceSkuStatus', 'El código debe tener exactamente 5 números.', 'warning');
+        return;
+    }
+
+    const skuOk = await validateSkuAvailability('marketplace');
+    if (!skuOk) {
+        const box = document.getElementById('marketplaceResult');
+        if (box) box.innerHTML = '<div class="alert alert-error">No fue posible guardar: código inválido o duplicado.</div>';
         return;
     }
 
     const currentId = Number(document.getElementById('marketplaceEditId').value || 0);
-    const skuCheck = await apiCall(`/admin_supply.php?action=marketplace-sku-check&sku=${encodeURIComponent(normalizedSku)}&id=${encodeURIComponent(currentId)}`, 'GET', null, { silent: true });
-    if (!skuCheck || !skuCheck.success || skuCheck.available === false) {
-        const box = document.getElementById('marketplaceResult');
-        if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((skuCheck && skuCheck.message) ? skuCheck.message : 'Ese código SKU CE ya existe.')}</div>`;
-        return;
-    }
-
     const formData = new FormData();
     formData.append('id', currentId);
     formData.append('sku', normalizedSku);
@@ -1763,44 +1827,36 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const productSkuInput = document.getElementById('newProductSku');
     if (productSkuInput) {
+        let productSkuDebounce = null;
         productSkuInput.addEventListener('input', function () {
             productSkuInput.value = normalizeNumericSku(productSkuInput.value);
+            if (productSkuDebounce) window.clearTimeout(productSkuDebounce);
+            productSkuDebounce = window.setTimeout(() => {
+                validateSkuAvailability('product');
+            }, 220);
         });
         productSkuInput.addEventListener('blur', async function () {
-            const sku = normalizeNumericSku(productSkuInput.value || '');
-            productSkuInput.value = sku;
-            if (!sku) return;
-            if (!/^\d{5}$/.test(sku)) {
-                showAlert('El código del producto debe tener exactamente 5 números', 'warning');
-                return;
-            }
-            const check = await apiCall(`/admin_supply.php?action=product-sku-check&sku=${encodeURIComponent(sku)}`, 'GET', null, { silent: true });
-            if (check && check.success && check.available === false) {
-                showAlert(check.message || 'Ese código de producto ya existe', 'warning');
-            }
+            await validateSkuAvailability('product');
         });
     }
 
     const marketplaceSkuInput = document.getElementById('marketplaceSku');
     if (marketplaceSkuInput) {
+        let marketplaceSkuDebounce = null;
         marketplaceSkuInput.addEventListener('input', function () {
             marketplaceSkuInput.value = normalizeNumericSku(marketplaceSkuInput.value);
+            if (marketplaceSkuDebounce) window.clearTimeout(marketplaceSkuDebounce);
+            marketplaceSkuDebounce = window.setTimeout(() => {
+                validateSkuAvailability('marketplace');
+            }, 220);
         });
         marketplaceSkuInput.addEventListener('blur', async function () {
-            const sku = normalizeNumericSku(marketplaceSkuInput.value || '');
-            const currentId = Number(document.getElementById('marketplaceEditId').value || 0);
-            marketplaceSkuInput.value = sku;
-            if (!sku) return;
-            if (!/^\d{5}$/.test(sku)) {
-                showAlert('El código SKU CE debe tener exactamente 5 números', 'warning');
-                return;
-            }
-            const check = await apiCall(`/admin_supply.php?action=marketplace-sku-check&sku=${encodeURIComponent(sku)}&id=${encodeURIComponent(currentId)}`, 'GET', null, { silent: true });
-            if (check && check.success && check.available === false) {
-                showAlert(check.message || 'Ese código SKU CE ya existe', 'warning');
-            }
+            await validateSkuAvailability('marketplace');
         });
     }
+
+    setSkuStatus('newProductSkuStatus', 'Debe ser único y de 5 números.', 'muted');
+    setSkuStatus('marketplaceSkuStatus', 'Debe ser único y de 5 números.', 'muted');
 
     // Add file input preview handler for homepage update images
     const imageInput = document.getElementById('updateImage');
