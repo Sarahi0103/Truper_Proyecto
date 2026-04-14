@@ -73,6 +73,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             <button class="tab-button active" data-tab="stockTab">Stock</button>
             <button class="tab-button" data-tab="calendarTab">Calendario</button>
             <button class="tab-button" data-tab="supplierOrderTab">Orden Proveedor</button>
+            <button class="tab-button" data-tab="updatesTab">Portada</button>
             <button class="tab-button" data-tab="clientsTab">Clientes</button>
             <button class="tab-button" data-tab="historyTab">Historico</button>
         </div>
@@ -129,6 +130,52 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     <thead><tr><th>Código del producto</th><th>Producto</th><th>Categoria</th><th>Stock</th><th>Nivel Reorden</th><th>Estatus</th></tr></thead>
                     <tbody id="stockRows"><tr><td colspan="6">Cargando...</td></tr></tbody>
                 </table>
+            </div></div>
+        </section>
+
+        <section id="updatesTab" class="tab-content">
+            <div class="card mb-3"><div class="card-body">
+                <h3>Noticias y promociones de portada</h3>
+                <p class="text-muted">Administra el carrusel automático que se muestra en la página principal.</p>
+
+                <input type="hidden" id="updateEditId" value="">
+
+                <div class="grid grid-3">
+                    <div class="form-group">
+                        <label>Tipo</label>
+                        <select id="updateType">
+                            <option value="noticia">Noticia</option>
+                            <option value="promocion">Promoción</option>
+                            <option value="evento">Evento</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Orden</label>
+                        <input id="updateOrder" type="number" min="0" step="1" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Visible en portada</label>
+                        <select id="updateActive">
+                            <option value="1">Sí</option>
+                            <option value="0">No</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group"><label>Título</label><input id="updateTitle" type="text" maxlength="220"></div>
+                <div class="form-group"><label>Contenido</label><textarea id="updateBody" rows="4" maxlength="1200"></textarea></div>
+
+                <div class="d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap;">
+                    <button class="btn btn-primary" type="button" onclick="saveHomepageUpdate()" id="updateSaveButton">Guardar publicación</button>
+                    <button class="btn btn-secondary" type="button" onclick="resetUpdateForm()">Limpiar formulario</button>
+                </div>
+
+                <div id="updateResult" class="mt-3"></div>
+            </div></div>
+
+            <div class="card"><div class="card-body">
+                <h3>Publicaciones registradas</h3>
+                <div id="updatesList" class="text-muted">Cargando publicaciones...</div>
             </div></div>
         </section>
 
@@ -259,6 +306,140 @@ function displayProductCode(rawSku) {
 
 function displayClientCode(rawCode) {
     return String(rawCode || '').replace(/\D+/g, '');
+}
+
+function normalizeUpdateTypeLabel(type) {
+    if (type === 'promocion') return 'Promoción';
+    if (type === 'evento') return 'Evento';
+    return 'Noticia';
+}
+
+function resetUpdateForm() {
+    document.getElementById('updateEditId').value = '';
+    document.getElementById('updateType').value = 'noticia';
+    document.getElementById('updateOrder').value = '0';
+    document.getElementById('updateActive').value = '1';
+    document.getElementById('updateTitle').value = '';
+    document.getElementById('updateBody').value = '';
+
+    const button = document.getElementById('updateSaveButton');
+    if (button) {
+        button.textContent = 'Guardar publicación';
+    }
+
+    const box = document.getElementById('updateResult');
+    if (box) {
+        box.innerHTML = '';
+    }
+}
+
+function fillUpdateForm(update) {
+    if (!update) return;
+    document.getElementById('updateEditId').value = update.id || '';
+    document.getElementById('updateType').value = update.update_type || 'noticia';
+    document.getElementById('updateOrder').value = String(update.sort_order || 0);
+    document.getElementById('updateActive').value = Number(update.is_active) ? '1' : '0';
+    document.getElementById('updateTitle').value = update.title || '';
+    document.getElementById('updateBody').value = update.body || '';
+
+    const button = document.getElementById('updateSaveButton');
+    if (button) {
+        button.textContent = 'Actualizar publicación';
+    }
+}
+
+async function loadHomepageUpdatesAdmin() {
+    const box = document.getElementById('updatesList');
+    const res = await apiCall('/admin_supply.php?action=updates-list', 'GET', null, { silent: true });
+
+    if (!res || !res.success || !Array.isArray(res.items)) {
+        if (box) box.innerHTML = '<p class="text-muted">No fue posible cargar publicaciones.</p>';
+        return;
+    }
+
+    if (res.items.length === 0) {
+        if (box) box.innerHTML = '<p class="text-muted">No hay publicaciones registradas.</p>';
+        return;
+    }
+
+    box.innerHTML = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Título</th>
+                    <th>Orden</th>
+                    <th>Visible</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${res.items.map((item) => `
+                    <tr>
+                        <td>${escapeHtml(normalizeUpdateTypeLabel(item.update_type))}</td>
+                        <td>
+                            <strong>${escapeHtml(item.title || '')}</strong>
+                            <div class="text-muted" style="font-size: 12px; max-width: 480px;">${escapeHtml(item.body || '')}</div>
+                        </td>
+                        <td>${Number(item.sort_order || 0)}</td>
+                        <td>${Number(item.is_active) ? '<span class="badge badge-success">Sí</span>' : '<span class="badge badge-danger">No</span>'}</td>
+                        <td>
+                            <button class="btn btn-small btn-secondary" type="button" data-action="edit-update">Editar</button>
+                            <button class="btn btn-small btn-danger" type="button" onclick="deleteHomepageUpdate(${Number(item.id)})">Eliminar</button>
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+
+    const rows = box.querySelectorAll('tbody tr');
+    rows.forEach((row, idx) => {
+        const editBtn = row.querySelector('[data-action="edit-update"]');
+        const item = res.items[idx];
+        if (editBtn && item) {
+            editBtn.onclick = function () {
+                fillUpdateForm(item);
+            };
+        }
+    });
+}
+
+async function saveHomepageUpdate() {
+    const payload = {
+        id: Number(document.getElementById('updateEditId').value || 0),
+        update_type: document.getElementById('updateType').value,
+        sort_order: Number(document.getElementById('updateOrder').value || 0),
+        is_active: document.getElementById('updateActive').value === '1',
+        title: document.getElementById('updateTitle').value,
+        body: document.getElementById('updateBody').value
+    };
+
+    const box = document.getElementById('updateResult');
+    const res = await apiCall('/admin_supply.php?action=updates-save', 'POST', payload);
+    if (!res || !res.success) {
+        if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible guardar')}</div>`;
+        return;
+    }
+
+    if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Publicación guardada')}</div>`;
+    resetUpdateForm();
+    loadHomepageUpdatesAdmin();
+}
+
+async function deleteHomepageUpdate(id) {
+    if (!id) return;
+    if (!confirm('¿Deseas eliminar esta publicación de portada?')) return;
+
+    const box = document.getElementById('updateResult');
+    const res = await apiCall('/admin_supply.php?action=updates-delete', 'POST', { id: id });
+    if (!res || !res.success) {
+        if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible eliminar')}</div>`;
+        return;
+    }
+
+    if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Publicación eliminada')}</div>`;
+    loadHomepageUpdatesAdmin();
 }
 
 function resetClientForm() {
@@ -839,6 +1020,7 @@ document.addEventListener('DOMContentLoaded', function () {
     loadHistory();
     loadProductImageReferences();
     loadClients();
+    loadHomepageUpdatesAdmin();
 
     const supplierInput = document.getElementById('poSupplier');
     if (supplierInput) {

@@ -135,6 +135,59 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
         $clientTicketCode = 'PUBLICO';
     }
 }
+
+$homepageUpdates = [];
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS homepage_updates (
+        id SERIAL PRIMARY KEY,
+        update_type VARCHAR(20) NOT NULL DEFAULT 'noticia',
+        title VARCHAR(220) NOT NULL,
+        body TEXT NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        created_by INTEGER REFERENCES users(id),
+        updated_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CHECK (update_type IN ('noticia', 'promocion', 'evento'))
+    )");
+
+    $stmtUpdates = $pdo->query("SELECT update_type, title, body FROM homepage_updates WHERE is_active = true ORDER BY sort_order ASC, id DESC LIMIT 12");
+    $homepageUpdates = $stmtUpdates ? $stmtUpdates->fetchAll() : [];
+} catch (Exception $ignored) {
+    $homepageUpdates = [];
+}
+
+if (empty($homepageUpdates)) {
+    $homepageUpdates = [
+        [
+            'update_type' => 'promocion',
+            'title' => 'Combo de herramientas eléctricas con precio especial',
+            'body' => 'Consulta disponibilidad por WhatsApp y recibe confirmación de stock para entrega rápida.'
+        ],
+        [
+            'update_type' => 'evento',
+            'title' => 'Capacitación técnica para instaladores este viernes',
+            'body' => 'Incluye demostración de productos y recomendaciones de uso en material eléctrico y herrería.'
+        ],
+        [
+            'update_type' => 'noticia',
+            'title' => 'Nuevos ingresos en fontanería y cerrajería',
+            'body' => 'Ya disponibles nuevas variantes de producto con ficha técnica y precio actualizado en catálogo.'
+        ]
+    ];
+}
+
+function homepage_update_label($type) {
+    $value = strtolower(trim((string)$type));
+    if ($value === 'promocion') {
+        return 'Promoción';
+    }
+    if ($value === 'evento') {
+        return 'Evento';
+    }
+    return 'Noticia';
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -194,21 +247,13 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
 
             <div class="promo-viewport" data-promo-viewport>
                 <div class="promo-track" data-promo-track>
-                    <article class="promo-slide" data-promo-slide>
-                        <span class="promo-kicker">Promocion semanal</span>
-                        <h3>Combo de herramientas electricas con precio especial</h3>
-                        <p>Consulta disponibilidad por WhatsApp y recibe confirmación de stock para entrega rápida.</p>
-                    </article>
-                    <article class="promo-slide" data-promo-slide>
-                        <span class="promo-kicker">Evento</span>
-                        <h3>Capacitación técnica para instaladores este viernes</h3>
-                        <p>Incluye demostración de productos y recomendaciones de uso en material eléctrico y herrería.</p>
-                    </article>
-                    <article class="promo-slide" data-promo-slide>
-                        <span class="promo-kicker">Noticia</span>
-                        <h3>Nuevos ingresos en fontanería y cerrajería</h3>
-                        <p>Ya disponibles nuevas variantes de producto con ficha técnica y precio actualizado en catálogo.</p>
-                    </article>
+                    <?php foreach ($homepageUpdates as $update): ?>
+                        <article class="promo-slide" data-promo-slide>
+                            <span class="promo-kicker"><?php echo htmlspecialchars(homepage_update_label($update['update_type'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span>
+                            <h3><?php echo htmlspecialchars((string)($update['title'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></h3>
+                            <p><?php echo htmlspecialchars((string)($update['body'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></p>
+                        </article>
+                    <?php endforeach; ?>
                 </div>
             </div>
 

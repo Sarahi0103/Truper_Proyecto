@@ -79,6 +79,20 @@ function ensure_admin_supply_tables($pdo): void {
         created_by INTEGER REFERENCES users(id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS homepage_updates (
+        id SERIAL PRIMARY KEY,
+        update_type VARCHAR(20) NOT NULL DEFAULT 'noticia',
+        title VARCHAR(220) NOT NULL,
+        body TEXT NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        created_by INTEGER REFERENCES users(id),
+        updated_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CHECK (update_type IN ('noticia', 'promocion', 'evento'))
+    )");
 }
 
 function ensure_products_extra_columns($pdo): void {
@@ -551,6 +565,73 @@ try {
                 break;
             }
             $response = ['success' => true, 'images' => list_available_product_images($pdo)];
+            break;
+
+        case 'updates-list':
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $onlyActive = isset($_GET['active']) && $_GET['active'] === '1';
+            if ($onlyActive) {
+                $stmt = $pdo->query("SELECT id, update_type, title, body, sort_order, is_active, created_at, updated_at FROM homepage_updates WHERE is_active = true ORDER BY sort_order ASC, id DESC LIMIT 40");
+            } else {
+                $stmt = $pdo->query("SELECT id, update_type, title, body, sort_order, is_active, created_at, updated_at FROM homepage_updates ORDER BY sort_order ASC, id DESC LIMIT 120");
+            }
+
+            $response = ['success' => true, 'items' => $stmt->fetchAll()];
+            break;
+
+        case 'updates-save':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $id = (int)($input['id'] ?? 0);
+            $type = sanitize($input['update_type'] ?? 'noticia');
+            $title = trim((string)($input['title'] ?? ''));
+            $body = trim((string)($input['body'] ?? ''));
+            $sortOrder = (int)($input['sort_order'] ?? 0);
+            $isActive = isset($input['is_active']) ? !empty($input['is_active']) : true;
+
+            $allowedTypes = ['noticia', 'promocion', 'evento'];
+            if (!in_array($type, $allowedTypes, true)) {
+                $type = 'noticia';
+            }
+
+            if ($title === '' || $body === '') {
+                $response = ['success' => false, 'message' => 'Titulo y contenido son obligatorios'];
+                break;
+            }
+
+            if ($id > 0) {
+                $stmt = $pdo->prepare("UPDATE homepage_updates SET update_type = ?, title = ?, body = ?, sort_order = ?, is_active = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+                $stmt->execute([$type, $title, $body, $sortOrder, $isActive, $_SESSION['user_id'], $id]);
+                $response = ['success' => true, 'message' => 'Publicacion actualizada'];
+            } else {
+                $stmt = $pdo->prepare("INSERT INTO homepage_updates (update_type, title, body, sort_order, is_active, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$type, $title, $body, $sortOrder, $isActive, $_SESSION['user_id'], $_SESSION['user_id']]);
+                $response = ['success' => true, 'message' => 'Publicacion creada'];
+            }
+            break;
+
+        case 'updates-delete':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $id = (int)($input['id'] ?? 0);
+            if ($id <= 0) {
+                $response = ['success' => false, 'message' => 'Registro invalido'];
+                break;
+            }
+
+            $stmt = $pdo->prepare("DELETE FROM homepage_updates WHERE id = ?");
+            $stmt->execute([$id]);
+            $response = ['success' => true, 'message' => 'Publicacion eliminada'];
             break;
 
         case 'supplier-product-create':
