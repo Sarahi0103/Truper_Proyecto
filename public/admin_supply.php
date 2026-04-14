@@ -76,6 +76,8 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             <button class="tab-button" data-tab="updatesTab">Portada</button>
             <button class="tab-button" data-tab="clientsTab">Clientes</button>
             <button class="tab-button" data-tab="historyTab">Historico</button>
+            <button class="tab-button" data-tab="visibilityTab">Visibilidad</button>
+            <button class="tab-button" data-tab="pricesTab">Precios</button>
         </div>
 
         <section id="stockTab" class="tab-content active">
@@ -292,6 +294,57 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 </table>
             </div></div>
         </section>
+
+        <section id="visibilityTab" class="tab-content">
+            <div class="card mb-3"><div class="card-body">
+                <h3>Control de Visibilidad de Productos</h3>
+                <p class="text-muted">Marca o desmarca productos para mostrar/ocultar en el catálogo público. Los cambios aplican inmediatamente.</p>
+                <div class="form-group mt-2">
+                    <input id="visibilitySearch" type="text" class="search-input" placeholder="Buscar producto por nombre o código...">
+                </div>
+            </div></div>
+            <div class="card"><div class="card-body">
+                <div id="visibilityList" class="text-muted">Cargando productos...</div>
+            </div></div>
+        </section>
+
+        <section id="pricesTab" class="tab-content">
+            <div class="card mb-3"><div class="card-body">
+                <h3>Ajuste de Precios Masivo</h3>
+                <p class="text-muted">Aplica un cambio de precio a múltiples productos. Usa % para porcentaje o $ para monto fijo.</p>
+                
+                <div class="grid grid-3 mt-2">
+                    <div class="form-group">
+                        <label>Tipo de ajuste</label>
+                        <select id="priceAdjustType">
+                            <option value="percentage">Porcentaje (%)</option>
+                            <option value="fixed">Monto fijo ($)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Valor (ej: 10 o -5)</label>
+                        <input id="priceAdjustValue" type="number" placeholder="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button class="btn btn-primary" onclick="applyPriceAdjustment()">Calcular preview</button>
+                    </div>
+                </div>
+
+                <div class="form-group mt-2">
+                    <label>Excluir productos (separados por coma)</label>
+                    <input id="priceExcludeSkus" type="text" placeholder="TRUP-001, TRUP-002...">
+                </div>
+
+                <div id="pricePreview" class="mt-3 p-2" style="background: var(--ui-surface-soft); border-radius: 8px; display: none;">
+                    <h4>Preview del cambio:</h4>
+                    <div id="pricePreviewContent"></div>
+                    <button class="btn btn-primary mt-2" onclick="confirmPriceAdjustment()">Aplicar cambios</button>
+                    <button class="btn btn-secondary mt-2" onclick="cancelPriceAdjustment()">Cancelar</button>
+                </div>
+                <div id="priceResult" class="mt-2"></div>
+            </div></div>
+        </section>
     </div>
 </main>
 
@@ -317,6 +370,186 @@ function normalizeUpdateTypeLabel(type) {
     if (type === 'promocion') return 'Promoción';
     if (type === 'evento') return 'Evento';
     return 'Noticia';
+}
+
+// ===== PRODUCT VISIBILITY FUNCTIONS =====
+let allProductsVisibility = [];
+
+async function loadProductsVisibility() {
+    try {
+        const res = await fetch('/api/products.php?action=list-all&visibility=1');
+        const data = await res.json();
+        if (!data.success || !Array.isArray(data.items)) {
+            console.error('Failed to load products');
+            return;
+        }
+        allProductsVisibility = data.items || [];
+        renderVisibilityList(allProductsVisibility);
+    } catch (e) {
+        console.error('Error loading visibility:', e);
+    }
+}
+
+function renderVisibilityList(products) {
+    const container = document.getElementById('visibilityList');
+    if (!products || products.length === 0) {
+        container.innerHTML = '<p class="text-muted">No hay productos.</p>';
+        return;
+    }
+
+    container.innerHTML = `
+        <table style="width: 100%;">
+            <thead>
+                <tr style="border-bottom: 1px solid var(--ui-border);">
+                    <th style="padding: 0.75rem; text-align: left;">Código</th>
+                    <th style="padding: 0.75rem; text-align: left;">Producto</th>
+                    <th style="padding: 0.75rem; text-align: center;">Visible</th>
+                    <th style="padding: 0.75rem; text-align: center;">Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${products.map(p => `
+                    <tr style="border-bottom: 1px solid var(--ui-border-soft);" data-product-id="${p.id}">
+                        <td style="padding: 0.75rem;">${escapeHtml(displayProductCode(p.sku))}</td>
+                        <td style="padding: 0.75rem;">${escapeHtml(p.name)}</td>
+                        <td style="padding: 0.75rem; text-align: center;">
+                            <span class="badge ${p.is_active ? 'badge-success' : 'badge-danger'}">
+                                ${p.is_active ? 'Visible' : 'Oculto'}
+                            </span>
+                        </td>
+                        <td style="padding: 0.75rem; text-align: center;">
+                            <button class="btn btn-small ${p.is_active ? 'btn-danger' : 'btn-success'}" onclick="toggleProductVisibility(${p.id}, !${p.is_active ? 1 : 0})">
+                                ${p.is_active ? 'Ocultar' : 'Mostrar'}
+                            </button>
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function filterVisibilityProducts() {
+    const query = (document.getElementById('visibilitySearch').value || '').toLowerCase();
+    const filtered = allProductsVisibility.filter(p => {
+        const code = displayProductCode(p.sku).toLowerCase();
+        const name = (p.name || '').toLowerCase();
+        return code.includes(query) || name.includes(query);
+    });
+    renderVisibilityList(filtered);
+}
+
+async function toggleProductVisibility(productId, newState) {
+    try {
+        const res = await fetch('/api/products.php?action=toggle-visibility', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: productId, is_active: newState })
+        });
+        const data = await res.json();
+        if (data.success) {
+            const idx = allProductsVisibility.findIndex(p => p.id === productId);
+            if (idx >= 0) {
+                allProductsVisibility[idx].is_active = newState;
+                filterVisibilityProducts();
+            }
+            window.showAlert?.apply(null, [data.message || 'Actualizado', 'success']);
+        } else {
+            window.showAlert?.apply(null, ['Error: ' + (data.message || 'desconocido'), 'error']);
+        }
+    } catch (e) {
+        console.error('Error toggling visibility:', e);
+        window.showAlert?.apply(null, ['Error de conexión', 'error']);
+    }
+}
+
+// ===== PRICE ADJUSTMENT FUNCTIONS =====
+let pricePreviewData = null;
+
+async function applyPriceAdjustment() {
+    const type = document.getElementById('priceAdjustType').value;
+    const value = parseFloat(document.getElementById('priceAdjustValue').value || 0);
+    const excludeSkus = (document.getElementById('priceExcludeSkus').value || '').split(',').map(s => s.trim().toUpperCase()).filter(s => s);
+
+    if (value === 0 || isNaN(value)) {
+        document.getElementById('pricePreview').style.display = 'none';
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/products.php?action=preview-price-adjustment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type, value, exclude_skus: excludeSkus })
+        });
+        const data = await res.json();
+        if (!data.success || !Array.isArray(data.preview)) {
+            console.error('Failed to preview prices');
+            return;
+        }
+
+        pricePreviewData = { type, value, exclude_skus: excludeSkus, affected: data.count || 0 };
+        const preview = data.preview.slice(0, 5);
+        
+        const content = document.getElementById('pricePreviewContent');
+        content.innerHTML = `
+            <p><strong>Cambios a aplicar: ${pricePreviewData.affected} productos</strong></p>
+            <table style="width: 100%; font-size: 0.9rem; margin-top: 1rem;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--ui-border);">
+                        <th style="padding: 0.5rem; text-align: left;">Producto</th>
+                        <th style="padding: 0.5rem; text-align: right;">Precio actual</th>
+                        <th style="padding: 0.5rem; text-align: right;">Nuevo precio</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${preview.map(item => `
+                        <tr style="border-bottom: 1px solid var(--ui-border-soft);">
+                            <td style="padding: 0.5rem;">${escapeHtml(item.name)}</td>
+                            <td style="padding: 0.5rem; text-align: right;">$${item.current_price.toFixed(0)}</td>
+                            <td style="padding: 0.5rem; text-align: right; color: var(--color-naranja); font-weight: 600;">$${item.new_price.toFixed(0)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            ${data.count > 5 ? `<p class="text-muted" style="font-size: 0.85rem; margin-top: 1rem;">+ ${data.count - 5} productos más...</p>` : ''}
+        `;
+        document.getElementById('pricePreview').style.display = 'block';
+    } catch (e) {
+        console.error('Error generating price preview:', e);
+    }
+}
+
+function cancelPriceAdjustment() {
+    document.getElementById('pricePreview').style.display = 'none';
+    document.getElementById('priceAdjustValue').value = '';
+    pricePreviewData = null;
+}
+
+async function confirmPriceAdjustment() {
+    if (!pricePreviewData) return;
+
+    try {
+        const res = await fetch('/api/products.php?action=apply-price-adjustment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(pricePreviewData)
+        });
+        const data = await res.json();
+        const resultBox = document.getElementById('priceResult');
+        if (data.success) {
+            resultBox.innerHTML = `<div class="alert alert-success">${escapeHtml(data.message || 'Precios actualizados exitosamente')}</div>`;
+            setTimeout(() => {
+                document.getElementById('pricePreview').style.display = 'none';
+                cancelPriceAdjustment();
+            }, 2000);
+        } else {
+            resultBox.innerHTML = `<div class="alert alert-error">${escapeHtml(data.message || 'Error al actualizar precios')}</div>`;
+        }
+    } catch (e) {
+        console.error('Error applying price adjustment:', e);
+        document.getElementById('priceResult').innerHTML = '<div class="alert alert-error">Error de conexión</div>';
+    }
 }
 
 function resetUpdateForm() {
@@ -1083,7 +1316,18 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+
+    // VISIBILITY TAB
+    loadProductsVisibility();
+    document.getElementById('visibilitySearch').addEventListener('input', filterVisibilityProducts);
+
+    // PRICES TAB
+    ['priceAdjustType', 'priceAdjustValue', 'priceExcludeSkus'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', applyPriceAdjustment);
+    });
 });
+
 </script>
 </body>
 </html>

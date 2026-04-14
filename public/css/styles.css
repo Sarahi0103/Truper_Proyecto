@@ -1852,18 +1852,26 @@ footer {
 .product-actions {
     margin-top: 1rem;
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 0.7rem;
     align-items: center;
     justify-content: space-between;
 }
 
-.product-actions button {
+.product-actions button,
+.product-actions a {
     font-size: 0.9rem;
     padding: 0.7rem 0.8rem;
     border-radius: 8px;
     font-weight: 500;
     transition: var(--transition);
+}
+
+.product-media-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    cursor: pointer;
 }
 
 

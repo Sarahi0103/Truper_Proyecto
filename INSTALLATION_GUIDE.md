@@ -1,4 +1,4 @@
-# 🚀 GUÍA DE INSTALACIÓN RÁPIDA - Truper Platform
+ya # 🚀 GUÍA DE INSTALACIÓN RÁPIDA - Truper Platform
 
 ## Requisitos Previos
 - PHP 7.4+

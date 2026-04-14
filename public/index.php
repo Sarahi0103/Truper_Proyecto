@@ -319,7 +319,8 @@ function homepage_update_label($type) {
                         data-category="<?php echo htmlspecialchars($product['category'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
                         data-price="<?php echo (float)$product['unit_price']; ?>"
                         data-stock="<?php echo $stock; ?>">
-                        <div class="product-media" data-product-gallery>
+                        <a href="product_detail.php?id=<?php echo (int)$product['id']; ?>" class="product-media-link" data-product-gallery>
+                            <div class="product-media" data-product-gallery>
                             <?php foreach ($galleryImages as $idx => $galleryImage): ?>
                                 <img
                                     class="product-gallery-image <?php echo $idx === 0 ? 'active' : ''; ?>"
@@ -332,7 +333,8 @@ function homepage_update_label($type) {
                                 <button type="button" class="gallery-nav gallery-next" data-gallery-next aria-label="Imagen siguiente">&#10095;</button>
                                 <div class="gallery-counter"><span data-gallery-current>1</span>/<?php echo count($galleryImages); ?></div>
                             <?php endif; ?>
-                        </div>
+                            </div>
+                        </a>
                         <div class="product-content">
                             <div class="catalog-tag"><?php echo htmlspecialchars($product['category'] ?: 'General', ENT_QUOTES, 'UTF-8'); ?></div>
                             <div class="product-code-label"><strong>Código:</strong> <strong><?php echo htmlspecialchars($displaySku, ENT_QUOTES, 'UTF-8'); ?></strong></div>
@@ -360,6 +362,7 @@ function homepage_update_label($type) {
                                     data-sku="<?php echo htmlspecialchars($displaySku, ENT_QUOTES, 'UTF-8'); ?>"
                                     data-name="<?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?>"
                                     data-price="<?php echo (float)$product['unit_price']; ?>">Agregar</button>
+                                <a href="product_detail.php?id=<?php echo (int)$product['id']; ?>" class="btn btn-secondary btn-small">Detalles</a>
                             </div>
                         </div>
                     </article>

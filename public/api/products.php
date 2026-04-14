@@ -174,6 +174,145 @@ try {
             $response = ['success' => true, 'message' => 'Escaneo registrado'];
             break;
 
+        case 'list-all':
+            // For admin visibility control
+            require_admin();
+            $queries = [
+                ["SELECT id, name, sku, unit_price, is_active FROM products ORDER BY name LIMIT 500", []],
+                ["SELECT id, name, sku, sell_price AS unit_price, active AS is_active FROM products ORDER BY name LIMIT 500", []]
+            ];
+            $products = [];
+            foreach ($queries as $q) {
+                try {
+                    $stmt = $pdo->prepare($q[0]);
+                    $stmt->execute($q[1]);
+                    $products = $stmt->fetchAll();
+                    if (!empty($products)) break;
+                } catch (Exception $e) {}
+            }
+            $response = ['success' => true, 'items' => $products ?: []];
+            break;
+
+        case 'toggle-visibility':
+            require_admin();
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+            $id = (int)($input['id'] ?? 0);
+            $is_active = isset($input['is_active']) ? (bool)$input['is_active'] : true;
+            
+            if ($id <= 0) {
+                $response = ['success' => false, 'message' => 'ID inválido'];
+                break;
+            }
+
+            // Try multiple column names (compatibility)
+            $updated = false;
+            try {
+                $stmt = $pdo->prepare("UPDATE products SET is_active = ? WHERE id = ?");
+                $stmt->execute([$is_active ? 1 : 0, $id]);
+                $updated = $stmt->rowCount() > 0;
+            } catch (Exception $e1) {
+                try {
+                    $stmt = $pdo->prepare("UPDATE products SET active = ? WHERE id = ?");
+                    $stmt->execute([$is_active ? 1 : 0, $id]);
+                    $updated = $stmt->rowCount() > 0;
+                } catch (Exception $e2) {}
+            }
+
+            $response = [
+                'success' => $updated,
+                'message' => $updated ? ($is_active ? 'Producto visible' : 'Producto oculto') : 'No se pudo actualizar'
+            ];
+            break;
+
+        case 'preview-price-adjustment':
+            require_admin();
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            $type = $input['type'] ?? 'percentage';
+            $value = (float)($input['value'] ?? 0);
+            $exclude_skus = $input['exclude_skus'] ?? [];
+
+            $stmt = $pdo->prepare("SELECT id, name, sku, unit_price FROM products WHERE is_active = true ORDER BY name LIMIT 500");
+            if (!$stmt->execute()) {
+                $stmt = $pdo->prepare("SELECT id, name, sku, sell_price AS unit_price FROM products ORDER BY name LIMIT 500");
+                $stmt->execute();
+            }
+            $products = $stmt->fetchAll();
+
+            $preview = [];
+            $count = 0;
+            foreach ($products as $p) {
+                $sku = strtoupper(preg_replace('/^XLS-/i', '', (string)$p['sku']));
+                if (in_array($sku, array_map('strtoupper', $exclude_skus), true)) continue;
+
+                $current = (float)$p['unit_price'];
+                $new = $type === 'percentage' ? round($current * (1 + $value / 100), 0) : round($current + $value, 0);
+                
+                $count++;
+                if (count($preview) < 5) {
+                    $preview[] = [
+                        'name' => $p['name'],
+                        'current_price' => $current,
+                        'new_price' => $new
+                    ];
+                }
+            }
+
+            $response = ['success' => true, 'preview' => $preview, 'count' => $count];
+            break;
+
+        case 'apply-price-adjustment':
+            require_admin();
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            $type = $input['type'] ?? 'percentage';
+            $value = (float)($input['value'] ?? 0);
+            $exclude_skus = $input['exclude_skus'] ?? [];
+            $affect_count = 0;
+
+            $stmt = $pdo->prepare("SELECT id, sku, unit_price FROM products WHERE is_active = true");
+            if (!$stmt->execute()) {
+                $stmt = $pdo->prepare("SELECT id, sku, sell_price AS unit_price FROM products");
+                $stmt->execute();
+            }
+            $products = $stmt->fetchAll();
+
+            foreach ($products as $p) {
+                $sku = strtoupper(preg_replace('/^XLS-/i', '', (string)$p['sku']));
+                if (in_array($sku, array_map('strtoupper', $exclude_skus), true)) continue;
+
+                $current = (float)$p['unit_price'];
+                $new = $type === 'percentage' ? round($current * (1 + $value / 100), 0) : round($current + $value, 0);
+                
+                try {
+                    $upstmt = $pdo->prepare("UPDATE products SET unit_price = ? WHERE id = ?");
+                    $upstmt->execute([$new, (int)$p['id']]);
+                    $affect_count++;
+                } catch (Exception $e1) {
+                    try {
+                        $upstmt = $pdo->prepare("UPDATE products SET sell_price = ? WHERE id = ?");
+                        $upstmt->execute([$new, (int)$p['id']]);
+                        $affect_count++;
+                    } catch(Exception $e2) {}
+                }
+            }
+
+            $response = [
+                'success' => true,
+                'message' => "Precios actualizados en {$affect_count} productos",
+                'count' => $affect_count
+            ];
+            break;
+
         default:
             $response = ['success' => false, 'message' => 'Acción no reconocida'];
     }
