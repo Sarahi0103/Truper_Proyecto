@@ -1639,10 +1639,11 @@ try {
                 break;
             }
 
-            $id = (int)($input['id'] ?? 0);
-            $name = trim((string)($input['name'] ?? ''));
-            $sortOrder = (int)($input['sort_order'] ?? 0);
-            $isActive = isset($input['is_active']) ? !empty($input['is_active']) : true;
+            $id = (int)($_POST['id'] ?? ($input['id'] ?? 0));
+            $name = trim((string)($_POST['name'] ?? ($input['name'] ?? '')));
+            $sortOrder = (int)($_POST['sort_order'] ?? ($input['sort_order'] ?? 0));
+            $rawIsActive = $_POST['is_active'] ?? ($input['is_active'] ?? 1);
+            $isActive = !in_array((string)$rawIsActive, ['0', 'false', 'False', 'FALSE', ''], true);
 
             if ($name === '') {
                 $response = ['success' => false, 'message' => 'El nombre de la categoría es obligatorio'];
@@ -1692,8 +1693,8 @@ try {
                 break;
             }
 
-            $id = (int)($input['id'] ?? 0);
-            $name = trim((string)($input['name'] ?? ''));
+            $id = (int)($_POST['id'] ?? ($input['id'] ?? 0));
+            $name = trim((string)($_POST['name'] ?? ($input['name'] ?? '')));
 
             if ($id <= 0 && $name === '') {
                 $response = ['success' => false, 'message' => 'Categoría inválida'];

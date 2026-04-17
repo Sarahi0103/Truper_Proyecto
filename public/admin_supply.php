@@ -146,6 +146,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                         <div id="categoryDeleteModeBox" class="alert alert-info category-help-box">
                             Selecciona una categoría de la lista y usa el botón − para eliminarla.
                         </div>
+                        <div id="quickCategoryResult" class="text-muted" style="font-size:12px; margin-top:6px;"></div>
                     </div>
                 </div>
 
@@ -1239,8 +1240,10 @@ async function loadStock() {
 
 async function deleteCategoryQuick() {
     const select = document.getElementById('newProductCategory');
+    const quickBox = document.getElementById('quickCategoryResult');
     const selected = Array.from(select?.selectedOptions || []);
     if (selected.length === 0) {
+        if (quickBox) quickBox.innerHTML = '<span style="color:#f59e0b;">Selecciona una categoría para eliminar.</span>';
         showAlert('Selecciona una categoría para eliminar', 'warning');
         return;
     }
@@ -1271,9 +1274,11 @@ async function deleteCategoryQuick() {
     }
 
     if (removed > 0) {
+        if (quickBox) quickBox.innerHTML = `<span style="color:#22c55e;">${removed === 1 ? 'Categoría eliminada.' : `${removed} categorías eliminadas.`}</span>`;
         showAlert(removed === 1 ? 'Categoría eliminada' : `${removed} categorías eliminadas`, 'success');
     }
     if (firstError) {
+        if (quickBox) quickBox.innerHTML = `<span style="color:#f87171;">${escapeHtml(firstError)}</span>`;
         showAlert(firstError, 'error');
     }
 
@@ -1282,8 +1287,10 @@ async function deleteCategoryQuick() {
 
 async function addCategoryFromStockForm() {
     const input = document.getElementById('newCategoryQuickName');
+    const quickBox = document.getElementById('quickCategoryResult');
     const raw = (input?.value || '').trim().replace(/\s+/g, ' ');
     if (!raw) {
+        if (quickBox) quickBox.innerHTML = '<span style="color:#f59e0b;">Escribe el nombre de la nueva categoría.</span>';
         showAlert('Escribe el nombre de la nueva categoría', 'warning');
         return;
     }
@@ -1293,9 +1300,12 @@ async function addCategoryFromStockForm() {
         String(opt.value || '').trim().toLowerCase() === raw.toLowerCase()
     );
     if (alreadyExists) {
+        if (quickBox) quickBox.innerHTML = '<span style="color:#f59e0b;">Esa categoría ya existe.</span>';
         showAlert('Esa categoría ya existe', 'warning');
         return;
     }
+
+    if (quickBox) quickBox.innerHTML = '<span style="color:#cbd5e1;">Guardando categoría...</span>';
 
     const payload = {
         id: 0,
@@ -1306,6 +1316,7 @@ async function addCategoryFromStockForm() {
 
     const res = await apiCall('/admin_supply.php?action=categories-save', 'POST', payload);
     if (!res || !res.success) {
+        if (quickBox) quickBox.innerHTML = `<span style="color:#f87171;">${escapeHtml((res && res.message) ? res.message : 'No fue posible guardar la categoría.')}</span>`;
         showAlert((res && res.message) ? res.message : 'No fue posible guardar la categoría', 'error');
         return;
     }
@@ -1321,6 +1332,7 @@ async function addCategoryFromStockForm() {
     }
 
     if (input) input.value = '';
+    if (quickBox) quickBox.innerHTML = '<span style="color:#22c55e;">Categoría guardada correctamente.</span>';
     showAlert(res.message || 'Categoría guardada', 'success');
     await refreshCategoriesUi();
 
@@ -2484,6 +2496,16 @@ document.addEventListener('DOMContentLoaded', function () {
     const newProductCategory = document.getElementById('newProductCategory');
     if (newProductCategory) {
         newProductCategory.addEventListener('change', updateStockPreview);
+    }
+
+    const newCategoryQuickName = document.getElementById('newCategoryQuickName');
+    if (newCategoryQuickName) {
+        newCategoryQuickName.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                addCategoryFromStockForm();
+            }
+        });
     }
 
     ['marketplaceName', 'marketplaceCondition', 'marketplacePrice', 'marketplaceStock', 'marketplaceDescription', 'marketplaceActive'].forEach((id) => {
