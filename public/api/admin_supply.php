@@ -743,7 +743,7 @@ try {
             }
 
             $usage = sku_usage_admin_supply($pdo, $sku, 0, 0);
-            $seedConflict = $usage['in_seed'] && $id <= 0;
+            $seedConflict = $usage['in_seed'];
             if ($usage['in_products'] || $usage['in_marketplace'] || $seedConflict) {
                 $response = [
                     'success' => false,
