@@ -175,6 +175,78 @@ function insert_category_and_get_id_admin_supply($pdo, string $name, int $sortOr
     return (int)$findStmt->fetchColumn();
 }
 
+function ensure_product_categories_runtime_admin_supply($pdo): void {
+    $created = false;
+
+    // PostgreSQL style.
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS product_categories (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(120) NOT NULL UNIQUE,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            is_active BOOLEAN NOT NULL DEFAULT true,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )");
+        $created = true;
+    } catch (Exception $ignored) {
+    }
+
+    // MySQL/MariaDB style fallback.
+    if (!$created) {
+        try {
+            $pdo->exec("CREATE TABLE IF NOT EXISTS product_categories (
+                id INTEGER PRIMARY KEY AUTO_INCREMENT,
+                name VARCHAR(120) NOT NULL UNIQUE,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                is_active BOOLEAN NOT NULL DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )");
+            $created = true;
+        } catch (Exception $ignored) {
+        }
+    }
+
+    // SQLite style fallback.
+    if (!$created) {
+        try {
+            $pdo->exec("CREATE TABLE IF NOT EXISTS product_categories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )");
+            $created = true;
+        } catch (Exception $ignored) {
+        }
+    }
+
+    if (!$created) {
+        throw new Exception('No se pudo inicializar la tabla de categorías');
+    }
+
+    // Best-effort column normalization for legacy environments.
+    try { $pdo->exec("ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0"); } catch (Exception $ignored) {}
+    try { $pdo->exec("ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true"); } catch (Exception $ignored) {}
+    try { $pdo->exec("ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"); } catch (Exception $ignored) {}
+    try { $pdo->exec("ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"); } catch (Exception $ignored) {}
+
+    try {
+        $seedCount = (int)$pdo->query("SELECT COUNT(*) FROM product_categories")->fetchColumn();
+        if ($seedCount === 0) {
+            $seedStmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order, is_active) VALUES (?, ?, true)");
+            $seedStmt->execute(['Material eléctrico', 10]);
+            $seedStmt->execute(['Fontanería', 20]);
+            $seedStmt->execute(['Cerrajería', 30]);
+            $seedStmt->execute(['Herrería', 40]);
+        }
+    } catch (Exception $ignored) {
+    }
+}
+
 function ensure_admin_supply_tables($pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS supplier_calendar (
         id SERIAL PRIMARY KEY,
@@ -1663,6 +1735,8 @@ try {
                 break;
             }
 
+            ensure_product_categories_runtime_admin_supply($pdo);
+
             $onlyActive = isset($_GET['active']) && $_GET['active'] === '1';
             if ($onlyActive) {
                 $stmt = $pdo->query("SELECT id, name, sort_order, is_active FROM product_categories WHERE is_active = true ORDER BY sort_order ASC, name ASC");
@@ -1677,6 +1751,8 @@ try {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];
                 break;
             }
+
+            ensure_product_categories_runtime_admin_supply($pdo);
 
             $id = (int)($_POST['id'] ?? ($input['id'] ?? 0));
             $name = trim((string)($_POST['name'] ?? ($input['name'] ?? '')));
@@ -1729,6 +1805,8 @@ try {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];
                 break;
             }
+
+            ensure_product_categories_runtime_admin_supply($pdo);
 
             $id = (int)($_POST['id'] ?? ($input['id'] ?? 0));
             $name = trim((string)($_POST['name'] ?? ($input['name'] ?? '')));
