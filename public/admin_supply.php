@@ -107,8 +107,12 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                         </select>
                         <small class="text-muted">Usa Ctrl/Cmd para seleccionar múltiples categorías.</small>
                         <div class="d-flex align-center" style="gap:0.5rem; margin-top:0.5rem;">
-                            <input id="newCategoryQuickName" type="text" placeholder="Nueva categoría" maxlength="120" style="max-width:220px;">
-                            <button class="btn btn-small btn-secondary" type="button" onclick="addCategoryFromStockForm()">+</button>
+                            <input id="newCategoryQuickName" type="text" placeholder="Nueva categoría" maxlength="120" style="max-width:180px;">
+                            <button class="btn btn-small btn-secondary" type="button" onclick="addCategoryFromStockForm()" title="Agregar categoría">+</button>
+                            <button class="btn btn-small btn-secondary" type="button" onclick="toggleCategoryDeleteMode()" title="Eliminar categoría">−</button>
+                        </div>
+                        <div id="categoryDeleteModeBox" class="alert alert-info" style="display:none; margin-top:0.5rem; padding:0.5rem; font-size:12px;">
+                            <strong>Modo eliminar:</strong> Selecciona una categoría de la lista arriba y haz clic en −
                         </div>
                     </div>
                 </div>
@@ -116,6 +120,15 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <div class="grid grid-3">
                     <div class="form-group"><label>Precio</label><input id="newProductPrice" type="number" min="0" step="0.01" value="0"></div>
                     <div class="form-group"><label>Stock inicial</label><input id="newProductStock" type="number" min="0" step="1" value="50"></div>
+                    <div class="form-group">
+                        <label style="display:flex; align-items:center; gap:0.5rem;">
+                            <input id="newProductVisible" type="checkbox" checked>
+                            <span>Visible en tienda</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="grid grid-3">
                     <div class="form-group"><label>Nivel reorden</label><input id="newProductReorder" type="number" min="0" step="1" value="10"></div>
                 </div>
 
@@ -1151,6 +1164,40 @@ async function loadStock() {
     renderStockList();
 }
 
+function toggleCategoryDeleteMode() {
+    const box = document.getElementById('categoryDeleteModeBox');
+    const select = document.getElementById('newProductCategory');
+    if (box) {
+        const isHidden = box.style.display === 'none';
+        box.style.display = isHidden ? 'block' : 'none';
+        if (isHidden) {
+            showAlert('Selecciona la categoría que deseas eliminar y haz clic en el botón −', 'info');
+        }
+    }
+}
+
+async function deleteCategoryByAdmin() {
+    const select = document.getElementById('newProductCategory');
+    const selected = Array.from(select?.selectedOptions || []);
+    if (selected.length === 0) {
+        showAlert('Selecciona una categoría para eliminar', 'warning');
+        return;
+    }
+
+    const categoryName = selected[0].value;
+    if (!confirm(`¿Desactivar categoría "${categoryName}"?`)) return;
+
+    const res = await apiCall('/admin_supply.php?action=categories-delete', 'POST', { name: categoryName });
+    if (!res || !res.success) {
+        showAlert((res && res.message) ? res.message : 'No fue posible eliminar la categoría', 'error');
+        return;
+    }
+
+    showAlert(res.message || 'Categoría eliminada', 'success');
+    await loadProductCategories(true);
+    await loadProductCategories(false);
+}
+
 async function addCategoryFromStockForm() {
     const input = document.getElementById('newCategoryQuickName');
     const raw = (input?.value || '').trim();
@@ -1213,6 +1260,7 @@ function resetProductForm() {
     document.getElementById('newProductReorder').value = '10';
     document.getElementById('newProductDescription').value = '';
     document.getElementById('newProductImageRef').value = 'images/products/default-product.svg';
+    document.getElementById('newProductVisible').checked = true;
 
     Array.from(document.getElementById('newProductCategory').options || []).forEach((opt) => {
         opt.selected = false;
@@ -1238,6 +1286,7 @@ function fillProductFormById(id) {
     document.getElementById('newProductReorder').value = String(item.reorder_level || 10);
     document.getElementById('newProductDescription').value = item.description || '';
     document.getElementById('newProductImageRef').value = item.image_url || 'images/products/default-product.svg';
+    document.getElementById('newProductVisible').checked = Number(item.is_active) ? true : false;
 
     const categories = String(item.category || '')
         .split(',')
@@ -1843,7 +1892,8 @@ async function createProductByAdmin() {
         price: document.getElementById('newProductPrice').value || '0',
         stock_quantity: document.getElementById('newProductStock').value || '50',
         reorder_level: document.getElementById('newProductReorder').value || '10',
-        image_url: document.getElementById('newProductImageRef').value || 'images/products/default-product.svg'
+        image_url: document.getElementById('newProductImageRef').value || 'images/products/default-product.svg',
+        is_visible: Boolean(document.getElementById('newProductVisible')?.checked) ? 1 : 0
     };
 
     if (selectedCategories.length === 0) {

@@ -857,11 +857,11 @@ try {
             $name = sanitize($input['name'] ?? '');
             $category = sanitize($input['category'] ?? 'General');
             $description = sanitize($input['description'] ?? '');
-            $barcode = sanitize($input['barcode'] ?? '');
             $price = (float)($input['price'] ?? 0);
             $stockQty = (int)($input['stock_quantity'] ?? 50);
             $reorder = (int)($input['reorder_level'] ?? 10);
             $imageUrl = sanitize($input['image_url'] ?? 'images/products/default-product.svg');
+            $isVisible = (int)(isset($input['is_visible']) ? (bool)$input['is_visible'] : true);
 
             if ($sku === '' || $name === '') {
                 $response = ['success' => false, 'message' => 'SKU y nombre son obligatorios'];
@@ -904,11 +904,11 @@ try {
                     'name' => $name,
                     'category' => $category,
                     'description' => $description,
-                    'barcode' => $barcode,
                     'price' => $price,
                     'stock_quantity' => max(0, $stockQty),
                     'reorder_level' => max(0, $reorder),
-                    'image_url' => $imageUrl
+                    'image_url' => $imageUrl,
+                    'is_active' => $isVisible
                 ]);
 
                 $response = [
@@ -928,11 +928,11 @@ try {
                 'name' => $name,
                 'category' => $category,
                 'description' => $description,
-                'barcode' => $barcode,
                 'price' => $price,
                 'stock_quantity' => max(0, $stockQty),
                 'reorder_level' => max(0, $reorder),
-                'image_url' => $imageUrl
+                'image_url' => $imageUrl,
+                'is_active' => $isVisible
             ]);
 
             $response = [
@@ -1161,14 +1161,20 @@ try {
             }
 
             $id = (int)($input['id'] ?? 0);
-            if ($id <= 0) {
+            $name = trim((string)($input['name'] ?? ''));
+
+            if ($id <= 0 && $name === '') {
                 $response = ['success' => false, 'message' => 'Categoría inválida'];
                 break;
             }
 
-            // Soft delete to preserve historical references.
-            $stmt = $pdo->prepare("UPDATE product_categories SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-            $stmt->execute([$id]);
+            if ($id > 0) {
+                $stmt = $pdo->prepare("UPDATE product_categories SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+                $stmt->execute([$id]);
+            } elseif ($name !== '') {
+                $stmt = $pdo->prepare("UPDATE product_categories SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE LOWER(name) = LOWER(?)");
+                $stmt->execute([$name]);
+            }
             $response = ['success' => true, 'message' => 'Categoría desactivada'];
             break;
 
