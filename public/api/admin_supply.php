@@ -534,21 +534,49 @@ bootstrap_admin_supply_schema($pdo);
 function list_available_product_images($pdo): array {
     $images = ['images/products/default-product.svg'];
 
-    $dir = __DIR__ . '/../images/products';
-    if (is_dir($dir)) {
-        $entries = scandir($dir);
-        if (is_array($entries)) {
-            foreach ($entries as $name) {
-                if ($name === '.' || $name === '..') {
-                    continue;
-                }
-                $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
-                if (in_array($ext, ['svg', 'png', 'jpg', 'jpeg', 'webp', 'gif'], true)) {
-                    $images[] = 'images/products/' . $name;
-                }
+    $appendImage = function ($value) use (&$images) {
+        $path = trim((string)$value);
+        if ($path === '') {
+            return;
+        }
+
+        // Accept local relative paths and absolute URLs used in content updates.
+        $isUrl = preg_match('/^https?:\/\//i', $path) === 1;
+        $hasImageExt = preg_match('/\.(svg|png|jpe?g|webp|gif)(\?.*)?$/i', $path) === 1;
+        if ($isUrl || $hasImageExt || strpos($path, 'images/') === 0 || strpos($path, 'img/') === 0) {
+            $images[] = $path;
+        }
+    };
+
+    $scanDir = function (string $dirPath, string $webPrefix) use (&$appendImage) {
+        if (!is_dir($dirPath)) {
+            return;
+        }
+
+        $entries = scandir($dirPath);
+        if (!is_array($entries)) {
+            return;
+        }
+
+        foreach ($entries as $name) {
+            if ($name === '.' || $name === '..') {
+                continue;
+            }
+
+            $full = $dirPath . DIRECTORY_SEPARATOR . $name;
+            if (!is_file($full)) {
+                continue;
+            }
+
+            $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+            if (in_array($ext, ['svg', 'png', 'jpg', 'jpeg', 'webp', 'gif'], true)) {
+                $appendImage(rtrim($webPrefix, '/') . '/' . $name);
             }
         }
-    }
+    };
+
+    $scanDir(__DIR__ . '/../images/products', 'images/products');
+    $scanDir(__DIR__ . '/../images', 'images');
 
     try {
         if (db_column_exists('products', 'image_url')) {
@@ -556,11 +584,49 @@ function list_available_product_images($pdo): array {
             $rows = $stmt->fetchAll();
             foreach ($rows as $row) {
                 if (!empty($row['image_url'])) {
-                    $images[] = (string)$row['image_url'];
+                    $appendImage((string)$row['image_url']);
                 }
             }
         }
     } catch (Exception $ignored) {
+    }
+
+    try {
+        if (db_table_exists('marketplace_ce_products') && db_column_exists('marketplace_ce_products', 'image_url')) {
+            $stmt = $pdo->query("SELECT DISTINCT image_url FROM marketplace_ce_products WHERE image_url IS NOT NULL AND image_url <> '' LIMIT 500");
+            $rows = $stmt->fetchAll();
+            foreach ($rows as $row) {
+                if (!empty($row['image_url'])) {
+                    $appendImage((string)$row['image_url']);
+                }
+            }
+        }
+    } catch (Exception $ignored) {
+    }
+
+    try {
+        if (db_table_exists('homepage_updates') && db_column_exists('homepage_updates', 'image_url')) {
+            $stmt = $pdo->query("SELECT DISTINCT image_url FROM homepage_updates WHERE image_url IS NOT NULL AND image_url <> '' LIMIT 500");
+            $rows = $stmt->fetchAll();
+            foreach ($rows as $row) {
+                if (!empty($row['image_url'])) {
+                    $appendImage((string)$row['image_url']);
+                }
+            }
+        }
+    } catch (Exception $ignored) {
+    }
+
+    if (function_exists('get_xlsx_seed_products')) {
+        try {
+            $seedItems = get_xlsx_seed_products();
+            if (is_array($seedItems)) {
+                foreach ($seedItems as $seed) {
+                    $appendImage($seed['image_url'] ?? '');
+                }
+            }
+        } catch (Throwable $ignored) {
+        }
     }
 
     $images = array_values(array_unique($images));

@@ -121,10 +121,11 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     <div class="form-group"><label>Precio</label><input id="newProductPrice" type="number" min="0" step="0.01" value="0"></div>
                     <div class="form-group"><label>Stock inicial</label><input id="newProductStock" type="number" min="0" step="1" value="50"></div>
                     <div class="form-group">
-                        <label style="display:flex; align-items:center; gap:0.5rem;">
-                            <input id="newProductVisible" type="checkbox" checked>
-                            <span>Visible en tienda</span>
-                        </label>
+                        <label>Visible en tienda</label>
+                        <select id="newProductVisible">
+                            <option value="1">Sí</option>
+                            <option value="0">No</option>
+                        </select>
                     </div>
                 </div>
 
@@ -584,7 +585,7 @@ function updateStockPreview() {
         stock_quantity: document.getElementById('newProductStock')?.value || 0,
         reorder_level: document.getElementById('newProductReorder')?.value || 10,
         image_url: document.getElementById('newProductImageRef')?.value || 'images/products/default-product.svg',
-        is_active: 1
+        is_active: Number(document.getElementById('newProductVisible')?.value || 1)
     };
     host.innerHTML = renderAdminProductCard(item, 'stock', false);
 }
@@ -1199,9 +1200,18 @@ async function deleteCategoryByAdmin() {
 
 async function addCategoryFromStockForm() {
     const input = document.getElementById('newCategoryQuickName');
-    const raw = (input?.value || '').trim();
+    const raw = (input?.value || '').trim().replace(/\s+/g, ' ');
     if (!raw) {
         showAlert('Escribe el nombre de la nueva categoría', 'warning');
+        return;
+    }
+
+    const categorySelect = document.getElementById('newProductCategory');
+    const alreadyExists = Array.from(categorySelect?.options || []).some((opt) =>
+        String(opt.value || '').trim().toLowerCase() === raw.toLowerCase()
+    );
+    if (alreadyExists) {
+        showAlert('Esa categoría ya existe', 'warning');
         return;
     }
 
@@ -1222,6 +1232,15 @@ async function addCategoryFromStockForm() {
     showAlert(res.message || 'Categoría guardada', 'success');
     await loadProductCategories(true);
     await loadProductCategories(false);
+
+    if (categorySelect) {
+        const target = Array.from(categorySelect.options || []).find((opt) =>
+            String(opt.value || '').trim().toLowerCase() === raw.toLowerCase()
+        );
+        if (target) {
+            target.selected = true;
+        }
+    }
 }
 
 function renderStockList() {
@@ -1259,7 +1278,7 @@ function resetProductForm() {
     document.getElementById('newProductReorder').value = '10';
     document.getElementById('newProductDescription').value = '';
     document.getElementById('newProductImageRef').value = 'images/products/default-product.svg';
-    document.getElementById('newProductVisible').checked = true;
+    document.getElementById('newProductVisible').value = '1';
 
     Array.from(document.getElementById('newProductCategory').options || []).forEach((opt) => {
         opt.selected = false;
@@ -1286,7 +1305,7 @@ function fillProductFormById(id) {
     document.getElementById('newProductReorder').value = String(item.reorder_level || 10);
     document.getElementById('newProductDescription').value = item.description || '';
     document.getElementById('newProductImageRef').value = item.image_url || 'images/products/default-product.svg';
-    document.getElementById('newProductVisible').checked = Number(item.is_active) ? true : false;
+    document.getElementById('newProductVisible').value = Number(item.is_active) ? '1' : '0';
 
     const categories = String(item.category || '')
         .split(',')
@@ -1954,7 +1973,7 @@ async function createProductByAdmin() {
         stock_quantity: document.getElementById('newProductStock').value || '50',
         reorder_level: document.getElementById('newProductReorder').value || '10',
         image_url: document.getElementById('newProductImageRef').value || 'images/products/default-product.svg',
-        is_visible: Boolean(document.getElementById('newProductVisible')?.checked) ? 1 : 0
+        is_visible: Number(document.getElementById('newProductVisible')?.value || 1) === 1 ? 1 : 0
     };
 
     if (selectedCategories.length === 0) {
