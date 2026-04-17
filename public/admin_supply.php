@@ -498,7 +498,7 @@ function normalizeNumericSku(rawValue) {
 
 const skuCheckVersion = { product: 0, marketplace: 0 };
 
-function renderAdminProductCard(item, mode = 'stock') {
+function renderAdminProductCard(item, mode = 'stock', withActions = true) {
     const id = Number(item.id || 0);
     const sku = displayProductCode(item.sku || '');
     const name = String(item.name || 'Sin nombre');
@@ -535,7 +535,7 @@ function renderAdminProductCard(item, mode = 'stock') {
                 <div><span class="variant-pill">${escapeHtml(condition)}</span></div>
                 <span class="stock-badge ${stockClass}">${stockText}${stock}</span>
                 <div class="catalog-price">$${Math.round(unitPrice).toLocaleString('es-MX')}</div>
-                <div class="product-actions">${actions}</div>
+                ${withActions ? `<div class="product-actions">${actions}</div>` : '<div class="text-muted" style="font-size:12px;margin-top:8px;">Vista previa del diseño en portada.</div>'}
                 ${inactive ? '<div class="text-muted" style="font-size:12px;margin-top:6px;">Producto oculto/desactivado.</div>' : ''}
             </div>
         </article>
@@ -560,7 +560,7 @@ function updateStockPreview() {
         image_url: document.getElementById('newProductImageRef')?.value || 'images/products/default-product.svg',
         is_active: 1
     };
-    host.innerHTML = renderAdminProductCard(item, 'stock');
+    host.innerHTML = renderAdminProductCard(item, 'stock', false);
 }
 
 function updateMarketplacePreview() {
@@ -579,7 +579,7 @@ function updateMarketplacePreview() {
         image_url: document.getElementById('marketplaceImagePreviewImg')?.getAttribute('src') || 'images/products/default-product.svg',
         is_active: Number(document.getElementById('marketplaceActive')?.value || 1)
     };
-    host.innerHTML = renderAdminProductCard(item, 'marketplace');
+    host.innerHTML = renderAdminProductCard(item, 'marketplace', false);
 }
 
 function setSkuStatus(statusId, message, tone = 'muted') {

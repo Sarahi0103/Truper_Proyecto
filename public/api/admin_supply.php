@@ -127,6 +127,25 @@ function sku_usage_admin_supply($pdo, string $sku, int $excludeMarketplaceId = 0
     ];
 }
 
+function record_matches_normalized_sku_admin_supply($pdo, string $table, int $id, string $sku): bool {
+    if ($id <= 0 || $sku === '') {
+        return false;
+    }
+
+    if (!in_array($table, ['products', 'marketplace_ce_products'], true)) {
+        return false;
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT sku FROM {$table} WHERE id = ? LIMIT 1");
+        $stmt->execute([$id]);
+        $existingSku = normalize_sku_admin_supply((string)$stmt->fetchColumn());
+        return $existingSku !== '' && $existingSku === $sku;
+    } catch (Exception $ignored) {
+        return false;
+    }
+}
+
 function ensure_admin_supply_tables($pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS supplier_calendar (
         id SERIAL PRIMARY KEY,
@@ -428,6 +447,14 @@ function bootstrap_admin_supply_schema($pdo): void {
     } catch (Throwable $e) {
         error_log('admin_supply bootstrap warning (product columns): ' . $e->getMessage());
     }
+
+    try {
+        if (function_exists('ensure_xlsx_products_seeded')) {
+            ensure_xlsx_products_seeded();
+        }
+    } catch (Throwable $e) {
+        error_log('admin_supply bootstrap warning (xlsx seed): ' . $e->getMessage());
+    }
 }
 
 bootstrap_admin_supply_schema($pdo);
@@ -560,12 +587,14 @@ try {
 
             $id = (int)($_GET['id'] ?? 0);
             $usage = sku_usage_admin_supply($pdo, $sku, 0, $id);
-            $exists = $usage['in_products'] || $usage['in_marketplace'] || $usage['in_seed'];
+            $sameRecord = record_matches_normalized_sku_admin_supply($pdo, 'products', $id, $sku);
+            $seedConflict = $usage['in_seed'] && !$sameRecord;
+            $exists = $usage['in_products'] || $usage['in_marketplace'] || $seedConflict;
             $message = 'Código disponible';
             if ($exists) {
                 $message = $usage['in_products']
                     ? 'Ya existe un producto con ese código'
-                    : ($usage['in_marketplace']
+                        : ($usage['in_marketplace']
                         ? 'Ya existe un artículo CE con ese código'
                         : 'Ese código ya existe en el catálogo base');
             }
@@ -601,12 +630,14 @@ try {
             }
 
             $usage = sku_usage_admin_supply($pdo, $sku, $id);
-            $exists = $usage['in_products'] || $usage['in_marketplace'] || $usage['in_seed'];
+            $sameRecord = record_matches_normalized_sku_admin_supply($pdo, 'marketplace_ce_products', $id, $sku);
+            $seedConflict = $usage['in_seed'] && !$sameRecord;
+            $exists = $usage['in_products'] || $usage['in_marketplace'] || $seedConflict;
             $message = 'Código disponible';
             if ($exists) {
                 $message = $usage['in_marketplace']
                     ? 'Ya existe un artículo CE con ese código'
-                    : ($usage['in_products']
+                        : ($usage['in_products']
                         ? 'Ya existe un producto con ese código'
                         : 'Ese código ya existe en el catálogo base');
             }
@@ -647,7 +678,8 @@ try {
             }
 
             $usage = sku_usage_admin_supply($pdo, $sku, 0, 0);
-            if ($usage['in_products'] || $usage['in_marketplace'] || $usage['in_seed']) {
+            $seedConflict = $usage['in_seed'] && $id <= 0;
+            if ($usage['in_products'] || $usage['in_marketplace'] || $seedConflict) {
                 $response = [
                     'success' => false,
                     'message' => $usage['in_products']
@@ -735,7 +767,9 @@ try {
             }
 
             $usage = sku_usage_admin_supply($pdo, $sku, 0, $id);
-            if ($usage['in_products'] || $usage['in_marketplace'] || $usage['in_seed']) {
+            $sameRecord = record_matches_normalized_sku_admin_supply($pdo, 'products', $id, $sku);
+            $seedConflict = $usage['in_seed'] && !$sameRecord;
+            if ($usage['in_products'] || $usage['in_marketplace'] || $seedConflict) {
                 $response = [
                     'success' => false,
                     'message' => $usage['in_products']
@@ -1078,7 +1112,9 @@ try {
             }
 
             $usage = sku_usage_admin_supply($pdo, $sku, $id);
-            if ($usage['in_products'] || $usage['in_marketplace'] || $usage['in_seed']) {
+            $sameRecord = record_matches_normalized_sku_admin_supply($pdo, 'marketplace_ce_products', $id, $sku);
+            $seedConflict = $usage['in_seed'] && !$sameRecord;
+            if ($usage['in_products'] || $usage['in_marketplace'] || $seedConflict) {
                 $response = [
                     'success' => false,
                     'message' => $usage['in_marketplace']
