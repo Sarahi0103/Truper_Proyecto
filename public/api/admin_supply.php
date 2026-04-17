@@ -317,6 +317,177 @@ function normalize_uploaded_files(array $files): array {
     return $normalized;
 }
 
+function normalize_gallery_base_name_admin_supply(string $base): string {
+    $clean = preg_replace('/\+(FC1|E1|D1)$/i', '', $base);
+    return trim((string)$clean, '-_ ');
+}
+
+function product_gallery_dir_admin_supply(string $sku): string {
+    return __DIR__ . '/../images/products/by_code/' . $sku;
+}
+
+function list_product_gallery_images_admin_supply(string $sku): array {
+    if (!is_valid_numeric_sku_admin_supply($sku)) {
+        return [];
+    }
+
+    $dir = product_gallery_dir_admin_supply($sku);
+    if (!is_dir($dir)) {
+        return [];
+    }
+
+    $files = glob($dir . '/*.{jpg,jpeg,png,webp,gif,JPG,JPEG,PNG,WEBP,GIF}', GLOB_BRACE);
+    if (empty($files)) {
+        return [];
+    }
+
+    usort($files, function ($a, $b) {
+        $scoreA = admin_supply_image_priority_score($a);
+        $scoreB = admin_supply_image_priority_score($b);
+        if ($scoreA === $scoreB) {
+            return strcmp((string)$a, (string)$b);
+        }
+        return $scoreA <=> $scoreB;
+    });
+
+    return array_map(function ($path) use ($sku) {
+        return 'images/products/by_code/' . $sku . '/' . basename((string)$path);
+    }, $files);
+}
+
+function store_product_image_for_sku_admin_supply(array $file, string $sku): string {
+    if (!is_valid_numeric_sku_admin_supply($sku)) {
+        throw new Exception('SKU inválido para galería');
+    }
+
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        throw new Exception('Archivo de imagen inválido');
+    }
+
+    $tmp = $file['tmp_name'] ?? '';
+    if ($tmp === '' || !is_uploaded_file($tmp)) {
+        throw new Exception('Archivo de imagen inválido');
+    }
+
+    $allowedExt = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+    $original = (string)($file['name'] ?? 'image');
+    $ext = strtolower(pathinfo($original, PATHINFO_EXTENSION));
+    if (!in_array($ext, $allowedExt, true)) {
+        throw new Exception('Formato de imagen no permitido');
+    }
+
+    $targetDir = product_gallery_dir_admin_supply($sku);
+    if (!is_dir($targetDir)) {
+        mkdir($targetDir, 0775, true);
+    }
+
+    $safeBase = preg_replace('/[^a-zA-Z0-9_-]/', '-', pathinfo($original, PATHINFO_FILENAME));
+    $safeBase = normalize_gallery_base_name_admin_supply((string)$safeBase);
+    if ($safeBase === '') {
+        $safeBase = 'product';
+    }
+
+    $existing = list_product_gallery_images_admin_supply($sku);
+    $suffix = empty($existing) ? '+FC1' : '';
+
+    $filename = $safeBase . $suffix . '-' . date('YmdHis') . '-' . substr(bin2hex(random_bytes(4)), 0, 8) . '.' . $ext;
+    $targetPath = $targetDir . DIRECTORY_SEPARATOR . $filename;
+
+    if (!move_uploaded_file($tmp, $targetPath)) {
+        throw new Exception('No se pudo guardar la imagen');
+    }
+
+    return 'images/products/by_code/' . $sku . '/' . $filename;
+}
+
+function set_product_main_image_by_sku_admin_supply($pdo, string $sku, string $imageUrl): void {
+    if (!is_valid_numeric_sku_admin_supply($sku) || trim($imageUrl) === '') {
+        return;
+    }
+
+    if (!db_column_exists('products', 'image_url')) {
+        return;
+    }
+
+    try {
+        $stmt = $pdo->query('SELECT id, sku FROM products');
+        $rows = $stmt ? $stmt->fetchAll() : [];
+        foreach ($rows as $row) {
+            $existing = normalize_sku_admin_supply($row['sku'] ?? '');
+            if ($existing !== $sku) {
+                continue;
+            }
+
+            $sets = ['image_url = ?'];
+            $values = [$imageUrl];
+            if (db_column_exists('products', 'updated_at')) {
+                $sets[] = 'updated_at = CURRENT_TIMESTAMP';
+            }
+
+            $values[] = (int)($row['id'] ?? 0);
+            $upd = $pdo->prepare('UPDATE products SET ' . implode(', ', $sets) . ' WHERE id = ?');
+            $upd->execute($values);
+            break;
+        }
+    } catch (Exception $ignored) {
+    }
+}
+
+function set_gallery_cover_image_admin_supply(string $sku, string $imageWebPath): string {
+    if (!is_valid_numeric_sku_admin_supply($sku)) {
+        throw new Exception('SKU inválido');
+    }
+
+    $prefix = 'images/products/by_code/' . $sku . '/';
+    if (strpos($imageWebPath, $prefix) !== 0) {
+        throw new Exception('Imagen inválida para este SKU');
+    }
+
+    $filename = basename($imageWebPath);
+    $dir = product_gallery_dir_admin_supply($sku);
+    $fullPath = $dir . DIRECTORY_SEPARATOR . $filename;
+    if (!is_file($fullPath)) {
+        throw new Exception('No se encontró la imagen');
+    }
+
+    $currentImages = list_product_gallery_images_admin_supply($sku);
+    foreach ($currentImages as $img) {
+        $imgName = basename($img);
+        $imgFull = $dir . DIRECTORY_SEPARATOR . $imgName;
+        if (!is_file($imgFull)) {
+            continue;
+        }
+
+        $ext = pathinfo($imgName, PATHINFO_EXTENSION);
+        $base = pathinfo($imgName, PATHINFO_FILENAME);
+        $normalizedBase = normalize_gallery_base_name_admin_supply($base);
+        if ($normalizedBase !== $base) {
+            $newName = $normalizedBase . '.' . $ext;
+            $newFull = $dir . DIRECTORY_SEPARATOR . $newName;
+            if (!file_exists($newFull) && $newFull !== $imgFull) {
+                @rename($imgFull, $newFull);
+            }
+        }
+    }
+
+    $ext = pathinfo($filename, PATHINFO_EXTENSION);
+    $base = pathinfo($filename, PATHINFO_FILENAME);
+    $normalizedBase = normalize_gallery_base_name_admin_supply($base);
+    $coverName = $normalizedBase . '+FC1.' . $ext;
+    $coverFull = $dir . DIRECTORY_SEPARATOR . $coverName;
+
+    if ($coverFull !== $fullPath) {
+        if (file_exists($coverFull)) {
+            @unlink($coverFull);
+        }
+        if (!@rename($fullPath, $coverFull)) {
+            throw new Exception('No se pudo asignar la portada');
+        }
+    }
+
+    return 'images/products/by_code/' . $sku . '/' . $coverName;
+}
+
 function create_product_compatible($pdo, array $payload): void {
     $columns = [];
     $values = [];
@@ -1199,6 +1370,144 @@ try {
                 'message' => 'Imágenes cargadas correctamente',
                 'images' => list_available_product_images($pdo),
                 'uploaded' => $uploaded
+            ];
+            break;
+
+        case 'product-gallery-list':
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $sku = normalize_sku_admin_supply($_GET['sku'] ?? '');
+            if (!is_valid_numeric_sku_admin_supply($sku)) {
+                $response = ['success' => false, 'message' => 'SKU inválido'];
+                break;
+            }
+
+            $images = list_product_gallery_images_admin_supply($sku);
+            $response = [
+                'success' => true,
+                'sku' => $sku,
+                'images' => $images,
+                'cover' => $images[0] ?? null
+            ];
+            break;
+
+        case 'product-gallery-upload':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $sku = normalize_sku_admin_supply($_POST['sku'] ?? ($input['sku'] ?? ''));
+            if (!is_valid_numeric_sku_admin_supply($sku)) {
+                $response = ['success' => false, 'message' => 'SKU inválido'];
+                break;
+            }
+
+            $fileInput = $_FILES['images'] ?? $_FILES['image'] ?? null;
+            if (!$fileInput) {
+                $response = ['success' => false, 'message' => 'Selecciona una o varias imágenes'];
+                break;
+            }
+
+            $files = isset($fileInput['name']) && is_array($fileInput['name']) ? normalize_uploaded_files($fileInput) : [$fileInput];
+            $uploaded = [];
+            foreach ($files as $file) {
+                if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                    continue;
+                }
+                $uploaded[] = store_product_image_for_sku_admin_supply($file, $sku);
+            }
+
+            if (empty($uploaded)) {
+                $response = ['success' => false, 'message' => 'No se pudieron subir las imágenes'];
+                break;
+            }
+
+            $images = list_product_gallery_images_admin_supply($sku);
+            if (!empty($images)) {
+                set_product_main_image_by_sku_admin_supply($pdo, $sku, $images[0]);
+            }
+
+            $response = [
+                'success' => true,
+                'message' => 'Galería actualizada correctamente',
+                'sku' => $sku,
+                'uploaded' => $uploaded,
+                'images' => $images,
+                'cover' => $images[0] ?? null
+            ];
+            break;
+
+        case 'product-gallery-cover':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $sku = normalize_sku_admin_supply($input['sku'] ?? '');
+            $image = trim((string)($input['image'] ?? ''));
+            if (!is_valid_numeric_sku_admin_supply($sku) || $image === '') {
+                $response = ['success' => false, 'message' => 'SKU o imagen inválidos'];
+                break;
+            }
+
+            $cover = set_gallery_cover_image_admin_supply($sku, $image);
+            set_product_main_image_by_sku_admin_supply($pdo, $sku, $cover);
+
+            $response = [
+                'success' => true,
+                'message' => 'Portada asignada correctamente',
+                'sku' => $sku,
+                'cover' => $cover,
+                'images' => list_product_gallery_images_admin_supply($sku)
+            ];
+            break;
+
+        case 'product-gallery-delete':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $sku = normalize_sku_admin_supply($input['sku'] ?? '');
+            $image = trim((string)($input['image'] ?? ''));
+            if (!is_valid_numeric_sku_admin_supply($sku) || $image === '') {
+                $response = ['success' => false, 'message' => 'SKU o imagen inválidos'];
+                break;
+            }
+
+            $prefix = 'images/products/by_code/' . $sku . '/';
+            if (strpos($image, $prefix) !== 0) {
+                $response = ['success' => false, 'message' => 'Imagen inválida para este SKU'];
+                break;
+            }
+
+            $fileName = basename($image);
+            $fullPath = product_gallery_dir_admin_supply($sku) . DIRECTORY_SEPARATOR . $fileName;
+            if (!is_file($fullPath)) {
+                $response = ['success' => false, 'message' => 'No se encontró la imagen'];
+                break;
+            }
+
+            if (!@unlink($fullPath)) {
+                $response = ['success' => false, 'message' => 'No se pudo eliminar la imagen'];
+                break;
+            }
+
+            $images = list_product_gallery_images_admin_supply($sku);
+            if (!empty($images)) {
+                set_product_main_image_by_sku_admin_supply($pdo, $sku, $images[0]);
+            }
+
+            $response = [
+                'success' => true,
+                'message' => 'Imagen eliminada correctamente',
+                'sku' => $sku,
+                'images' => $images,
+                'cover' => $images[0] ?? null
             ];
             break;
 

@@ -155,6 +155,13 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label>Galería del producto (por código)</label>
+                    <small class="text-muted">Sube varias imágenes para este SKU, define portada y elimina las que no necesites.</small>
+                    <div id="productGalleryStatus" class="text-muted" style="margin-top:6px;">Escribe un código de 5 números para cargar su galería.</div>
+                    <div id="productGalleryList" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:0.6rem; margin-top:0.6rem;"></div>
+                </div>
+
                 <div class="form-group"><label>Descripción</label><textarea id="newProductDescription" rows="3"></textarea></div>
 
                 <div class="admin-preview-wrap">
@@ -1290,6 +1297,7 @@ function resetProductForm() {
     if (box) box.innerHTML = '';
     setSkuStatus('newProductSkuStatus', 'Debe ser único y de 5 números.', 'muted');
     updateStockPreview();
+    loadProductGalleryForCurrentSku();
 }
 
 function fillProductFormById(id) {
@@ -1324,6 +1332,7 @@ function fillProductFormById(id) {
         setSkuStatus('newProductSkuStatus', 'Editando producto existente.', 'muted');
     }
     updateStockPreview();
+    loadProductGalleryForCurrentSku();
 }
 
 function prepareSeedProductForEditing(id) {
@@ -1884,9 +1893,117 @@ async function deleteCategoryByAdminId(id) {
     loadProductCategories(false);
 }
 
+function getCurrentStockSkuForGallery() {
+    return normalizeNumericSku(document.getElementById('newProductSku')?.value || '');
+}
+
+function renderProductGallery(images, sku) {
+    const host = document.getElementById('productGalleryList');
+    const status = document.getElementById('productGalleryStatus');
+    if (!host || !status) return;
+
+    if (!Array.isArray(images) || images.length === 0) {
+        host.innerHTML = '';
+        status.textContent = `No hay imágenes cargadas para el código ${sku}.`;
+        return;
+    }
+
+    status.textContent = `Galería para ${sku}: ${images.length} imagen(es)`;
+    host.innerHTML = images.map((img, idx) => `
+        <div style="border:1px solid var(--ui-border); border-radius:10px; padding:0.5rem; background:var(--ui-surface-soft);">
+            <img src="${escapeHtml(img)}" alt="Imagen ${idx + 1}" style="width:100%; height:90px; object-fit:cover; border-radius:8px;">
+            <div style="display:flex; gap:0.35rem; margin-top:0.45rem; flex-wrap:wrap;">
+                <button class="btn btn-small btn-secondary" type="button" onclick="setProductGalleryCover('${escapeHtml(sku)}','${escapeHtml(img)}')">Portada</button>
+                <button class="btn btn-small btn-danger" type="button" onclick="deleteProductGalleryImage('${escapeHtml(sku)}','${escapeHtml(img)}')">Eliminar</button>
+            </div>
+            ${idx === 0 ? '<div class="text-muted" style="font-size:11px; margin-top:4px;">Portada actual</div>' : ''}
+        </div>
+    `).join('');
+}
+
+async function loadProductGalleryForCurrentSku() {
+    const sku = getCurrentStockSkuForGallery();
+    const host = document.getElementById('productGalleryList');
+    const status = document.getElementById('productGalleryStatus');
+    if (!host || !status) return;
+
+    if (!/^\d{5}$/.test(sku)) {
+        host.innerHTML = '';
+        status.textContent = 'Escribe un código de 5 números para cargar su galería.';
+        return;
+    }
+
+    const res = await apiCall(`/admin_supply.php?action=product-gallery-list&sku=${encodeURIComponent(sku)}`, 'GET', null, { silent: true });
+    if (!res || !res.success) {
+        status.textContent = (res && res.message) ? res.message : 'No se pudo cargar la galería del producto.';
+        host.innerHTML = '';
+        return;
+    }
+
+    renderProductGallery(Array.isArray(res.images) ? res.images : [], sku);
+    if (res.cover) {
+        const select = document.getElementById('newProductImageRef');
+        if (select) {
+            const exists = Array.from(select.options || []).some((opt) => opt.value === res.cover);
+            if (!exists) {
+                const option = document.createElement('option');
+                option.value = res.cover;
+                option.textContent = res.cover;
+                select.appendChild(option);
+            }
+            select.value = res.cover;
+        }
+    }
+}
+
+async function setProductGalleryCover(sku, imagePath) {
+    const box = document.getElementById('productCreateResult');
+    const res = await apiCall('/admin_supply.php?action=product-gallery-cover', 'POST', {
+        sku: sku,
+        image: imagePath
+    });
+
+    if (!res || !res.success) {
+        if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No se pudo cambiar la portada')}</div>`;
+        return;
+    }
+
+    if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Portada actualizada')}</div>`;
+    await loadProductImageReferences();
+    await loadProductGalleryForCurrentSku();
+    await loadStock();
+}
+
+async function deleteProductGalleryImage(sku, imagePath) {
+    if (!confirm('¿Eliminar esta imagen de la galería?')) return;
+    const box = document.getElementById('productCreateResult');
+    const res = await apiCall('/admin_supply.php?action=product-gallery-delete', 'POST', {
+        sku: sku,
+        image: imagePath
+    });
+
+    if (!res || !res.success) {
+        if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No se pudo eliminar la imagen')}</div>`;
+        return;
+    }
+
+    if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Imagen eliminada')}</div>`;
+    await loadProductImageReferences();
+    await loadProductGalleryForCurrentSku();
+    await loadStock();
+}
+
 async function uploadProductImages() {
     const input = document.getElementById('newProductImages');
     const resultBox = document.getElementById('productCreateResult');
+    const sku = getCurrentStockSkuForGallery();
+
+    if (!/^\d{5}$/.test(sku)) {
+        if (resultBox) {
+            resultBox.innerHTML = '<div class="alert alert-error">Primero captura un código de producto válido (5 números)</div>';
+        }
+        return;
+    }
 
     if (!input || !input.files || input.files.length === 0) {
         if (resultBox) {
@@ -1896,12 +2013,13 @@ async function uploadProductImages() {
     }
 
     const formData = new FormData();
+    formData.append('sku', sku);
     Array.from(input.files).forEach((file) => {
         formData.append('images[]', file);
     });
 
     try {
-        const response = await fetch('/api/admin_supply.php?action=product-image-upload', {
+        const response = await fetch('/api/admin_supply.php?action=product-gallery-upload', {
             method: 'POST',
             body: formData,
             headers: {
@@ -1923,10 +2041,18 @@ async function uploadProductImages() {
 
         input.value = '';
         await loadProductImageReferences();
+        await loadProductGalleryForCurrentSku();
 
         const select = document.getElementById('newProductImageRef');
-        if (select && Array.isArray(data.uploaded) && data.uploaded.length > 0) {
-            select.value = data.uploaded[0];
+        if (select && data.cover) {
+            const exists = Array.from(select.options || []).some((o) => o.value === data.cover);
+            if (!exists) {
+                const option = document.createElement('option');
+                option.value = data.cover;
+                option.textContent = data.cover;
+                select.appendChild(option);
+            }
+            select.value = data.cover;
         }
     } catch (error) {
         if (resultBox) {
@@ -2006,6 +2132,7 @@ async function createProductByAdmin() {
     resetProductForm();
     loadStock();
     loadSupplierProducts();
+    loadProductGalleryForCurrentSku();
 }
 
 function resetMarketplaceForm() {
@@ -2218,10 +2345,12 @@ document.addEventListener('DOMContentLoaded', function () {
             if (productSkuDebounce) window.clearTimeout(productSkuDebounce);
             productSkuDebounce = window.setTimeout(() => {
                 validateSkuAvailability('product');
+                loadProductGalleryForCurrentSku();
             }, 220);
         });
         productSkuInput.addEventListener('blur', async function () {
             await validateSkuAvailability('product');
+            await loadProductGalleryForCurrentSku();
         });
     }
 
@@ -2254,7 +2383,7 @@ document.addEventListener('DOMContentLoaded', function () {
         marketplaceSearch.addEventListener('input', renderMarketplaceList);
     }
 
-    ['newProductName', 'newProductPrice', 'newProductStock', 'newProductReorder', 'newProductDescription', 'newProductImageRef'].forEach((id) => {
+    ['newProductName', 'newProductPrice', 'newProductStock', 'newProductReorder', 'newProductDescription', 'newProductImageRef', 'newProductVisible'].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', updateStockPreview);
         if (el && el.tagName === 'SELECT') el.addEventListener('change', updateStockPreview);
@@ -2273,6 +2402,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     updateStockPreview();
     updateMarketplacePreview();
+    loadProductGalleryForCurrentSku();
 
     // Add file input preview handler for homepage update images
     const imageInput = document.getElementById('updateImage');
