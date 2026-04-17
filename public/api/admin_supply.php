@@ -580,18 +580,63 @@ function list_stock_products_compatible($pdo): array {
 
     $queries[] = "SELECT id, sku, name, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} FROM products ORDER BY stock_quantity ASC, name ASC LIMIT 500";
 
+    $items = [];
     foreach ($queries as $sql) {
         try {
             $stmt = $pdo->query($sql);
-            $items = $stmt ? $stmt->fetchAll() : [];
-            if (is_array($items) && count($items) > 0) {
-                return $items;
+            $rows = $stmt ? $stmt->fetchAll() : [];
+            if (is_array($rows) && count($rows) > 0) {
+                $items = $rows;
+                break;
             }
         } catch (Exception $ignored) {
         }
     }
 
-    return [];
+    $existingSkus = [];
+    foreach ($items as $row) {
+        $normalized = normalize_sku_admin_supply($row['sku'] ?? '');
+        if ($normalized !== '') {
+            $existingSkus[$normalized] = true;
+        }
+    }
+
+    if (function_exists('get_xlsx_seed_products')) {
+        try {
+            $seed = get_xlsx_seed_products();
+            if (is_array($seed)) {
+                foreach ($seed as $seedItem) {
+                    $seedSku = normalize_sku_admin_supply($seedItem['sku'] ?? '');
+                    if ($seedSku === '' || isset($existingSkus[$seedSku])) {
+                        continue;
+                    }
+
+                    $items[] = [
+                        'id' => (int)($seedItem['id'] ?? 0),
+                        'sku' => (string)($seedItem['sku'] ?? ''),
+                        'name' => (string)($seedItem['name'] ?? ''),
+                        'description' => (string)($seedItem['description'] ?? ''),
+                        'category' => (string)($seedItem['category'] ?? 'General'),
+                        'stock_quantity' => (int)($seedItem['stock_quantity'] ?? 50),
+                        'reorder_level' => (int)($seedItem['reorder_level'] ?? 10),
+                        'unit_price' => (float)($seedItem['unit_price'] ?? 0),
+                        'image_url' => (string)($seedItem['image_url'] ?? 'images/products/default-product.svg'),
+                        'is_active' => true,
+                        'seed_only' => true
+                    ];
+
+                    $existingSkus[$seedSku] = true;
+                }
+            }
+        } catch (Throwable $ignored) {
+        }
+    }
+
+    usort($items, function ($a, $b) {
+        return strcasecmp((string)($a['name'] ?? ''), (string)($b['name'] ?? ''));
+    });
+
+    return $items;
 }
 
 function ensure_numeric_client_user_code_admin_supply($pdo, int $userId): string {

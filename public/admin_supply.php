@@ -106,6 +106,10 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                             <option value="Herrería">Herrería</option>
                         </select>
                         <small class="text-muted">Usa Ctrl/Cmd para seleccionar múltiples categorías.</small>
+                        <div class="d-flex align-center" style="gap:0.5rem; margin-top:0.5rem;">
+                            <input id="newCategoryQuickName" type="text" placeholder="Nueva categoría" maxlength="120" style="max-width:220px;">
+                            <button class="btn btn-small btn-secondary" type="button" onclick="addCategoryFromStockForm()">+</button>
+                        </div>
                     </div>
                 </div>
 
@@ -116,7 +120,6 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 </div>
 
                 <div class="grid grid-2">
-                    <div class="form-group"><label>Código de barras (opcional)</label><input id="newProductBarcode" type="text" maxlength="100"></div>
                     <div class="form-group">
                         <label>Imagen de referencia</label>
                         <select id="newProductImageRef">
@@ -512,15 +515,18 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
     const stockText = stock <= (mode === 'marketplace' ? 2 : reorder) ? 'Stock bajo: ' : 'Stock: ';
     const stockClass = stock <= (mode === 'marketplace' ? 2 : reorder) ? 'stock-low' : 'stock-ok';
     const inactive = Number(item.is_active) === 0;
+    const seedOnly = Boolean(item.seed_only || item.__seed_only);
     const actions = mode === 'marketplace'
         ? `
             <button class="btn btn-small btn-secondary" type="button" onclick="fillMarketplaceFormById(${id})">Editar</button>
             <button class="btn btn-small btn-danger" type="button" onclick="deleteMarketplaceCeByAdmin(${id})">Desactivar</button>
         `
-        : `
-            <button class="btn btn-small btn-secondary" type="button" onclick="fillProductFormById(${id})">Editar</button>
-            <button class="btn btn-small btn-danger" type="button" onclick="deleteProductByAdmin(${id})">Desactivar</button>
-        `;
+        : (seedOnly
+            ? `<span class="text-muted" style="font-size:12px;">Catálogo base de portada</span>`
+            : `
+                <button class="btn btn-small btn-secondary" type="button" onclick="fillProductFormById(${id})">Editar</button>
+                <button class="btn btn-small btn-danger" type="button" onclick="deleteProductByAdmin(${id})">Desactivar</button>
+            `);
 
     return `
         <article class="product-card-min ${inactive ? 'product-card-inactive' : ''}">
@@ -1116,7 +1122,26 @@ async function loadStock() {
     const res = await apiCall('/admin_supply.php?action=stock', 'GET', null, { silent: true });
     const body = document.getElementById('stockRows');
     const caption = document.getElementById('stockListCaption');
-    if (!res || !res.success || !Array.isArray(res.items)) {
+    if (!res || !res.success || !Array.isArray(res.items) || res.items.length === 0) {
+        const fallback = await apiCall('/products.php?action=list', 'GET', null, { silent: true });
+        if (fallback && fallback.success && Array.isArray(fallback.products) && fallback.products.length > 0) {
+            stockItemsCache = fallback.products.map((p) => ({
+                id: Number(p.id || 0),
+                sku: p.sku || '',
+                name: p.name || '',
+                description: p.description || '',
+                category: p.category || 'General',
+                stock_quantity: Number(p.stock_quantity || 50),
+                reorder_level: Number(p.reorder_level || 10),
+                unit_price: Number(p.unit_price || 0),
+                image_url: p.image_url || 'images/products/default-product.svg',
+                is_active: 1,
+                __fallback: true
+            }));
+            renderStockList();
+            return;
+        }
+
         if (body) body.innerHTML = '<p class="text-muted">Sin datos</p>';
         if (caption) caption.textContent = 'No fue posible cargar productos.';
         return;
@@ -1124,6 +1149,33 @@ async function loadStock() {
 
     stockItemsCache = Array.isArray(res.items) ? res.items : [];
     renderStockList();
+}
+
+async function addCategoryFromStockForm() {
+    const input = document.getElementById('newCategoryQuickName');
+    const raw = (input?.value || '').trim();
+    if (!raw) {
+        showAlert('Escribe el nombre de la nueva categoría', 'warning');
+        return;
+    }
+
+    const payload = {
+        id: 0,
+        name: raw,
+        sort_order: 0,
+        is_active: true
+    };
+
+    const res = await apiCall('/admin_supply.php?action=categories-save', 'POST', payload);
+    if (!res || !res.success) {
+        showAlert((res && res.message) ? res.message : 'No fue posible guardar la categoría', 'error');
+        return;
+    }
+
+    if (input) input.value = '';
+    showAlert(res.message || 'Categoría guardada', 'success');
+    await loadProductCategories(true);
+    await loadProductCategories(false);
 }
 
 function renderStockList() {
@@ -1159,7 +1211,6 @@ function resetProductForm() {
     document.getElementById('newProductPrice').value = '0';
     document.getElementById('newProductStock').value = '50';
     document.getElementById('newProductReorder').value = '10';
-    document.getElementById('newProductBarcode').value = '';
     document.getElementById('newProductDescription').value = '';
     document.getElementById('newProductImageRef').value = 'images/products/default-product.svg';
 
@@ -1792,7 +1843,6 @@ async function createProductByAdmin() {
         price: document.getElementById('newProductPrice').value || '0',
         stock_quantity: document.getElementById('newProductStock').value || '50',
         reorder_level: document.getElementById('newProductReorder').value || '10',
-        barcode: document.getElementById('newProductBarcode').value || '',
         image_url: document.getElementById('newProductImageRef').value || 'images/products/default-product.svg'
     };
 
@@ -1806,7 +1856,11 @@ async function createProductByAdmin() {
 
     const box = document.getElementById('productCreateResult');
 
-    const res = await apiCall('/admin_supply.php?action=product-save', 'POST', payload);
+    let res = await apiCall('/admin_supply.php?action=product-save', 'POST', payload);
+    if ((!res || !res.success) && editId <= 0) {
+        // Fallback to stable create endpoint if unified save fails in legacy environments.
+        res = await apiCall('/admin_supply.php?action=product-create', 'POST', payload);
+    }
     if (!res || !res.success) {
         if (box) {
             box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible registrar el producto')}</div>`;
