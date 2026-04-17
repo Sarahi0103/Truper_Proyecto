@@ -146,6 +146,35 @@ function record_matches_normalized_sku_admin_supply($pdo, string $table, int $id
     }
 }
 
+function insert_category_and_get_id_admin_supply($pdo, string $name, int $sortOrder, bool $isActive): int {
+    // PostgreSQL supports RETURNING; MySQL/MariaDB may not.
+    try {
+        $stmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order, is_active) VALUES (?, ?, ?) RETURNING id");
+        $stmt->execute([$name, $sortOrder, $isActive]);
+        $createdId = (int)$stmt->fetchColumn();
+        if ($createdId > 0) {
+            return $createdId;
+        }
+    } catch (Exception $ignored) {
+        // Fallback path below.
+    }
+
+    $stmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order, is_active) VALUES (?, ?, ?)");
+    $stmt->execute([$name, $sortOrder, $isActive]);
+
+    try {
+        $lastId = (int)$pdo->lastInsertId();
+        if ($lastId > 0) {
+            return $lastId;
+        }
+    } catch (Exception $ignored) {
+    }
+
+    $findStmt = $pdo->prepare("SELECT id FROM product_categories WHERE LOWER(name) = LOWER(?) ORDER BY id DESC LIMIT 1");
+    $findStmt->execute([$name]);
+    return (int)$findStmt->fetchColumn();
+}
+
 function ensure_admin_supply_tables($pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS supplier_calendar (
         id SERIAL PRIMARY KEY,
@@ -1040,12 +1069,16 @@ try {
 
             $id = (int)($_GET['id'] ?? 0);
             $usage = sku_usage_admin_supply($pdo, $sku, 0, $id);
-            $exists = $usage['in_products'] || $usage['in_marketplace'];
+            $sameRecord = record_matches_normalized_sku_admin_supply($pdo, 'products', $id, $sku);
+            $seedConflict = $usage['in_seed'] && !$sameRecord;
+            $exists = $usage['in_products'] || $usage['in_marketplace'] || $seedConflict;
             $message = 'Código disponible';
             if ($exists) {
                 $message = $usage['in_products']
                     ? 'Ya existe un producto con ese código'
-                        : 'Ya existe un artículo CE con ese código';
+                        : ($usage['in_marketplace']
+                            ? 'Ya existe un artículo CE con ese código'
+                            : 'Ese código ya existe en el catálogo base');
             }
             $response = [
                 'success' => true,
@@ -1127,12 +1160,14 @@ try {
             }
 
             $usage = sku_usage_admin_supply($pdo, $sku, 0, 0);
-            if ($usage['in_products'] || $usage['in_marketplace']) {
+            if ($usage['in_products'] || $usage['in_marketplace'] || $usage['in_seed']) {
                 $response = [
                     'success' => false,
                     'message' => $usage['in_products']
                         ? 'Ya existe un producto con ese código'
-                        : 'Ese código ya está registrado en Marketplace CE'
+                        : ($usage['in_marketplace']
+                            ? 'Ese código ya está registrado en Marketplace CE'
+                            : 'Ese código ya existe en el catálogo base')
                 ];
                 break;
             }
@@ -1213,12 +1248,16 @@ try {
             }
 
             $usage = sku_usage_admin_supply($pdo, $sku, 0, $id);
-            if ($usage['in_products'] || $usage['in_marketplace']) {
+            $sameRecord = record_matches_normalized_sku_admin_supply($pdo, 'products', $id, $sku);
+            $seedConflict = $usage['in_seed'] && !$sameRecord;
+            if ($usage['in_products'] || $usage['in_marketplace'] || $seedConflict) {
                 $response = [
                     'success' => false,
                     'message' => $usage['in_products']
                         ? 'Ya existe un producto con ese código'
-                        : 'Ese código ya está registrado en Marketplace CE'
+                        : ($usage['in_marketplace']
+                            ? 'Ese código ya está registrado en Marketplace CE'
+                            : 'Ese código ya existe en el catálogo base')
                 ];
                 break;
             }
@@ -1671,9 +1710,7 @@ try {
                     ]
                 ];
             } else {
-                $stmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order, is_active) VALUES (?, ?, ?) RETURNING id");
-                $stmt->execute([$name, $sortOrder, $isActive]);
-                $createdId = (int)$stmt->fetchColumn();
+                $createdId = insert_category_and_get_id_admin_supply($pdo, $name, $sortOrder, $isActive);
                 $response = [
                     'success' => true,
                     'message' => 'Categoría creada',
