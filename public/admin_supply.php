@@ -28,8 +28,18 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
         .admin-preview-wrap .catalog-grid-min { grid-template-columns: minmax(240px, 330px); }
         .admin-list-caption { color: var(--ui-text-muted); font-size: 0.9rem; margin-bottom: 0.6rem; }
         .admin-editor-card {
-            border: 1px solid rgba(255, 127, 0, 0.22);
-            background: linear-gradient(180deg, rgba(255, 127, 0, 0.06) 0%, rgba(255, 255, 255, 0.01) 100%);
+            border: 1px solid var(--ui-border);
+            background: var(--ui-surface);
+            box-shadow: none;
+        }
+        .admin-section-subtitle {
+            margin-top: 1rem;
+            margin-bottom: 0.35rem;
+            font-size: 0.84rem;
+            color: var(--ui-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            font-weight: 700;
         }
         .category-quick-tools {
             display: flex;
@@ -58,6 +68,42 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
         .category-action-btn-remove:hover {
             border-color: rgba(248, 113, 113, 0.8);
             background: rgba(127, 29, 29, 0.28);
+        }
+        .admin-quick-panel {
+            border: 1px solid var(--ui-border);
+            border-radius: 10px;
+            padding: 0.75rem;
+            background: var(--ui-surface-soft);
+            margin-bottom: 0.8rem;
+        }
+        .admin-quick-grid {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 0.85rem;
+            align-items: end;
+        }
+        .admin-quick-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            min-width: 210px;
+        }
+        .admin-quick-select {
+            width: 100%;
+            min-height: 160px;
+            border-radius: 8px;
+            border: 1px solid var(--ui-border);
+            background: var(--ui-surface);
+        }
+        @media (max-width: 900px) {
+            .admin-quick-grid {
+                grid-template-columns: 1fr;
+            }
+            .admin-quick-actions {
+                min-width: 0;
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
         }
     </style>
 </head>
@@ -525,6 +571,20 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <h3>Artículos CE registrados</h3>
                 <div class="admin-search-row">
                     <input id="marketplaceSearch" type="text" placeholder="Buscar por SKU, nombre o condición...">
+                </div>
+                <div class="admin-section-subtitle">Gestión rápida (selección múltiple)</div>
+                <div class="admin-quick-panel">
+                    <div class="admin-quick-grid">
+                        <div>
+                            <select id="marketplaceBulkSelect" class="admin-quick-select" multiple size="7"></select>
+                            <small class="text-muted">Selecciona uno o varios artículos CE para editar o desactivar.</small>
+                        </div>
+                        <div class="admin-quick-actions">
+                            <button class="btn btn-secondary" type="button" onclick="editMarketplaceSelectedItem()">Editar seleccionado</button>
+                            <button class="btn btn-danger" type="button" onclick="deleteMarketplaceSelectedItems()">Desactivar seleccionados</button>
+                        </div>
+                    </div>
+                    <div id="marketplaceQuickResult" class="text-muted" style="font-size:12px; margin-top:8px;"></div>
                 </div>
                 <div id="marketplaceListCaption" class="admin-list-caption">Cargando artículos CE...</div>
                 <div id="marketplaceList" class="text-muted">Cargando artículos CE...</div>
@@ -2296,16 +2356,122 @@ function fillMarketplaceFormById(id) {
 async function loadMarketplaceCeAdmin() {
     const box = document.getElementById('marketplaceList');
     const caption = document.getElementById('marketplaceListCaption');
+    const quickBox = document.getElementById('marketplaceQuickResult');
     const res = await apiCall('/admin_supply.php?action=marketplace-list', 'GET', null, { silent: true });
 
     if (!res || !res.success || !Array.isArray(res.items)) {
         if (box) box.innerHTML = '<p class="text-muted">No fue posible cargar artículos CE.</p>';
         if (caption) caption.textContent = 'No fue posible cargar artículos CE.';
+        if (quickBox) quickBox.innerHTML = '<span style="color:#f87171;">No fue posible cargar la gestión rápida.</span>';
+        updateMarketplaceQuickSelection([]);
         return;
     }
 
     marketplaceItemsCache = Array.isArray(res.items) ? res.items : [];
     renderMarketplaceList();
+}
+
+function updateMarketplaceQuickSelection(items = marketplaceItemsCache) {
+    const select = document.getElementById('marketplaceBulkSelect');
+    if (!select) return;
+
+    const previouslySelected = new Set(Array.from(select.selectedOptions || []).map((option) => Number(option.value || 0)));
+    select.innerHTML = '';
+
+    if (!Array.isArray(items) || items.length === 0) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Sin artículos para mostrar';
+        option.disabled = true;
+        select.appendChild(option);
+        return;
+    }
+
+    items.forEach((item) => {
+        const id = Number(item.id || 0);
+        if (id <= 0) return;
+
+        const code = displayProductCode(item.sku || '');
+        const name = String(item.name || 'Sin nombre').trim();
+        const condition = String(item.condition_label || 'Seminuevo').trim();
+        const inactive = Number(item.is_active) === 0;
+
+        const option = document.createElement('option');
+        option.value = String(id);
+        option.textContent = `${code} | ${name} | ${condition}${inactive ? ' (Oculto)' : ''}`;
+        option.selected = previouslySelected.has(id);
+        select.appendChild(option);
+    });
+}
+
+function getMarketplaceBulkSelectedIds() {
+    const select = document.getElementById('marketplaceBulkSelect');
+    return Array.from(select?.selectedOptions || [])
+        .map((option) => Number(option.value || 0))
+        .filter((id) => id > 0);
+}
+
+function editMarketplaceSelectedItem() {
+    const quickBox = document.getElementById('marketplaceQuickResult');
+    const selectedIds = getMarketplaceBulkSelectedIds();
+
+    if (selectedIds.length === 0) {
+        if (quickBox) quickBox.innerHTML = '<span style="color:#f59e0b;">Selecciona un artículo para editar.</span>';
+        return;
+    }
+
+    if (selectedIds.length > 1) {
+        if (quickBox) quickBox.innerHTML = '<span style="color:#f59e0b;">Selecciona solo un artículo para editar.</span>';
+        return;
+    }
+
+    const target = marketplaceItemsCache.find((item) => Number(item.id || 0) === selectedIds[0]);
+    if (!target) {
+        if (quickBox) quickBox.innerHTML = '<span style="color:#f87171;">No se encontró el artículo seleccionado.</span>';
+        return;
+    }
+
+    fillMarketplaceForm(target);
+    if (quickBox) quickBox.innerHTML = '<span style="color:#22c55e;">Artículo cargado en el formulario.</span>';
+    document.getElementById('marketplaceSku')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function deleteMarketplaceSelectedItems() {
+    const quickBox = document.getElementById('marketplaceQuickResult');
+    const selectedIds = getMarketplaceBulkSelectedIds();
+
+    if (selectedIds.length === 0) {
+        if (quickBox) quickBox.innerHTML = '<span style="color:#f59e0b;">Selecciona al menos un artículo para desactivar.</span>';
+        return;
+    }
+
+    if (!confirm(`¿Desactivar ${selectedIds.length} artículo(s) seleccionado(s)?`)) {
+        return;
+    }
+
+    if (quickBox) quickBox.innerHTML = '<span style="color:#cbd5e1;">Desactivando artículos...</span>';
+
+    let successCount = 0;
+    let firstError = '';
+    for (const id of selectedIds) {
+        const res = await apiCall('/admin_supply.php?action=marketplace-delete', 'POST', { id: id });
+        if (res && res.success) {
+            successCount += 1;
+        } else if (!firstError) {
+            firstError = (res && res.message) ? res.message : `No se pudo desactivar el artículo ${id}`;
+        }
+    }
+
+    if (successCount > 0) {
+        if (quickBox) quickBox.innerHTML = `<span style="color:#22c55e;">${successCount} artículo(s) desactivado(s).</span>`;
+        showAlert(`${successCount} artículo(s) CE desactivado(s)`, 'success');
+    }
+    if (firstError) {
+        if (quickBox) quickBox.innerHTML += ` <span style="color:#f87171;">${escapeHtml(firstError)}</span>`;
+        showAlert(firstError, 'error');
+    }
+
+    await loadMarketplaceCeAdmin();
 }
 
 function renderMarketplaceList() {
@@ -2324,6 +2490,8 @@ function renderMarketplaceList() {
     if (caption) {
         caption.textContent = `Mostrando ${filtered.length} de ${marketplaceItemsCache.length} artículos CE`;
     }
+
+    updateMarketplaceQuickSelection(filtered);
 
     if (filtered.length === 0) {
         if (box) box.innerHTML = '<p class="text-muted">No hay artículos CE registrados.</p>';
@@ -2485,6 +2653,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const marketplaceSearch = document.getElementById('marketplaceSearch');
     if (marketplaceSearch) {
         marketplaceSearch.addEventListener('input', renderMarketplaceList);
+    }
+
+    const marketplaceBulkSelect = document.getElementById('marketplaceBulkSelect');
+    if (marketplaceBulkSelect) {
+        marketplaceBulkSelect.addEventListener('dblclick', editMarketplaceSelectedItem);
     }
 
     ['newProductName', 'newProductPrice', 'newProductStock', 'newProductReorder', 'newProductDescription', 'newProductImageRef', 'newProductVisible'].forEach((id) => {
