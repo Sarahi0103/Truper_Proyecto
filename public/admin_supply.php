@@ -27,6 +27,38 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
         .admin-preview-wrap { margin-top: 1rem; }
         .admin-preview-wrap .catalog-grid-min { grid-template-columns: minmax(240px, 330px); }
         .admin-list-caption { color: var(--ui-text-muted); font-size: 0.9rem; margin-bottom: 0.6rem; }
+        .admin-editor-card {
+            border: 1px solid rgba(255, 127, 0, 0.22);
+            background: linear-gradient(180deg, rgba(255, 127, 0, 0.06) 0%, rgba(255, 255, 255, 0.01) 100%);
+        }
+        .category-quick-tools {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .category-quick-input {
+            max-width: 220px;
+            min-width: 170px;
+        }
+        .category-help-box {
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            font-size: 12px;
+        }
+        .category-action-btn {
+            min-width: 92px;
+        }
+        .category-action-btn-remove {
+            border-color: rgba(220, 38, 38, 0.35);
+            color: #fecaca;
+            background: rgba(127, 29, 29, 0.18);
+        }
+        .category-action-btn-remove:hover {
+            border-color: rgba(248, 113, 113, 0.8);
+            background: rgba(127, 29, 29, 0.28);
+        }
     </style>
 </head>
 <body>
@@ -88,7 +120,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
         </div>
 
         <section id="stockTab" class="tab-content active">
-            <div class="card mb-3"><div class="card-body">
+            <div class="card mb-3 admin-editor-card"><div class="card-body">
                 <h3>Agregar Producto</h3>
                 <p class="text-muted">Registra nuevos productos y opcionalmente sube su imagen.</p>
 
@@ -106,12 +138,12 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                             <option value="Herrería">Herrería</option>
                         </select>
                         <small class="text-muted">Usa Ctrl/Cmd para seleccionar múltiples categorías.</small>
-                        <div class="d-flex align-center" style="gap:0.5rem; margin-top:0.5rem;">
-                            <input id="newCategoryQuickName" type="text" placeholder="Nueva categoría" maxlength="120" style="max-width:180px;">
-                            <button class="btn btn-small btn-secondary" type="button" onclick="addCategoryFromStockForm()" title="Agregar categoría">+</button>
-                            <button class="btn btn-small btn-secondary" type="button" onclick="deleteCategoryQuick()" title="Eliminar categoría seleccionada">−</button>
+                        <div class="category-quick-tools">
+                            <input id="newCategoryQuickName" class="category-quick-input" type="text" placeholder="Nueva categoría" maxlength="120">
+                            <button class="btn btn-small btn-secondary category-action-btn" type="button" onclick="addCategoryFromStockForm()" title="Agregar categoría">Agregar</button>
+                            <button class="btn btn-small btn-secondary category-action-btn category-action-btn-remove" type="button" onclick="deleteCategoryQuick()" title="Eliminar categoría seleccionada">Eliminar</button>
                         </div>
-                        <div id="categoryDeleteModeBox" class="alert alert-info" style="margin-top:0.5rem; padding:0.5rem; font-size:12px;">
+                        <div id="categoryDeleteModeBox" class="alert alert-info category-help-box">
                             Selecciona una categoría de la lista y usa el botón − para eliminarla.
                         </div>
                     </div>
@@ -187,7 +219,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
         </section>
 
         <section id="updatesTab" class="tab-content">
-            <div class="card mb-3"><div class="card-body">
+            <div class="card mb-3 admin-editor-card"><div class="card-body">
                 <h3>Noticias y promociones de portada</h3>
                 <p class="text-muted">Administra el carrusel automático que se muestra en la página principal.</p>
 
@@ -431,7 +463,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
         </section>
 
         <section id="marketplaceTab" class="tab-content">
-            <div class="card mb-3"><div class="card-body">
+            <div class="card mb-3 admin-editor-card"><div class="card-body">
                 <h3>Marketplace CE - Gestión de artículos</h3>
                 <p class="text-muted">Administra artículos de segunda mano: producto, condición, precio, stock, imagen y visibilidad.</p>
 
@@ -1213,25 +1245,39 @@ async function deleteCategoryQuick() {
         return;
     }
 
-    const categoryName = selected[0].value;
-    const categoryId = Number(selected[0].dataset?.id || 0);
-    if (!confirm(`¿Eliminar categoría "${categoryName}"?`)) return;
+    const names = selected.map((opt) => String(opt.value || '').trim()).filter(Boolean);
+    const confirmLabel = names.length === 1
+        ? `¿Eliminar categoría "${names[0]}"?`
+        : `¿Eliminar ${names.length} categorías seleccionadas?`;
+    if (!confirm(confirmLabel)) return;
 
-    const res = await apiCall('/admin_supply.php?action=categories-delete', 'POST', {
-        id: categoryId,
-        name: categoryName
-    });
-    if (!res || !res.success) {
-        showAlert((res && res.message) ? res.message : 'No fue posible eliminar la categoría', 'error');
-        return;
+    let removed = 0;
+    let firstError = '';
+
+    for (const option of selected) {
+        const categoryName = String(option.value || '').trim();
+        const categoryId = Number(option.dataset?.id || 0);
+        const res = await apiCall('/admin_supply.php?action=categories-delete', 'POST', {
+            id: categoryId,
+            name: categoryName
+        });
+
+        if (res && res.success) {
+            removed += 1;
+            option.remove();
+        } else if (!firstError) {
+            firstError = (res && res.message) ? res.message : `No fue posible eliminar "${categoryName}"`;
+        }
     }
 
-    // Reflect deletion immediately in the same select control.
-    selected.forEach((opt) => opt.remove());
+    if (removed > 0) {
+        showAlert(removed === 1 ? 'Categoría eliminada' : `${removed} categorías eliminadas`, 'success');
+    }
+    if (firstError) {
+        showAlert(firstError, 'error');
+    }
 
-    showAlert(res.message || 'Categoría eliminada', 'success');
-    await loadProductCategories(true);
-    await loadProductCategories(false);
+    await refreshCategoriesUi();
 }
 
 async function addCategoryFromStockForm() {
@@ -1276,8 +1322,7 @@ async function addCategoryFromStockForm() {
 
     if (input) input.value = '';
     showAlert(res.message || 'Categoría guardada', 'success');
-    await loadProductCategories(true);
-    await loadProductCategories(false);
+    await refreshCategoriesUi();
 
     if (categorySelect) {
         const target = Array.from(categorySelect.options || []).find((opt) =>
@@ -1446,7 +1491,7 @@ async function toggleMarketplaceVisibility(id, nextVisible) {
         box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Visibilidad actualizada')}</div>`;
     }
 
-    await loadMarketplace();
+    await loadMarketplaceCeAdmin();
 }
 
 async function createVisit() {
@@ -1824,13 +1869,17 @@ async function loadProductCategories(onlyActive = true) {
         return;
     }
 
-    if (categorySelect) {
+    if (onlyActive && categorySelect) {
+        const selectedValues = new Set(
+            Array.from(categorySelect.selectedOptions || []).map((option) => String(option.value || '').trim().toLowerCase())
+        );
         categorySelect.innerHTML = '';
         res.items.forEach((cat) => {
             const option = document.createElement('option');
             option.value = cat.name;
             option.textContent = cat.name;
             option.dataset.id = String(Number(cat.id || 0));
+            option.selected = selectedValues.has(String(cat.name || '').trim().toLowerCase());
             categorySelect.appendChild(option);
         });
     }
@@ -1874,6 +1923,12 @@ async function loadProductCategories(onlyActive = true) {
     }
 }
 
+async function refreshCategoriesUi() {
+    await loadProductCategories(true);
+    await loadProductCategories(false);
+    updateStockPreview();
+}
+
 function resetCategoryForm() {
     const editId = document.getElementById('categoryEditId');
     const name = document.getElementById('categoryName');
@@ -1915,8 +1970,7 @@ async function saveCategoryByAdmin() {
     }
     if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Categoría guardada')}</div>`;
     resetCategoryForm();
-    loadProductCategories(true);
-    loadProductCategories(false);
+    await refreshCategoriesUi();
 }
 
 async function deleteCategoryByAdminId(id) {
@@ -1929,8 +1983,7 @@ async function deleteCategoryByAdminId(id) {
         return;
     }
     if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Categoría eliminada')}</div>`;
-    loadProductCategories(true);
-    loadProductCategories(false);
+    await refreshCategoriesUi();
 }
 
 function getCurrentStockSkuForGallery() {
@@ -2363,8 +2416,7 @@ document.addEventListener('DOMContentLoaded', function () {
     loadSupplierOrders();
     loadHistory();
     loadProductImageReferences();
-    loadProductCategories(true);
-    loadProductCategories(false);
+    refreshCategoriesUi();
     loadMarketplaceCeAdmin();
     loadClients();
     loadHomepageUpdatesAdmin();
