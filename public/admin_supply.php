@@ -109,7 +109,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                         <div class="d-flex align-center" style="gap:0.5rem; margin-top:0.5rem;">
                             <input id="newCategoryQuickName" type="text" placeholder="Nueva categoría" maxlength="120" style="max-width:180px;">
                             <button class="btn btn-small btn-secondary" type="button" onclick="addCategoryFromStockForm()" title="Agregar categoría">+</button>
-                            <button class="btn btn-small btn-secondary" type="button" onclick="deleteCategoryByAdmin()" title="Eliminar categoría seleccionada">−</button>
+                            <button class="btn btn-small btn-secondary" type="button" onclick="deleteCategoryQuick()" title="Eliminar categoría seleccionada">−</button>
                         </div>
                         <div id="categoryDeleteModeBox" class="alert alert-info" style="margin-top:0.5rem; padding:0.5rem; font-size:12px;">
                             Selecciona una categoría de la lista y usa el botón − para eliminarla.
@@ -1172,7 +1172,7 @@ async function loadStock() {
     renderStockList();
 }
 
-async function deleteCategoryByAdmin() {
+async function deleteCategoryQuick() {
     const select = document.getElementById('newProductCategory');
     const selected = Array.from(select?.selectedOptions || []);
     if (selected.length === 0) {
@@ -1803,7 +1803,7 @@ async function loadProductCategories(onlyActive = true) {
                             <td>${Number(cat.is_active) ? '<span class="badge badge-success">Sí</span>' : '<span class="badge badge-danger">No</span>'}</td>
                             <td>
                                 <button class="btn btn-small btn-secondary" type="button" data-action="edit-category">Editar</button>
-                                <button class="btn btn-small btn-danger" type="button" onclick="deleteCategoryByAdmin(${Number(cat.id || 0)})">Desactivar</button>
+                                <button class="btn btn-small btn-danger" type="button" onclick="deleteCategoryByAdminId(${Number(cat.id || 0)})">Desactivar</button>
                             </td>
                         </tr>
                     `).join('')}
@@ -1870,7 +1870,7 @@ async function saveCategoryByAdmin() {
     loadProductCategories(false);
 }
 
-async function deleteCategoryByAdmin(id) {
+async function deleteCategoryByAdminId(id) {
     if (!id) return;
     if (!confirm('¿Deseas desactivar esta categoría?')) return;
     const box = document.getElementById('categoryResult');
