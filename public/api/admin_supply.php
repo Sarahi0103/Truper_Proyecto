@@ -634,6 +634,84 @@ function list_available_product_images($pdo): array {
     return $images;
 }
 
+function admin_supply_image_priority_score($filePath): int {
+    $name = strtoupper((string)pathinfo((string)$filePath, PATHINFO_FILENAME));
+    if (strpos($name, '+') === false) {
+        return 0;
+    }
+    if (preg_match('/\+FC1$/', $name)) {
+        return 1;
+    }
+    if (preg_match('/\+E1$/', $name)) {
+        return 2;
+    }
+    if (preg_match('/\+D1$/', $name)) {
+        return 3;
+    }
+    return 9;
+}
+
+function resolve_admin_supply_image_by_sku($rawSku): ?string {
+    static $cache = null;
+    if ($cache === null) {
+        $cache = [];
+        $baseDir = __DIR__ . '/../images/products/by_code';
+        if (is_dir($baseDir)) {
+            $dirs = scandir($baseDir);
+            if (is_array($dirs)) {
+                foreach ($dirs as $dir) {
+                    if ($dir === '.' || $dir === '..') {
+                        continue;
+                    }
+
+                    $fullDir = $baseDir . '/' . $dir;
+                    if (!is_dir($fullDir)) {
+                        continue;
+                    }
+
+                    $matches = glob($fullDir . '/*.{jpg,jpeg,png,webp,gif,JPG,JPEG,PNG,WEBP,GIF}', GLOB_BRACE);
+                    if (empty($matches)) {
+                        continue;
+                    }
+
+                    usort($matches, function ($a, $b) {
+                        $scoreA = admin_supply_image_priority_score($a);
+                        $scoreB = admin_supply_image_priority_score($b);
+                        if ($scoreA === $scoreB) {
+                            return strcmp((string)$a, (string)$b);
+                        }
+                        return $scoreA <=> $scoreB;
+                    });
+
+                    $cache[(string)$dir] = 'images/products/by_code/' . $dir . '/' . basename((string)$matches[0]);
+                }
+            }
+        }
+    }
+
+    $sku = normalize_sku_admin_supply($rawSku);
+    if ($sku === '') {
+        return null;
+    }
+
+    return $cache[$sku] ?? null;
+}
+
+function apply_catalog_image_fallback_admin_supply(array $item): array {
+    $current = trim((string)($item['image_url'] ?? ''));
+    $needsFallback = ($current === '' || strcasecmp($current, 'images/products/default-product.svg') === 0);
+    if (!$needsFallback) {
+        return $item;
+    }
+
+    $resolved = resolve_admin_supply_image_by_sku($item['sku'] ?? '');
+    if ($resolved !== null && $resolved !== '') {
+        $item['image_url'] = $resolved;
+    }
+
+    return $item;
+}
+
 function list_stock_products_compatible($pdo): array {
     $categorySelect = db_column_exists('products', 'category')
         ? "COALESCE(category, 'General') AS category"
@@ -683,11 +761,15 @@ function list_stock_products_compatible($pdo): array {
 
     $existingSkus = [];
     foreach ($items as $row) {
+        $row = apply_catalog_image_fallback_admin_supply($row);
         $normalized = normalize_sku_admin_supply($row['sku'] ?? '');
         if ($normalized !== '') {
             $existingSkus[$normalized] = true;
         }
     }
+
+    // Keep resolved image fallback for DB-backed products.
+    $items = array_map('apply_catalog_image_fallback_admin_supply', $items);
 
     if (function_exists('get_xlsx_seed_products')) {
         try {
@@ -712,6 +794,8 @@ function list_stock_products_compatible($pdo): array {
                         'is_active' => true,
                         'seed_only' => true
                     ];
+
+                    $items[count($items) - 1] = apply_catalog_image_fallback_admin_supply($items[count($items) - 1]);
 
                     $existingSkus[$seedSku] = true;
                 }
