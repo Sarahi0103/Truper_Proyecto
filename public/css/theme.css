@@ -443,6 +443,12 @@ textarea:focus,
     color: #d4d4d4;
 }
 
+:root[data-theme="dark"] .variant-pill {
+    background: #252b36;
+    border-color: #3b4454;
+    color: #e5e7eb;
+}
+
 :root[data-theme="dark"] .product-title,
 :root[data-theme="dark"] .catalog-price,
 :root[data-theme="dark"] .cart-total,
