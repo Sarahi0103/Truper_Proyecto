@@ -663,8 +663,33 @@ async function validateSkuAvailability(kind) {
     }
 
     if (!check || !check.success) {
-        setSkuStatus(statusId, 'No se pudo validar el código. Intenta de nuevo.', 'warning');
-        return false;
+        // Fallback local: use loaded caches so the admin can continue even if SKU endpoint is temporarily unavailable.
+        const normalizeRowSku = (row) => normalizeNumericSku(displayProductCode(row?.sku || ''));
+
+        const existsInStock = stockItemsCache.some((row) => {
+            if (Boolean(row?.seed_only || row?.__seed_only)) {
+                return false;
+            }
+            if (!isMarketplace && Number(row?.id || 0) === currentId) {
+                return false;
+            }
+            return normalizeRowSku(row) === sku;
+        });
+
+        const existsInMarketplace = marketplaceItemsCache.some((row) => {
+            if (isMarketplace && Number(row?.id || 0) === currentId) {
+                return false;
+            }
+            return normalizeRowSku(row) === sku;
+        });
+
+        if (existsInStock || existsInMarketplace) {
+            setSkuStatus(statusId, existsInStock ? 'Ya existe un producto con ese código.' : 'Ya existe un artículo CE con ese código.', 'error');
+            return false;
+        }
+
+        setSkuStatus(statusId, 'Validación local aplicada (servidor no disponible).', 'warning');
+        return true;
     }
 
     if (check.available === false) {
