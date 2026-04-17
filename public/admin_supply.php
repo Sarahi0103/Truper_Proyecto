@@ -667,7 +667,8 @@ async function validateSkuAvailability(kind) {
         const normalizeRowSku = (row) => normalizeNumericSku(displayProductCode(row?.sku || ''));
 
         const existsInStock = stockItemsCache.some((row) => {
-            if (Boolean(row?.seed_only || row?.__seed_only)) {
+            const isSeedRow = Boolean(row?.seed_only || row?.__seed_only);
+            if (isSeedRow && !isMarketplace) {
                 return false;
             }
             if (!isMarketplace && Number(row?.id || 0) === currentId) {
