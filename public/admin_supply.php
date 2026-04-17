@@ -32,6 +32,36 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             background: var(--ui-surface);
             box-shadow: none;
         }
+        .admin-editor-card-stock {
+            border-left: 4px solid #f59e0b;
+            background: linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, rgba(0, 0, 0, 0) 42%);
+        }
+        .admin-editor-card-marketplace {
+            border-left: 4px solid #38bdf8;
+            background: linear-gradient(180deg, rgba(56, 189, 248, 0.1) 0%, rgba(0, 0, 0, 0) 42%);
+        }
+        .section-kicker {
+            display: inline-flex;
+            align-items: center;
+            font-size: 0.74rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            border-radius: 999px;
+            border: 1px solid var(--ui-border);
+            padding: 0.2rem 0.55rem;
+            margin-bottom: 0.45rem;
+        }
+        .section-kicker-stock {
+            color: #f59e0b;
+            border-color: rgba(245, 158, 11, 0.38);
+            background: rgba(245, 158, 11, 0.12);
+        }
+        .section-kicker-marketplace {
+            color: #38bdf8;
+            border-color: rgba(56, 189, 248, 0.42);
+            background: rgba(56, 189, 248, 0.12);
+        }
         .admin-section-subtitle {
             margin-top: 1rem;
             margin-bottom: 0.35rem;
@@ -166,7 +196,8 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
         </div>
 
         <section id="stockTab" class="tab-content active">
-            <div class="card mb-3 admin-editor-card"><div class="card-body">
+            <div class="card mb-3 admin-editor-card admin-editor-card-stock"><div class="card-body">
+                <div class="section-kicker section-kicker-stock">Stock interno</div>
                 <h3>Agregar Producto</h3>
                 <p class="text-muted">Registra nuevos productos y opcionalmente sube su imagen.</p>
 
@@ -510,7 +541,8 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
         </section>
 
         <section id="marketplaceTab" class="tab-content">
-            <div class="card mb-3 admin-editor-card"><div class="card-body">
+            <div class="card mb-3 admin-editor-card admin-editor-card-marketplace"><div class="card-body">
+                <div class="section-kicker section-kicker-marketplace">Marketplace CE</div>
                 <h3>Marketplace CE - Gestión de artículos</h3>
                 <p class="text-muted">Administra artículos de segunda mano: producto, condición, precio, stock, imagen y visibilidad.</p>
 
