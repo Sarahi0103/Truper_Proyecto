@@ -435,6 +435,50 @@ function deactivate_product_compatible($pdo, int $id): void {
     $stmt->execute([$id]);
 }
 
+function ensure_products_seeded_for_admin_supply($pdo): void {
+    if (!function_exists('get_xlsx_seed_products')) {
+        return;
+    }
+
+    try {
+        $countStmt = $pdo->query('SELECT COUNT(*) FROM products');
+        $count = (int)$countStmt->fetchColumn();
+        if ($count >= 10) {
+            return;
+        }
+
+        $seedProducts = get_xlsx_seed_products();
+        if (!is_array($seedProducts) || empty($seedProducts)) {
+            return;
+        }
+
+        foreach ($seedProducts as $seed) {
+            $sku = (string)($seed['sku'] ?? '');
+            if ($sku === '' || product_sku_exists_admin_supply($pdo, normalize_sku_admin_supply($sku))) {
+                continue;
+            }
+
+            try {
+                create_product_compatible($pdo, [
+                    'sku' => $sku,
+                    'name' => (string)($seed['name'] ?? 'Producto'),
+                    'category' => (string)($seed['category'] ?? 'General'),
+                    'description' => (string)($seed['description'] ?? ''),
+                    'barcode' => (string)($seed['barcode'] ?? ''),
+                    'price' => (float)($seed['unit_price'] ?? 0),
+                    'stock_quantity' => (int)($seed['stock_quantity'] ?? 50),
+                    'reorder_level' => 10,
+                    'image_url' => (string)($seed['image_url'] ?? 'images/products/default-product.svg')
+                ]);
+            } catch (Exception $ignored) {
+                // Continue trying next seed row.
+            }
+        }
+    } catch (Exception $ignored) {
+        // Best-effort seeding only.
+    }
+}
+
 function bootstrap_admin_supply_schema($pdo): void {
     try {
         ensure_admin_supply_tables($pdo);
@@ -454,6 +498,12 @@ function bootstrap_admin_supply_schema($pdo): void {
         }
     } catch (Throwable $e) {
         error_log('admin_supply bootstrap warning (xlsx seed): ' . $e->getMessage());
+    }
+
+    try {
+        ensure_products_seeded_for_admin_supply($pdo);
+    } catch (Throwable $e) {
+        error_log('admin_supply bootstrap warning (admin seed ensure): ' . $e->getMessage());
     }
 }
 
@@ -497,9 +547,24 @@ function list_available_product_images($pdo): array {
 }
 
 function list_stock_products_compatible($pdo): array {
+    $categorySelect = db_column_exists('products', 'category')
+        ? "COALESCE(category, 'General') AS category"
+        : "'General' AS category";
     $descriptionSelect = db_column_exists('products', 'description')
         ? "COALESCE(description, '') AS description"
         : "'' AS description";
+    $stockSelect = db_column_exists('products', 'stock_quantity')
+        ? "COALESCE(stock_quantity, 0) AS stock_quantity"
+        : "0 AS stock_quantity";
+    $reorderSelect = db_column_exists('products', 'reorder_level')
+        ? "COALESCE(reorder_level, 10) AS reorder_level"
+        : "10 AS reorder_level";
+    $imageSelect = db_column_exists('products', 'image_url')
+        ? "COALESCE(image_url, 'images/products/default-product.svg') AS image_url"
+        : "'images/products/default-product.svg' AS image_url";
+    $priceSelect = db_column_exists('products', 'unit_price')
+        ? "COALESCE(unit_price, 0) AS unit_price"
+        : (db_column_exists('products', 'sell_price') ? "COALESCE(sell_price, 0) AS unit_price" : "0 AS unit_price");
     $isActiveSelect = db_column_exists('products', 'is_active')
         ? "COALESCE(is_active, true) AS is_active"
         : (db_column_exists('products', 'active') ? "(active = 1) AS is_active" : "true AS is_active");
@@ -507,13 +572,13 @@ function list_stock_products_compatible($pdo): array {
     $queries = [];
 
     if (db_column_exists('products', 'is_active')) {
-        $queries[] = "SELECT id, sku, name, {$descriptionSelect}, category, stock_quantity, reorder_level, COALESCE(unit_price, sell_price, 0) AS unit_price, COALESCE(image_url, 'images/products/default-product.svg') AS image_url, {$isActiveSelect} FROM products WHERE is_active = true ORDER BY stock_quantity ASC, name ASC LIMIT 500";
+        $queries[] = "SELECT id, sku, name, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} FROM products WHERE is_active = true ORDER BY stock_quantity ASC, name ASC LIMIT 500";
     }
     if (db_column_exists('products', 'active')) {
-        $queries[] = "SELECT id, sku, name, {$descriptionSelect}, category, stock_quantity, reorder_level, COALESCE(unit_price, sell_price, 0) AS unit_price, COALESCE(image_url, 'images/products/default-product.svg') AS image_url, {$isActiveSelect} FROM products WHERE active = 1 ORDER BY stock_quantity ASC, name ASC LIMIT 500";
+        $queries[] = "SELECT id, sku, name, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} FROM products WHERE active = 1 ORDER BY stock_quantity ASC, name ASC LIMIT 500";
     }
 
-    $queries[] = "SELECT id, sku, name, {$descriptionSelect}, category, stock_quantity, reorder_level, COALESCE(unit_price, sell_price, 0) AS unit_price, COALESCE(image_url, 'images/products/default-product.svg') AS image_url, {$isActiveSelect} FROM products ORDER BY stock_quantity ASC, name ASC LIMIT 500";
+    $queries[] = "SELECT id, sku, name, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} FROM products ORDER BY stock_quantity ASC, name ASC LIMIT 500";
 
     foreach ($queries as $sql) {
         try {
