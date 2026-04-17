@@ -22,6 +22,11 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
         .calendar-day-number { font-weight: 700; font-size: 13px; color: var(--ui-text); }
         .calendar-day-visits { margin-top: 4px; font-size: 11px; color: var(--color-naranja); }
         .calendar-day-has-visits { border-color: var(--color-naranja); background: var(--theme-accent-soft); }
+        .admin-search-row { display: flex; gap: 0.75rem; align-items: center; margin: 0.5rem 0 1rem; }
+        .admin-search-row input { max-width: 480px; }
+        .admin-preview-wrap { margin-top: 1rem; }
+        .admin-preview-wrap .catalog-grid-min { grid-template-columns: minmax(240px, 330px); }
+        .admin-list-caption { color: var(--ui-text-muted); font-size: 0.9rem; margin-bottom: 0.6rem; }
     </style>
 </head>
 <body>
@@ -87,6 +92,8 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <h3>Agregar Producto</h3>
                 <p class="text-muted">Registra nuevos productos y opcionalmente sube su imagen.</p>
 
+                <input type="hidden" id="newProductEditId" value="">
+
                 <div class="grid grid-3">
                     <div class="form-group"><label>Código del producto (5 números)</label><input id="newProductSku" type="text" maxlength="5" inputmode="numeric" pattern="\d{5}" placeholder="Ej. 23032"><small id="newProductSkuStatus" class="text-muted">Debe ser único y de 5 números.</small></div>
                     <div class="form-group"><label>Nombre</label><input id="newProductName" type="text" maxlength="255"></div>
@@ -133,16 +140,25 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
 
                 <div class="form-group"><label>Descripción</label><textarea id="newProductDescription" rows="3"></textarea></div>
 
-                <button class="btn btn-primary" onclick="createProductByAdmin()">Guardar producto</button>
+                <div class="admin-preview-wrap">
+                    <p class="admin-list-caption">Vista previa (estilo portada):</p>
+                    <div id="stockPreviewHost" class="catalog-grid-min"></div>
+                </div>
+
+                <div class="d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap;">
+                    <button class="btn btn-primary" id="newProductSaveButton" onclick="createProductByAdmin()">Guardar producto</button>
+                    <button class="btn btn-secondary" type="button" onclick="resetProductForm()">Limpiar formulario</button>
+                </div>
                 <div id="productCreateResult" class="mt-3"></div>
             </div></div>
 
             <div class="card"><div class="card-body">
                 <h3>Control de Existencias</h3>
-                <table>
-                    <thead><tr><th>Código del producto</th><th>Producto</th><th>Categoria</th><th>Stock</th><th>Nivel Reorden</th><th>Estatus</th></tr></thead>
-                    <tbody id="stockRows"><tr><td colspan="6">Cargando...</td></tr></tbody>
-                </table>
+                <div class="admin-search-row">
+                    <input id="stockSearch" type="text" placeholder="Buscar por código, nombre o categoría...">
+                </div>
+                <div id="stockListCaption" class="admin-list-caption">Cargando productos...</div>
+                <div id="stockRows"><p class="text-muted">Cargando...</p></div>
             </div></div>
         </section>
 
@@ -440,11 +456,20 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     <button class="btn btn-secondary" type="button" onclick="resetMarketplaceForm()">Limpiar formulario</button>
                 </div>
 
+                <div class="admin-preview-wrap">
+                    <p class="admin-list-caption">Vista previa (estilo portada):</p>
+                    <div id="marketplacePreviewHost" class="catalog-grid-min"></div>
+                </div>
+
                 <div id="marketplaceResult" class="mt-2"></div>
             </div></div>
 
             <div class="card"><div class="card-body">
                 <h3>Artículos CE registrados</h3>
+                <div class="admin-search-row">
+                    <input id="marketplaceSearch" type="text" placeholder="Buscar por SKU, nombre o condición...">
+                </div>
+                <div id="marketplaceListCaption" class="admin-list-caption">Cargando artículos CE...</div>
                 <div id="marketplaceList" class="text-muted">Cargando artículos CE...</div>
             </div></div>
         </section>
@@ -454,6 +479,8 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
 <script src="js/main.js"></script>
 <script>
 let supplierOrderItems = [];
+let stockItemsCache = [];
+let marketplaceItemsCache = [];
 
 function escapeHtml(v) {
     return String(v || '').replace(/[&<>"']/g, function(m) {
@@ -470,6 +497,90 @@ function normalizeNumericSku(rawValue) {
 }
 
 const skuCheckVersion = { product: 0, marketplace: 0 };
+
+function renderAdminProductCard(item, mode = 'stock') {
+    const id = Number(item.id || 0);
+    const sku = displayProductCode(item.sku || '');
+    const name = String(item.name || 'Sin nombre');
+    const category = String(item.category || (mode === 'marketplace' ? 'Marketplace CE' : 'General'));
+    const description = String(item.description || 'Descripción pendiente');
+    const imageUrl = String(item.image_url || 'images/products/default-product.svg');
+    const unitPrice = Number(item.unit_price || 0);
+    const stock = Math.max(0, Number(item.stock_quantity || 0));
+    const reorder = Math.max(0, Number(item.reorder_level || 10));
+    const condition = mode === 'marketplace' ? String(item.condition_label || 'Seminuevo') : 'Modelo estándar';
+    const stockText = stock <= (mode === 'marketplace' ? 2 : reorder) ? 'Stock bajo: ' : 'Stock: ';
+    const stockClass = stock <= (mode === 'marketplace' ? 2 : reorder) ? 'stock-low' : 'stock-ok';
+    const inactive = Number(item.is_active) === 0;
+    const actions = mode === 'marketplace'
+        ? `
+            <button class="btn btn-small btn-secondary" type="button" onclick="fillMarketplaceFormById(${id})">Editar</button>
+            <button class="btn btn-small btn-danger" type="button" onclick="deleteMarketplaceCeByAdmin(${id})">Desactivar</button>
+        `
+        : `
+            <button class="btn btn-small btn-secondary" type="button" onclick="fillProductFormById(${id})">Editar</button>
+            <button class="btn btn-small btn-danger" type="button" onclick="deleteProductByAdmin(${id})">Desactivar</button>
+        `;
+
+    return `
+        <article class="product-card-min ${inactive ? 'product-card-inactive' : ''}">
+            <div class="product-media">
+                <img class="product-gallery-image active" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(name)}" loading="lazy">
+            </div>
+            <div class="product-content">
+                <div class="catalog-tag">${escapeHtml(category)}</div>
+                <div class="product-code-label"><strong>Código:</strong> <strong>${escapeHtml(sku)}</strong></div>
+                <h3 class="product-title">${escapeHtml(name)}</h3>
+                <p class="product-spec">${escapeHtml(description)}</p>
+                <div><span class="variant-pill">${escapeHtml(condition)}</span></div>
+                <span class="stock-badge ${stockClass}">${stockText}${stock}</span>
+                <div class="catalog-price">$${Math.round(unitPrice).toLocaleString('es-MX')}</div>
+                <div class="product-actions">${actions}</div>
+                ${inactive ? '<div class="text-muted" style="font-size:12px;margin-top:6px;">Producto oculto/desactivado.</div>' : ''}
+            </div>
+        </article>
+    `;
+}
+
+function updateStockPreview() {
+    const host = document.getElementById('stockPreviewHost');
+    if (!host) return;
+    const sku = normalizeNumericSku(document.getElementById('newProductSku')?.value || '');
+    const selectedCategoryOptions = Array.from(document.getElementById('newProductCategory')?.selectedOptions || []);
+    const selectedCategories = selectedCategoryOptions.map((option) => option.value).filter(Boolean);
+    const item = {
+        id: 0,
+        sku: sku || '00000',
+        name: document.getElementById('newProductName')?.value || 'Nombre del producto',
+        category: selectedCategories.join(', ') || 'General',
+        description: document.getElementById('newProductDescription')?.value || 'Descripción pendiente',
+        unit_price: document.getElementById('newProductPrice')?.value || 0,
+        stock_quantity: document.getElementById('newProductStock')?.value || 0,
+        reorder_level: document.getElementById('newProductReorder')?.value || 10,
+        image_url: document.getElementById('newProductImageRef')?.value || 'images/products/default-product.svg',
+        is_active: 1
+    };
+    host.innerHTML = renderAdminProductCard(item, 'stock');
+}
+
+function updateMarketplacePreview() {
+    const host = document.getElementById('marketplacePreviewHost');
+    if (!host) return;
+    const sku = normalizeNumericSku(document.getElementById('marketplaceSku')?.value || '');
+    const item = {
+        id: Number(document.getElementById('marketplaceEditId')?.value || 0),
+        sku: sku || '00000',
+        name: document.getElementById('marketplaceName')?.value || 'Artículo CE',
+        category: 'Marketplace CE',
+        description: document.getElementById('marketplaceDescription')?.value || 'Descripción pendiente',
+        condition_label: document.getElementById('marketplaceCondition')?.value || 'Seminuevo',
+        unit_price: document.getElementById('marketplacePrice')?.value || 0,
+        stock_quantity: document.getElementById('marketplaceStock')?.value || 1,
+        image_url: document.getElementById('marketplaceImagePreviewImg')?.getAttribute('src') || 'images/products/default-product.svg',
+        is_active: Number(document.getElementById('marketplaceActive')?.value || 1)
+    };
+    host.innerHTML = renderAdminProductCard(item, 'marketplace');
+}
 
 function setSkuStatus(statusId, message, tone = 'muted') {
     const el = document.getElementById(statusId);
@@ -505,10 +616,12 @@ async function validateSkuAvailability(kind) {
 
     setSkuStatus(statusId, 'Verificando disponibilidad...', 'muted');
     const version = ++skuCheckVersion[kind];
-    const currentId = isMarketplace ? Number(document.getElementById('marketplaceEditId').value || 0) : 0;
+    const currentId = isMarketplace
+        ? Number(document.getElementById('marketplaceEditId').value || 0)
+        : Number(document.getElementById('newProductEditId').value || 0);
     const endpoint = isMarketplace
         ? `/admin_supply.php?action=marketplace-sku-check&sku=${encodeURIComponent(sku)}&id=${encodeURIComponent(currentId)}`
-        : `/admin_supply.php?action=product-sku-check&sku=${encodeURIComponent(sku)}`;
+        : `/admin_supply.php?action=product-sku-check&sku=${encodeURIComponent(sku)}&id=${encodeURIComponent(currentId)}`;
 
     const check = await apiCall(endpoint, 'GET', null, { silent: true });
     if (version !== skuCheckVersion[kind]) {
@@ -1002,21 +1115,110 @@ async function loadClients() {
 async function loadStock() {
     const res = await apiCall('/admin_supply.php?action=stock', 'GET', null, { silent: true });
     const body = document.getElementById('stockRows');
+    const caption = document.getElementById('stockListCaption');
     if (!res || !res.success || !Array.isArray(res.items)) {
-        body.innerHTML = '<tr><td colspan="6">Sin datos</td></tr>';
+        if (body) body.innerHTML = '<p class="text-muted">Sin datos</p>';
+        if (caption) caption.textContent = 'No fue posible cargar productos.';
         return;
     }
-    body.innerHTML = res.items.map(i => {
-        const low = Number(i.stock_quantity) <= Number(i.reorder_level);
-        return `<tr>
-            <td>${escapeHtml(displayProductCode(i.sku))}</td>
-            <td>${escapeHtml(i.name)}</td>
-            <td>${escapeHtml(i.category || '')}</td>
-            <td>${escapeHtml(i.stock_quantity)}</td>
-            <td>${escapeHtml(i.reorder_level)}</td>
-            <td>${low ? '<span class="badge badge-danger">Reabastecer</span>' : '<span class="badge badge-success">OK</span>'}</td>
-        </tr>`;
-    }).join('');
+
+    stockItemsCache = Array.isArray(res.items) ? res.items : [];
+    renderStockList();
+}
+
+function renderStockList() {
+    const body = document.getElementById('stockRows');
+    const caption = document.getElementById('stockListCaption');
+    const search = (document.getElementById('stockSearch')?.value || '').toLowerCase().trim();
+
+    if (!body) return;
+
+    const filtered = stockItemsCache.filter((item) => {
+        const code = displayProductCode(item.sku || '').toLowerCase();
+        const name = String(item.name || '').toLowerCase();
+        const cat = String(item.category || '').toLowerCase();
+        return `${code} ${name} ${cat}`.includes(search);
+    });
+
+    if (caption) {
+        caption.textContent = `Mostrando ${filtered.length} de ${stockItemsCache.length} productos`;
+    }
+
+    if (filtered.length === 0) {
+        body.innerHTML = '<p class="text-muted">No hay productos que coincidan con la búsqueda.</p>';
+        return;
+    }
+
+    body.innerHTML = `<div class="catalog-grid-min">${filtered.map((item) => renderAdminProductCard(item, 'stock')).join('')}</div>`;
+}
+
+function resetProductForm() {
+    document.getElementById('newProductEditId').value = '';
+    document.getElementById('newProductSku').value = '';
+    document.getElementById('newProductName').value = '';
+    document.getElementById('newProductPrice').value = '0';
+    document.getElementById('newProductStock').value = '50';
+    document.getElementById('newProductReorder').value = '10';
+    document.getElementById('newProductBarcode').value = '';
+    document.getElementById('newProductDescription').value = '';
+    document.getElementById('newProductImageRef').value = 'images/products/default-product.svg';
+
+    Array.from(document.getElementById('newProductCategory').options || []).forEach((opt) => {
+        opt.selected = false;
+    });
+
+    const saveBtn = document.getElementById('newProductSaveButton');
+    if (saveBtn) saveBtn.textContent = 'Guardar producto';
+    const box = document.getElementById('productCreateResult');
+    if (box) box.innerHTML = '';
+    setSkuStatus('newProductSkuStatus', 'Debe ser único y de 5 números.', 'muted');
+    updateStockPreview();
+}
+
+function fillProductFormById(id) {
+    const item = stockItemsCache.find((row) => Number(row.id) === Number(id));
+    if (!item) return;
+
+    document.getElementById('newProductEditId').value = item.id || '';
+    document.getElementById('newProductSku').value = displayProductCode(item.sku || '');
+    document.getElementById('newProductName').value = item.name || '';
+    document.getElementById('newProductPrice').value = String(item.unit_price || 0);
+    document.getElementById('newProductStock').value = String(item.stock_quantity || 0);
+    document.getElementById('newProductReorder').value = String(item.reorder_level || 10);
+    document.getElementById('newProductDescription').value = item.description || '';
+    document.getElementById('newProductImageRef').value = item.image_url || 'images/products/default-product.svg';
+
+    const categories = String(item.category || '')
+        .split(',')
+        .map((x) => x.trim())
+        .filter(Boolean);
+    Array.from(document.getElementById('newProductCategory').options || []).forEach((opt) => {
+        opt.selected = categories.includes(opt.value);
+    });
+
+    const saveBtn = document.getElementById('newProductSaveButton');
+    if (saveBtn) saveBtn.textContent = 'Actualizar producto';
+    setSkuStatus('newProductSkuStatus', 'Editando producto existente.', 'muted');
+    updateStockPreview();
+}
+
+async function deleteProductByAdmin(id) {
+    if (!id) return;
+    if (!confirm('¿Deseas desactivar este producto?')) return;
+
+    const box = document.getElementById('productCreateResult');
+    const res = await apiCall('/admin_supply.php?action=product-delete', 'POST', { id: id });
+    if (!res || !res.success) {
+        if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible desactivar producto')}</div>`;
+        return;
+    }
+
+    if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Producto desactivado')}</div>`;
+    if (Number(document.getElementById('newProductEditId').value || 0) === Number(id)) {
+        resetProductForm();
+    }
+    loadStock();
+    loadSupplierProducts();
 }
 
 async function createVisit() {
@@ -1554,6 +1756,7 @@ async function uploadProductImages() {
 }
 
 async function createProductByAdmin() {
+    const editId = Number(document.getElementById('newProductEditId')?.value || 0);
     const skuInput = document.getElementById('newProductSku');
     const normalizedSku = normalizeNumericSku(skuInput?.value || '');
     if (skuInput) {
@@ -1581,6 +1784,7 @@ async function createProductByAdmin() {
     const selectedCategoryOptions = Array.from(document.getElementById('newProductCategory').selectedOptions || []);
     const selectedCategories = selectedCategoryOptions.map((option) => option.value).filter(Boolean);
     const payload = {
+        id: editId,
         sku: normalizedSku,
         name: document.getElementById('newProductName').value || '',
         category: selectedCategories.join(', '),
@@ -1602,7 +1806,7 @@ async function createProductByAdmin() {
 
     const box = document.getElementById('productCreateResult');
 
-    const res = await apiCall('/admin_supply.php?action=product-create', 'POST', payload);
+    const res = await apiCall('/admin_supply.php?action=product-save', 'POST', payload);
     if (!res || !res.success) {
         if (box) {
             box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible registrar el producto')}</div>`;
@@ -1611,10 +1815,11 @@ async function createProductByAdmin() {
     }
 
     if (box) {
-        box.innerHTML = `<div class="alert alert-success">Producto registrado correctamente: <strong>${escapeHtml(displayProductCode(res.product.sku || ''))}</strong></div>`;
+        box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Producto guardado')}: <strong>${escapeHtml(displayProductCode((res.product && res.product.sku) ? res.product.sku : normalizedSku))}</strong></div>`;
     }
 
-    showAlert('Producto registrado correctamente', 'success');
+    showAlert(res.message || 'Producto guardado correctamente', 'success');
+    resetProductForm();
     loadStock();
     loadSupplierProducts();
 }
@@ -1636,6 +1841,7 @@ function resetMarketplaceForm() {
     const box = document.getElementById('marketplaceResult');
     if (box) box.innerHTML = '';
     setSkuStatus('marketplaceSkuStatus', 'Debe ser único y de 5 números.', 'muted');
+    updateMarketplacePreview();
 }
 
 function fillMarketplaceForm(item) {
@@ -1662,59 +1868,53 @@ function fillMarketplaceForm(item) {
     const saveBtn = document.getElementById('marketplaceSaveButton');
     if (saveBtn) saveBtn.textContent = 'Actualizar artículo CE';
     validateSkuAvailability('marketplace');
+    updateMarketplacePreview();
+}
+
+function fillMarketplaceFormById(id) {
+    const item = marketplaceItemsCache.find((row) => Number(row.id) === Number(id));
+    if (!item) return;
+    fillMarketplaceForm(item);
 }
 
 async function loadMarketplaceCeAdmin() {
     const box = document.getElementById('marketplaceList');
+    const caption = document.getElementById('marketplaceListCaption');
     const res = await apiCall('/admin_supply.php?action=marketplace-list', 'GET', null, { silent: true });
 
     if (!res || !res.success || !Array.isArray(res.items)) {
         if (box) box.innerHTML = '<p class="text-muted">No fue posible cargar artículos CE.</p>';
+        if (caption) caption.textContent = 'No fue posible cargar artículos CE.';
         return;
     }
 
-    if (res.items.length === 0) {
+    marketplaceItemsCache = Array.isArray(res.items) ? res.items : [];
+    renderMarketplaceList();
+}
+
+function renderMarketplaceList() {
+    const box = document.getElementById('marketplaceList');
+    const caption = document.getElementById('marketplaceListCaption');
+    if (!box) return;
+
+    const query = (document.getElementById('marketplaceSearch')?.value || '').toLowerCase().trim();
+    const filtered = marketplaceItemsCache.filter((item) => {
+        const code = displayProductCode(item.sku || '').toLowerCase();
+        const name = String(item.name || '').toLowerCase();
+        const cond = String(item.condition_label || '').toLowerCase();
+        return `${code} ${name} ${cond}`.includes(query);
+    });
+
+    if (caption) {
+        caption.textContent = `Mostrando ${filtered.length} de ${marketplaceItemsCache.length} artículos CE`;
+    }
+
+    if (filtered.length === 0) {
         if (box) box.innerHTML = '<p class="text-muted">No hay artículos CE registrados.</p>';
         return;
     }
 
-    box.innerHTML = `
-        <table>
-            <thead>
-                <tr><th>SKU</th><th>Artículo</th><th>Condición</th><th>Precio</th><th>Stock</th><th>Visible</th><th>Acciones</th></tr>
-            </thead>
-            <tbody>
-                ${res.items.map((item) => `
-                    <tr>
-                        <td>${escapeHtml(item.sku || '')}</td>
-                        <td>
-                            <strong>${escapeHtml(item.name || '')}</strong>
-                            <div class="text-muted" style="font-size:12px; max-width:420px;">${escapeHtml(item.description || '')}</div>
-                        </td>
-                        <td>${escapeHtml(item.condition_label || 'Seminuevo')}</td>
-                        <td>$${Number(item.unit_price || 0).toFixed(2)}</td>
-                        <td>${Number(item.stock_quantity || 0)}</td>
-                        <td>${Number(item.is_active) ? '<span class="badge badge-success">Sí</span>' : '<span class="badge badge-danger">No</span>'}</td>
-                        <td>
-                            <button class="btn btn-small btn-secondary" type="button" data-action="edit-marketplace">Editar</button>
-                            <button class="btn btn-small btn-danger" type="button" onclick="deleteMarketplaceCeByAdmin(${Number(item.id || 0)})">Desactivar</button>
-                        </td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
-
-    const rows = box.querySelectorAll('tbody tr');
-    rows.forEach((row, idx) => {
-        const editBtn = row.querySelector('[data-action="edit-marketplace"]');
-        const item = res.items[idx];
-        if (editBtn && item) {
-            editBtn.onclick = function () {
-                fillMarketplaceForm(item);
-            };
-        }
-    });
+    box.innerHTML = `<div class="catalog-grid-min">${filtered.map((item) => renderAdminProductCard(item, 'marketplace')).join('')}</div>`;
 }
 
 async function saveMarketplaceCeByAdmin() {
@@ -1830,6 +2030,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let productSkuDebounce = null;
         productSkuInput.addEventListener('input', function () {
             productSkuInput.value = normalizeNumericSku(productSkuInput.value);
+            updateStockPreview();
             if (productSkuDebounce) window.clearTimeout(productSkuDebounce);
             productSkuDebounce = window.setTimeout(() => {
                 validateSkuAvailability('product');
@@ -1845,6 +2046,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let marketplaceSkuDebounce = null;
         marketplaceSkuInput.addEventListener('input', function () {
             marketplaceSkuInput.value = normalizeNumericSku(marketplaceSkuInput.value);
+            updateMarketplacePreview();
             if (marketplaceSkuDebounce) window.clearTimeout(marketplaceSkuDebounce);
             marketplaceSkuDebounce = window.setTimeout(() => {
                 validateSkuAvailability('marketplace');
@@ -1857,6 +2059,36 @@ document.addEventListener('DOMContentLoaded', function () {
 
     setSkuStatus('newProductSkuStatus', 'Debe ser único y de 5 números.', 'muted');
     setSkuStatus('marketplaceSkuStatus', 'Debe ser único y de 5 números.', 'muted');
+
+    const stockSearch = document.getElementById('stockSearch');
+    if (stockSearch) {
+        stockSearch.addEventListener('input', renderStockList);
+    }
+
+    const marketplaceSearch = document.getElementById('marketplaceSearch');
+    if (marketplaceSearch) {
+        marketplaceSearch.addEventListener('input', renderMarketplaceList);
+    }
+
+    ['newProductName', 'newProductPrice', 'newProductStock', 'newProductReorder', 'newProductDescription', 'newProductImageRef'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', updateStockPreview);
+        if (el && el.tagName === 'SELECT') el.addEventListener('change', updateStockPreview);
+    });
+
+    const newProductCategory = document.getElementById('newProductCategory');
+    if (newProductCategory) {
+        newProductCategory.addEventListener('change', updateStockPreview);
+    }
+
+    ['marketplaceName', 'marketplaceCondition', 'marketplacePrice', 'marketplaceStock', 'marketplaceDescription', 'marketplaceActive'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', updateMarketplacePreview);
+        if (el && el.tagName === 'SELECT') el.addEventListener('change', updateMarketplacePreview);
+    });
+
+    updateStockPreview();
+    updateMarketplacePreview();
 
     // Add file input preview handler for homepage update images
     const imageInput = document.getElementById('updateImage');
@@ -1886,6 +2118,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 reader.onload = function (event) {
                     previewImg.src = event.target.result;
                     preview.style.display = 'block';
+                    updateMarketplacePreview();
                 };
                 reader.readAsDataURL(e.target.files[0]);
             }

@@ -58,8 +58,8 @@ function normalized_sku_exists_in_table_admin_supply($pdo, string $table, string
     }
 
     try {
-        if ($table === 'marketplace_ce_products' && $excludeId > 0) {
-            $stmt = $pdo->prepare("SELECT id, sku FROM marketplace_ce_products WHERE id <> ?");
+        if ($excludeId > 0) {
+            $stmt = $pdo->prepare("SELECT id, sku FROM {$table} WHERE id <> ?");
             $stmt->execute([max(0, $excludeId)]);
         } else {
             $stmt = $pdo->query("SELECT id, sku FROM {$table}");
@@ -79,12 +79,12 @@ function normalized_sku_exists_in_table_admin_supply($pdo, string $table, string
     }
 }
 
-function product_sku_exists_admin_supply($pdo, string $sku): bool {
+function product_sku_exists_admin_supply($pdo, string $sku, int $excludeId = 0): bool {
     if ($sku === '') {
         return false;
     }
 
-    return normalized_sku_exists_in_table_admin_supply($pdo, 'products', $sku);
+    return normalized_sku_exists_in_table_admin_supply($pdo, 'products', $sku, $excludeId);
 }
 
 function marketplace_sku_exists_admin_supply($pdo, string $sku, int $excludeId = 0): bool {
@@ -119,9 +119,9 @@ function seed_sku_exists_admin_supply(string $sku): bool {
     return false;
 }
 
-function sku_usage_admin_supply($pdo, string $sku, int $excludeMarketplaceId = 0): array {
+function sku_usage_admin_supply($pdo, string $sku, int $excludeMarketplaceId = 0, int $excludeProductId = 0): array {
     return [
-        'in_products' => product_sku_exists_admin_supply($pdo, $sku),
+        'in_products' => product_sku_exists_admin_supply($pdo, $sku, $excludeProductId),
         'in_marketplace' => marketplace_sku_exists_admin_supply($pdo, $sku, $excludeMarketplaceId),
         'in_seed' => seed_sku_exists_admin_supply($sku),
     ];
@@ -366,6 +366,56 @@ function create_product_compatible($pdo, array $payload): void {
     $stmt->execute($values);
 }
 
+function update_product_compatible($pdo, int $id, array $payload): void {
+    if ($id <= 0) {
+        throw new Exception('ID de producto inválido');
+    }
+
+    $sets = [];
+    $values = [];
+
+    if (db_column_exists('products', 'sku')) { $sets[] = 'sku = ?'; $values[] = $payload['sku']; }
+    if (db_column_exists('products', 'name')) { $sets[] = 'name = ?'; $values[] = $payload['name']; }
+    if (db_column_exists('products', 'description')) { $sets[] = 'description = ?'; $values[] = $payload['description']; }
+    if (db_column_exists('products', 'category')) { $sets[] = 'category = ?'; $values[] = $payload['category']; }
+    if (db_column_exists('products', 'barcode')) { $sets[] = 'barcode = ?'; $values[] = $payload['barcode']; }
+    if (db_column_exists('products', 'image_url')) { $sets[] = 'image_url = ?'; $values[] = $payload['image_url']; }
+    if (db_column_exists('products', 'stock_quantity')) { $sets[] = 'stock_quantity = ?'; $values[] = (int)$payload['stock_quantity']; }
+    if (db_column_exists('products', 'reorder_level')) { $sets[] = 'reorder_level = ?'; $values[] = (int)$payload['reorder_level']; }
+    if (db_column_exists('products', 'unit_price')) { $sets[] = 'unit_price = ?'; $values[] = (float)$payload['price']; }
+    elseif (db_column_exists('products', 'sell_price')) { $sets[] = 'sell_price = ?'; $values[] = (float)$payload['price']; }
+    if (db_column_exists('products', 'updated_at')) { $sets[] = 'updated_at = CURRENT_TIMESTAMP'; }
+
+    if (empty($sets)) {
+        throw new Exception('No hay columnas disponibles para actualizar el producto');
+    }
+
+    $values[] = $id;
+    $stmt = $pdo->prepare('UPDATE products SET ' . implode(', ', $sets) . ' WHERE id = ?');
+    $stmt->execute($values);
+}
+
+function deactivate_product_compatible($pdo, int $id): void {
+    if ($id <= 0) {
+        throw new Exception('ID de producto inválido');
+    }
+
+    if (db_column_exists('products', 'is_active')) {
+        $stmt = $pdo->prepare('UPDATE products SET is_active = false WHERE id = ?');
+        $stmt->execute([$id]);
+        return;
+    }
+
+    if (db_column_exists('products', 'active')) {
+        $stmt = $pdo->prepare('UPDATE products SET active = 0 WHERE id = ?');
+        $stmt->execute([$id]);
+        return;
+    }
+
+    $stmt = $pdo->prepare('DELETE FROM products WHERE id = ?');
+    $stmt->execute([$id]);
+}
+
 function bootstrap_admin_supply_schema($pdo): void {
     try {
         ensure_admin_supply_tables($pdo);
@@ -420,16 +470,23 @@ function list_available_product_images($pdo): array {
 }
 
 function list_stock_products_compatible($pdo): array {
+    $descriptionSelect = db_column_exists('products', 'description')
+        ? "COALESCE(description, '') AS description"
+        : "'' AS description";
+    $isActiveSelect = db_column_exists('products', 'is_active')
+        ? "COALESCE(is_active, true) AS is_active"
+        : (db_column_exists('products', 'active') ? "(active = 1) AS is_active" : "true AS is_active");
+
     $queries = [];
 
     if (db_column_exists('products', 'is_active')) {
-        $queries[] = "SELECT id, sku, name, category, stock_quantity, reorder_level, COALESCE(unit_price, sell_price, 0) AS unit_price, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE is_active = true ORDER BY stock_quantity ASC, name ASC LIMIT 500";
+        $queries[] = "SELECT id, sku, name, {$descriptionSelect}, category, stock_quantity, reorder_level, COALESCE(unit_price, sell_price, 0) AS unit_price, COALESCE(image_url, 'images/products/default-product.svg') AS image_url, {$isActiveSelect} FROM products WHERE is_active = true ORDER BY stock_quantity ASC, name ASC LIMIT 500";
     }
     if (db_column_exists('products', 'active')) {
-        $queries[] = "SELECT id, sku, name, category, stock_quantity, reorder_level, COALESCE(unit_price, sell_price, 0) AS unit_price, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE active = 1 ORDER BY stock_quantity ASC, name ASC LIMIT 500";
+        $queries[] = "SELECT id, sku, name, {$descriptionSelect}, category, stock_quantity, reorder_level, COALESCE(unit_price, sell_price, 0) AS unit_price, COALESCE(image_url, 'images/products/default-product.svg') AS image_url, {$isActiveSelect} FROM products WHERE active = 1 ORDER BY stock_quantity ASC, name ASC LIMIT 500";
     }
 
-    $queries[] = "SELECT id, sku, name, category, stock_quantity, reorder_level, COALESCE(unit_price, sell_price, 0) AS unit_price, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products ORDER BY stock_quantity ASC, name ASC LIMIT 500";
+    $queries[] = "SELECT id, sku, name, {$descriptionSelect}, category, stock_quantity, reorder_level, COALESCE(unit_price, sell_price, 0) AS unit_price, COALESCE(image_url, 'images/products/default-product.svg') AS image_url, {$isActiveSelect} FROM products ORDER BY stock_quantity ASC, name ASC LIMIT 500";
 
     foreach ($queries as $sql) {
         try {
@@ -501,7 +558,8 @@ try {
                 break;
             }
 
-            $usage = sku_usage_admin_supply($pdo, $sku, 0);
+            $id = (int)($_GET['id'] ?? 0);
+            $usage = sku_usage_admin_supply($pdo, $sku, 0, $id);
             $exists = $usage['in_products'] || $usage['in_marketplace'] || $usage['in_seed'];
             $message = 'Código disponible';
             if ($exists) {
@@ -588,7 +646,7 @@ try {
                 break;
             }
 
-            $usage = sku_usage_admin_supply($pdo, $sku, 0);
+            $usage = sku_usage_admin_supply($pdo, $sku, 0, 0);
             if ($usage['in_products'] || $usage['in_marketplace'] || $usage['in_seed']) {
                 $response = [
                     'success' => false,
@@ -644,6 +702,122 @@ try {
                     'image_url' => $imageUrl
                 ]
             ];
+            break;
+
+        case 'product-save':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $id = (int)($input['id'] ?? 0);
+            $sku = normalize_sku_admin_supply(sanitize($input['sku'] ?? ''));
+            $name = sanitize($input['name'] ?? '');
+            $category = sanitize($input['category'] ?? 'General');
+            $description = sanitize($input['description'] ?? '');
+            $barcode = sanitize($input['barcode'] ?? '');
+            $price = (float)($input['price'] ?? 0);
+            $stockQty = (int)($input['stock_quantity'] ?? 50);
+            $reorder = (int)($input['reorder_level'] ?? 10);
+            $imageUrl = sanitize($input['image_url'] ?? 'images/products/default-product.svg');
+
+            if ($sku === '' || $name === '') {
+                $response = ['success' => false, 'message' => 'SKU y nombre son obligatorios'];
+                break;
+            }
+            if (!is_valid_numeric_sku_admin_supply($sku)) {
+                $response = ['success' => false, 'message' => 'El código del producto debe tener exactamente 5 números'];
+                break;
+            }
+            if ($price < 0 || $stockQty < 0 || $reorder < 0) {
+                $response = ['success' => false, 'message' => 'Valores numéricos inválidos'];
+                break;
+            }
+
+            $usage = sku_usage_admin_supply($pdo, $sku, 0, $id);
+            if ($usage['in_products'] || $usage['in_marketplace'] || $usage['in_seed']) {
+                $response = [
+                    'success' => false,
+                    'message' => $usage['in_products']
+                        ? 'Ya existe un producto con ese código'
+                        : ($usage['in_marketplace']
+                            ? 'Ese código ya está registrado en Marketplace CE'
+                            : 'Ese código ya existe en el catálogo base')
+                ];
+                break;
+            }
+
+            if ($id > 0) {
+                $check = $pdo->prepare('SELECT id FROM products WHERE id = ? LIMIT 1');
+                $check->execute([$id]);
+                if (!(int)$check->fetchColumn()) {
+                    $response = ['success' => false, 'message' => 'Producto no encontrado'];
+                    break;
+                }
+
+                update_product_compatible($pdo, $id, [
+                    'sku' => $sku,
+                    'name' => $name,
+                    'category' => $category,
+                    'description' => $description,
+                    'barcode' => $barcode,
+                    'price' => $price,
+                    'stock_quantity' => max(0, $stockQty),
+                    'reorder_level' => max(0, $reorder),
+                    'image_url' => $imageUrl
+                ]);
+
+                $response = [
+                    'success' => true,
+                    'message' => 'Producto actualizado correctamente',
+                    'product' => [
+                        'id' => $id,
+                        'sku' => $sku,
+                        'name' => $name
+                    ]
+                ];
+                break;
+            }
+
+            create_product_compatible($pdo, [
+                'sku' => $sku,
+                'name' => $name,
+                'category' => $category,
+                'description' => $description,
+                'barcode' => $barcode,
+                'price' => $price,
+                'stock_quantity' => max(0, $stockQty),
+                'reorder_level' => max(0, $reorder),
+                'image_url' => $imageUrl
+            ]);
+
+            $response = [
+                'success' => true,
+                'message' => 'Producto registrado correctamente',
+                'product' => [
+                    'sku' => $sku,
+                    'name' => $name,
+                    'category' => $category,
+                    'price' => $price,
+                    'image_url' => $imageUrl
+                ]
+            ];
+            break;
+
+        case 'product-delete':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $id = (int)($input['id'] ?? 0);
+            if ($id <= 0) {
+                $response = ['success' => false, 'message' => 'Producto inválido'];
+                break;
+            }
+
+            deactivate_product_compatible($pdo, $id);
+            $response = ['success' => true, 'message' => 'Producto desactivado'];
             break;
 
         case 'product-image-upload':
