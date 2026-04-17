@@ -1701,19 +1701,19 @@ try {
             }
 
             if ($id > 0) {
-                $stmt = $pdo->prepare("UPDATE product_categories SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+                $stmt = $pdo->prepare("DELETE FROM product_categories WHERE id = ?");
                 $stmt->execute([$id]);
             } elseif ($name !== '') {
-                $stmt = $pdo->prepare("UPDATE product_categories SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE LOWER(name) = LOWER(?)");
+                $stmt = $pdo->prepare("DELETE FROM product_categories WHERE LOWER(name) = LOWER(?)");
                 $stmt->execute([$name]);
             }
 
             if (($stmt->rowCount() ?? 0) <= 0) {
-                $response = ['success' => false, 'message' => 'No se encontró la categoría para desactivar'];
+                $response = ['success' => false, 'message' => 'No se encontró la categoría para eliminar'];
                 break;
             }
 
-            $response = ['success' => true, 'message' => 'Categoría desactivada'];
+            $response = ['success' => true, 'message' => 'Categoría eliminada'];
             break;
 
         case 'marketplace-list':

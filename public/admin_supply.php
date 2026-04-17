@@ -99,7 +99,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     <div class="form-group"><label>Nombre</label><input id="newProductName" type="text" maxlength="255"></div>
                     <div class="form-group">
                         <label>Categorías (selección múltiple)</label>
-                        <select id="newProductCategory" multiple size="4">
+                        <select id="newProductCategory" multiple size="6">
                             <option value="Material eléctrico">Material eléctrico</option>
                             <option value="Fontanería">Fontanería</option>
                             <option value="Cerrajería">Cerrajería</option>
@@ -1189,7 +1189,7 @@ async function deleteCategoryQuick() {
 
     const categoryName = selected[0].value;
     const categoryId = Number(selected[0].dataset?.id || 0);
-    if (!confirm(`¿Desactivar categoría "${categoryName}"?`)) return;
+    if (!confirm(`¿Eliminar categoría "${categoryName}"?`)) return;
 
     const res = await apiCall('/admin_supply.php?action=categories-delete', 'POST', {
         id: categoryId,
@@ -1259,6 +1259,7 @@ async function addCategoryFromStockForm() {
         );
         if (target) {
             target.selected = true;
+            target.scrollIntoView({ block: 'nearest' });
         }
     }
 }
@@ -1825,7 +1826,7 @@ async function loadProductCategories(onlyActive = true) {
                             <td>${Number(cat.is_active) ? '<span class="badge badge-success">Sí</span>' : '<span class="badge badge-danger">No</span>'}</td>
                             <td>
                                 <button class="btn btn-small btn-secondary" type="button" data-action="edit-category">Editar</button>
-                                <button class="btn btn-small btn-danger" type="button" onclick="deleteCategoryByAdminId(${Number(cat.id || 0)})">Desactivar</button>
+                                <button class="btn btn-small btn-danger" type="button" onclick="deleteCategoryByAdminId(${Number(cat.id || 0)})">Eliminar</button>
                             </td>
                         </tr>
                     `).join('')}
@@ -1894,14 +1895,14 @@ async function saveCategoryByAdmin() {
 
 async function deleteCategoryByAdminId(id) {
     if (!id) return;
-    if (!confirm('¿Deseas desactivar esta categoría?')) return;
+    if (!confirm('¿Deseas eliminar esta categoría?')) return;
     const box = document.getElementById('categoryResult');
     const res = await apiCall('/admin_supply.php?action=categories-delete', 'POST', { id: id });
     if (!res || !res.success) {
-        if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible desactivar categoría')}</div>`;
+        if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible eliminar categoría')}</div>`;
         return;
     }
-    if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Categoría desactivada')}</div>`;
+    if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Categoría eliminada')}</div>`;
     loadProductCategories(true);
     loadProductCategories(false);
 }
