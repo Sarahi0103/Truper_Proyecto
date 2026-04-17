@@ -373,10 +373,10 @@ function create_product_compatible($pdo, array $payload): void {
 
     if (db_column_exists('products', 'is_active')) {
         $columns[] = 'is_active';
-        $values[] = true;
+        $values[] = isset($payload['is_active']) ? !empty($payload['is_active']) : true;
     } elseif (db_column_exists('products', 'active')) {
         $columns[] = 'active';
-        $values[] = 1;
+        $values[] = isset($payload['is_active']) ? (!empty($payload['is_active']) ? 1 : 0) : 1;
     }
 
     $placeholders = implode(', ', array_fill(0, count($columns), '?'));
@@ -403,6 +403,8 @@ function update_product_compatible($pdo, int $id, array $payload): void {
     if (db_column_exists('products', 'reorder_level')) { $sets[] = 'reorder_level = ?'; $values[] = (int)$payload['reorder_level']; }
     if (db_column_exists('products', 'unit_price')) { $sets[] = 'unit_price = ?'; $values[] = (float)$payload['price']; }
     elseif (db_column_exists('products', 'sell_price')) { $sets[] = 'sell_price = ?'; $values[] = (float)$payload['price']; }
+    if (array_key_exists('is_active', $payload) && db_column_exists('products', 'is_active')) { $sets[] = 'is_active = ?'; $values[] = !empty($payload['is_active']); }
+    elseif (array_key_exists('is_active', $payload) && db_column_exists('products', 'active')) { $sets[] = 'active = ?'; $values[] = !empty($payload['is_active']) ? 1 : 0; }
     if (db_column_exists('products', 'updated_at')) { $sets[] = 'updated_at = CURRENT_TIMESTAMP'; }
 
     if (empty($sets)) {
@@ -433,6 +435,26 @@ function deactivate_product_compatible($pdo, int $id): void {
 
     $stmt = $pdo->prepare('DELETE FROM products WHERE id = ?');
     $stmt->execute([$id]);
+}
+
+function set_product_visibility_compatible($pdo, int $id, bool $isVisible): void {
+    if ($id <= 0) {
+        throw new Exception('ID de producto inválido');
+    }
+
+    if (db_column_exists('products', 'is_active')) {
+        $stmt = $pdo->prepare('UPDATE products SET is_active = ? WHERE id = ?');
+        $stmt->execute([$isVisible, $id]);
+        return;
+    }
+
+    if (db_column_exists('products', 'active')) {
+        $stmt = $pdo->prepare('UPDATE products SET active = ? WHERE id = ?');
+        $stmt->execute([$isVisible ? 1 : 0, $id]);
+        return;
+    }
+
+    throw new Exception('No existe columna de visibilidad en products');
 }
 
 function ensure_products_seeded_for_admin_supply($pdo): void {
@@ -697,16 +719,12 @@ try {
 
             $id = (int)($_GET['id'] ?? 0);
             $usage = sku_usage_admin_supply($pdo, $sku, 0, $id);
-            $sameRecord = record_matches_normalized_sku_admin_supply($pdo, 'products', $id, $sku);
-            $seedConflict = $usage['in_seed'] && !$sameRecord;
-            $exists = $usage['in_products'] || $usage['in_marketplace'] || $seedConflict;
+            $exists = $usage['in_products'] || $usage['in_marketplace'];
             $message = 'Código disponible';
             if ($exists) {
                 $message = $usage['in_products']
                     ? 'Ya existe un producto con ese código'
-                        : ($usage['in_marketplace']
-                        ? 'Ya existe un artículo CE con ese código'
-                        : 'Ese código ya existe en el catálogo base');
+                        : 'Ya existe un artículo CE con ese código';
             }
             $response = [
                 'success' => true,
@@ -788,15 +806,12 @@ try {
             }
 
             $usage = sku_usage_admin_supply($pdo, $sku, 0, 0);
-            $seedConflict = $usage['in_seed'];
-            if ($usage['in_products'] || $usage['in_marketplace'] || $seedConflict) {
+            if ($usage['in_products'] || $usage['in_marketplace']) {
                 $response = [
                     'success' => false,
                     'message' => $usage['in_products']
                         ? 'Ya existe un producto con ese código'
-                        : ($usage['in_marketplace']
-                            ? 'Ese código ya está registrado en Marketplace CE'
-                            : 'Ese código ya existe en el catálogo base')
+                        : 'Ese código ya está registrado en Marketplace CE'
                 ];
                 break;
             }
@@ -877,16 +892,12 @@ try {
             }
 
             $usage = sku_usage_admin_supply($pdo, $sku, 0, $id);
-            $sameRecord = record_matches_normalized_sku_admin_supply($pdo, 'products', $id, $sku);
-            $seedConflict = $usage['in_seed'] && !$sameRecord;
-            if ($usage['in_products'] || $usage['in_marketplace'] || $seedConflict) {
+            if ($usage['in_products'] || $usage['in_marketplace']) {
                 $response = [
                     'success' => false,
                     'message' => $usage['in_products']
                         ? 'Ya existe un producto con ese código'
-                        : ($usage['in_marketplace']
-                            ? 'Ese código ya está registrado en Marketplace CE'
-                            : 'Ese código ya existe en el catálogo base')
+                        : 'Ese código ya está registrado en Marketplace CE'
                 ];
                 break;
             }
@@ -962,6 +973,49 @@ try {
 
             deactivate_product_compatible($pdo, $id);
             $response = ['success' => true, 'message' => 'Producto desactivado'];
+            break;
+
+        case 'product-visibility':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $id = (int)($input['id'] ?? 0);
+            $isVisible = isset($input['is_visible']) ? !empty($input['is_visible']) : true;
+            if ($id <= 0) {
+                $response = ['success' => false, 'message' => 'Producto inválido'];
+                break;
+            }
+
+            set_product_visibility_compatible($pdo, $id, $isVisible);
+
+            $response = [
+                'success' => true,
+                'message' => $isVisible ? 'Producto visible en tienda' : 'Producto oculto en tienda'
+            ];
+            break;
+
+        case 'marketplace-visibility':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $id = (int)($input['id'] ?? 0);
+            $isVisible = isset($input['is_visible']) ? !empty($input['is_visible']) : true;
+            if ($id <= 0) {
+                $response = ['success' => false, 'message' => 'Artículo CE inválido'];
+                break;
+            }
+
+            $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET is_active = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+            $stmt->execute([$isVisible, $_SESSION['user_id'], $id]);
+
+            $response = [
+                'success' => true,
+                'message' => $isVisible ? 'Artículo CE visible' : 'Artículo CE oculto'
+            ];
             break;
 
         case 'product-image-upload':

@@ -109,10 +109,10 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                         <div class="d-flex align-center" style="gap:0.5rem; margin-top:0.5rem;">
                             <input id="newCategoryQuickName" type="text" placeholder="Nueva categoría" maxlength="120" style="max-width:180px;">
                             <button class="btn btn-small btn-secondary" type="button" onclick="addCategoryFromStockForm()" title="Agregar categoría">+</button>
-                            <button class="btn btn-small btn-secondary" type="button" onclick="toggleCategoryDeleteMode()" title="Eliminar categoría">−</button>
+                            <button class="btn btn-small btn-secondary" type="button" onclick="deleteCategoryByAdmin()" title="Eliminar categoría seleccionada">−</button>
                         </div>
-                        <div id="categoryDeleteModeBox" class="alert alert-info" style="display:none; margin-top:0.5rem; padding:0.5rem; font-size:12px;">
-                            <strong>Modo eliminar:</strong> Selecciona una categoría de la lista arriba y haz clic en −
+                        <div id="categoryDeleteModeBox" class="alert alert-info" style="margin-top:0.5rem; padding:0.5rem; font-size:12px;">
+                            Selecciona una categoría de la lista y usa el botón − para eliminarla.
                         </div>
                     </div>
                 </div>
@@ -529,15 +529,21 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
     const stockClass = stock <= (mode === 'marketplace' ? 2 : reorder) ? 'stock-low' : 'stock-ok';
     const inactive = Number(item.is_active) === 0;
     const seedOnly = Boolean(item.seed_only || item.__seed_only);
+    const visibilityLabel = inactive ? 'Oculto' : 'Visible';
     const actions = mode === 'marketplace'
         ? `
             <button class="btn btn-small btn-secondary" type="button" onclick="fillMarketplaceFormById(${id})">Editar</button>
+            <button class="btn btn-small btn-ghost" type="button" onclick="toggleMarketplaceVisibility(${id}, ${inactive ? 1 : 0})">${inactive ? 'Mostrar' : 'Ocultar'}</button>
             <button class="btn btn-small btn-danger" type="button" onclick="deleteMarketplaceCeByAdmin(${id})">Desactivar</button>
         `
         : (seedOnly
-            ? `<span class="text-muted" style="font-size:12px;">Catálogo base de portada</span>`
+            ? `
+                <button class="btn btn-small btn-secondary" type="button" onclick="prepareSeedProductForEditing(${id})">Editar</button>
+                <span class="text-muted" style="font-size:12px;">Guárdalo para convertirlo en editable</span>
+            `
             : `
                 <button class="btn btn-small btn-secondary" type="button" onclick="fillProductFormById(${id})">Editar</button>
+                <button class="btn btn-small btn-ghost" type="button" onclick="toggleStockVisibility(${id}, ${inactive ? 1 : 0})">${inactive ? 'Mostrar' : 'Ocultar'}</button>
                 <button class="btn btn-small btn-danger" type="button" onclick="deleteProductByAdmin(${id})">Desactivar</button>
             `);
 
@@ -553,6 +559,7 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
                 <p class="product-spec">${escapeHtml(description)}</p>
                 <div><span class="variant-pill">${escapeHtml(condition)}</span></div>
                 <span class="stock-badge ${stockClass}">${stockText}${stock}</span>
+                <div class="text-muted" style="font-size:12px; margin-top:4px;">Visibilidad: ${visibilityLabel}</div>
                 <div class="catalog-price">$${Math.round(unitPrice).toLocaleString('es-MX')}</div>
                 ${withActions ? `<div class="product-actions">${actions}</div>` : '<div class="text-muted" style="font-size:12px;margin-top:8px;">Vista previa del diseño en portada.</div>'}
                 ${inactive ? '<div class="text-muted" style="font-size:12px;margin-top:6px;">Producto oculto/desactivado.</div>' : ''}
@@ -1164,18 +1171,6 @@ async function loadStock() {
     renderStockList();
 }
 
-function toggleCategoryDeleteMode() {
-    const box = document.getElementById('categoryDeleteModeBox');
-    const select = document.getElementById('newProductCategory');
-    if (box) {
-        const isHidden = box.style.display === 'none';
-        box.style.display = isHidden ? 'block' : 'none';
-        if (isHidden) {
-            showAlert('Selecciona la categoría que deseas eliminar y haz clic en el botón −', 'info');
-        }
-    }
-}
-
 async function deleteCategoryByAdmin() {
     const select = document.getElementById('newProductCategory');
     const selected = Array.from(select?.selectedOptions || []);
@@ -1185,9 +1180,13 @@ async function deleteCategoryByAdmin() {
     }
 
     const categoryName = selected[0].value;
+    const categoryId = Number(selected[0].dataset?.id || 0);
     if (!confirm(`¿Desactivar categoría "${categoryName}"?`)) return;
 
-    const res = await apiCall('/admin_supply.php?action=categories-delete', 'POST', { name: categoryName });
+    const res = await apiCall('/admin_supply.php?action=categories-delete', 'POST', {
+        id: categoryId,
+        name: categoryName
+    });
     if (!res || !res.success) {
         showAlert((res && res.message) ? res.message : 'No fue posible eliminar la categoría', 'error');
         return;
@@ -1278,7 +1277,8 @@ function fillProductFormById(id) {
     const item = stockItemsCache.find((row) => Number(row.id) === Number(id));
     if (!item) return;
 
-    document.getElementById('newProductEditId').value = item.id || '';
+    const isSeedOnly = Boolean(item.seed_only || item.__seed_only);
+    document.getElementById('newProductEditId').value = isSeedOnly ? '' : (item.id || '');
     document.getElementById('newProductSku').value = displayProductCode(item.sku || '');
     document.getElementById('newProductName').value = item.name || '';
     document.getElementById('newProductPrice').value = String(item.unit_price || 0);
@@ -1298,8 +1298,22 @@ function fillProductFormById(id) {
 
     const saveBtn = document.getElementById('newProductSaveButton');
     if (saveBtn) saveBtn.textContent = 'Actualizar producto';
-    setSkuStatus('newProductSkuStatus', 'Editando producto existente.', 'muted');
+    if (isSeedOnly) {
+        if (saveBtn) saveBtn.textContent = 'Guardar en stock';
+        setSkuStatus('newProductSkuStatus', 'Producto base: al guardar se crea editable en stock.', 'warning');
+    } else {
+        setSkuStatus('newProductSkuStatus', 'Editando producto existente.', 'muted');
+    }
     updateStockPreview();
+}
+
+function prepareSeedProductForEditing(id) {
+    fillProductFormById(id);
+    const formTop = document.getElementById('newProductSku');
+    if (formTop) {
+        formTop.focus();
+        formTop.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 }
 
 async function deleteProductByAdmin(id) {
@@ -1319,6 +1333,52 @@ async function deleteProductByAdmin(id) {
     }
     loadStock();
     loadSupplierProducts();
+}
+
+async function toggleStockVisibility(id, nextVisible) {
+    if (!id) return;
+
+    const box = document.getElementById('productCreateResult');
+    const res = await apiCall('/admin_supply.php?action=product-visibility', 'POST', {
+        id: Number(id),
+        is_visible: Number(nextVisible) ? 1 : 0
+    });
+
+    if (!res || !res.success) {
+        if (box) {
+            box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible actualizar visibilidad')}</div>`;
+        }
+        return;
+    }
+
+    if (box) {
+        box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Visibilidad actualizada')}</div>`;
+    }
+
+    await loadStock();
+}
+
+async function toggleMarketplaceVisibility(id, nextVisible) {
+    if (!id) return;
+
+    const box = document.getElementById('marketplaceResult');
+    const res = await apiCall('/admin_supply.php?action=marketplace-visibility', 'POST', {
+        id: Number(id),
+        is_visible: Number(nextVisible) ? 1 : 0
+    });
+
+    if (!res || !res.success) {
+        if (box) {
+            box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible actualizar visibilidad')}</div>`;
+        }
+        return;
+    }
+
+    if (box) {
+        box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Visibilidad actualizada')}</div>`;
+    }
+
+    await loadMarketplace();
 }
 
 async function createVisit() {
@@ -1702,6 +1762,7 @@ async function loadProductCategories(onlyActive = true) {
             const option = document.createElement('option');
             option.value = cat.name;
             option.textContent = cat.name;
+            option.dataset.id = String(Number(cat.id || 0));
             categorySelect.appendChild(option);
         });
     }
