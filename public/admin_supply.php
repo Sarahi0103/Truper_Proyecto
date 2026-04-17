@@ -1200,6 +1200,9 @@ async function deleteCategoryQuick() {
         return;
     }
 
+    // Reflect deletion immediately in the same select control.
+    selected.forEach((opt) => opt.remove());
+
     showAlert(res.message || 'Categoría eliminada', 'success');
     await loadProductCategories(true);
     await loadProductCategories(false);
@@ -1233,6 +1236,16 @@ async function addCategoryFromStockForm() {
     if (!res || !res.success) {
         showAlert((res && res.message) ? res.message : 'No fue posible guardar la categoría', 'error');
         return;
+    }
+
+    // Reflect creation immediately in the same select control.
+    if (categorySelect) {
+        const option = document.createElement('option');
+        option.value = raw;
+        option.textContent = raw;
+        option.dataset.id = String(Number((res.item && res.item.id) ? res.item.id : 0));
+        option.selected = true;
+        categorySelect.appendChild(option);
     }
 
     if (input) input.value = '';

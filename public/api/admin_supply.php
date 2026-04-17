@@ -1659,11 +1659,30 @@ try {
             if ($id > 0) {
                 $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, sort_order = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
                 $stmt->execute([$name, $sortOrder, $isActive, $id]);
-                $response = ['success' => true, 'message' => 'Categoría actualizada'];
+                $response = [
+                    'success' => true,
+                    'message' => 'Categoría actualizada',
+                    'item' => [
+                        'id' => $id,
+                        'name' => $name,
+                        'sort_order' => $sortOrder,
+                        'is_active' => $isActive ? 1 : 0
+                    ]
+                ];
             } else {
-                $stmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order, is_active) VALUES (?, ?, ?)");
+                $stmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order, is_active) VALUES (?, ?, ?) RETURNING id");
                 $stmt->execute([$name, $sortOrder, $isActive]);
-                $response = ['success' => true, 'message' => 'Categoría creada'];
+                $createdId = (int)$stmt->fetchColumn();
+                $response = [
+                    'success' => true,
+                    'message' => 'Categoría creada',
+                    'item' => [
+                        'id' => $createdId,
+                        'name' => $name,
+                        'sort_order' => $sortOrder,
+                        'is_active' => $isActive ? 1 : 0
+                    ]
+                ];
             }
             break;
 
@@ -1688,6 +1707,12 @@ try {
                 $stmt = $pdo->prepare("UPDATE product_categories SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE LOWER(name) = LOWER(?)");
                 $stmt->execute([$name]);
             }
+
+            if (($stmt->rowCount() ?? 0) <= 0) {
+                $response = ['success' => false, 'message' => 'No se encontró la categoría para desactivar'];
+                break;
+            }
+
             $response = ['success' => true, 'message' => 'Categoría desactivada'];
             break;
 
