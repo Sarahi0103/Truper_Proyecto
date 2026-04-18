@@ -120,6 +120,7 @@ if (count($products) < 10) {
 
 $isLogged = is_logged_in();
 $isAdmin = (($_SESSION['role'] ?? '') === 'admin');
+$showSessionExpiredNotice = (($_GET['error'] ?? '') === 'expired');
 $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre los productos y cotizaciones.');
 $clientTicketCode = 'PUBLICO';
 $clientTicketNumber = $isLogged ? (string)($_SESSION['user_id'] ?? '0') : '0';
@@ -228,6 +229,12 @@ function homepage_update_label($type) {
     </header>
 
     <main>
+        <?php if ($showSessionExpiredNotice): ?>
+            <section class="alert alert-warning" role="status" aria-live="polite" style="margin-bottom: 1rem;">
+                Tu sesión expiró por seguridad. Inicia sesión nuevamente para continuar.
+            </section>
+        <?php endif; ?>
+
         <section class="catalog-hero">
             <div class="module-badge module-main"><span class="module-glyph">CT</span> Catálogo principal</div>
             <h1>Catálogo Truper</h1>
