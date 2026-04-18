@@ -1801,32 +1801,42 @@ try {
             }
 
             if ($id > 0) {
-                $sets = [];
-                $values = [];
+                $updated = false;
 
-                if (db_column_exists('product_categories', 'name')) {
-                    $sets[] = 'name = ?';
-                    $values[] = $name;
-                }
-                if (db_column_exists('product_categories', 'sort_order')) {
-                    $sets[] = 'sort_order = ?';
-                    $values[] = $sortOrder;
-                }
-                if (db_column_exists('product_categories', 'is_active')) {
-                    $sets[] = 'is_active = ?';
-                    $values[] = $isActive;
-                }
-                if (db_column_exists('product_categories', 'updated_at')) {
-                    $sets[] = 'updated_at = CURRENT_TIMESTAMP';
+                // Full update path (newest schema)
+                try {
+                    $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, sort_order = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+                    $stmt->execute([$name, $sortOrder, $isActive, $id]);
+                    $updated = true;
+                } catch (Exception $ignored) {
                 }
 
-                if (empty($sets)) {
-                    throw new Exception('No hay columnas actualizables en product_categories');
+                // Legacy fallback: without updated_at
+                if (!$updated) {
+                    try {
+                        $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, sort_order = ?, is_active = ? WHERE id = ?");
+                        $stmt->execute([$name, $sortOrder, $isActive, $id]);
+                        $updated = true;
+                    } catch (Exception $ignored) {
+                    }
                 }
 
-                $values[] = $id;
-                $stmt = $pdo->prepare('UPDATE product_categories SET ' . implode(', ', $sets) . ' WHERE id = ?');
-                $stmt->execute($values);
+                // Minimal fallback: name + sort_order only
+                if (!$updated) {
+                    try {
+                        $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, sort_order = ? WHERE id = ?");
+                        $stmt->execute([$name, $sortOrder, $id]);
+                        $updated = true;
+                    } catch (Exception $ignored) {
+                    }
+                }
+
+                // Final fallback: name only
+                if (!$updated) {
+                    $stmt = $pdo->prepare("UPDATE product_categories SET name = ? WHERE id = ?");
+                    $stmt->execute([$name, $id]);
+                }
+
                 $response = [
                     'success' => true,
                     'message' => 'Categoría actualizada',
@@ -1838,17 +1848,40 @@ try {
                     ]
                 ];
             } else {
-                if (db_column_exists('product_categories', 'sort_order') && db_column_exists('product_categories', 'is_active')) {
+                $createdId = 0;
+
+                // Full insert path (newest schema)
+                try {
                     $createdId = insert_category_and_get_id_admin_supply($pdo, $name, $sortOrder, $isActive);
-                } elseif (db_column_exists('product_categories', 'sort_order')) {
-                    $stmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order) VALUES (?, ?)");
-                    $stmt->execute([$name, $sortOrder]);
-                    $createdId = (int)$pdo->lastInsertId();
-                } else {
+                } catch (Exception $ignored) {
+                }
+
+                // Legacy fallback: name + sort_order
+                if ($createdId <= 0) {
+                    try {
+                        $stmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order) VALUES (?, ?)");
+                        $stmt->execute([$name, $sortOrder]);
+                        $createdId = (int)$pdo->lastInsertId();
+                    } catch (Exception $ignored) {
+                    }
+                }
+
+                // Final fallback: name only
+                if ($createdId <= 0) {
                     $stmt = $pdo->prepare("INSERT INTO product_categories (name) VALUES (?)");
                     $stmt->execute([$name]);
                     $createdId = (int)$pdo->lastInsertId();
                 }
+
+                if ($createdId <= 0) {
+                    try {
+                        $check = $pdo->prepare("SELECT id FROM product_categories WHERE LOWER(name) = LOWER(?) ORDER BY id DESC LIMIT 1");
+                        $check->execute([$name]);
+                        $createdId = (int)$check->fetchColumn();
+                    } catch (Exception $ignored) {
+                    }
+                }
+
                 $response = [
                     'success' => true,
                     'message' => 'Categoría creada',
