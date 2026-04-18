@@ -229,10 +229,19 @@ function ensure_product_categories_runtime_admin_supply($pdo): void {
     }
 
     // Best-effort column normalization for legacy environments.
-    try { $pdo->exec("ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0"); } catch (Exception $ignored) {}
-    try { $pdo->exec("ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true"); } catch (Exception $ignored) {}
-    try { $pdo->exec("ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"); } catch (Exception $ignored) {}
-    try { $pdo->exec("ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"); } catch (Exception $ignored) {}
+    // Use direct ALTER statements only when a column is missing to avoid engine-specific syntax issues.
+    if (!db_column_exists('product_categories', 'sort_order')) {
+        try { $pdo->exec("ALTER TABLE product_categories ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0"); } catch (Exception $ignored) {}
+    }
+    if (!db_column_exists('product_categories', 'is_active')) {
+        try { $pdo->exec("ALTER TABLE product_categories ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT true"); } catch (Exception $ignored) {}
+    }
+    if (!db_column_exists('product_categories', 'created_at')) {
+        try { $pdo->exec("ALTER TABLE product_categories ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"); } catch (Exception $ignored) {}
+    }
+    if (!db_column_exists('product_categories', 'updated_at')) {
+        try { $pdo->exec("ALTER TABLE product_categories ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"); } catch (Exception $ignored) {}
+    }
 
     try {
         $seedCount = (int)$pdo->query("SELECT COUNT(*) FROM product_categories")->fetchColumn();
@@ -1742,11 +1751,25 @@ try {
 
             ensure_product_categories_runtime_admin_supply($pdo);
 
+            $nameSelect = db_column_exists('product_categories', 'name')
+                ? "name"
+                : "'' AS name";
+            $orderSelect = db_column_exists('product_categories', 'sort_order')
+                ? "sort_order"
+                : "0 AS sort_order";
+            $activeSelect = db_column_exists('product_categories', 'is_active')
+                ? "is_active"
+                : "true AS is_active";
+
             $onlyActive = isset($_GET['active']) && $_GET['active'] === '1';
             if ($onlyActive) {
-                $stmt = $pdo->query("SELECT id, name, sort_order, is_active FROM product_categories WHERE is_active = true ORDER BY sort_order ASC, name ASC");
+                if (db_column_exists('product_categories', 'is_active')) {
+                    $stmt = $pdo->query("SELECT id, {$nameSelect}, {$orderSelect}, {$activeSelect} FROM product_categories WHERE is_active = true ORDER BY " . (db_column_exists('product_categories', 'sort_order') ? 'sort_order ASC, ' : '') . "name ASC");
+                } else {
+                    $stmt = $pdo->query("SELECT id, {$nameSelect}, {$orderSelect}, {$activeSelect} FROM product_categories ORDER BY " . (db_column_exists('product_categories', 'sort_order') ? 'sort_order ASC, ' : '') . "name ASC");
+                }
             } else {
-                $stmt = $pdo->query("SELECT id, name, sort_order, is_active FROM product_categories ORDER BY sort_order ASC, name ASC");
+                $stmt = $pdo->query("SELECT id, {$nameSelect}, {$orderSelect}, {$activeSelect} FROM product_categories ORDER BY " . (db_column_exists('product_categories', 'sort_order') ? 'sort_order ASC, ' : '') . "name ASC");
             }
             $response = ['success' => true, 'items' => $stmt->fetchAll()];
             break;
@@ -1778,8 +1801,32 @@ try {
             }
 
             if ($id > 0) {
-                $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, sort_order = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-                $stmt->execute([$name, $sortOrder, $isActive, $id]);
+                $sets = [];
+                $values = [];
+
+                if (db_column_exists('product_categories', 'name')) {
+                    $sets[] = 'name = ?';
+                    $values[] = $name;
+                }
+                if (db_column_exists('product_categories', 'sort_order')) {
+                    $sets[] = 'sort_order = ?';
+                    $values[] = $sortOrder;
+                }
+                if (db_column_exists('product_categories', 'is_active')) {
+                    $sets[] = 'is_active = ?';
+                    $values[] = $isActive;
+                }
+                if (db_column_exists('product_categories', 'updated_at')) {
+                    $sets[] = 'updated_at = CURRENT_TIMESTAMP';
+                }
+
+                if (empty($sets)) {
+                    throw new Exception('No hay columnas actualizables en product_categories');
+                }
+
+                $values[] = $id;
+                $stmt = $pdo->prepare('UPDATE product_categories SET ' . implode(', ', $sets) . ' WHERE id = ?');
+                $stmt->execute($values);
                 $response = [
                     'success' => true,
                     'message' => 'Categoría actualizada',
@@ -1791,7 +1838,17 @@ try {
                     ]
                 ];
             } else {
-                $createdId = insert_category_and_get_id_admin_supply($pdo, $name, $sortOrder, $isActive);
+                if (db_column_exists('product_categories', 'sort_order') && db_column_exists('product_categories', 'is_active')) {
+                    $createdId = insert_category_and_get_id_admin_supply($pdo, $name, $sortOrder, $isActive);
+                } elseif (db_column_exists('product_categories', 'sort_order')) {
+                    $stmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order) VALUES (?, ?)");
+                    $stmt->execute([$name, $sortOrder]);
+                    $createdId = (int)$pdo->lastInsertId();
+                } else {
+                    $stmt = $pdo->prepare("INSERT INTO product_categories (name) VALUES (?)");
+                    $stmt->execute([$name]);
+                    $createdId = (int)$pdo->lastInsertId();
+                }
                 $response = [
                     'success' => true,
                     'message' => 'Categoría creada',
