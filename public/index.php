@@ -230,7 +230,7 @@ function homepage_update_label($type) {
 
     <main>
         <?php if ($showSessionExpiredNotice): ?>
-            <section class="alert alert-warning" role="status" aria-live="polite" style="margin-bottom: 1rem;">
+            <section id="sessionExpiredNotice" class="alert alert-warning" role="status" aria-live="polite" style="margin-bottom: 1rem;">
                 Tu sesión expiró por seguridad. Inicia sesión nuevamente para continuar.
             </section>
         <?php endif; ?>
@@ -411,6 +411,20 @@ function homepage_update_label($type) {
     <script>
         // Compartir por WhatsApp
         document.addEventListener('DOMContentLoaded', function() {
+            const sessionExpiredNotice = document.getElementById('sessionExpiredNotice');
+            if (sessionExpiredNotice) {
+                window.setTimeout(function () {
+                    sessionExpiredNotice.style.transition = 'opacity 0.35s ease, transform 0.35s ease';
+                    sessionExpiredNotice.style.opacity = '0';
+                    sessionExpiredNotice.style.transform = 'translateY(-4px)';
+                    window.setTimeout(function () {
+                        if (sessionExpiredNotice.parentNode) {
+                            sessionExpiredNotice.parentNode.removeChild(sessionExpiredNotice);
+                        }
+                    }, 360);
+                }, 5000);
+            }
+
             const companyWhatsApp = '<?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?>';
 
             // Carrusel de noticias/promociones
