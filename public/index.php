@@ -141,7 +141,43 @@ foreach ($products as $item) {
 }
 
 $quickCategories = array_values($quickCategoriesMap);
-usort($quickCategories, function ($a, $b) {
+$priorityCategories = [
+    'material electrico' => 0,
+    'fontaneria' => 1,
+    'cerrajeria' => 2,
+    'herreria' => 3,
+];
+
+$normalizeCategoryOrderKey = function ($value) {
+    $text = trim((string)$value);
+    if (function_exists('mb_strtolower')) {
+        $text = mb_strtolower($text, 'UTF-8');
+    } else {
+        $text = strtolower($text);
+    }
+
+    return strtr($text, [
+        'á' => 'a',
+        'é' => 'e',
+        'í' => 'i',
+        'ó' => 'o',
+        'ú' => 'u',
+        'ü' => 'u',
+        'ñ' => 'n',
+    ]);
+};
+
+usort($quickCategories, function ($a, $b) use ($priorityCategories, $normalizeCategoryOrderKey) {
+    $keyA = $normalizeCategoryOrderKey($a);
+    $keyB = $normalizeCategoryOrderKey($b);
+
+    $priorityA = $priorityCategories[$keyA] ?? 999;
+    $priorityB = $priorityCategories[$keyB] ?? 999;
+
+    if ($priorityA !== $priorityB) {
+        return $priorityA <=> $priorityB;
+    }
+
     return strcasecmp((string)$a, (string)$b);
 });
 
