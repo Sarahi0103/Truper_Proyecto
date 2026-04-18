@@ -78,6 +78,20 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             margin-top: 0.5rem;
             flex-wrap: wrap;
         }
+        .category-panel {
+            border: 1px solid var(--ui-border);
+            border-radius: 10px;
+            padding: 0.65rem;
+            background: var(--ui-surface-soft);
+        }
+        .category-panel-title {
+            font-size: 0.85rem;
+            color: var(--ui-text-muted);
+            margin-bottom: 0.45rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
         .category-quick-input {
             max-width: 220px;
             min-width: 170px;
@@ -208,20 +222,20 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     <div class="form-group"><label>Nombre</label><input id="newProductName" type="text" maxlength="255"></div>
                     <div class="form-group">
                         <label>Categorías (selección múltiple)</label>
-                        <select id="newProductCategory" multiple size="6">
-                            <option value="Material eléctrico">Material eléctrico</option>
-                            <option value="Fontanería">Fontanería</option>
-                            <option value="Cerrajería">Cerrajería</option>
-                            <option value="Herrería">Herrería</option>
-                        </select>
-                        <small class="text-muted">Usa Ctrl/Cmd para seleccionar múltiples categorías.</small>
-                        <div class="category-quick-tools">
-                            <input id="newCategoryQuickName" class="category-quick-input" type="text" placeholder="Nueva categoría" maxlength="120">
-                            <button class="btn btn-small btn-secondary category-action-btn" type="button" onclick="addCategoryFromStockForm()" title="Agregar categoría">Agregar</button>
-                            <button class="btn btn-small btn-secondary category-action-btn category-action-btn-remove" type="button" onclick="deleteCategoryQuick()" title="Eliminar categoría seleccionada">Eliminar</button>
-                        </div>
-                        <div id="categoryDeleteModeBox" class="alert alert-info category-help-box">
-                            Selecciona una categoría de la lista y usa el botón − para eliminarla.
+                        <div class="category-panel">
+                            <div class="category-panel-title">Administrar categorías</div>
+                            <select id="newProductCategory" multiple size="6">
+                                <option value="Material eléctrico">Material eléctrico</option>
+                                <option value="Fontanería">Fontanería</option>
+                                <option value="Cerrajería">Cerrajería</option>
+                                <option value="Herrería">Herrería</option>
+                            </select>
+                            <small class="text-muted">Usa Ctrl/Cmd para seleccionar múltiples categorías.</small>
+                            <div class="category-quick-tools">
+                                <input id="newCategoryQuickName" class="category-quick-input" type="text" placeholder="Nueva categoría" maxlength="120">
+                                <button class="btn btn-small btn-secondary category-action-btn" type="button" onclick="addCategoryFromStockForm()" title="Agregar categoría">Agregar</button>
+                                <button class="btn btn-small btn-secondary category-action-btn category-action-btn-remove" type="button" onclick="deleteCategoryQuick()" title="Eliminar categoría seleccionada">Eliminar</button>
+                            </div>
                         </div>
                         <div id="quickCategoryResult" class="text-muted" style="font-size:12px; margin-top:6px;"></div>
                     </div>
@@ -561,6 +575,21 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label>Categorías CE (selección múltiple)</label>
+                    <div class="category-panel">
+                        <div class="category-panel-title">Categorías para Marketplace</div>
+                        <select id="marketplaceCategory" multiple size="6"></select>
+                        <small class="text-muted">Las categorías se comparten con Stock.</small>
+                        <div class="category-quick-tools">
+                            <input id="marketplaceCategoryQuickName" class="category-quick-input" type="text" placeholder="Nueva categoría" maxlength="120">
+                            <button class="btn btn-small btn-secondary category-action-btn" type="button" onclick="addCategoryFromMarketplaceForm()">Agregar</button>
+                            <button class="btn btn-small btn-secondary category-action-btn category-action-btn-remove" type="button" onclick="deleteMarketplaceCategoryQuick()">Eliminar</button>
+                        </div>
+                    </div>
+                    <div id="marketplaceQuickCategoryResult" class="text-muted" style="font-size:12px; margin-top:6px;"></div>
+                </div>
+
                 <div class="grid grid-3">
                     <div class="form-group"><label>Precio</label><input id="marketplacePrice" type="number" min="0" step="0.01" value="0"></div>
                     <div class="form-group"><label>Stock</label><input id="marketplaceStock" type="number" min="0" step="1" value="1"></div>
@@ -726,11 +755,13 @@ function updateMarketplacePreview() {
     const host = document.getElementById('marketplacePreviewHost');
     if (!host) return;
     const sku = normalizeNumericSku(document.getElementById('marketplaceSku')?.value || '');
+    const selectedCategoryOptions = Array.from(document.getElementById('marketplaceCategory')?.selectedOptions || []);
+    const selectedCategories = selectedCategoryOptions.map((option) => option.value).filter(Boolean);
     const item = {
         id: Number(document.getElementById('marketplaceEditId')?.value || 0),
         sku: sku || '00000',
         name: document.getElementById('marketplaceName')?.value || 'Artículo CE',
-        category: 'Marketplace CE',
+        category: selectedCategories.join(', ') || 'Marketplace CE',
         description: document.getElementById('marketplaceDescription')?.value || 'Descripción pendiente',
         condition_label: document.getElementById('marketplaceCondition')?.value || 'Seminuevo',
         unit_price: document.getElementById('marketplacePrice')?.value || 0,
@@ -1330,9 +1361,9 @@ async function loadStock() {
     renderStockList();
 }
 
-async function deleteCategoryQuick() {
-    const select = document.getElementById('newProductCategory');
-    const quickBox = document.getElementById('quickCategoryResult');
+async function deleteCategoryQuickFromSelect(selectId, resultId) {
+    const select = document.getElementById(selectId);
+    const quickBox = document.getElementById(resultId);
     const selected = Array.from(select?.selectedOptions || []);
     if (selected.length === 0) {
         if (quickBox) quickBox.innerHTML = '<span style="color:#f59e0b;">Selecciona una categoría para eliminar.</span>';
@@ -1377,9 +1408,17 @@ async function deleteCategoryQuick() {
     await refreshCategoriesUi();
 }
 
-async function addCategoryFromStockForm() {
-    const input = document.getElementById('newCategoryQuickName');
-    const quickBox = document.getElementById('quickCategoryResult');
+async function deleteCategoryQuick() {
+    return deleteCategoryQuickFromSelect('newProductCategory', 'quickCategoryResult');
+}
+
+async function deleteMarketplaceCategoryQuick() {
+    return deleteCategoryQuickFromSelect('marketplaceCategory', 'marketplaceQuickCategoryResult');
+}
+
+async function addCategoryFromQuickForm(selectId, inputId, resultId) {
+    const input = document.getElementById(inputId);
+    const quickBox = document.getElementById(resultId);
     const raw = (input?.value || '').trim().replace(/\s+/g, ' ');
     if (!raw) {
         if (quickBox) quickBox.innerHTML = '<span style="color:#f59e0b;">Escribe el nombre de la nueva categoría.</span>';
@@ -1387,7 +1426,7 @@ async function addCategoryFromStockForm() {
         return;
     }
 
-    const categorySelect = document.getElementById('newProductCategory');
+    const categorySelect = document.getElementById(selectId);
     const alreadyExists = Array.from(categorySelect?.options || []).some((opt) =>
         String(opt.value || '').trim().toLowerCase() === raw.toLowerCase()
     );
@@ -1437,6 +1476,14 @@ async function addCategoryFromStockForm() {
             target.scrollIntoView({ block: 'nearest' });
         }
     }
+}
+
+async function addCategoryFromStockForm() {
+    return addCategoryFromQuickForm('newProductCategory', 'newCategoryQuickName', 'quickCategoryResult');
+}
+
+async function addCategoryFromMarketplaceForm() {
+    return addCategoryFromQuickForm('marketplaceCategory', 'marketplaceCategoryQuickName', 'marketplaceQuickCategoryResult');
 }
 
 function renderStockList() {
@@ -1962,6 +2009,7 @@ async function loadProductImageReferences() {
 
 async function loadProductCategories(onlyActive = true) {
     const categorySelect = document.getElementById('newProductCategory');
+    const marketplaceCategorySelect = document.getElementById('marketplaceCategory');
     const categoriesListBox = document.getElementById('categoriesList');
     const action = `/admin_supply.php?action=categories-list${onlyActive ? '&active=1' : ''}`;
     const res = await apiCall(action, 'GET', null, { silent: true });
@@ -1973,19 +2021,25 @@ async function loadProductCategories(onlyActive = true) {
         return;
     }
 
-    if (onlyActive && categorySelect) {
-        const selectedValues = new Set(
-            Array.from(categorySelect.selectedOptions || []).map((option) => String(option.value || '').trim().toLowerCase())
-        );
-        categorySelect.innerHTML = '';
-        res.items.forEach((cat) => {
-            const option = document.createElement('option');
-            option.value = cat.name;
-            option.textContent = cat.name;
-            option.dataset.id = String(Number(cat.id || 0));
-            option.selected = selectedValues.has(String(cat.name || '').trim().toLowerCase());
-            categorySelect.appendChild(option);
-        });
+    if (onlyActive) {
+        const fillSelect = function (selectEl) {
+            if (!selectEl) return;
+            const selectedValues = new Set(
+                Array.from(selectEl.selectedOptions || []).map((option) => String(option.value || '').trim().toLowerCase())
+            );
+            selectEl.innerHTML = '';
+            res.items.forEach((cat) => {
+                const option = document.createElement('option');
+                option.value = cat.name;
+                option.textContent = cat.name;
+                option.dataset.id = String(Number(cat.id || 0));
+                option.selected = selectedValues.has(String(cat.name || '').trim().toLowerCase());
+                selectEl.appendChild(option);
+            });
+        };
+
+        fillSelect(categorySelect);
+        fillSelect(marketplaceCategorySelect);
     }
 
     if (!onlyActive && categoriesListBox) {
@@ -2341,6 +2395,9 @@ function resetMarketplaceForm() {
     document.getElementById('marketplaceStock').value = '1';
     document.getElementById('marketplaceActive').value = '1';
     document.getElementById('marketplaceDescription').value = '';
+    Array.from(document.getElementById('marketplaceCategory')?.options || []).forEach((opt) => {
+        opt.selected = false;
+    });
     document.getElementById('marketplaceImage').value = '';
     const preview = document.getElementById('marketplaceImagePreview');
     if (preview) preview.style.display = 'none';
@@ -2363,6 +2420,14 @@ function fillMarketplaceForm(item) {
     document.getElementById('marketplaceActive').value = Number(item.is_active) ? '1' : '0';
     document.getElementById('marketplaceDescription').value = item.description || '';
     document.getElementById('marketplaceImage').value = '';
+
+    const categories = String(item.category || '')
+        .split(',')
+        .map((x) => x.trim())
+        .filter(Boolean);
+    Array.from(document.getElementById('marketplaceCategory')?.options || []).forEach((opt) => {
+        opt.selected = categories.includes(opt.value);
+    });
 
     const preview = document.getElementById('marketplaceImagePreview');
     const previewImg = document.getElementById('marketplaceImagePreviewImg');
@@ -2516,7 +2581,8 @@ function renderMarketplaceList() {
         const code = displayProductCode(item.sku || '').toLowerCase();
         const name = String(item.name || '').toLowerCase();
         const cond = String(item.condition_label || '').toLowerCase();
-        return `${code} ${name} ${cond}`.includes(query);
+        const category = String(item.category || '').toLowerCase();
+        return `${code} ${name} ${cond} ${category}`.includes(query);
     });
 
     if (caption) {
@@ -2560,6 +2626,9 @@ async function saveMarketplaceCeByAdmin() {
     formData.append('sku', normalizedSku);
     formData.append('name', document.getElementById('marketplaceName').value || '');
     formData.append('condition_label', document.getElementById('marketplaceCondition').value || 'Seminuevo');
+    const selectedCategoryOptions = Array.from(document.getElementById('marketplaceCategory')?.selectedOptions || []);
+    const selectedCategories = selectedCategoryOptions.map((option) => option.value).filter(Boolean);
+    formData.append('category', selectedCategories.join(', '));
     formData.append('unit_price', document.getElementById('marketplacePrice').value || '0');
     formData.append('stock_quantity', document.getElementById('marketplaceStock').value || '1');
     formData.append('is_active', document.getElementById('marketplaceActive').value === '1' ? '1' : '0');
@@ -2713,11 +2782,26 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    const marketplaceCategoryQuickName = document.getElementById('marketplaceCategoryQuickName');
+    if (marketplaceCategoryQuickName) {
+        marketplaceCategoryQuickName.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                addCategoryFromMarketplaceForm();
+            }
+        });
+    }
+
     ['marketplaceName', 'marketplaceCondition', 'marketplacePrice', 'marketplaceStock', 'marketplaceDescription', 'marketplaceActive'].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', updateMarketplacePreview);
         if (el && el.tagName === 'SELECT') el.addEventListener('change', updateMarketplacePreview);
     });
+
+    const marketplaceCategory = document.getElementById('marketplaceCategory');
+    if (marketplaceCategory) {
+        marketplaceCategory.addEventListener('change', updateMarketplacePreview);
+    }
 
     updateStockPreview();
     updateMarketplacePreview();

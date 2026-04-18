@@ -333,6 +333,7 @@ function ensure_admin_supply_tables($pdo): void {
         id SERIAL PRIMARY KEY,
         sku VARCHAR(100) UNIQUE NOT NULL,
         name VARCHAR(220) NOT NULL,
+        category VARCHAR(220),
         description TEXT NOT NULL,
         condition_label VARCHAR(80) NOT NULL DEFAULT 'Seminuevo',
         unit_price DECIMAL(12,2) NOT NULL DEFAULT 0,
@@ -344,6 +345,10 @@ function ensure_admin_supply_tables($pdo): void {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
+
+    try {
+        $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS category VARCHAR(220)");
+    } catch (Exception $ignored) {}
     
 }
 
@@ -1838,11 +1843,15 @@ try {
                 break;
             }
 
+            $marketplaceCategorySelect = db_column_exists('marketplace_ce_products', 'category')
+                ? "COALESCE(category, 'Marketplace CE') AS category"
+                : "'Marketplace CE' AS category";
+
             $onlyActive = isset($_GET['active']) && $_GET['active'] === '1';
             if ($onlyActive) {
-                $stmt = $pdo->query("SELECT id, sku, name, description, condition_label, unit_price, stock_quantity, image_url, is_active, created_at, updated_at FROM marketplace_ce_products WHERE is_active = true ORDER BY created_at DESC");
+                $stmt = $pdo->query("SELECT id, sku, name, {$marketplaceCategorySelect}, description, condition_label, unit_price, stock_quantity, image_url, is_active, created_at, updated_at FROM marketplace_ce_products WHERE is_active = true ORDER BY created_at DESC");
             } else {
-                $stmt = $pdo->query("SELECT id, sku, name, description, condition_label, unit_price, stock_quantity, image_url, is_active, created_at, updated_at FROM marketplace_ce_products ORDER BY created_at DESC");
+                $stmt = $pdo->query("SELECT id, sku, name, {$marketplaceCategorySelect}, description, condition_label, unit_price, stock_quantity, image_url, is_active, created_at, updated_at FROM marketplace_ce_products ORDER BY created_at DESC");
             }
             $response = ['success' => true, 'items' => $stmt->fetchAll()];
             break;
@@ -1856,6 +1865,7 @@ try {
             $id = (int)($_POST['id'] ?? ($input['id'] ?? 0));
             $sku = normalize_sku_admin_supply(sanitize($_POST['sku'] ?? ($input['sku'] ?? '')));
             $name = sanitize($_POST['name'] ?? ($input['name'] ?? ''));
+            $category = sanitize($_POST['category'] ?? ($input['category'] ?? 'Marketplace CE'));
             $description = trim((string)($_POST['description'] ?? ($input['description'] ?? '')));
             $conditionLabel = sanitize($_POST['condition_label'] ?? ($input['condition_label'] ?? 'Seminuevo'));
             $unitPrice = (float)($_POST['unit_price'] ?? ($input['unit_price'] ?? 0));
@@ -1902,17 +1912,36 @@ try {
             }
 
             if ($id > 0) {
-                if (!isset($_FILES['image']) || ($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
-                    $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET sku = ?, name = ?, description = ?, condition_label = ?, unit_price = ?, stock_quantity = ?, is_active = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-                    $stmt->execute([$sku, $name, $description, $conditionLabel, $unitPrice, max(0, $stockQuantity), $isActive, $_SESSION['user_id'], $id]);
-                } else {
-                    $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET sku = ?, name = ?, description = ?, condition_label = ?, unit_price = ?, stock_quantity = ?, image_url = ?, is_active = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-                    $stmt->execute([$sku, $name, $description, $conditionLabel, $unitPrice, max(0, $stockQuantity), $imageUrl, $isActive, $_SESSION['user_id'], $id]);
+                $sets = ['sku = ?', 'name = ?', 'description = ?', 'condition_label = ?', 'unit_price = ?', 'stock_quantity = ?', 'is_active = ?', 'updated_by = ?', 'updated_at = CURRENT_TIMESTAMP'];
+                $values = [$sku, $name, $description, $conditionLabel, $unitPrice, max(0, $stockQuantity), $isActive, $_SESSION['user_id']];
+
+                if (db_column_exists('marketplace_ce_products', 'category')) {
+                    $sets[] = 'category = ?';
+                    $values[] = $category;
                 }
+
+                if (isset($_FILES['image']) && ($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+                    $sets[] = 'image_url = ?';
+                    $values[] = $imageUrl;
+                }
+
+                $values[] = $id;
+                $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET ' . implode(', ', $sets) . ' WHERE id = ?');
+                $stmt->execute($values);
                 $response = ['success' => true, 'message' => 'Artículo CE actualizado'];
             } else {
-                $stmt = $pdo->prepare("INSERT INTO marketplace_ce_products (sku, name, description, condition_label, unit_price, stock_quantity, image_url, is_active, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$sku, $name, $description, $conditionLabel, $unitPrice, max(0, $stockQuantity), $imageUrl, $isActive, $_SESSION['user_id'], $_SESSION['user_id']]);
+                $columns = ['sku', 'name', 'description', 'condition_label', 'unit_price', 'stock_quantity', 'image_url', 'is_active', 'created_by', 'updated_by'];
+                $placeholders = ['?', '?', '?', '?', '?', '?', '?', '?', '?', '?'];
+                $values = [$sku, $name, $description, $conditionLabel, $unitPrice, max(0, $stockQuantity), $imageUrl, $isActive, $_SESSION['user_id'], $_SESSION['user_id']];
+
+                if (db_column_exists('marketplace_ce_products', 'category')) {
+                    $columns[] = 'category';
+                    $placeholders[] = '?';
+                    $values[] = $category;
+                }
+
+                $stmt = $pdo->prepare('INSERT INTO marketplace_ce_products (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ')');
+                $stmt->execute($values);
                 $response = ['success' => true, 'message' => 'Artículo CE creado'];
             }
             break;
