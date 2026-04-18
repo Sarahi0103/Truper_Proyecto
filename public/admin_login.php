@@ -59,7 +59,7 @@ if (is_logged_in()) {
                         <input type="hidden" name="return_to" value="<?php echo htmlspecialchars((string)$return_to, ENT_QUOTES, 'UTF-8'); ?>">
                         <div class="form-group">
                             <label for="email">Email o teléfono</label>
-                            <input type="text" id="email" name="email" required placeholder="admin@truper.com o +52..." maxlength="255" autocomplete="username">
+                            <input type="text" id="email" name="email" required placeholder="Ejemplo: usuario_admin o +52 33 0000 0000" maxlength="255" autocomplete="username">
                         </div>
 
                         <div class="form-group">
