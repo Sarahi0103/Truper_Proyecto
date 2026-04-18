@@ -11,7 +11,9 @@ header('Content-Type: application/json');
 
 $action = $_GET['action'] ?? null;
 $method = $_SERVER['REQUEST_METHOD'];
-$input = json_decode(file_get_contents('php://input'), true);
+$rawInput = file_get_contents('php://input');
+$decodedInput = json_decode($rawInput, true);
+$input = is_array($decodedInput) ? $decodedInput : (is_array($_POST) ? $_POST : []);
 
 $taskController = new TaskController($pdo);
 $response = [];
@@ -175,6 +177,12 @@ try {
 } catch (Exception $e) {
     error_log("Tasks API Error: " . $e->getMessage());
     $response = ['success' => false, 'message' => 'Error del servidor'];
+    if (($_SESSION['role'] ?? '') === 'admin') {
+        $response['debug'] = [
+            'action' => (string)$action,
+            'detail' => (string)$e->getMessage()
+        ];
+    }
 }
 
 echo json_encode($response);

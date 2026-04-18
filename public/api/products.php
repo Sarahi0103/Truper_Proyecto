@@ -12,6 +12,9 @@ header('Content-Type: application/json');
 
 $action = $_GET['action'] ?? null;
 $method = $_SERVER['REQUEST_METHOD'];
+$rawInput = file_get_contents('php://input');
+$decodedInput = json_decode($rawInput, true);
+$input = is_array($decodedInput) ? $decodedInput : (is_array($_POST) ? $_POST : []);
 
 function display_product_code($sku) {
     return preg_replace('/^\s*XLS-/i', '', (string)$sku);
@@ -160,8 +163,6 @@ try {
                 $response = ['success' => false, 'message' => 'Método no permitido'];
                 break;
             }
-
-            $input = json_decode(file_get_contents('php://input'), true);
             
             // Registrar escaneo en logs
             log_action(
@@ -320,6 +321,12 @@ try {
 } catch (Exception $e) {
     error_log("Products API Error: " . $e->getMessage());
     $response = ['success' => false, 'message' => 'Error del servidor'];
+    if (($_SESSION['role'] ?? '') === 'admin') {
+        $response['debug'] = [
+            'action' => (string)$action,
+            'detail' => (string)$e->getMessage()
+        ];
+    }
 }
 
 echo json_encode($response);
