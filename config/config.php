@@ -8,7 +8,7 @@ $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_set_cookie_params([
-        'lifetime' => 1800,
+        'lifetime' => 3600,
         'path' => '/',
         'domain' => '',
         'secure' => $is_https,
@@ -226,8 +226,12 @@ function deny_unauthorized($code, $message) {
         $_SESSION['post_login_redirect'] = $currentUri;
     }
 
-    $errorType = ((int)$code === 401) ? 'expired' : 'unauthorized';
-    header("Location: /login.php?error={$errorType}");
+    if ((int)$code === 401) {
+        header('Location: /index.php?error=expired');
+        exit;
+    }
+
+    header('Location: /login.php?error=unauthorized');
     exit;
 }
 
