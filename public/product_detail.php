@@ -25,19 +25,22 @@ $displaySku = preg_replace('/^XLS-/i', '', $rawSku);
 
 function image_priority_score($fileName): int {
     $name = strtoupper((string)pathinfo($fileName, PATHINFO_FILENAME));
-    if (strpos($name, '+') === false) {
+    if (preg_match('/\+FC1$/', $name)) {
         return 0;
     }
-    if (preg_match('/\+FC1$/', $name)) {
+    if (preg_match('/\+E1$/', $name)) {
         return 1;
     }
-    if (preg_match('/\+E1$/', $name)) {
+    if (preg_match('/\+D1$/', $name)) {
         return 2;
     }
-    if (preg_match('/\+D1$/', $name)) {
+    if (preg_match('/\+O\d+$/', $name)) {
         return 3;
     }
-    return 9;
+    if (strpos($name, '+') === false) {
+        return 50;
+    }
+    return 90;
 }
 
 $imagePath = !empty($product['image_url']) ? $product['image_url'] : 'images/products/default-product.svg';

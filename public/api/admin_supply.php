@@ -520,32 +520,138 @@ function set_product_main_image_by_sku_admin_supply($pdo, string $sku, string $i
         return;
     }
 
-    if (!db_column_exists('products', 'image_url')) {
-        return;
-    }
-
-    try {
-        $stmt = $pdo->query('SELECT id, sku FROM products');
-        $rows = $stmt ? $stmt->fetchAll() : [];
-        foreach ($rows as $row) {
-            $existing = normalize_sku_admin_supply($row['sku'] ?? '');
-            if ($existing !== $sku) {
-                continue;
-            }
-
-            $sets = ['image_url = ?'];
-            $values = [$imageUrl];
-            if (db_column_exists('products', 'updated_at')) {
-                $sets[] = 'updated_at = CURRENT_TIMESTAMP';
-            }
-
-            $values[] = (int)($row['id'] ?? 0);
-            $upd = $pdo->prepare('UPDATE products SET ' . implode(', ', $sets) . ' WHERE id = ?');
-            $upd->execute($values);
-            break;
+    $tables = ['products', 'marketplace_ce_products'];
+    foreach ($tables as $table) {
+        if (!db_table_exists($table) || !db_column_exists($table, 'image_url')) {
+            continue;
         }
-    } catch (Exception $ignored) {
+
+        try {
+            $stmt = $pdo->query("SELECT id, sku FROM {$table}");
+            $rows = $stmt ? $stmt->fetchAll() : [];
+            foreach ($rows as $row) {
+                $existing = normalize_sku_admin_supply($row['sku'] ?? '');
+                if ($existing !== $sku) {
+                    continue;
+                }
+
+                $sets = ['image_url = ?'];
+                $values = [$imageUrl];
+                if (db_column_exists($table, 'updated_at')) {
+                    $sets[] = 'updated_at = CURRENT_TIMESTAMP';
+                }
+
+                $values[] = (int)($row['id'] ?? 0);
+                $upd = $pdo->prepare('UPDATE ' . $table . ' SET ' . implode(', ', $sets) . ' WHERE id = ?');
+                $upd->execute($values);
+            }
+        } catch (Exception $ignored) {
+        }
     }
+}
+
+function reorder_product_gallery_images_admin_supply($pdo, string $sku, array $orderedImages): array {
+    if (!is_valid_numeric_sku_admin_supply($sku)) {
+        throw new Exception('SKU inválido');
+    }
+
+    $dir = product_gallery_dir_admin_supply($sku);
+    if (!is_dir($dir)) {
+        return [];
+    }
+
+    $currentImages = list_product_gallery_images_admin_supply($sku);
+    if (count($currentImages) <= 1) {
+        return $currentImages;
+    }
+
+    $prefix = 'images/products/by_code/' . $sku . '/';
+    $currentMap = [];
+    foreach ($currentImages as $img) {
+        $fileName = basename((string)$img);
+        $fullPath = $dir . DIRECTORY_SEPARATOR . $fileName;
+        if (is_file($fullPath)) {
+            $currentMap[$img] = $fullPath;
+        }
+    }
+
+    $normalizedOrder = [];
+    foreach ($orderedImages as $candidate) {
+        $webPath = trim((string)$candidate);
+        if ($webPath === '' || strpos($webPath, $prefix) !== 0) {
+            continue;
+        }
+        if (!isset($currentMap[$webPath])) {
+            continue;
+        }
+        if (!in_array($webPath, $normalizedOrder, true)) {
+            $normalizedOrder[] = $webPath;
+        }
+    }
+
+    foreach (array_keys($currentMap) as $existingPath) {
+        if (!in_array($existingPath, $normalizedOrder, true)) {
+            $normalizedOrder[] = $existingPath;
+        }
+    }
+
+    if (empty($normalizedOrder)) {
+        return $currentImages;
+    }
+
+    $tempEntries = [];
+    foreach ($normalizedOrder as $index => $webPath) {
+        $sourcePath = $currentMap[$webPath] ?? '';
+        if ($sourcePath === '' || !is_file($sourcePath)) {
+            continue;
+        }
+
+        $ext = strtolower((string)pathinfo($sourcePath, PATHINFO_EXTENSION));
+        $tempName = '__tmp__' . $index . '-' . substr(bin2hex(random_bytes(4)), 0, 8) . '.' . $ext;
+        $tempPath = $dir . DIRECTORY_SEPARATOR . $tempName;
+        if (!@rename($sourcePath, $tempPath)) {
+            throw new Exception('No se pudo preparar el reordenamiento de imágenes');
+        }
+
+        $tempEntries[] = [
+            'temp_path' => $tempPath,
+            'original_web' => $webPath,
+            'index' => $index
+        ];
+    }
+
+    foreach ($tempEntries as $entry) {
+        $index = (int)$entry['index'];
+        $tempPath = (string)$entry['temp_path'];
+        $originalBase = pathinfo(basename((string)$entry['original_web']), PATHINFO_FILENAME);
+        $base = normalize_gallery_base_name_admin_supply((string)$originalBase);
+        if ($base === '') {
+            $base = 'product';
+        }
+
+        $ext = strtolower((string)pathinfo($tempPath, PATHINFO_EXTENSION));
+        $suffix = $index === 0 ? '+FC1' : ('+O' . str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT));
+        $targetName = $base . $suffix . '.' . $ext;
+        $targetPath = $dir . DIRECTORY_SEPARATOR . $targetName;
+
+        $counter = 1;
+        while (file_exists($targetPath)) {
+            $targetName = $base . $suffix . '-' . $counter . '.' . $ext;
+            $targetPath = $dir . DIRECTORY_SEPARATOR . $targetName;
+            $counter += 1;
+        }
+
+        if (!@rename($tempPath, $targetPath)) {
+            throw new Exception('No se pudo aplicar el nuevo orden de imágenes');
+        }
+    }
+
+    $images = list_product_gallery_images_admin_supply($sku);
+    if (!empty($images)) {
+        set_product_main_image_by_sku_admin_supply($pdo, $sku, $images[0]);
+    }
+
+    return $images;
 }
 
 function set_gallery_cover_image_admin_supply(string $sku, string $imageWebPath): string {
@@ -922,19 +1028,22 @@ function list_available_product_images($pdo): array {
 
 function admin_supply_image_priority_score($filePath): int {
     $name = strtoupper((string)pathinfo((string)$filePath, PATHINFO_FILENAME));
-    if (strpos($name, '+') === false) {
+    if (preg_match('/\+FC1$/', $name)) {
         return 0;
     }
-    if (preg_match('/\+FC1$/', $name)) {
+    if (preg_match('/\+E1$/', $name)) {
         return 1;
     }
-    if (preg_match('/\+E1$/', $name)) {
+    if (preg_match('/\+D1$/', $name)) {
         return 2;
     }
-    if (preg_match('/\+D1$/', $name)) {
+    if (preg_match('/\+O\d+$/', $name)) {
         return 3;
     }
-    return 9;
+    if (strpos($name, '+') === false) {
+        return 50;
+    }
+    return 90;
 }
 
 function resolve_admin_supply_image_by_sku($rawSku): ?string {
@@ -1633,6 +1742,29 @@ try {
                 'sku' => $sku,
                 'images' => $images,
                 'cover' => $images[0] ?? null
+            ];
+            break;
+
+        case 'product-gallery-reorder':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $sku = normalize_sku_admin_supply($input['sku'] ?? '');
+            $images = $input['images'] ?? [];
+            if (!is_valid_numeric_sku_admin_supply($sku) || !is_array($images) || count($images) === 0) {
+                $response = ['success' => false, 'message' => 'SKU o lista de imágenes inválida'];
+                break;
+            }
+
+            $ordered = reorder_product_gallery_images_admin_supply($pdo, $sku, $images);
+            $response = [
+                'success' => true,
+                'message' => 'Orden de imágenes actualizado',
+                'sku' => $sku,
+                'images' => $ordered,
+                'cover' => $ordered[0] ?? null
             ];
             break;
 
