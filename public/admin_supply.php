@@ -105,13 +105,13 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             min-width: 92px;
         }
         .category-action-btn-remove {
-            border-color: rgba(220, 38, 38, 0.35);
-            color: #fecaca;
-            background: rgba(127, 29, 29, 0.18);
+            border-color: #d97706;
+            color: #ffffff;
+            background: #f59e0b;
         }
         .category-action-btn-remove:hover {
-            border-color: rgba(248, 113, 113, 0.8);
-            background: rgba(127, 29, 29, 0.28);
+            border-color: #b45309;
+            background: #ea8a00;
         }
         .admin-quick-panel {
             border: 1px solid var(--ui-border);
@@ -217,28 +217,29 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
 
                 <input type="hidden" id="newProductEditId" value="">
 
-                <div class="grid grid-3">
+                <div class="grid grid-2">
                     <div class="form-group"><label>Código del producto (5 números)</label><input id="newProductSku" type="text" maxlength="5" inputmode="numeric" pattern="\d{5}" placeholder="Ej. 23032"><small id="newProductSkuStatus" class="text-muted">Debe ser único y de 5 números.</small></div>
                     <div class="form-group"><label>Nombre</label><input id="newProductName" type="text" maxlength="255"></div>
-                    <div class="form-group">
-                        <label>Categorías (selección múltiple)</label>
-                        <div class="category-panel">
-                            <div class="category-panel-title">Administrar categorías</div>
-                            <select id="newProductCategory" multiple size="6">
-                                <option value="Material eléctrico">Material eléctrico</option>
-                                <option value="Fontanería">Fontanería</option>
-                                <option value="Cerrajería">Cerrajería</option>
-                                <option value="Herrería">Herrería</option>
-                            </select>
-                            <small class="text-muted">Usa Ctrl/Cmd para seleccionar múltiples categorías.</small>
-                            <div class="category-quick-tools">
-                                <input id="newCategoryQuickName" class="category-quick-input" type="text" placeholder="Nueva categoría" maxlength="120">
-                                <button class="btn btn-small btn-secondary category-action-btn" type="button" onclick="addCategoryFromStockForm()" title="Agregar categoría">Agregar</button>
-                                <button class="btn btn-small btn-secondary category-action-btn category-action-btn-remove" type="button" onclick="deleteCategoryQuick()" title="Eliminar categoría seleccionada">Eliminar</button>
-                            </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Categorías (selección múltiple)</label>
+                    <div class="category-panel">
+                        <div class="category-panel-title">Administrar categorías</div>
+                        <select id="newProductCategory" multiple size="6">
+                            <option value="Material eléctrico">Material eléctrico</option>
+                            <option value="Fontanería">Fontanería</option>
+                            <option value="Cerrajería">Cerrajería</option>
+                            <option value="Herrería">Herrería</option>
+                        </select>
+                        <small class="text-muted">Usa Ctrl/Cmd para seleccionar múltiples categorías.</small>
+                        <div class="category-quick-tools">
+                            <input id="newCategoryQuickName" class="category-quick-input" type="text" placeholder="Nueva categoría" maxlength="120">
+                            <button class="btn btn-small btn-secondary category-action-btn" type="button" onclick="addCategoryFromStockForm()" title="Agregar categoría">Agregar</button>
+                            <button class="btn btn-small btn-secondary category-action-btn category-action-btn-remove" type="button" onclick="deleteCategoryQuick()" title="Eliminar categoría seleccionada">Eliminar</button>
                         </div>
-                        <div id="quickCategoryResult" class="text-muted" style="font-size:12px; margin-top:6px;"></div>
                     </div>
+                    <div id="quickCategoryResult" class="text-muted" style="font-size:12px; margin-top:6px;"></div>
                 </div>
 
                 <div class="grid grid-3">
