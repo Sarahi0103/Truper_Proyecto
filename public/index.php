@@ -118,6 +118,33 @@ if (count($products) < 10) {
     }
 }
 
+$quickCategoriesMap = [];
+foreach ($products as $item) {
+    $rawCategory = trim((string)($item['category'] ?? ''));
+    if ($rawCategory === '') {
+        continue;
+    }
+
+    $categoryParts = preg_split('/\s*,\s*/', $rawCategory) ?: [];
+    foreach ($categoryParts as $categoryPart) {
+        $category = trim((string)$categoryPart);
+        if ($category === '') {
+            continue;
+        }
+        $key = function_exists('mb_strtolower')
+            ? mb_strtolower($category, 'UTF-8')
+            : strtolower($category);
+        if (!isset($quickCategoriesMap[$key])) {
+            $quickCategoriesMap[$key] = $category;
+        }
+    }
+}
+
+$quickCategories = array_values($quickCategoriesMap);
+usort($quickCategories, function ($a, $b) {
+    return strcasecmp((string)$a, (string)$b);
+});
+
 $isLogged = is_logged_in();
 $isAdmin = (($_SESSION['role'] ?? '') === 'admin');
 $showSessionExpiredNotice = (($_GET['error'] ?? '') === 'expired');
@@ -280,10 +307,12 @@ function homepage_update_label($type) {
                 <div class="catalog-categories-title">Categorías</div>
                 <div class="catalog-categories-actions">
                     <button type="button" class="btn btn-ghost btn-small active" data-quick-category="">Todas</button>
-                    <button type="button" class="btn btn-ghost btn-small" data-quick-category="Material eléctrico">Material eléctrico</button>
-                    <button type="button" class="btn btn-ghost btn-small" data-quick-category="Fontanería">Fontanería</button>
-                    <button type="button" class="btn btn-ghost btn-small" data-quick-category="Cerrajería">Cerrajería</button>
-                    <button type="button" class="btn btn-ghost btn-small" data-quick-category="Herrería">Herrería</button>
+                    <?php foreach ($quickCategories as $categoryName): ?>
+                        <button
+                            type="button"
+                            class="btn btn-ghost btn-small"
+                            data-quick-category="<?php echo htmlspecialchars($categoryName, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($categoryName, ENT_QUOTES, 'UTF-8'); ?></button>
+                    <?php endforeach; ?>
                 </div>
             </div>
 
