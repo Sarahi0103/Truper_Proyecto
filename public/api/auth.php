@@ -7,6 +7,9 @@ require_once '../../config/config.php';
 require_once '../../src/controllers/AuthController.php';
 
 header('Content-Type: application/json');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
 
 $action = $_GET['action'] ?? ($_POST['action'] ?? 'login');
 

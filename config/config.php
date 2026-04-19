@@ -332,6 +332,11 @@ function require_login() {
     if (!is_logged_in()) {
         deny_unauthorized(401, 'Debes iniciar sesión');
     }
+
+    // No permitir cache de páginas/sesiones autenticadas en navegador o proxies.
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
 }
 
 function require_admin() {
