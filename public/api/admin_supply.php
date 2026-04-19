@@ -48,6 +48,16 @@ function is_valid_numeric_sku_admin_supply(string $sku): bool {
     return (bool)preg_match('/^\d{5}$/', $sku);
 }
 
+function sku_column_for_table_admin_supply(string $table): ?string {
+    $candidates = ['sku', 'product_code', 'code', 'codigo'];
+    foreach ($candidates as $candidate) {
+        if (db_column_exists($table, $candidate)) {
+            return $candidate;
+        }
+    }
+    return null;
+}
+
 function normalized_sku_exists_in_table_admin_supply($pdo, string $table, string $sku, int $excludeId = 0): bool {
     if ($sku === '') {
         return false;
@@ -57,12 +67,17 @@ function normalized_sku_exists_in_table_admin_supply($pdo, string $table, string
         return false;
     }
 
+    $skuColumn = sku_column_for_table_admin_supply($table);
+    if ($skuColumn === null) {
+        return false;
+    }
+
     try {
         if ($excludeId > 0) {
-            $stmt = $pdo->prepare("SELECT id, sku FROM {$table} WHERE id <> ?");
+            $stmt = $pdo->prepare("SELECT id, {$skuColumn} AS sku FROM {$table} WHERE id <> ?");
             $stmt->execute([max(0, $excludeId)]);
         } else {
-            $stmt = $pdo->query("SELECT id, sku FROM {$table}");
+            $stmt = $pdo->query("SELECT id, {$skuColumn} AS sku FROM {$table}");
         }
 
         $rows = $stmt ? $stmt->fetchAll() : [];
@@ -136,8 +151,13 @@ function record_matches_normalized_sku_admin_supply($pdo, string $table, int $id
         return false;
     }
 
+    $skuColumn = sku_column_for_table_admin_supply($table);
+    if ($skuColumn === null) {
+        return false;
+    }
+
     try {
-        $stmt = $pdo->prepare("SELECT sku FROM {$table} WHERE id = ? LIMIT 1");
+        $stmt = $pdo->prepare("SELECT {$skuColumn} AS sku FROM {$table} WHERE id = ? LIMIT 1");
         $stmt->execute([$id]);
         $existingSku = normalize_sku_admin_supply((string)$stmt->fetchColumn());
         return $existingSku !== '' && $existingSku === $sku;
@@ -526,8 +546,13 @@ function set_product_main_image_by_sku_admin_supply($pdo, string $sku, string $i
             continue;
         }
 
+        $skuColumn = sku_column_for_table_admin_supply($table);
+        if ($skuColumn === null) {
+            continue;
+        }
+
         try {
-            $stmt = $pdo->query("SELECT id, sku FROM {$table}");
+            $stmt = $pdo->query("SELECT id, {$skuColumn} AS sku FROM {$table}");
             $rows = $stmt ? $stmt->fetchAll() : [];
             foreach ($rows as $row) {
                 $existing = normalize_sku_admin_supply($row['sku'] ?? '');
@@ -713,14 +738,19 @@ function create_product_compatible($pdo, array $payload): void {
     $columns = [];
     $values = [];
 
-    $required = ['sku', 'name'];
-    foreach ($required as $col) {
-        if (!db_column_exists('products', $col)) {
-            throw new Exception('La tabla products no tiene la columna requerida: ' . $col);
-        }
-        $columns[] = $col;
-        $values[] = $payload[$col];
+    $skuColumn = sku_column_for_table_admin_supply('products');
+    if ($skuColumn === null) {
+        throw new Exception('La tabla products no tiene una columna de código (sku/product_code/code)');
     }
+
+    if (!db_column_exists('products', 'name')) {
+        throw new Exception('La tabla products no tiene la columna requerida: name');
+    }
+
+    $columns[] = $skuColumn;
+    $values[] = $payload['sku'];
+    $columns[] = 'name';
+    $values[] = $payload['name'];
 
     if (db_column_exists('products', 'description')) {
         $columns[] = 'description';
@@ -785,7 +815,9 @@ function update_product_compatible($pdo, int $id, array $payload): void {
     $sets = [];
     $values = [];
 
-    if (db_column_exists('products', 'sku')) { $sets[] = 'sku = ?'; $values[] = $payload['sku']; }
+    $skuColumn = sku_column_for_table_admin_supply('products');
+
+    if ($skuColumn !== null) { $sets[] = $skuColumn . ' = ?'; $values[] = $payload['sku']; }
     if (db_column_exists('products', 'name')) { $sets[] = 'name = ?'; $values[] = $payload['name']; }
     if (db_column_exists('products', 'description')) { $sets[] = 'description = ?'; $values[] = $payload['description']; }
     if (db_column_exists('products', 'category')) { $sets[] = 'category = ?'; $values[] = $payload['category']; }
@@ -1108,6 +1140,8 @@ function apply_catalog_image_fallback_admin_supply(array $item): array {
 }
 
 function list_stock_products_compatible($pdo): array {
+    $skuColumn = sku_column_for_table_admin_supply('products');
+    $skuSelect = $skuColumn !== null ? "{$skuColumn} AS sku" : "'' AS sku";
     $categorySelect = db_column_exists('products', 'category')
         ? "COALESCE(category, 'General') AS category"
         : "'General' AS category";
@@ -1133,13 +1167,13 @@ function list_stock_products_compatible($pdo): array {
     $queries = [];
 
     if (db_column_exists('products', 'is_active')) {
-        $queries[] = "SELECT id, sku, name, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} FROM products WHERE is_active = true ORDER BY stock_quantity ASC, name ASC LIMIT 500";
+        $queries[] = "SELECT id, {$skuSelect}, name, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} FROM products WHERE is_active = true ORDER BY stock_quantity ASC, name ASC LIMIT 500";
     }
     if (db_column_exists('products', 'active')) {
-        $queries[] = "SELECT id, sku, name, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} FROM products WHERE active = 1 ORDER BY stock_quantity ASC, name ASC LIMIT 500";
+        $queries[] = "SELECT id, {$skuSelect}, name, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} FROM products WHERE active = 1 ORDER BY stock_quantity ASC, name ASC LIMIT 500";
     }
 
-    $queries[] = "SELECT id, sku, name, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} FROM products ORDER BY stock_quantity ASC, name ASC LIMIT 500";
+    $queries[] = "SELECT id, {$skuSelect}, name, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} FROM products ORDER BY stock_quantity ASC, name ASC LIMIT 500";
 
     $items = [];
     foreach ($queries as $sql) {
