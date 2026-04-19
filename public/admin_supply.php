@@ -2233,6 +2233,32 @@ async function moveGalleryImage(sku, imagePath, direction, mode = 'stock') {
     await reorderGalleryImages(sku, images, mode);
 }
 
+async function moveGalleryImageToPosition(sku, imagePath, targetPosition, mode = 'stock') {
+    const listAction = `/admin_supply.php?action=product-gallery-list&sku=${encodeURIComponent(sku)}`;
+    const listing = await apiCall(listAction, 'GET', null, { silent: true });
+    const images = Array.isArray(listing?.images) ? listing.images.slice() : [];
+    const index = images.indexOf(imagePath);
+    if (index < 0) {
+        showGalleryResult(mode, 'No se encontró la imagen a mover', 'error');
+        return;
+    }
+
+    const positionNumber = Number(targetPosition || 0);
+    if (!Number.isInteger(positionNumber) || positionNumber < 1 || positionNumber > images.length) {
+        showGalleryResult(mode, 'Posición inválida', 'error');
+        return;
+    }
+
+    const targetIndex = positionNumber - 1;
+    if (targetIndex === index) {
+        return;
+    }
+
+    const [moved] = images.splice(index, 1);
+    images.splice(targetIndex, 0, moved);
+    await reorderGalleryImages(sku, images, mode);
+}
+
 function renderProductGallery(images, sku, mode = 'stock') {
     const host = document.getElementById(mode === 'marketplace' ? 'marketplaceGalleryList' : 'productGalleryList');
     const status = document.getElementById(mode === 'marketplace' ? 'marketplaceGalleryStatus' : 'productGalleryStatus');
@@ -2246,15 +2272,19 @@ function renderProductGallery(images, sku, mode = 'stock') {
 
     const setCoverFn = mode === 'marketplace' ? 'setMarketplaceGalleryCover' : 'setProductGalleryCover';
     const deleteFn = mode === 'marketplace' ? 'deleteMarketplaceGalleryImage' : 'deleteProductGalleryImage';
-    const moveFn = mode === 'marketplace' ? 'moveMarketplaceGalleryImage' : 'moveProductGalleryImage';
+    const moveToFn = mode === 'marketplace' ? 'moveMarketplaceGalleryImageTo' : 'moveProductGalleryImageTo';
 
     status.textContent = `Galería para ${sku}: ${images.length} imagen(es)`;
     host.innerHTML = images.map((img, idx) => `
         <div style="border:1px solid var(--ui-border); border-radius:10px; padding:0.5rem; background:var(--ui-surface-soft);">
             <img src="${escapeHtml(img)}" alt="Imagen ${idx + 1}" style="width:100%; height:90px; object-fit:cover; border-radius:8px;">
+            <div style="display:flex; align-items:center; gap:0.35rem; margin-top:0.45rem;">
+                <label style="font-size:12px; color:var(--ui-text-muted);">Posición</label>
+                <select id="galleryPos-${mode}-${idx}" style="max-width:90px;" onchange="${moveToFn}('${escapeHtml(sku)}','${escapeHtml(img)}', this.value)">
+                    ${images.map((_, pos) => `<option value="${pos + 1}" ${pos === idx ? 'selected' : ''}>${pos + 1}</option>`).join('')}
+                </select>
+            </div>
             <div style="display:flex; gap:0.35rem; margin-top:0.45rem; flex-wrap:wrap;">
-                <button class="btn btn-small btn-ghost" type="button" onclick="${moveFn}('${escapeHtml(sku)}','${escapeHtml(img)}','up')" ${idx === 0 ? 'disabled' : ''}>Subir</button>
-                <button class="btn btn-small btn-ghost" type="button" onclick="${moveFn}('${escapeHtml(sku)}','${escapeHtml(img)}','down')" ${idx === images.length - 1 ? 'disabled' : ''}>Bajar</button>
                 <button class="btn btn-small btn-secondary" type="button" onclick="${setCoverFn}('${escapeHtml(sku)}','${escapeHtml(img)}')">Portada</button>
                 <button class="btn btn-small btn-danger" type="button" onclick="${deleteFn}('${escapeHtml(sku)}','${escapeHtml(img)}')">Eliminar</button>
             </div>
@@ -2377,6 +2407,14 @@ function moveProductGalleryImage(sku, imagePath, direction) {
 
 function moveMarketplaceGalleryImage(sku, imagePath, direction) {
     return moveGalleryImage(sku, imagePath, direction, 'marketplace');
+}
+
+function moveProductGalleryImageTo(sku, imagePath, targetPosition) {
+    return moveGalleryImageToPosition(sku, imagePath, targetPosition, 'stock');
+}
+
+function moveMarketplaceGalleryImageTo(sku, imagePath, targetPosition) {
+    return moveGalleryImageToPosition(sku, imagePath, targetPosition, 'marketplace');
 }
 
 async function setMarketplaceGalleryCover(sku, imagePath) {
