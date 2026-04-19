@@ -11,11 +11,54 @@ $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
 $response = [];
 $user_id = (int)$_SESSION['user_id'];
 
+function client_account_json_response(array $payload): void {
+    $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+    if ($json === false) {
+        http_response_code(500);
+        echo '{"success":false,"message":"Error serializando respuesta JSON"}';
+        return;
+    }
+    echo $json;
+}
+
+function normalize_quote_product_code($value): string {
+    $code = trim((string)$value);
+    if ($code === '') {
+        return '';
+    }
+    return preg_replace('/^XLS-/i', '', $code);
+}
+
+function quote_item_code(array $item, array $skuByProductId = []): string {
+    $candidates = [
+        $item['sku'] ?? '',
+        $item['code'] ?? '',
+        $item['product_code'] ?? ''
+    ];
+
+    foreach ($candidates as $candidate) {
+        $normalized = normalize_quote_product_code($candidate);
+        if ($normalized !== '') {
+            return $normalized;
+        }
+    }
+
+    $productId = (int)($item['product_id'] ?? 0);
+    if ($productId > 0 && isset($skuByProductId[$productId])) {
+        $normalized = normalize_quote_product_code($skuByProductId[$productId]);
+        if ($normalized !== '') {
+            return $normalized;
+        }
+    }
+
+    return $productId > 0 ? ('ID-' . $productId) : 'N/A';
+}
+
 try {
-    // Ensure tables exist (PostgreSQL compatible)
+    // Ensure tables exist
     $pdo->exec("CREATE TABLE IF NOT EXISTS client_credit_balance (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL UNIQUE,
         credit_limit DECIMAL(10, 2) DEFAULT 0,
         credit_available DECIMAL(10, 2) DEFAULT 0,
         credit_used DECIMAL(10, 2) DEFAULT 0,
@@ -23,12 +66,13 @@ try {
         last_payment_date DATE,
         days_overdue INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )");
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS weekly_consumption_summary (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL,
         week_start DATE NOT NULL,
         week_end DATE NOT NULL,
         total_consumed DECIMAL(10, 2) DEFAULT 0,
@@ -36,26 +80,30 @@ try {
         payment_status VARCHAR(20) DEFAULT 'pending',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         UNIQUE (user_id, week_start),
         CHECK (payment_status IN ('pending', 'partial', 'paid'))
     )");
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS credit_payments (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        order_id INTEGER REFERENCES orders(id) ON DELETE SET NULL,
+        user_id INTEGER NOT NULL,
+        order_id INTEGER,
         payment_amount DECIMAL(10, 2) NOT NULL,
         payment_date DATE NOT NULL,
         payment_method VARCHAR(50),
         reference_number VARCHAR(100),
         notes TEXT,
-        recorded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        recorded_by INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL,
+        FOREIGN KEY (recorded_by) REFERENCES users(id) ON DELETE SET NULL
     )");
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS whatsapp_quotes (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL,
         quote_data JSONB NOT NULL,
         total_amount DECIMAL(10, 2) NOT NULL,
         items_count INTEGER NOT NULL,
@@ -63,10 +111,12 @@ try {
         status VARCHAR(30) DEFAULT 'pending',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         CHECK (status IN ('pending', 'sent', 'answered', 'converted_to_order'))
     )");
 
     switch ($action) {
+        // Resumen de cuenta crediticia del cliente
         case 'credit-summary':
             if ($method !== 'GET') {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];
@@ -78,7 +128,8 @@ try {
             $credit = $stmt->fetch();
 
             if (!$credit) {
-                $stmt = $pdo->prepare("INSERT INTO client_credit_balance (user_id, credit_limit, credit_available, credit_used, total_owed, updated_at) VALUES (?, 0, 0, 0, 0, CURRENT_TIMESTAMP)");
+                // Create default if not exists
+                $stmt = $pdo->prepare("INSERT INTO client_credit_balance (user_id, credit_limit, credit_available) VALUES (?, 0, 0)");
                 $stmt->execute([$user_id]);
                 $credit = ['credit_limit' => 0, 'credit_available' => 0, 'total_owed' => 0, 'days_overdue' => 0];
             }
@@ -86,43 +137,29 @@ try {
             $response = ['success' => true, 'credit' => $credit];
             break;
 
+        // Control semanal de consumido y adeudado
         case 'weekly-summary':
             if ($method !== 'GET') {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];
                 break;
             }
 
+            // Get current week start (Monday)
             $weekStart = date('Y-m-d', strtotime('monday this week'));
             $weekEnd = date('Y-m-d', strtotime('sunday this week'));
 
+            // Get or create weekly summary
             $stmt = $pdo->prepare("SELECT * FROM weekly_consumption_summary WHERE user_id = ? AND week_start = ?");
             $stmt->execute([$user_id, $weekStart]);
             $weekly = $stmt->fetch();
 
             if (!$weekly) {
-                $stmt = $pdo->prepare("
-                    SELECT
-                        COALESCE(SUM(o.total_amount), 0) AS total_consumed,
-                        COALESCE(SUM(CASE WHEN o.payment_status IN ('pending','partial') THEN COALESCE(o.balance, 0) ELSE 0 END), 0) AS total_owed
-                    FROM orders o
-                    INNER JOIN clients c ON c.id = o.client_id
-                    WHERE c.user_id = ?
-                      AND o.created_at::date >= ?
-                      AND o.created_at::date <= ?
-                ");
+                // Calculate from orders in this week
+                                $stmt = $pdo->prepare("SELECT COALESCE(SUM(o.total_amount), 0) AS total_consumed, COALESCE(SUM(CASE WHEN o.payment_status IN ('pending','partial') THEN COALESCE(o.balance, 0) ELSE 0 END), 0) AS total_owed FROM orders o INNER JOIN clients c ON c.id = o.client_id WHERE c.user_id = ? AND o.created_at::date >= ? AND o.created_at::date <= ?");
                 $stmt->execute([$user_id, $weekStart, $weekEnd]);
                 $calc = $stmt->fetch();
 
-                $stmt = $pdo->prepare("
-                    INSERT INTO weekly_consumption_summary (user_id, week_start, week_end, total_consumed, total_owed)
-                    VALUES (?, ?, ?, ?, ?)
-                    ON CONFLICT (user_id, week_start)
-                    DO UPDATE SET
-                        week_end = EXCLUDED.week_end,
-                        total_consumed = EXCLUDED.total_consumed,
-                        total_owed = EXCLUDED.total_owed,
-                        updated_at = CURRENT_TIMESTAMP
-                ");
+                $stmt = $pdo->prepare("INSERT INTO weekly_consumption_summary (user_id, week_start, week_end, total_consumed, total_owed) VALUES (?, ?, ?, ?, ?) ON CONFLICT (user_id, week_start) DO UPDATE SET week_end = EXCLUDED.week_end, total_consumed = EXCLUDED.total_consumed, total_owed = EXCLUDED.total_owed, updated_at = CURRENT_TIMESTAMP");
                 $stmt->execute([
                     $user_id,
                     $weekStart,
@@ -130,7 +167,6 @@ try {
                     (float)($calc['total_consumed'] ?? 0),
                     (float)($calc['total_owed'] ?? 0)
                 ]);
-
                 $weekly = [
                     'total_consumed' => (float)($calc['total_consumed'] ?? 0),
                     'total_owed' => (float)($calc['total_owed'] ?? 0),
@@ -142,6 +178,7 @@ try {
             $response = ['success' => true, 'weekly' => $weekly];
             break;
 
+        // Historial semanal (Ãºltimas 12 semanas)
         case 'weekly-history':
             if ($method !== 'GET') {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];
@@ -161,6 +198,7 @@ try {
             $response = ['success' => true, 'weeks' => $weeks];
             break;
 
+        // Registrar pago contra crÃ©dito/deuda
         case 'record-payment':
             require_admin();
             if ($method !== 'POST') {
@@ -186,6 +224,7 @@ try {
                 break;
             }
 
+            // Record payment
             $stmt = $pdo->prepare("
                 INSERT INTO credit_payments (user_id, order_id, payment_amount, payment_date, payment_method, reference_number, notes, recorded_by)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -201,12 +240,14 @@ try {
                 $_SESSION['user_id']
             ]);
 
+            // Update credit balance
             $stmt = $pdo->prepare("INSERT INTO client_credit_balance (user_id, credit_limit, credit_available, credit_used, total_owed, last_payment_date, updated_at) VALUES (?, 0, 0, 0, 0, ?, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO NOTHING");
             $stmt->execute([$target_user_id, $payment_date]);
 
             $stmt = $pdo->prepare("UPDATE client_credit_balance SET credit_used = GREATEST(COALESCE(credit_used, 0) - ?, 0), total_owed = GREATEST(COALESCE(total_owed, 0) - ?, 0), last_payment_date = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?");
             $stmt->execute([$payment_amount, $payment_amount, $payment_date, $target_user_id]);
 
+            // If related to specific order, update order balance
             if ($order_id) {
                 $stmt = $pdo->prepare("UPDATE orders SET payment_amount = COALESCE(payment_amount, 0) + ?, balance = GREATEST(COALESCE(balance, 0) - ?, 0), payment_status = CASE WHEN COALESCE(balance, 0) - ? <= 0 THEN 'paid' ELSE 'partial' END, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
                 $stmt->execute([$payment_amount, $payment_amount, $payment_amount, $order_id]);
@@ -215,6 +256,7 @@ try {
             $response = ['success' => true, 'message' => 'Pago registrado correctamente'];
             break;
 
+        // Crear cotizaciÃ³n para WhatsApp
         case 'whatsapp-quote':
             if ($method !== 'POST') {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];
@@ -224,44 +266,108 @@ try {
             $items = $input['items'] ?? [];
             $total_amount = (float)($input['total'] ?? 0);
             $whatsapp_phone = sanitize($input['whatsapp_phone'] ?? '');
+            $target_phone = whatsapp_phone_digits($whatsapp_phone);
 
             if (empty($items) || $total_amount <= 0) {
                 $response = ['success' => false, 'message' => 'Carrito vacio o total invalido'];
                 break;
             }
 
+            $skuByProductId = [];
+            $productIds = [];
+            foreach ($items as $item) {
+                $pid = (int)($item['product_id'] ?? 0);
+                if ($pid > 0) {
+                    $productIds[$pid] = true;
+                }
+            }
+            if (!empty($productIds)) {
+                $placeholders = implode(',', array_fill(0, count($productIds), '?'));
+                $stmtSku = $pdo->prepare("SELECT id, COALESCE(sku, '') AS sku FROM products WHERE id IN ($placeholders)");
+                $stmtSku->execute(array_map('intval', array_keys($productIds)));
+                foreach ($stmtSku->fetchAll() as $rowSku) {
+                    $rowId = (int)($rowSku['id'] ?? 0);
+                    if ($rowId > 0) {
+                        $skuByProductId[$rowId] = (string)($rowSku['sku'] ?? '');
+                    }
+                }
+            }
+
+            $normalizedItems = [];
+            foreach ($items as $item) {
+                $qty = max(1, (int)($item['quantity'] ?? 1));
+                $unitPrice = (float)($item['price'] ?? ($item['unit_price'] ?? 0));
+                $code = quote_item_code((array)$item, $skuByProductId);
+                $normalizedItems[] = [
+                    'product_id' => (int)($item['product_id'] ?? 0),
+                    'name' => trim((string)($item['name'] ?? 'Producto')),
+                    'quantity' => $qty,
+                    'price' => $unitPrice,
+                    'sku' => $code
+                ];
+            }
+
+            // Save quote
             $stmt = $pdo->prepare("
                 INSERT INTO whatsapp_quotes (user_id, quote_data, total_amount, items_count, whatsapp_phone, status)
                 VALUES (?, ?, ?, ?, ?, 'pending')
             ");
             $stmt->execute([
                 $user_id,
-                json_encode($items, JSON_UNESCAPED_UNICODE),
+                json_encode($normalizedItems, JSON_UNESCAPED_UNICODE),
                 $total_amount,
-                count($items),
+                count($normalizedItems),
                 $whatsapp_phone
             ]);
             $quote_id = (int)$pdo->lastInsertId();
+            $ticket_code = 'COT-' . str_pad((string)$quote_id, 6, '0', STR_PAD_LEFT);
+            $issued_at = date('Y-m-d H:i');
+            $client_ref = 'U' . str_pad((string)$user_id, 5, '0', STR_PAD_LEFT);
+            $ticket_url = app_base_url() . '/ticket_quote.php?quote_id=' . $quote_id
+                . '&folio=' . rawurlencode($ticket_code)
+                . '&format=thermal'
+                . '&auto_pdf=1';
 
-            $message = "Solicito cotización:\n";
-            foreach ($items as $item) {
+            // Generate WhatsApp message
+            $message = "TRUPER - COTIZACION\n";
+            $message .= "===========================\n";
+            $message .= "Folio: {$ticket_code}\n";
+            $message .= "Fecha: {$issued_at}\n";
+            $message .= "Cliente: {$client_ref}\n";
+            $message .= "---------------------------\n";
+            $message .= "PRODUCTOS:\n";
+            foreach ($normalizedItems as $idx => $item) {
                 $qty = (int)($item['quantity'] ?? 0);
-                $name = htmlspecialchars($item['name'] ?? '', ENT_QUOTES);
-                $message .= "• $qty x $name\n";
+                $name = trim((string)($item['name'] ?? ''));
+                $unit_price = (float)($item['price'] ?? ($item['unit_price'] ?? 0));
+                $code = quote_item_code((array)$item);
+                $line_total = $qty * $unit_price;
+                $message .= "- {$name}\n";
+                $message .= "  Codigo: {$code}\n";
+                $message .= "  {$qty} x $" . number_format($unit_price, 2) . " = $" . number_format($line_total, 2) . "\n";
+                if ($idx < (count($normalizedItems) - 1)) {
+                    $message .= "---------------------------\n";
+                }
             }
-            $message .= "\nTotal estimado: \$$total_amount";
+            $message .= "---------------------------\n";
+            $message .= "TOTAL: $" . number_format($total_amount, 2) . "\n";
+            $message .= "PDF/Ticket: {$ticket_url}\n";
+            $message .= "\nQuedo atento(a) a disponibilidad y tiempo de entrega.";
 
-            $encoded_msg = urlencode($message);
-            $whatsapp_url = "https://wa.me/521234567890?text=$encoded_msg";
+            $whatsapp_url = whatsapp_url($message, $target_phone);
 
             $response = [
                 'success' => true,
                 'quote_id' => $quote_id,
+                'ticket_code' => $ticket_code,
+                'ticket_url' => $ticket_url,
                 'whatsapp_url' => $whatsapp_url,
-                'message' => 'Cotización creada'
+                'whatsapp_phone' => $target_phone,
+                'message' => 'Cotizacion creada y ticket generado'
             ];
             break;
 
+        // Listar cotizaciones pendientes
         case 'pending-quotes':
             if ($method !== 'GET') {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];
@@ -309,5 +415,4 @@ try {
     $response = ['success' => false, 'message' => 'Error del servidor'];
 }
 
-echo json_encode($response);
-?>
+client_account_json_response((array)$response);
