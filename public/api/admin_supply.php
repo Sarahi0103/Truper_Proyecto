@@ -2506,7 +2506,9 @@ try {
             $selectPrice = $mkPriceCol !== null ? ('COALESCE(' . $mkPriceCol . ', 0) AS unit_price') : '0 AS unit_price';
             $selectStock = $mkStockCol !== null ? ('COALESCE(' . $mkStockCol . ', 0) AS stock_quantity') : '0 AS stock_quantity';
             $selectImage = $mkImageCol !== null ? ('COALESCE(' . $mkImageCol . ", 'images/products/default-product.svg') AS image_url") : "'images/products/default-product.svg' AS image_url";
-            $selectActive = $mkActiveCol !== null ? ('COALESCE(' . $mkActiveCol . ', 1) AS is_active') : '1 AS is_active';
+            $selectActive = $mkActiveCol !== null
+                ? ("(CASE WHEN " . $mkActiveCol . " IS NULL THEN 1 WHEN LOWER(CAST(" . $mkActiveCol . " AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) AS is_active")
+                : '1 AS is_active';
             $selectCreatedAt = db_column_exists('marketplace_ce_products', 'created_at') ? 'created_at' : 'NULL AS created_at';
             $selectUpdatedAt = db_column_exists('marketplace_ce_products', 'updated_at') ? 'updated_at' : 'NULL AS updated_at';
             $orderExpr = db_column_exists('marketplace_ce_products', 'created_at') ? 'created_at DESC' : 'id DESC';

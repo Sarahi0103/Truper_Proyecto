@@ -373,6 +373,71 @@ function ensure_postgresql_form_schema() {
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )");
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS orders (
+            id SERIAL PRIMARY KEY,
+            client_id INTEGER,
+            order_number VARCHAR(80),
+            total_amount DECIMAL(12,2) DEFAULT 0,
+            payment_amount DECIMAL(12,2) DEFAULT 0,
+            balance DECIMAL(12,2) DEFAULT 0,
+            is_wholesale BOOLEAN DEFAULT false,
+            status VARCHAR(30) DEFAULT 'pending',
+            payment_status VARCHAR(30) DEFAULT 'pending',
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS order_items (
+            id SERIAL PRIMARY KEY,
+            order_id INTEGER NOT NULL,
+            product_id INTEGER,
+            quantity INTEGER NOT NULL DEFAULT 1,
+            unit_price DECIMAL(12,2) DEFAULT 0,
+            subtotal DECIMAL(12,2) DEFAULT 0,
+            discount_percentage DECIMAL(8,2) DEFAULT 0,
+            discount_amount DECIMAL(12,2) DEFAULT 0,
+            line_total DECIMAL(12,2) DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+        )");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS payments (
+            id SERIAL PRIMARY KEY,
+            order_id INTEGER NOT NULL,
+            amount DECIMAL(12,2) NOT NULL,
+            payment_method VARCHAR(60),
+            reference_number VARCHAR(120),
+            processed_by INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+        )");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS purchase_statistics (
+            id SERIAL PRIMARY KEY,
+            product_id INTEGER NOT NULL,
+            month INTEGER NOT NULL,
+            year INTEGER NOT NULL,
+            total_quantity INTEGER DEFAULT 0,
+            total_amount DECIMAL(12,2) DEFAULT 0,
+            season VARCHAR(40),
+            weather_condition VARCHAR(80),
+            special_event VARCHAR(120),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE (product_id, month, year)
+        )");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS transaction_history (
+            id SERIAL PRIMARY KEY,
+            transaction_type VARCHAR(40) NOT NULL,
+            reference_folio VARCHAR(80) NOT NULL,
+            data_json TEXT,
+            created_by INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )");
+
         $usersAlters = [
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255)",
@@ -427,7 +492,21 @@ function ensure_postgresql_form_schema() {
             "ALTER TABLE wholesalers ADD COLUMN IF NOT EXISTS approved_by INTEGER"
         ];
 
-        foreach (array_merge($usersAlters, $productAlters, $clientAlters, $wholesaleAlters) as $sql) {
+        $orderAlters = [
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS client_id INTEGER",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_number VARCHAR(80)",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS total_amount DECIMAL(12,2) DEFAULT 0",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_amount DECIMAL(12,2) DEFAULT 0",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS balance DECIMAL(12,2) DEFAULT 0",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS is_wholesale BOOLEAN DEFAULT false",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'pending'",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status VARCHAR(30) DEFAULT 'pending'",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes TEXT",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+        ];
+
+        foreach (array_merge($usersAlters, $productAlters, $clientAlters, $wholesaleAlters, $orderAlters) as $sql) {
             try {
                 $pdo->exec($sql);
             } catch (Exception $ignored) {
