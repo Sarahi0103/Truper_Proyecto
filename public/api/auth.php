@@ -112,20 +112,36 @@ try {
                 break;
             }
 
-            $loginKey = 'login_attempts_' . hash('sha256', strtolower(trim((string)($_POST['email'] ?? ''))) . '_' . getTrusSIDBug());
-            if (!auth_rate_limit_check($loginKey, 6, 900)) {
+            $email = sanitize($_POST['email'] ?? '');
+            $password = $_POST['password'] ?? '';
+            
+            // Validar email
+            $validated_email = SecurityValidator::validateEmail($email);
+            if (!$validated_email) {
+                $response = ['success' => false, 'message' => 'Email inválido'];
+                break;
+            }
+            
+            // Rate limiting por IP + email
+            $loginKey = 'login_attempts_' . hash('sha256', strtolower($validated_email) . '_' . IPSecurity::getClientIP());
+            $limiter = new RateLimiter($pdo);
+            if (!$limiter->checkLimit($loginKey, 6, 900)) {
                 $response = ['success' => false, 'message' => 'Demasiados intentos. Intenta en 15 minutos.'];
+                $secLogger = new SecurityLogger($pdo);
+                $secLogger->logEvent('RATE_LIMIT_EXCEEDED', "Email: $validated_email", 'HIGH');
                 break;
             }
 
-            $response = $auth->login(
-                sanitize($_POST['email'] ?? ''),
-                $_POST['password'] ?? ''
-            );
+            $response = $auth->login($validated_email, $password);
 
             if ($response['success']) {
                 auth_rate_limit_reset($loginKey);
                 log_action($_SESSION['user_id'], 'LOGIN', 'Inicio de sesión exitoso', getTrusSIDBug());
+                
+                // Log de seguridad
+                $secLogger = new SecurityLogger($pdo);
+                $secLogger->logEvent('LOGIN_SUCCESS', "Email: $validated_email", 'LOW', $_SESSION['user_id']);
+                
                 $engagement = apply_login_engagement_rules($_SESSION['user_id']);
                 if (!empty($engagement['birthday_bonus_awarded'])) {
                     $response['message'] = ($response['message'] ?? 'Bienvenido') . '. ' . ($engagement['message'] ?? 'Bono de cumpleaños aplicado.');
@@ -134,6 +150,10 @@ try {
                 $requested = trim((string)($_POST['return_to'] ?? ($_SESSION['post_login_redirect'] ?? '')));
                 $response['redirect'] = resolve_post_login_redirect($requested, $role);
                 unset($_SESSION['post_login_redirect']);
+            } else {
+                // Log de login fallido
+                $secLogger = new SecurityLogger($pdo);
+                $secLogger->logFailedLogin($validated_email, $response['message'] ?? 'Invalid credentials');
             }
             break;
 

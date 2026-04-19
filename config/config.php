@@ -3,6 +3,9 @@
  * Configuración General de la Aplicación
  */
 
+// ===== SEGURIDAD PRIMERA =====
+require_once __DIR__ . '/security.php';
+
 $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
     || (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443);
 
@@ -285,6 +288,15 @@ function require_admin() {
     require_login();
     if ($_SESSION['role'] !== 'admin') {
         deny_unauthorized(403, 'Acceso solo para administradores');
+    }
+    
+    // Validar IP whitelist para admin (opcional)
+    if (getenv('ENFORCE_ADMIN_IP_WHITELIST') === 'true') {
+        if (!IPSecurity::isAdminIPWhitelisted()) {
+            $secLogger = new SecurityLogger($GLOBALS['pdo']);
+            $secLogger->logSuspiciousActivity('Admin access attempt from non-whitelisted IP: ' . IPSecurity::getClientIP());
+            deny_unauthorized(403, 'Acceso denegado desde esta ubicación');
+        }
     }
 }
 
