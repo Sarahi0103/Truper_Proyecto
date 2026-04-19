@@ -321,7 +321,30 @@ function deny_unauthorized($code, $message) {
     }
 
     if ((int)$code === 401) {
-        header('Location: /index.php?error=expired');
+        $adminRoutes = [
+            '/admin_login.php',
+            '/admin_supply.php',
+            '/cashier.php',
+            '/tickets.php'
+        ];
+
+        $isAdminContext = false;
+        foreach ($adminRoutes as $adminRoute) {
+            if (strpos($currentPath, $adminRoute) === 0) {
+                $isAdminContext = true;
+                break;
+            }
+        }
+
+        $loginPath = $isAdminContext ? '/admin_login.php' : '/login.php';
+        $separator = strpos($loginPath, '?') !== false ? '&' : '?';
+        $redirect = $loginPath . $separator . 'error=expired';
+
+        if ($currentUri !== '/' && is_safe_return_path($currentPath)) {
+            $redirect .= '&return_to=' . rawurlencode($currentUri);
+        }
+
+        header('Location: ' . $redirect);
         exit;
     }
 
