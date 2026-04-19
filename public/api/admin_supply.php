@@ -383,6 +383,7 @@ function ensure_admin_supply_tables($pdo): void {
 
 function ensure_products_extra_columns($pdo): void {
     try {
+        $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS sku VARCHAR(100)");
         $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS technical_specs TEXT");
         $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url TEXT");
         $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS variants_json TEXT");
@@ -391,6 +392,110 @@ function ensure_products_extra_columns($pdo): void {
         $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true");
     } catch (Exception $ignored) {
         // En esquemas legados puede fallar; se maneja con inserciones alternativas.
+    }
+}
+
+function ensure_products_sku_integrity_admin_supply($pdo): void {
+    if (!db_table_exists('products')) {
+        return;
+    }
+
+    // Ensure sku column exists in legacy schemas.
+    if (!db_column_exists('products', 'sku')) {
+        try {
+            $pdo->exec("ALTER TABLE products ADD COLUMN sku VARCHAR(100)");
+        } catch (Exception $ignored) {
+        }
+    }
+
+    if (!db_column_exists('products', 'sku')) {
+        // If sku still does not exist, keep compatibility mode and avoid crashing.
+        return;
+    }
+
+    $sourceColumn = null;
+    foreach (['product_code', 'code', 'codigo', 'barcode'] as $candidateColumn) {
+        if (db_column_exists('products', $candidateColumn)) {
+            $sourceColumn = $candidateColumn;
+            break;
+        }
+    }
+
+    try {
+        $selectSql = 'SELECT id, COALESCE(sku, \'\') AS sku';
+        if ($sourceColumn !== null) {
+            $selectSql .= ', COALESCE(' . $sourceColumn . ', \'\') AS source_code';
+        } else {
+            $selectSql .= ", '' AS source_code";
+        }
+        $selectSql .= ' FROM products ORDER BY id ASC';
+
+        $rowsStmt = $pdo->query($selectSql);
+        $rows = $rowsStmt ? $rowsStmt->fetchAll() : [];
+        if (!is_array($rows) || empty($rows)) {
+            return;
+        }
+
+        $used = [];
+        foreach ($rows as $row) {
+            $existing = normalize_sku_admin_supply($row['sku'] ?? '');
+            if (is_valid_numeric_sku_admin_supply($existing) && !isset($used[$existing])) {
+                $used[$existing] = true;
+            }
+        }
+
+        $updates = [];
+        foreach ($rows as $row) {
+            $id = (int)($row['id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+
+            $current = normalize_sku_admin_supply($row['sku'] ?? '');
+            if (is_valid_numeric_sku_admin_supply($current) && !isset($updates[$id])) {
+                continue;
+            }
+
+            $candidate = normalize_sku_admin_supply($row['source_code'] ?? '');
+            if (!is_valid_numeric_sku_admin_supply($candidate)) {
+                $candidate = str_pad((string)($id % 100000), 5, '0', STR_PAD_LEFT);
+            }
+
+            if (!is_valid_numeric_sku_admin_supply($candidate)) {
+                $candidate = '00000';
+            }
+
+            $attempts = 0;
+            while (isset($used[$candidate]) && $attempts < 100000) {
+                $next = (((int)$candidate) + 1) % 100000;
+                $candidate = str_pad((string)$next, 5, '0', STR_PAD_LEFT);
+                $attempts += 1;
+            }
+
+            if (isset($used[$candidate])) {
+                // Extremely unlikely; keep going without hard fail.
+                continue;
+            }
+
+            $used[$candidate] = true;
+            $updates[$id] = $candidate;
+        }
+
+        if (!empty($updates)) {
+            $upd = $pdo->prepare('UPDATE products SET sku = ? WHERE id = ?');
+            foreach ($updates as $id => $skuValue) {
+                try {
+                    $upd->execute([$skuValue, (int)$id]);
+                } catch (Exception $ignored) {
+                }
+            }
+        }
+
+        try {
+            $pdo->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_products_sku_admin_supply ON products (sku)');
+        } catch (Exception $ignored) {
+        }
+    } catch (Exception $ignored) {
     }
 }
 
@@ -934,6 +1039,12 @@ function bootstrap_admin_supply_schema($pdo): void {
         ensure_products_extra_columns($pdo);
     } catch (Throwable $e) {
         error_log('admin_supply bootstrap warning (product columns): ' . $e->getMessage());
+    }
+
+    try {
+        ensure_products_sku_integrity_admin_supply($pdo);
+    } catch (Throwable $e) {
+        error_log('admin_supply bootstrap warning (sku integrity): ' . $e->getMessage());
     }
 
     try {
