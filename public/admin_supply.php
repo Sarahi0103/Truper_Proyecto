@@ -676,6 +676,8 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
 
 <script src="js/main.js"></script>
 <script>
+// CSRF token for API requests
+window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>';
 let supplierOrderItems = [];
 let stockItemsCache = [];
 let marketplaceItemsCache = [];

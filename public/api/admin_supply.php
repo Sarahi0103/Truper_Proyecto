@@ -1686,6 +1686,12 @@ function ensure_numeric_client_user_code_admin_supply($pdo, int $userId): string
 $response = ['success' => false, 'message' => 'Accion no reconocida'];
 
 try {
+    // CSRF validation for POST requests to write endpoints
+    $write_actions = ['product-save', 'product-delete', 'marketplace-save', 'marketplace-delete', 'stock-update', 'toggle-visibility'];
+    if ($method === 'POST' && in_array($action, $write_actions, true)) {
+        require_csrf_token();
+    }
+    
     switch ($action) {
         case 'product-sku-check':
             if ($method !== 'GET') {

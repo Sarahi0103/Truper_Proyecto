@@ -149,6 +149,46 @@ function rotate_csrf_token() {
     return $_SESSION['csrf_token'];
 }
 
+/**
+ * Extract CSRF token from multiple sources (POST, JSON, headers)
+ * Checks: $_POST['csrf_token'], JSON body, X-CSRF-Token header
+ */
+function get_csrf_token_from_request() {
+    // Try POST parameter
+    if (!empty($_POST['csrf_token'])) {
+        return $_POST['csrf_token'];
+    }
+    
+    // Try JSON body
+    $json_input = file_get_contents('php://input');
+    if (!empty($json_input)) {
+        $data = json_decode($json_input, true);
+        if (is_array($data) && !empty($data['csrf_token'])) {
+            return $data['csrf_token'];
+        }
+    }
+    
+    // Try X-CSRF-Token header
+    if (!empty($_SERVER['HTTP_X_CSRF_TOKEN'])) {
+        return $_SERVER['HTTP_X_CSRF_TOKEN'];
+    }
+    
+    return null;
+}
+
+/**
+ * Verify CSRF token from request and return error if invalid
+ */
+function require_csrf_token() {
+    $token = get_csrf_token_from_request();
+    if (!verify_csrf_token($token)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Token CSRF inválido o expirado']);
+        exit;
+    }
+}
+
 function getTrusSIDBug() {
     $trusted_proxies = ["127.0.0.1"];
     $ip = $_SERVER['REMOTE_ADDR'];

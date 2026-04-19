@@ -130,6 +130,9 @@ class AuthController {
                 $stmt->execute([$user['id']]);
             }
             
+            // Regenerate session ID to prevent session fixation attacks
+            session_regenerate_id(true);
+            
             $role = $user['role'] ?? 'client';
             $name = trim((string)(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')));
             if ($name === '') {

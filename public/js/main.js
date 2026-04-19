@@ -95,14 +95,20 @@ async function apiCall(endpoint, method = 'GET', data = null, options = {}) {
         const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
         const fetchOptions = {
             method: method,
+            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
             }
         };
         
-        if (data && (method === 'POST' || method === 'PUT')) {
-            fetchOptions.body = JSON.stringify(data);
+        let bodyData = data;
+        if (bodyData && (method === 'POST' || method === 'PUT')) {
+            // Add CSRF token to request data
+            if (typeof bodyData === 'object' && bodyData !== null) {
+                bodyData.csrf_token = window.csrfToken || '';
+            }
+            fetchOptions.body = JSON.stringify(bodyData);
         }
         
         const response = await fetch(`${APP.apiUrl}${normalizedEndpoint}`, fetchOptions);
