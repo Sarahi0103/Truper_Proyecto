@@ -100,6 +100,10 @@ function ensure_products_name_column_admin_supply($pdo): ?string {
         return 'description';
     }
 
+    if (db_column_exists('products', 'category')) {
+        return 'category';
+    }
+
     return null;
 }
 
@@ -1105,16 +1109,14 @@ function create_product_compatible($pdo, array $payload): void {
         $skuColumn = sku_column_for_table_admin_supply('products');
     }
 
-    if ($nameColumn === null) {
-        throw new Exception('HOTFIX_V2: products sin columna de nombre/descripcion utilizable');
-    }
-
     if ($skuColumn !== null) {
         $columns[] = $skuColumn;
         $values[] = $payload['sku'];
     }
-    $columns[] = $nameColumn;
-    $values[] = $payload['name'];
+    if ($nameColumn !== null) {
+        $columns[] = $nameColumn;
+        $values[] = $payload['name'];
+    }
 
     if (db_column_exists('products', 'description') && $nameColumn !== 'description') {
         $columns[] = 'description';
@@ -1163,6 +1165,10 @@ function create_product_compatible($pdo, array $payload): void {
     } elseif (db_column_exists('products', 'active')) {
         $columns[] = 'active';
         $values[] = isset($payload['is_active']) ? (!empty($payload['is_active']) ? 1 : 0) : 1;
+    }
+
+    if (count($columns) === 0) {
+        throw new Exception('No hay columnas disponibles para insertar en products');
     }
 
     $placeholders = implode(', ', array_fill(0, count($columns), '?'));
