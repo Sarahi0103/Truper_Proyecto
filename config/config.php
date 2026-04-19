@@ -37,13 +37,23 @@ if (!ob_get_level() || ob_get_status()['name'] === 'default output handler') {
 }
 
 // Headers de caché para navegadores (cliente-side caching)
-$cache_control = 'public, max-age=3600'; // 1 hora
-if (strpos($_SERVER['REQUEST_URI'] ?? '', '/api/') !== false) {
-    $cache_control = 'private, max-age=300'; // 5 minutos para APIs
+$request_uri = $_SERVER['REQUEST_URI'] ?? '';
+$request_path = parse_url($request_uri, PHP_URL_PATH) ?: '';
+$is_api_request = strpos($request_path, '/api/') !== false;
+$is_auth_context = preg_match('#/(admin_login|login|register)\.php$#', $request_path) === 1
+    || strpos($request_path, '/api/auth.php') !== false;
+
+if ($is_auth_context) {
+    // Evita reutilizar páginas con CSRF viejo y corrige "Sesión inválida" al iniciar sesión.
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
+} else {
+    $cache_control = $is_api_request ? 'private, max-age=300' : 'private, max-age=3600';
+    header("Cache-Control: {$cache_control}");
+    header("Expires: " . gmdate("D, d M Y H:i:s", time() + 3600) . " GMT");
+    header('Pragma: cache');
 }
-header("Cache-Control: {$cache_control}");
-header("Expires: " . gmdate("D, d M Y H:i:s", time() + 3600) . " GMT");
-header("Pragma: cache");
 
 // Caché de servidor en memoria para queries frecuentes
 define('CACHE_ENABLED', true);
