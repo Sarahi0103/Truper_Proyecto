@@ -256,6 +256,7 @@ async function handleFormSubmit(e) {
         const response = await fetch(action, {
             method: method,
             body: formData,
+            credentials: 'include',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
             }
