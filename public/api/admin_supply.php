@@ -66,6 +66,11 @@ function name_column_for_table_admin_supply(string $table): ?string {
 }
 
 function ensure_products_name_column_admin_supply($pdo): ?string {
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS products (id SERIAL PRIMARY KEY)");
+    } catch (Exception $ignored) {
+    }
+
     $resolved = name_column_for_table_admin_supply('products');
     if ($resolved !== null) {
         return $resolved;
@@ -1081,6 +1086,11 @@ function set_gallery_cover_image_admin_supply(string $sku, string $imageWebPath)
 }
 
 function create_product_compatible($pdo, array $payload): void {
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS products (id SERIAL PRIMARY KEY)");
+    } catch (Exception $ignored) {
+    }
+
     $columns = [];
     $values = [];
 
@@ -1164,6 +1174,11 @@ function create_product_compatible($pdo, array $payload): void {
 function update_product_compatible($pdo, int $id, array $payload): void {
     if ($id <= 0) {
         throw new Exception('ID de producto inválido');
+    }
+
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS products (id SERIAL PRIMARY KEY)");
+    } catch (Exception $ignored) {
     }
 
     $sets = [];
@@ -1521,6 +1536,11 @@ function apply_catalog_image_fallback_admin_supply(array $item): array {
 }
 
 function list_stock_products_compatible($pdo): array {
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS products (id SERIAL PRIMARY KEY)");
+    } catch (Exception $ignored) {
+    }
+
     $skuColumn = sku_column_for_table_admin_supply('products');
     $skuSelect = $skuColumn !== null ? "{$skuColumn} AS sku" : "'' AS sku";
     $nameColumn = name_column_for_table_admin_supply('products');
