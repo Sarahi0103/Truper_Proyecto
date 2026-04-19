@@ -739,16 +739,14 @@ function create_product_compatible($pdo, array $payload): void {
     $values = [];
 
     $skuColumn = sku_column_for_table_admin_supply('products');
-    if ($skuColumn === null) {
-        throw new Exception('La tabla products no tiene una columna de código (sku/product_code/code)');
-    }
-
     if (!db_column_exists('products', 'name')) {
         throw new Exception('La tabla products no tiene la columna requerida: name');
     }
 
-    $columns[] = $skuColumn;
-    $values[] = $payload['sku'];
+    if ($skuColumn !== null) {
+        $columns[] = $skuColumn;
+        $values[] = $payload['sku'];
+    }
     $columns[] = 'name';
     $values[] = $payload['name'];
 
