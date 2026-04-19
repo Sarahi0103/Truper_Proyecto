@@ -2821,8 +2821,36 @@ try {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];
                 break;
             }
-            $items = list_stock_products_compatible($pdo);
-            $response = ['success' => true, 'items' => $items];
+            // Paginación para mejorar rendimiento
+            $page = max(1, (int)($_GET['page'] ?? 1));
+            $per_page = max(10, min(100, (int)($_GET['per_page'] ?? 50)));
+            $offset = ($page - 1) * $per_page;
+            
+            // Usar caché para lista completa
+            $cache_key = 'admin_stock_products_' . md5($per_page . '_' . $offset);
+            $items = cache_get($cache_key);
+            
+            if ($items === null) {
+                $all_items = list_stock_products_compatible($pdo);
+                $items = array_slice($all_items, $offset, $per_page);
+                cache_set($cache_key, $items, 300);
+            }
+            
+            // Optimizar imágenes: agregar lazy loading
+            $items = array_map(function($item) {
+                $item['image_url_thumb'] = str_replace('.svg', '_thumb.svg', $item['image_url']);
+                return $item;
+            }, $items);
+            
+            $response = [
+                'success' => true,
+                'items' => $items,
+                'pagination' => [
+                    'page' => $page,
+                    'per_page' => $per_page,
+                    'total' => count(list_stock_products_compatible($pdo))
+                ]
+            ];
             break;
 
         case 'calendar-list':
@@ -2966,4 +2994,5 @@ if (!empty($buffer)) {
     error_log('admin_supply API buffered output: ' . trim($buffer));
 }
 
-echo json_encode($response);
+// JSON minificado para reducir tamaño de respuesta
+echo json_encode($response, JSON_UNESCAPED_UNICODE);

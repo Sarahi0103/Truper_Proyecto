@@ -27,6 +27,46 @@ if ($is_https) {
 }
 header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;");
 
+// ===== OPTIMIZACIONES DE PERFORMANCE =====
+// Compresión gzip automática
+if (!ob_get_level() || ob_get_status()['name'] === 'default output handler') {
+    ob_start('ob_gzhandler');
+}
+
+// Headers de caché para navegadores (cliente-side caching)
+$cache_control = 'public, max-age=3600'; // 1 hora
+if (strpos($_SERVER['REQUEST_URI'] ?? '', '/api/') !== false) {
+    $cache_control = 'private, max-age=300'; // 5 minutos para APIs
+}
+header("Cache-Control: {$cache_control}");
+header("Expires: " . gmdate("D, d M Y H:i:s", time() + 3600) . " GMT");
+header("Pragma: cache");
+
+// Caché de servidor en memoria para queries frecuentes
+define('CACHE_ENABLED', true);
+define('CACHE_TTL', 300); // 5 minutos
+$_CACHE = [];
+
+function cache_get($key) {
+    global $_CACHE;
+    if (!CACHE_ENABLED || empty($_CACHE[$key])) return null;
+    $entry = $_CACHE[$key];
+    if ($entry['expires'] < time()) {
+        unset($_CACHE[$key]);
+        return null;
+    }
+    return $entry['data'];
+}
+
+function cache_set($key, $data, $ttl = null) {
+    global $_CACHE;
+    if (!CACHE_ENABLED) return;
+    $_CACHE[$key] = [
+        'data' => $data,
+        'expires' => time() + ($ttl ?? CACHE_TTL)
+    ];
+}
+
 // Incluir base de datos
 $pdo = include __DIR__ . '/database.php';
 

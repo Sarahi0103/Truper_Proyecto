@@ -228,4 +228,65 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+// ===== OPTIMIZACIONES DE PERFORMANCE =====
+// Lazy Loading de Imágenes
+function initLazyLoading() {
+    // Usar Intersection Observer para lazy loading
+    if ('IntersectionObserver' in window) {
+        const images = document.querySelectorAll('img[data-src]');
+        const imageObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    img.src = img.dataset.src;
+                    img.removeAttribute('data-src');
+                    observer.unobserve(img);
+                }
+            });
+        }, { rootMargin: '50px' });
+        
+        images.forEach(img => imageObserver.observe(img));
+    } else {
+        // Fallback para navegadores viejos
+        document.querySelectorAll('img[data-src]').forEach(img => {
+            img.src = img.dataset.src;
+        });
+    }
+}
+
+// Prefetch y Preload de recursos
+function optimizeResourceLoading() {
+    // Prefetch API endpoints
+    const prefetchUrls = [
+        '/api/products.php?action=list',
+        '/api/orders.php?action=list',
+    ];
+    
+    prefetchUrls.forEach(url => {
+        const link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.href = url;
+        document.head.appendChild(link);
+    });
+}
+
+// Deferrir carga de scripts no críticos
+function deferNonCriticalScripts() {
+    const scripts = document.querySelectorAll('script[data-defer]');
+    scripts.forEach(script => {
+        const newScript = document.createElement('script');
+        newScript.src = script.src;
+        newScript.async = true;
+        document.body.appendChild(newScript);
+    });
+}
+
+// Iniciar optimizaciones al cargar la página
+document.addEventListener('DOMContentLoaded', () => {
+    initLazyLoading();
+    optimizeResourceLoading();
+    deferNonCriticalScripts();
+});
+
+
 
