@@ -216,6 +216,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <p class="text-muted">Registra nuevos productos y opcionalmente sube su imagen.</p>
 
                 <input type="hidden" id="newProductEditId" value="">
+                <input type="hidden" id="newProductSeedMode" value="0">
 
                 <div class="grid grid-2">
                     <div class="form-group"><label>Código del producto (5 números)</label><input id="newProductSku" type="text" maxlength="5" inputmode="numeric" pattern="\d{5}" placeholder="Ej. 23032"><small id="newProductSkuStatus" class="text-muted">Debe ser único y de 5 números.</small></div>
@@ -828,9 +829,10 @@ async function validateSkuAvailability(kind) {
     const currentId = isMarketplace
         ? Number(document.getElementById('marketplaceEditId').value || 0)
         : Number(document.getElementById('newProductEditId').value || 0);
+    const allowSeedSku = !isMarketplace && Number(document.getElementById('newProductSeedMode')?.value || 0) === 1;
     const endpoint = isMarketplace
         ? `/admin_supply.php?action=marketplace-sku-check&sku=${encodeURIComponent(sku)}&id=${encodeURIComponent(currentId)}`
-        : `/admin_supply.php?action=product-sku-check&sku=${encodeURIComponent(sku)}&id=${encodeURIComponent(currentId)}`;
+        : `/admin_supply.php?action=product-sku-check&sku=${encodeURIComponent(sku)}&id=${encodeURIComponent(currentId)}&allow_seed=${allowSeedSku ? '1' : '0'}`;
 
     const check = await apiCall(endpoint, 'GET', null, { silent: true });
     if (version !== skuCheckVersion[kind]) {
@@ -1533,6 +1535,7 @@ function renderStockList() {
 
 function resetProductForm() {
     document.getElementById('newProductEditId').value = '';
+    document.getElementById('newProductSeedMode').value = '0';
     document.getElementById('newProductSku').value = '';
     document.getElementById('newProductName').value = '';
     document.getElementById('newProductPrice').value = '0';
@@ -1561,13 +1564,25 @@ function fillProductFormById(id) {
 
     const isSeedOnly = Boolean(item.seed_only || item.__seed_only);
     document.getElementById('newProductEditId').value = isSeedOnly ? '' : (item.id || '');
+    document.getElementById('newProductSeedMode').value = isSeedOnly ? '1' : '0';
     document.getElementById('newProductSku').value = displayProductCode(item.sku || '');
     document.getElementById('newProductName').value = item.name || '';
     document.getElementById('newProductPrice').value = String(item.unit_price || 0);
     document.getElementById('newProductStock').value = String(item.stock_quantity || 0);
     document.getElementById('newProductReorder').value = String(item.reorder_level || 10);
     document.getElementById('newProductDescription').value = item.description || '';
-    document.getElementById('newProductImageRef').value = item.image_url || 'images/products/default-product.svg';
+    const imageRefSelect = document.getElementById('newProductImageRef');
+    const itemImage = item.image_url || 'images/products/default-product.svg';
+    if (imageRefSelect) {
+        const exists = Array.from(imageRefSelect.options || []).some((opt) => opt.value === itemImage);
+        if (!exists) {
+            const option = document.createElement('option');
+            option.value = itemImage;
+            option.textContent = itemImage;
+            imageRefSelect.appendChild(option);
+        }
+        imageRefSelect.value = itemImage;
+    }
     document.getElementById('newProductVisible').value = Number(item.is_active) ? '1' : '0';
 
     const categories = String(item.category || '')
@@ -2326,6 +2341,7 @@ async function loadProductGalleryForCurrentSku() {
             select.value = res.cover;
         }
     }
+    updateStockPreview();
 }
 
 async function loadMarketplaceGalleryForCurrentSku() {
@@ -2587,6 +2603,7 @@ async function uploadMarketplaceImages() {
 
 async function createProductByAdmin() {
     const editId = Number(document.getElementById('newProductEditId')?.value || 0);
+    const seedMode = Number(document.getElementById('newProductSeedMode')?.value || 0) === 1;
     const skuInput = document.getElementById('newProductSku');
     const normalizedSku = normalizeNumericSku(skuInput?.value || '');
     if (skuInput) {
@@ -2623,7 +2640,8 @@ async function createProductByAdmin() {
         stock_quantity: document.getElementById('newProductStock').value || '50',
         reorder_level: document.getElementById('newProductReorder').value || '10',
         image_url: document.getElementById('newProductImageRef').value || 'images/products/default-product.svg',
-        is_visible: Number(document.getElementById('newProductVisible')?.value || 1) === 1 ? 1 : 0
+        is_visible: Number(document.getElementById('newProductVisible')?.value || 1) === 1 ? 1 : 0,
+        allow_seed_sku: seedMode ? 1 : 0
     };
 
     if (selectedCategories.length === 0) {

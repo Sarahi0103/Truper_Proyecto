@@ -1263,9 +1263,10 @@ try {
             }
 
             $id = (int)($_GET['id'] ?? 0);
+            $allowSeedSku = in_array((string)($_GET['allow_seed'] ?? '0'), ['1', 'true', 'TRUE', 'yes', 'on'], true);
             $usage = sku_usage_admin_supply($pdo, $sku, 0, $id);
             $sameRecord = record_matches_normalized_sku_admin_supply($pdo, 'products', $id, $sku);
-            $seedConflict = $usage['in_seed'] && !$sameRecord;
+            $seedConflict = $usage['in_seed'] && !$sameRecord && !$allowSeedSku;
             $exists = $usage['in_products'] || $usage['in_marketplace'] || $seedConflict;
             $message = 'Código disponible';
             if ($exists) {
@@ -1340,6 +1341,7 @@ try {
             $price = (float)($_POST['price'] ?? ($input['price'] ?? 0));
             $stockQty = (int)($_POST['stock_quantity'] ?? ($input['stock_quantity'] ?? 50));
             $reorder = (int)($_POST['reorder_level'] ?? ($input['reorder_level'] ?? 10));
+            $allowSeedSku = in_array((string)($_POST['allow_seed_sku'] ?? ($input['allow_seed_sku'] ?? '0')), ['1', 'true', 'TRUE', 'yes', 'on'], true);
 
             if ($sku === '' || $name === '') {
                 $response = ['success' => false, 'message' => 'SKU y nombre son obligatorios'];
@@ -1355,7 +1357,7 @@ try {
             }
 
             $usage = sku_usage_admin_supply($pdo, $sku, 0, 0);
-            if ($usage['in_products'] || $usage['in_marketplace'] || $usage['in_seed']) {
+            if ($usage['in_products'] || $usage['in_marketplace'] || ($usage['in_seed'] && !$allowSeedSku)) {
                 $response = [
                     'success' => false,
                     'message' => $usage['in_products']
@@ -1428,6 +1430,7 @@ try {
             $reorder = (int)($input['reorder_level'] ?? 10);
             $imageUrl = sanitize($input['image_url'] ?? 'images/products/default-product.svg');
             $isVisible = (int)(isset($input['is_visible']) ? (bool)$input['is_visible'] : true);
+            $allowSeedSku = in_array((string)($input['allow_seed_sku'] ?? '0'), ['1', 'true', 'TRUE', 'yes', 'on'], true);
 
             if ($sku === '' || $name === '') {
                 $response = ['success' => false, 'message' => 'SKU y nombre son obligatorios'];
@@ -1444,7 +1447,7 @@ try {
 
             $usage = sku_usage_admin_supply($pdo, $sku, 0, $id);
             $sameRecord = record_matches_normalized_sku_admin_supply($pdo, 'products', $id, $sku);
-            $seedConflict = $usage['in_seed'] && !$sameRecord;
+            $seedConflict = $usage['in_seed'] && !$sameRecord && !$allowSeedSku;
             if ($usage['in_products'] || $usage['in_marketplace'] || $seedConflict) {
                 $response = [
                     'success' => false,
