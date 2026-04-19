@@ -58,6 +58,16 @@ function sku_column_for_table_admin_supply(string $table): ?string {
     return null;
 }
 
+function name_column_for_table_admin_supply(string $table): ?string {
+    $candidates = ['name', 'product_name', 'nombre', 'title'];
+    foreach ($candidates as $candidate) {
+        if (db_column_exists($table, $candidate)) {
+            return $candidate;
+        }
+    }
+    return null;
+}
+
 function normalized_sku_exists_in_table_admin_supply($pdo, string $table, string $sku, int $excludeId = 0): bool {
     if ($sku === '') {
         return false;
@@ -384,6 +394,7 @@ function ensure_admin_supply_tables($pdo): void {
 function ensure_products_extra_columns($pdo): void {
     try {
         $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS sku VARCHAR(100)");
+        $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS name VARCHAR(255)");
         $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS technical_specs TEXT");
         $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url TEXT");
         $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS variants_json TEXT");
@@ -494,6 +505,71 @@ function ensure_products_sku_integrity_admin_supply($pdo): void {
         try {
             $pdo->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_products_sku_admin_supply ON products (sku)');
         } catch (Exception $ignored) {
+        }
+    } catch (Exception $ignored) {
+    }
+}
+
+function ensure_products_name_integrity_admin_supply($pdo): void {
+    if (!db_table_exists('products')) {
+        return;
+    }
+
+    if (!db_column_exists('products', 'name')) {
+        try {
+            $pdo->exec("ALTER TABLE products ADD COLUMN name VARCHAR(255)");
+        } catch (Exception $ignored) {
+        }
+    }
+
+    if (!db_column_exists('products', 'name')) {
+        return;
+    }
+
+    $sourceColumn = null;
+    foreach (['product_name', 'nombre', 'title', 'description'] as $candidateColumn) {
+        if (db_column_exists('products', $candidateColumn)) {
+            $sourceColumn = $candidateColumn;
+            break;
+        }
+    }
+
+    try {
+        $sql = 'SELECT id, COALESCE(name, \'\') AS current_name';
+        if ($sourceColumn !== null) {
+            $sql .= ', COALESCE(' . $sourceColumn . ', \'\') AS source_name';
+        } else {
+            $sql .= ", '' AS source_name";
+        }
+        $sql .= ' FROM products ORDER BY id ASC';
+
+        $rowsStmt = $pdo->query($sql);
+        $rows = $rowsStmt ? $rowsStmt->fetchAll() : [];
+        if (!is_array($rows) || empty($rows)) {
+            return;
+        }
+
+        $upd = $pdo->prepare('UPDATE products SET name = ? WHERE id = ?');
+        foreach ($rows as $row) {
+            $id = (int)($row['id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+
+            $currentName = trim((string)($row['current_name'] ?? ''));
+            if ($currentName !== '') {
+                continue;
+            }
+
+            $candidateName = trim((string)($row['source_name'] ?? ''));
+            if ($candidateName === '') {
+                $candidateName = 'Producto ' . str_pad((string)$id, 5, '0', STR_PAD_LEFT);
+            }
+
+            try {
+                $upd->execute([$candidateName, $id]);
+            } catch (Exception $ignored) {
+            }
         }
     } catch (Exception $ignored) {
     }
@@ -844,15 +920,16 @@ function create_product_compatible($pdo, array $payload): void {
     $values = [];
 
     $skuColumn = sku_column_for_table_admin_supply('products');
-    if (!db_column_exists('products', 'name')) {
-        throw new Exception('La tabla products no tiene la columna requerida: name');
+    $nameColumn = name_column_for_table_admin_supply('products');
+    if ($nameColumn === null) {
+        throw new Exception('La tabla products no tiene una columna de nombre (name/product_name/nombre/title)');
     }
 
     if ($skuColumn !== null) {
         $columns[] = $skuColumn;
         $values[] = $payload['sku'];
     }
-    $columns[] = 'name';
+    $columns[] = $nameColumn;
     $values[] = $payload['name'];
 
     if (db_column_exists('products', 'description')) {
@@ -919,9 +996,10 @@ function update_product_compatible($pdo, int $id, array $payload): void {
     $values = [];
 
     $skuColumn = sku_column_for_table_admin_supply('products');
+    $nameColumn = name_column_for_table_admin_supply('products');
 
     if ($skuColumn !== null) { $sets[] = $skuColumn . ' = ?'; $values[] = $payload['sku']; }
-    if (db_column_exists('products', 'name')) { $sets[] = 'name = ?'; $values[] = $payload['name']; }
+    if ($nameColumn !== null) { $sets[] = $nameColumn . ' = ?'; $values[] = $payload['name']; }
     if (db_column_exists('products', 'description')) { $sets[] = 'description = ?'; $values[] = $payload['description']; }
     if (db_column_exists('products', 'category')) { $sets[] = 'category = ?'; $values[] = $payload['category']; }
     if (db_column_exists('products', 'barcode')) { $sets[] = 'barcode = ?'; $values[] = $payload['barcode']; }
@@ -1045,6 +1123,12 @@ function bootstrap_admin_supply_schema($pdo): void {
         ensure_products_sku_integrity_admin_supply($pdo);
     } catch (Throwable $e) {
         error_log('admin_supply bootstrap warning (sku integrity): ' . $e->getMessage());
+    }
+
+    try {
+        ensure_products_name_integrity_admin_supply($pdo);
+    } catch (Throwable $e) {
+        error_log('admin_supply bootstrap warning (name integrity): ' . $e->getMessage());
     }
 
     try {
@@ -1251,6 +1335,9 @@ function apply_catalog_image_fallback_admin_supply(array $item): array {
 function list_stock_products_compatible($pdo): array {
     $skuColumn = sku_column_for_table_admin_supply('products');
     $skuSelect = $skuColumn !== null ? "{$skuColumn} AS sku" : "'' AS sku";
+    $nameColumn = name_column_for_table_admin_supply('products');
+    $nameSelect = $nameColumn !== null ? "COALESCE({$nameColumn}, '') AS name" : "'' AS name";
+    $nameOrderExpr = $nameColumn !== null ? $nameColumn . ' ASC' : 'id ASC';
     $categorySelect = db_column_exists('products', 'category')
         ? "COALESCE(category, 'General') AS category"
         : "'General' AS category";
@@ -1276,13 +1363,13 @@ function list_stock_products_compatible($pdo): array {
     $queries = [];
 
     if (db_column_exists('products', 'is_active')) {
-        $queries[] = "SELECT id, {$skuSelect}, name, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} FROM products WHERE is_active = true ORDER BY stock_quantity ASC, name ASC LIMIT 500";
+        $queries[] = "SELECT id, {$skuSelect}, {$nameSelect}, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} FROM products WHERE is_active = true ORDER BY stock_quantity ASC, {$nameOrderExpr} LIMIT 500";
     }
     if (db_column_exists('products', 'active')) {
-        $queries[] = "SELECT id, {$skuSelect}, name, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} FROM products WHERE active = 1 ORDER BY stock_quantity ASC, name ASC LIMIT 500";
+        $queries[] = "SELECT id, {$skuSelect}, {$nameSelect}, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} FROM products WHERE active = 1 ORDER BY stock_quantity ASC, {$nameOrderExpr} LIMIT 500";
     }
 
-    $queries[] = "SELECT id, {$skuSelect}, name, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} FROM products ORDER BY stock_quantity ASC, name ASC LIMIT 500";
+    $queries[] = "SELECT id, {$skuSelect}, {$nameSelect}, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} FROM products ORDER BY stock_quantity ASC, {$nameOrderExpr} LIMIT 500";
 
     $items = [];
     foreach ($queries as $sql) {
@@ -2440,7 +2527,12 @@ try {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];
                 break;
             }
-            $stmt = $pdo->query("SELECT ps.id, ps.product_id, p.sku, p.name AS product_name, ps.supplier_name, ps.supplier_sku, ps.unit_cost FROM product_suppliers ps JOIN products p ON p.id = ps.product_id ORDER BY ps.supplier_name ASC, p.name ASC");
+            $supplierSkuColumn = sku_column_for_table_admin_supply('products');
+            $supplierNameColumn = name_column_for_table_admin_supply('products');
+            $skuExpr = $supplierSkuColumn !== null ? ('p.' . $supplierSkuColumn) : "''";
+            $nameExpr = $supplierNameColumn !== null ? ('p.' . $supplierNameColumn) : "''";
+            $orderByName = $supplierNameColumn !== null ? ('p.' . $supplierNameColumn . ' ASC') : 'p.id ASC';
+            $stmt = $pdo->query("SELECT ps.id, ps.product_id, {$skuExpr} AS sku, {$nameExpr} AS product_name, ps.supplier_name, ps.supplier_sku, ps.unit_cost FROM product_suppliers ps JOIN products p ON p.id = ps.product_id ORDER BY ps.supplier_name ASC, {$orderByName}");
             $response = ['success' => true, 'items' => $stmt->fetchAll()];
             break;
 
@@ -2454,7 +2546,12 @@ try {
                 $response = ['success' => true, 'items' => []];
                 break;
             }
-            $stmt = $pdo->prepare("SELECT ps.id, ps.product_id, p.sku, p.name AS product_name, ps.supplier_name, ps.supplier_sku, ps.unit_cost FROM product_suppliers ps JOIN products p ON p.id = ps.product_id WHERE LOWER(TRIM(ps.supplier_name)) = LOWER(TRIM(?)) ORDER BY p.name ASC");
+            $supplierSkuColumn = sku_column_for_table_admin_supply('products');
+            $supplierNameColumn = name_column_for_table_admin_supply('products');
+            $skuExpr = $supplierSkuColumn !== null ? ('p.' . $supplierSkuColumn) : "''";
+            $nameExpr = $supplierNameColumn !== null ? ('p.' . $supplierNameColumn) : "''";
+            $orderByName = $supplierNameColumn !== null ? ('p.' . $supplierNameColumn . ' ASC') : 'p.id ASC';
+            $stmt = $pdo->prepare("SELECT ps.id, ps.product_id, {$skuExpr} AS sku, {$nameExpr} AS product_name, ps.supplier_name, ps.supplier_sku, ps.unit_cost FROM product_suppliers ps JOIN products p ON p.id = ps.product_id WHERE LOWER(TRIM(ps.supplier_name)) = LOWER(TRIM(?)) ORDER BY {$orderByName}");
             $stmt->execute([$supplierName]);
             $response = ['success' => true, 'items' => $stmt->fetchAll()];
             break;
@@ -2521,7 +2618,11 @@ try {
                 $productName = sanitize($it['product_name'] ?? '');
 
                 if ($supplierProductId > 0) {
-                    $sp = $pdo->prepare("SELECT p.sku, p.name AS product_name, ps.supplier_sku FROM product_suppliers ps JOIN products p ON p.id = ps.product_id WHERE ps.id = ? LIMIT 1");
+                    $supplierSkuColumn = sku_column_for_table_admin_supply('products');
+                    $supplierNameColumn = name_column_for_table_admin_supply('products');
+                    $skuExpr = $supplierSkuColumn !== null ? ('p.' . $supplierSkuColumn) : "''";
+                    $nameExpr = $supplierNameColumn !== null ? ('p.' . $supplierNameColumn) : "''";
+                    $sp = $pdo->prepare("SELECT {$skuExpr} AS sku, {$nameExpr} AS product_name, ps.supplier_sku FROM product_suppliers ps JOIN products p ON p.id = ps.product_id WHERE ps.id = ? LIMIT 1");
                     $sp->execute([$supplierProductId]);
                     $spRow = $sp->fetch();
                     if ($spRow) {
