@@ -48,24 +48,49 @@ function is_valid_numeric_sku_admin_supply(string $sku): bool {
     return (bool)preg_match('/^\d{5}$/', $sku);
 }
 
-function sku_column_for_table_admin_supply(string $table): ?string {
-    $candidates = ['sku', 'product_code', 'code', 'codigo'];
+function first_existing_column_admin_supply(string $table, array $candidates): ?string {
     foreach ($candidates as $candidate) {
-        if (db_column_exists($table, $candidate)) {
-            return $candidate;
+        if (db_column_exists($table, (string)$candidate)) {
+            return (string)$candidate;
         }
     }
     return null;
 }
 
+function sku_column_for_table_admin_supply(string $table): ?string {
+    return first_existing_column_admin_supply($table, ['sku', 'product_code', 'code', 'codigo']);
+}
+
 function name_column_for_table_admin_supply(string $table): ?string {
-    $candidates = ['name', 'product_name', 'nombre', 'title'];
-    foreach ($candidates as $candidate) {
-        if (db_column_exists($table, $candidate)) {
-            return $candidate;
-        }
+    return first_existing_column_admin_supply($table, ['name', 'product_name', 'nombre', 'title']);
+}
+
+function set_marketplace_visibility_compatible($pdo, int $id, bool $isVisible): void {
+    if ($id <= 0) {
+        throw new Exception('ID de artículo CE inválido');
     }
-    return null;
+
+    $activeColumn = first_existing_column_admin_supply('marketplace_ce_products', ['is_active', 'active']);
+    if ($activeColumn === null) {
+        throw new Exception('No existe columna de visibilidad en marketplace_ce_products');
+    }
+
+    $sets = [
+        $activeColumn . ' = ?'
+    ];
+    $values = [$isVisible ? 1 : 0];
+
+    if (db_column_exists('marketplace_ce_products', 'updated_by')) {
+        $sets[] = 'updated_by = ?';
+        $values[] = (int)($_SESSION['user_id'] ?? 0);
+    }
+    if (db_column_exists('marketplace_ce_products', 'updated_at')) {
+        $sets[] = 'updated_at = CURRENT_TIMESTAMP';
+    }
+
+    $values[] = $id;
+    $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET ' . implode(', ', $sets) . ' WHERE id = ?');
+    $stmt->execute($values);
 }
 
 function normalized_sku_exists_in_table_admin_supply($pdo, string $table, string $sku, int $excludeId = 0): bool {
@@ -570,6 +595,113 @@ function ensure_products_name_integrity_admin_supply($pdo): void {
                 $upd->execute([$candidateName, $id]);
             } catch (Exception $ignored) {
             }
+        }
+    } catch (Exception $ignored) {
+    }
+}
+
+function ensure_marketplace_integrity_admin_supply($pdo): void {
+    if (!db_table_exists('marketplace_ce_products')) {
+        return;
+    }
+
+    // Best-effort ensure core columns exist.
+    $alterStatements = [
+        "ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS sku VARCHAR(100)",
+        "ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS name VARCHAR(220)",
+        "ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS description TEXT",
+        "ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS condition_label VARCHAR(80) DEFAULT 'Seminuevo'",
+        "ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS unit_price DECIMAL(12,2) DEFAULT 0",
+        "ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS stock_quantity INTEGER DEFAULT 1",
+        "ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS image_url TEXT",
+        "ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS category VARCHAR(220)",
+        "ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true"
+    ];
+    foreach ($alterStatements as $sql) {
+        try {
+            $pdo->exec($sql);
+        } catch (Exception $ignored) {
+        }
+    }
+
+    $skuColumn = sku_column_for_table_admin_supply('marketplace_ce_products');
+    $nameColumn = name_column_for_table_admin_supply('marketplace_ce_products');
+
+    if ($skuColumn !== null) {
+        $sourceSkuColumn = first_existing_column_admin_supply('marketplace_ce_products', ['product_code', 'code', 'codigo', 'barcode']);
+        try {
+            $sql = 'SELECT id, COALESCE(' . $skuColumn . ', \'\') AS current_sku';
+            if ($sourceSkuColumn !== null && $sourceSkuColumn !== $skuColumn) {
+                $sql .= ', COALESCE(' . $sourceSkuColumn . ', \'\') AS source_sku';
+            } else {
+                $sql .= ", '' AS source_sku";
+            }
+            $sql .= ' FROM marketplace_ce_products ORDER BY id ASC';
+
+            $rows = ($pdo->query($sql) ?: null);
+            $rows = $rows ? $rows->fetchAll() : [];
+
+            $used = [];
+            foreach ($rows as $row) {
+                $existing = normalize_sku_admin_supply($row['current_sku'] ?? '');
+                if (is_valid_numeric_sku_admin_supply($existing) && !isset($used[$existing])) {
+                    $used[$existing] = true;
+                }
+            }
+
+            $upd = $pdo->prepare('UPDATE marketplace_ce_products SET ' . $skuColumn . ' = ? WHERE id = ?');
+            foreach ($rows as $row) {
+                $id = (int)($row['id'] ?? 0);
+                if ($id <= 0) {
+                    continue;
+                }
+
+                $current = normalize_sku_admin_supply($row['current_sku'] ?? '');
+                if (is_valid_numeric_sku_admin_supply($current) && !isset($used[$current])) {
+                    $used[$current] = true;
+                    continue;
+                }
+
+                $candidate = normalize_sku_admin_supply($row['source_sku'] ?? '');
+                if (!is_valid_numeric_sku_admin_supply($candidate)) {
+                    $candidate = str_pad((string)((90000 + $id) % 100000), 5, '0', STR_PAD_LEFT);
+                }
+
+                $attempts = 0;
+                while (isset($used[$candidate]) && $attempts < 100000) {
+                    $next = (((int)$candidate) + 1) % 100000;
+                    $candidate = str_pad((string)$next, 5, '0', STR_PAD_LEFT);
+                    $attempts += 1;
+                }
+
+                if (isset($used[$candidate])) {
+                    continue;
+                }
+
+                $used[$candidate] = true;
+                try {
+                    $upd->execute([$candidate, $id]);
+                } catch (Exception $ignored) {
+                }
+            }
+        } catch (Exception $ignored) {
+        }
+    }
+
+    if ($nameColumn !== null) {
+        $sourceNameColumn = first_existing_column_admin_supply('marketplace_ce_products', ['product_name', 'nombre', 'title', 'description']);
+        if ($sourceNameColumn !== null) {
+            try {
+                $sql = 'UPDATE marketplace_ce_products SET ' . $nameColumn . ' = ' . $sourceNameColumn . ' WHERE COALESCE(' . $nameColumn . ", '') = ''";
+                $pdo->exec($sql);
+            } catch (Exception $ignored) {
+            }
+        }
+    }
+
+    try {
+        if ($skuColumn !== null) {
+            $pdo->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_marketplace_ce_sku_admin_supply ON marketplace_ce_products (' . $skuColumn . ')');
         }
     } catch (Exception $ignored) {
     }
@@ -1129,6 +1261,12 @@ function bootstrap_admin_supply_schema($pdo): void {
         ensure_products_name_integrity_admin_supply($pdo);
     } catch (Throwable $e) {
         error_log('admin_supply bootstrap warning (name integrity): ' . $e->getMessage());
+    }
+
+    try {
+        ensure_marketplace_integrity_admin_supply($pdo);
+    } catch (Throwable $e) {
+        error_log('admin_supply bootstrap warning (marketplace integrity): ' . $e->getMessage());
     }
 
     try {
@@ -1797,8 +1935,7 @@ try {
                 break;
             }
 
-            $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET is_active = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-            $stmt->execute([$isVisible, $_SESSION['user_id'], $id]);
+            set_marketplace_visibility_compatible($pdo, $id, $isVisible);
 
             $response = [
                 'success' => true,
@@ -2298,17 +2435,40 @@ try {
                 break;
             }
 
-            $marketplaceCategorySelect = db_column_exists('marketplace_ce_products', 'category')
-                ? "COALESCE(category, 'Marketplace CE') AS category"
-                : "'Marketplace CE' AS category";
+            $mkSkuCol = sku_column_for_table_admin_supply('marketplace_ce_products');
+            $mkNameCol = name_column_for_table_admin_supply('marketplace_ce_products');
+            $mkCategoryCol = first_existing_column_admin_supply('marketplace_ce_products', ['category', 'categoria']);
+            $mkDescriptionCol = first_existing_column_admin_supply('marketplace_ce_products', ['description', 'details', 'descripcion']);
+            $mkConditionCol = first_existing_column_admin_supply('marketplace_ce_products', ['condition_label', 'condition', 'estado']);
+            $mkPriceCol = first_existing_column_admin_supply('marketplace_ce_products', ['unit_price', 'sell_price', 'price']);
+            $mkStockCol = first_existing_column_admin_supply('marketplace_ce_products', ['stock_quantity', 'stock']);
+            $mkImageCol = first_existing_column_admin_supply('marketplace_ce_products', ['image_url', 'image', 'photo_url']);
+            $mkActiveCol = first_existing_column_admin_supply('marketplace_ce_products', ['is_active', 'active']);
+
+            $selectSku = $mkSkuCol !== null ? ('COALESCE(' . $mkSkuCol . ", '') AS sku") : "'' AS sku";
+            $selectName = $mkNameCol !== null ? ('COALESCE(' . $mkNameCol . ", '') AS name") : "'' AS name";
+            $selectCategory = $mkCategoryCol !== null ? ('COALESCE(' . $mkCategoryCol . ", 'Marketplace CE') AS category") : "'Marketplace CE' AS category";
+            $selectDescription = $mkDescriptionCol !== null ? ('COALESCE(' . $mkDescriptionCol . ", '') AS description") : "'' AS description";
+            $selectCondition = $mkConditionCol !== null ? ('COALESCE(' . $mkConditionCol . ", 'Seminuevo') AS condition_label") : "'Seminuevo' AS condition_label";
+            $selectPrice = $mkPriceCol !== null ? ('COALESCE(' . $mkPriceCol . ', 0) AS unit_price') : '0 AS unit_price';
+            $selectStock = $mkStockCol !== null ? ('COALESCE(' . $mkStockCol . ', 0) AS stock_quantity') : '0 AS stock_quantity';
+            $selectImage = $mkImageCol !== null ? ('COALESCE(' . $mkImageCol . ", 'images/products/default-product.svg') AS image_url") : "'images/products/default-product.svg' AS image_url";
+            $selectActive = $mkActiveCol !== null ? ('COALESCE(' . $mkActiveCol . ', 1) AS is_active') : '1 AS is_active';
+            $selectCreatedAt = db_column_exists('marketplace_ce_products', 'created_at') ? 'created_at' : 'NULL AS created_at';
+            $selectUpdatedAt = db_column_exists('marketplace_ce_products', 'updated_at') ? 'updated_at' : 'NULL AS updated_at';
+            $orderExpr = db_column_exists('marketplace_ce_products', 'created_at') ? 'created_at DESC' : 'id DESC';
+
+            $stmt = $pdo->query('SELECT id, ' . $selectSku . ', ' . $selectName . ', ' . $selectCategory . ', ' . $selectDescription . ', ' . $selectCondition . ', ' . $selectPrice . ', ' . $selectStock . ', ' . $selectImage . ', ' . $selectActive . ', ' . $selectCreatedAt . ', ' . $selectUpdatedAt . ' FROM marketplace_ce_products ORDER BY ' . $orderExpr);
+            $items = $stmt ? $stmt->fetchAll() : [];
 
             $onlyActive = isset($_GET['active']) && $_GET['active'] === '1';
             if ($onlyActive) {
-                $stmt = $pdo->query("SELECT id, sku, name, {$marketplaceCategorySelect}, description, condition_label, unit_price, stock_quantity, image_url, is_active, created_at, updated_at FROM marketplace_ce_products WHERE is_active = true ORDER BY created_at DESC");
-            } else {
-                $stmt = $pdo->query("SELECT id, sku, name, {$marketplaceCategorySelect}, description, condition_label, unit_price, stock_quantity, image_url, is_active, created_at, updated_at FROM marketplace_ce_products ORDER BY created_at DESC");
+                $items = array_values(array_filter($items, function ($row) {
+                    return !in_array((string)($row['is_active'] ?? '1'), ['0', '', 'false', 'False', 'FALSE'], true);
+                }));
             }
-            $response = ['success' => true, 'items' => $stmt->fetchAll()];
+
+            $response = ['success' => true, 'items' => $items];
             break;
 
         case 'marketplace-save':
@@ -2326,6 +2486,24 @@ try {
             $unitPrice = (float)($_POST['unit_price'] ?? ($input['unit_price'] ?? 0));
             $stockQuantity = (int)($_POST['stock_quantity'] ?? ($input['stock_quantity'] ?? 1));
             $isActive = isset($_POST['is_active']) ? !empty($_POST['is_active']) : (isset($input['is_active']) ? !empty($input['is_active']) : true);
+
+            $mkSkuCol = sku_column_for_table_admin_supply('marketplace_ce_products');
+            $mkNameCol = name_column_for_table_admin_supply('marketplace_ce_products');
+            $mkCategoryCol = first_existing_column_admin_supply('marketplace_ce_products', ['category', 'categoria']);
+            $mkDescriptionCol = first_existing_column_admin_supply('marketplace_ce_products', ['description', 'details', 'descripcion']);
+            $mkConditionCol = first_existing_column_admin_supply('marketplace_ce_products', ['condition_label', 'condition', 'estado']);
+            $mkPriceCol = first_existing_column_admin_supply('marketplace_ce_products', ['unit_price', 'sell_price', 'price']);
+            $mkStockCol = first_existing_column_admin_supply('marketplace_ce_products', ['stock_quantity', 'stock']);
+            $mkImageCol = first_existing_column_admin_supply('marketplace_ce_products', ['image_url', 'image', 'photo_url']);
+            $mkActiveCol = first_existing_column_admin_supply('marketplace_ce_products', ['is_active', 'active']);
+            $mkCreatedByCol = first_existing_column_admin_supply('marketplace_ce_products', ['created_by']);
+            $mkUpdatedByCol = first_existing_column_admin_supply('marketplace_ce_products', ['updated_by']);
+            $mkUpdatedAtCol = first_existing_column_admin_supply('marketplace_ce_products', ['updated_at']);
+
+            if ($mkSkuCol === null || $mkNameCol === null || $mkDescriptionCol === null) {
+                $response = ['success' => false, 'message' => 'Faltan columnas obligatorias en marketplace_ce_products (sku/nombre/descripción)'];
+                break;
+            }
 
             if ($sku === '' || $name === '' || $description === '') {
                 $response = ['success' => false, 'message' => 'SKU, nombre y descripción son obligatorios'];
@@ -2367,33 +2545,35 @@ try {
             }
 
             if ($id > 0) {
-                $sets = ['sku = ?', 'name = ?', 'description = ?', 'condition_label = ?', 'unit_price = ?', 'stock_quantity = ?', 'is_active = ?', 'updated_by = ?', 'updated_at = CURRENT_TIMESTAMP'];
-                $values = [$sku, $name, $description, $conditionLabel, $unitPrice, max(0, $stockQuantity), $isActive, $_SESSION['user_id']];
+                $sets = [$mkSkuCol . ' = ?', $mkNameCol . ' = ?', $mkDescriptionCol . ' = ?'];
+                $values = [$sku, $name, $description];
 
-                if (db_column_exists('marketplace_ce_products', 'category')) {
-                    $sets[] = 'category = ?';
-                    $values[] = $category;
-                }
-
-                if (isset($_FILES['image']) && ($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
-                    $sets[] = 'image_url = ?';
-                    $values[] = $imageUrl;
-                }
+                if ($mkConditionCol !== null) { $sets[] = $mkConditionCol . ' = ?'; $values[] = $conditionLabel; }
+                if ($mkPriceCol !== null) { $sets[] = $mkPriceCol . ' = ?'; $values[] = $unitPrice; }
+                if ($mkStockCol !== null) { $sets[] = $mkStockCol . ' = ?'; $values[] = max(0, $stockQuantity); }
+                if ($mkActiveCol !== null) { $sets[] = $mkActiveCol . ' = ?'; $values[] = $isActive ? 1 : 0; }
+                if ($mkUpdatedByCol !== null) { $sets[] = $mkUpdatedByCol . ' = ?'; $values[] = (int)($_SESSION['user_id'] ?? 0); }
+                if ($mkUpdatedAtCol !== null) { $sets[] = $mkUpdatedAtCol . ' = CURRENT_TIMESTAMP'; }
+                if ($mkCategoryCol !== null) { $sets[] = $mkCategoryCol . ' = ?'; $values[] = $category; }
+                if ($mkImageCol !== null && (isset($_FILES['image']) && ($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE)) { $sets[] = $mkImageCol . ' = ?'; $values[] = $imageUrl; }
 
                 $values[] = $id;
                 $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET ' . implode(', ', $sets) . ' WHERE id = ?');
                 $stmt->execute($values);
                 $response = ['success' => true, 'message' => 'Artículo CE actualizado'];
             } else {
-                $columns = ['sku', 'name', 'description', 'condition_label', 'unit_price', 'stock_quantity', 'image_url', 'is_active', 'created_by', 'updated_by'];
-                $placeholders = ['?', '?', '?', '?', '?', '?', '?', '?', '?', '?'];
-                $values = [$sku, $name, $description, $conditionLabel, $unitPrice, max(0, $stockQuantity), $imageUrl, $isActive, $_SESSION['user_id'], $_SESSION['user_id']];
+                $columns = [$mkSkuCol, $mkNameCol, $mkDescriptionCol];
+                $placeholders = ['?', '?', '?'];
+                $values = [$sku, $name, $description];
 
-                if (db_column_exists('marketplace_ce_products', 'category')) {
-                    $columns[] = 'category';
-                    $placeholders[] = '?';
-                    $values[] = $category;
-                }
+                if ($mkConditionCol !== null) { $columns[] = $mkConditionCol; $placeholders[] = '?'; $values[] = $conditionLabel; }
+                if ($mkPriceCol !== null) { $columns[] = $mkPriceCol; $placeholders[] = '?'; $values[] = $unitPrice; }
+                if ($mkStockCol !== null) { $columns[] = $mkStockCol; $placeholders[] = '?'; $values[] = max(0, $stockQuantity); }
+                if ($mkImageCol !== null) { $columns[] = $mkImageCol; $placeholders[] = '?'; $values[] = $imageUrl; }
+                if ($mkActiveCol !== null) { $columns[] = $mkActiveCol; $placeholders[] = '?'; $values[] = $isActive ? 1 : 0; }
+                if ($mkCreatedByCol !== null) { $columns[] = $mkCreatedByCol; $placeholders[] = '?'; $values[] = (int)($_SESSION['user_id'] ?? 0); }
+                if ($mkUpdatedByCol !== null) { $columns[] = $mkUpdatedByCol; $placeholders[] = '?'; $values[] = (int)($_SESSION['user_id'] ?? 0); }
+                if ($mkCategoryCol !== null) { $columns[] = $mkCategoryCol; $placeholders[] = '?'; $values[] = $category; }
 
                 $stmt = $pdo->prepare('INSERT INTO marketplace_ce_products (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ')');
                 $stmt->execute($values);
@@ -2413,8 +2593,7 @@ try {
                 break;
             }
 
-            $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET is_active = false, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-            $stmt->execute([$_SESSION['user_id'], $id]);
+            set_marketplace_visibility_compatible($pdo, $id, false);
             $response = ['success' => true, 'message' => 'Artículo CE desactivado'];
             break;
 
