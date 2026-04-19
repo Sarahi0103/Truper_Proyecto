@@ -40,10 +40,11 @@ if (!ob_get_level() || ob_get_status()['name'] === 'default output handler') {
 $request_uri = $_SERVER['REQUEST_URI'] ?? '';
 $request_path = parse_url($request_uri, PHP_URL_PATH) ?: '';
 $is_api_request = strpos($request_path, '/api/') !== false;
+$has_authenticated_session = isset($_SESSION['user_id']) && isset($_SESSION['role']);
 $is_auth_context = preg_match('#/(admin_login|login|register)\.php$#', $request_path) === 1
     || strpos($request_path, '/api/auth.php') !== false;
 
-if ($is_auth_context) {
+if ($has_authenticated_session || $is_auth_context) {
     // Evita reutilizar páginas con CSRF viejo y corrige "Sesión inválida" al iniciar sesión.
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
     header('Pragma: no-cache');
