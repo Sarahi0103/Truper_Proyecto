@@ -1053,8 +1053,29 @@ function create_product_compatible($pdo, array $payload): void {
 
     $skuColumn = sku_column_for_table_admin_supply('products');
     $nameColumn = name_column_for_table_admin_supply('products');
+
+    if ($skuColumn === null) {
+        try {
+            $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS sku VARCHAR(100)");
+        } catch (Exception $ignored) {
+        }
+        $skuColumn = sku_column_for_table_admin_supply('products');
+    }
+
     if ($nameColumn === null) {
-        throw new Exception('La tabla products no tiene una columna de nombre (name/product_name/nombre/title)');
+        try {
+            $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS name VARCHAR(255)");
+        } catch (Exception $ignored) {
+        }
+        $nameColumn = name_column_for_table_admin_supply('products');
+    }
+
+    if ($nameColumn === null && db_column_exists('products', 'description')) {
+        $nameColumn = 'description';
+    }
+
+    if ($nameColumn === null) {
+        throw new Exception('La tabla products no tiene una columna de texto usable para nombre/descripcion');
     }
 
     if ($skuColumn !== null) {
@@ -1064,7 +1085,7 @@ function create_product_compatible($pdo, array $payload): void {
     $columns[] = $nameColumn;
     $values[] = $payload['name'];
 
-    if (db_column_exists('products', 'description')) {
+    if (db_column_exists('products', 'description') && $nameColumn !== 'description') {
         $columns[] = 'description';
         $values[] = $payload['description'];
     }
@@ -1130,9 +1151,29 @@ function update_product_compatible($pdo, int $id, array $payload): void {
     $skuColumn = sku_column_for_table_admin_supply('products');
     $nameColumn = name_column_for_table_admin_supply('products');
 
+    if ($skuColumn === null) {
+        try {
+            $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS sku VARCHAR(100)");
+        } catch (Exception $ignored) {
+        }
+        $skuColumn = sku_column_for_table_admin_supply('products');
+    }
+
+    if ($nameColumn === null) {
+        try {
+            $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS name VARCHAR(255)");
+        } catch (Exception $ignored) {
+        }
+        $nameColumn = name_column_for_table_admin_supply('products');
+    }
+
+    if ($nameColumn === null && db_column_exists('products', 'description')) {
+        $nameColumn = 'description';
+    }
+
     if ($skuColumn !== null) { $sets[] = $skuColumn . ' = ?'; $values[] = $payload['sku']; }
     if ($nameColumn !== null) { $sets[] = $nameColumn . ' = ?'; $values[] = $payload['name']; }
-    if (db_column_exists('products', 'description')) { $sets[] = 'description = ?'; $values[] = $payload['description']; }
+    if (db_column_exists('products', 'description') && $nameColumn !== 'description') { $sets[] = 'description = ?'; $values[] = $payload['description']; }
     if (db_column_exists('products', 'category')) { $sets[] = 'category = ?'; $values[] = $payload['category']; }
     if (db_column_exists('products', 'barcode')) { $sets[] = 'barcode = ?'; $values[] = $payload['barcode']; }
     if (db_column_exists('products', 'image_url')) { $sets[] = 'image_url = ?'; $values[] = $payload['image_url']; }
@@ -1474,6 +1515,9 @@ function list_stock_products_compatible($pdo): array {
     $skuColumn = sku_column_for_table_admin_supply('products');
     $skuSelect = $skuColumn !== null ? "{$skuColumn} AS sku" : "'' AS sku";
     $nameColumn = name_column_for_table_admin_supply('products');
+    if ($nameColumn === null && db_column_exists('products', 'description')) {
+        $nameColumn = 'description';
+    }
     $nameSelect = $nameColumn !== null ? "COALESCE({$nameColumn}, '') AS name" : "'' AS name";
     $nameOrderExpr = $nameColumn !== null ? $nameColumn . ' ASC' : 'id ASC';
     $categorySelect = db_column_exists('products', 'category')

@@ -1202,7 +1202,7 @@ async function saveHomepageUpdate() {
 
     const box = document.getElementById('updateResult');
     try {
-        const response = await fetch('/admin_supply.php?action=updates-save', {
+        const response = await fetch('/api/admin_supply.php?action=updates-save', {
             method: 'POST',
             body: formData,
             headers: {

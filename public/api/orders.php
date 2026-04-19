@@ -18,6 +18,48 @@ $input = is_array($decodedInput) ? $decodedInput : (is_array($_POST) ? $_POST : 
 $orderController = new OrderController($pdo);
 $response = [];
 
+function ensure_client_profile_id_for_user($pdo, int $userId): int {
+    if ($userId <= 0) {
+        return 0;
+    }
+
+    $stmt = $pdo->prepare("SELECT id FROM clients WHERE user_id = ? LIMIT 1");
+    $stmt->execute([$userId]);
+    $existingId = (int)$stmt->fetchColumn();
+    if ($existingId > 0) {
+        return $existingId;
+    }
+
+    $company = null;
+    try {
+        $userStmt = $pdo->prepare("SELECT COALESCE(name, '') AS full_name, COALESCE(first_name, '') AS first_name, COALESCE(last_name, '') AS last_name FROM users WHERE id = ? LIMIT 1");
+        $userStmt->execute([$userId]);
+        $user = $userStmt->fetch();
+        $full = trim((string)($user['full_name'] ?? ''));
+        if ($full === '') {
+            $full = trim((string)($user['first_name'] ?? '') . ' ' . (string)($user['last_name'] ?? ''));
+        }
+        $company = $full !== '' ? $full : 'Cliente';
+    } catch (Exception $ignored) {
+        $company = 'Cliente';
+    }
+
+    try {
+        $insert = $pdo->prepare("INSERT INTO clients (user_id, company_name) VALUES (?, ?) ON CONFLICT (user_id) DO NOTHING");
+        $insert->execute([$userId, $company]);
+    } catch (Exception $ignored) {
+        try {
+            $insert = $pdo->prepare("INSERT INTO clients (user_id, company_name) VALUES (?, ?)");
+            $insert->execute([$userId, $company]);
+        } catch (Exception $ignoredTwice) {
+        }
+    }
+
+    $stmt = $pdo->prepare("SELECT id FROM clients WHERE user_id = ? LIMIT 1");
+    $stmt->execute([$userId]);
+    return (int)$stmt->fetchColumn();
+}
+
 try {
     switch ($action) {
         case 'create':
@@ -27,17 +69,14 @@ try {
             }
 
             // Obtener cliente_id del usuario actual
-            $stmt = $pdo->prepare("SELECT id FROM clients WHERE user_id = ?");
-            $stmt->execute([$_SESSION['user_id']]);
-            $client = $stmt->fetch();
-
-            if (!$client) {
+            $clientId = ensure_client_profile_id_for_user($pdo, (int)$_SESSION['user_id']);
+            if ($clientId <= 0) {
                 $response = ['success' => false, 'message' => 'Cliente no encontrado'];
                 break;
             }
 
             $response = $orderController->createOrder(
-                $client['id'],
+                $clientId,
                 $input['items'] ?? [],
                 $input['is_wholesale'] ?? false,
                 [
@@ -91,12 +130,9 @@ try {
                 break;
             }
 
-            $stmt = $pdo->prepare("SELECT id FROM clients WHERE user_id = ?");
-            $stmt->execute([$_SESSION['user_id']]);
-            $client = $stmt->fetch();
-
-            if ($client) {
-                $orders = $orderController->getClientOrders($client['id']);
+            $clientId = ensure_client_profile_id_for_user($pdo, (int)$_SESSION['user_id']);
+            if ($clientId > 0) {
+                $orders = $orderController->getClientOrders($clientId);
                 $response = ['success' => true, 'orders' => $orders];
             } else {
                 $response = ['success' => false, 'orders' => []];

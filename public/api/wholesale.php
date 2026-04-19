@@ -12,7 +12,71 @@ $input = is_array($decodedInput) ? $decodedInput : (is_array($_POST) ? $_POST : 
 
 $response = [];
 
+function ensure_wholesale_client_id($pdo, int $userId): int {
+    if ($userId <= 0) {
+        return 0;
+    }
+
+    $stmt = $pdo->prepare('SELECT id FROM clients WHERE user_id = ? LIMIT 1');
+    $stmt->execute([$userId]);
+    $clientId = (int)$stmt->fetchColumn();
+    if ($clientId > 0) {
+        return $clientId;
+    }
+
+    $company = 'Cliente';
+    try {
+        $userStmt = $pdo->prepare("SELECT COALESCE(name, '') AS full_name, COALESCE(first_name, '') AS first_name, COALESCE(last_name, '') AS last_name FROM users WHERE id = ? LIMIT 1");
+        $userStmt->execute([$userId]);
+        $user = $userStmt->fetch();
+        $candidate = trim((string)($user['full_name'] ?? ''));
+        if ($candidate === '') {
+            $candidate = trim((string)($user['first_name'] ?? '') . ' ' . (string)($user['last_name'] ?? ''));
+        }
+        if ($candidate !== '') {
+            $company = $candidate;
+        }
+    } catch (Exception $ignored) {
+    }
+
+    try {
+        $insert = $pdo->prepare("INSERT INTO clients (user_id, company_name) VALUES (?, ?) ON CONFLICT (user_id) DO NOTHING");
+        $insert->execute([$userId, $company]);
+    } catch (Exception $ignored) {
+        try {
+            $insert = $pdo->prepare('INSERT INTO clients (user_id, company_name) VALUES (?, ?)');
+            $insert->execute([$userId, $company]);
+        } catch (Exception $ignoredTwice) {
+        }
+    }
+
+    $stmt = $pdo->prepare('SELECT id FROM clients WHERE user_id = ? LIMIT 1');
+    $stmt->execute([$userId]);
+    return (int)$stmt->fetchColumn();
+}
+
 try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS wholesalers (
+        id SERIAL PRIMARY KEY,
+        client_id INTEGER NOT NULL,
+        business_type VARCHAR(100),
+        min_order_quantity INTEGER DEFAULT 50,
+        discount_percentage DECIMAL(5,2) DEFAULT 15,
+        payment_terms VARCHAR(100),
+        is_approved BOOLEAN DEFAULT false,
+        requested_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        approved_date TIMESTAMP,
+        approved_by INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+    )");
+
+    try { $pdo->exec("ALTER TABLE wholesalers ADD COLUMN IF NOT EXISTS requested_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP"); } catch (Exception $ignored) {}
+    try { $pdo->exec("ALTER TABLE wholesalers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"); } catch (Exception $ignored) {}
+    try { $pdo->exec("ALTER TABLE wholesalers ADD COLUMN IF NOT EXISTS approved_date TIMESTAMP"); } catch (Exception $ignored) {}
+    try { $pdo->exec("ALTER TABLE wholesalers ADD COLUMN IF NOT EXISTS approved_by INTEGER"); } catch (Exception $ignored) {}
+
     switch ($action) {
         case 'request':
             if ($method !== 'POST') {
@@ -20,11 +84,8 @@ try {
                 break;
             }
 
-            $stmt = $pdo->prepare('SELECT id FROM clients WHERE user_id = ?');
-            $stmt->execute([$_SESSION['user_id']]);
-            $client = $stmt->fetch();
-
-            if (!$client) {
+            $clientId = ensure_wholesale_client_id($pdo, (int)$_SESSION['user_id']);
+            if ($clientId <= 0) {
                 $response = ['success' => false, 'message' => 'Perfil de cliente no encontrado'];
                 break;
             }
@@ -32,7 +93,7 @@ try {
             $stmt = $pdo->prepare("INSERT INTO wholesalers (client_id, business_type, min_order_quantity, discount_percentage, payment_terms, is_approved)
                                    VALUES (?, ?, ?, ?, ?, false)");
             $stmt->execute([
-                $client['id'],
+                $clientId,
                 sanitize($input['business_type'] ?? ''),
                 (int)($input['min_order_quantity'] ?? 50),
                 (float)($input['discount_percentage'] ?? 15),
@@ -67,17 +128,14 @@ try {
                 break;
             }
 
-            $stmt = $pdo->prepare('SELECT id FROM clients WHERE user_id = ?');
-            $stmt->execute([$_SESSION['user_id']]);
-            $client = $stmt->fetch();
-
-            if (!$client) {
+            $clientId = ensure_wholesale_client_id($pdo, (int)$_SESSION['user_id']);
+            if ($clientId <= 0) {
                 $response = ['success' => true, 'items' => []];
                 break;
             }
 
             $stmt = $pdo->prepare('SELECT * FROM wholesalers WHERE client_id = ? ORDER BY requested_date DESC');
-            $stmt->execute([$client['id']]);
+            $stmt->execute([$clientId]);
             $response = ['success' => true, 'items' => $stmt->fetchAll()];
             break;
 

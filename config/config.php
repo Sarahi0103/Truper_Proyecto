@@ -308,11 +308,167 @@ function db_table_exists($table_name) {
 function db_column_exists($table_name, $column_name) {
     global $pdo;
     try {
-        $stmt = $pdo->prepare("SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = ? AND column_name = ?)");
+        $stmt = $pdo->prepare("SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE LOWER(table_name) = LOWER(?) AND LOWER(column_name) = LOWER(?) AND table_schema = current_schema())");
+        $stmt->execute([$table_name, $column_name]);
+        if ((bool)$stmt->fetchColumn()) {
+            return true;
+        }
+
+        $stmt = $pdo->prepare("SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE LOWER(table_name) = LOWER(?) AND LOWER(column_name) = LOWER(?) AND table_schema = 'public')");
+        $stmt->execute([$table_name, $column_name]);
+        if ((bool)$stmt->fetchColumn()) {
+            return true;
+        }
+
+        // Last-resort lookup for databases where tables are in non-default schemas.
+        $stmt = $pdo->prepare("SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE LOWER(table_name) = LOWER(?) AND LOWER(column_name) = LOWER(?))");
         $stmt->execute([$table_name, $column_name]);
         return (bool)$stmt->fetchColumn();
     } catch (Exception $e) {
         return false;
+    }
+}
+
+function ensure_postgresql_form_schema() {
+    static $initialized = false;
+    if ($initialized) {
+        return;
+    }
+    $initialized = true;
+
+    global $pdo;
+
+    try {
+        if (!($pdo instanceof PDO)) {
+            return;
+        }
+        if ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) !== 'pgsql') {
+            return;
+        }
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS clients (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER UNIQUE,
+            company_name VARCHAR(255),
+            client_code VARCHAR(32),
+            is_wholesale BOOLEAN DEFAULT false,
+            credit_limit DECIMAL(12,2) DEFAULT 0,
+            credit_available DECIMAL(12,2) DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS wholesalers (
+            id SERIAL PRIMARY KEY,
+            client_id INTEGER NOT NULL,
+            business_type VARCHAR(100),
+            min_order_quantity INTEGER DEFAULT 50,
+            discount_percentage DECIMAL(5,2) DEFAULT 15,
+            payment_terms VARCHAR(100),
+            is_approved BOOLEAN DEFAULT false,
+            requested_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            approved_date TIMESTAMP,
+            approved_by INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )");
+
+        $usersAlters = [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name VARCHAR(120)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name VARCHAR(120)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(255)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'client'",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(30)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS birthdate DATE",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS birthday DATE",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_points INTEGER DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT true",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT true",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS user_code VARCHAR(32)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP"
+        ];
+
+        $productAlters = [
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS sku VARCHAR(100)",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS name VARCHAR(255)",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS description TEXT",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS category VARCHAR(120)",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS unit_price DECIMAL(12,2) DEFAULT 0",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS sell_price DECIMAL(12,2) DEFAULT 0",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS stock_quantity INTEGER DEFAULT 0",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS reorder_level INTEGER DEFAULT 10",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url TEXT",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT true",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+        ];
+
+        $clientAlters = [
+            "ALTER TABLE clients ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)",
+            "ALTER TABLE clients ADD COLUMN IF NOT EXISTS client_code VARCHAR(32)",
+            "ALTER TABLE clients ADD COLUMN IF NOT EXISTS is_wholesale BOOLEAN DEFAULT false",
+            "ALTER TABLE clients ADD COLUMN IF NOT EXISTS credit_limit DECIMAL(12,2) DEFAULT 0",
+            "ALTER TABLE clients ADD COLUMN IF NOT EXISTS credit_available DECIMAL(12,2) DEFAULT 0",
+            "ALTER TABLE clients ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+            "ALTER TABLE clients ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+        ];
+
+        $wholesaleAlters = [
+            "ALTER TABLE wholesalers ADD COLUMN IF NOT EXISTS requested_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+            "ALTER TABLE wholesalers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+            "ALTER TABLE wholesalers ADD COLUMN IF NOT EXISTS approved_date TIMESTAMP",
+            "ALTER TABLE wholesalers ADD COLUMN IF NOT EXISTS approved_by INTEGER"
+        ];
+
+        foreach (array_merge($usersAlters, $productAlters, $clientAlters, $wholesaleAlters) as $sql) {
+            try {
+                $pdo->exec($sql);
+            } catch (Exception $ignored) {
+            }
+        }
+
+        try {
+            $pdo->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_user_code_unique ON users (user_code)");
+        } catch (Exception $ignored) {
+        }
+        try {
+            $pdo->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_products_sku_unique ON products (sku)");
+        } catch (Exception $ignored) {
+        }
+
+        try {
+            $pdo->exec("UPDATE users SET name = TRIM(COALESCE(first_name, '') || ' ' || COALESCE(last_name, '')) WHERE COALESCE(name, '') = '' AND (COALESCE(first_name, '') <> '' OR COALESCE(last_name, '') <> '')");
+        } catch (Exception $ignored) {
+        }
+
+        try {
+            $pdo->exec("UPDATE products SET name = COALESCE(NULLIF(description, ''), 'Producto ' || id::text) WHERE COALESCE(name, '') = ''");
+        } catch (Exception $ignored) {
+        }
+
+        try {
+            $pdo->exec("UPDATE products SET unit_price = COALESCE(unit_price, sell_price, 0)");
+        } catch (Exception $ignored) {
+        }
+
+        try {
+            $pdo->exec("UPDATE products SET is_active = COALESCE(is_active, active, true)");
+        } catch (Exception $ignored) {
+        }
+
+        try {
+            $pdo->exec("UPDATE clients c SET client_code = u.user_code FROM users u WHERE c.user_id = u.id AND COALESCE(c.client_code, '') = '' AND COALESCE(u.user_code, '') <> ''");
+        } catch (Exception $ignored) {
+        }
+    } catch (Exception $e) {
+        error_log('ensure_postgresql_form_schema warning: ' . $e->getMessage());
     }
 }
 
@@ -512,4 +668,6 @@ function apply_login_engagement_rules($user_id) {
         return ['birthday_bonus_awarded' => false];
     }
 }
+
+ensure_postgresql_form_schema();
 ?>
