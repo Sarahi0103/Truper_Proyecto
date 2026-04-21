@@ -27,6 +27,27 @@ function normalize_product_sku_for_response(array $product) {
     return $product;
 }
 
+function normalize_bool_products_api($value, bool $default = false): bool {
+    if ($value === null) {
+        return $default;
+    }
+
+    if (is_bool($value)) {
+        return $value;
+    }
+
+    if (is_int($value) || is_float($value)) {
+        return ((int)$value) !== 0;
+    }
+
+    $raw = trim((string)$value);
+    if ($raw === '') {
+        return $default;
+    }
+
+    return in_array(strtolower($raw), ['1', 'true', 't', 'yes', 'y', 'on'], true);
+}
+
 $productModel = new Product($pdo);
 $response = [];
 
@@ -201,7 +222,7 @@ try {
                 break;
             }
             $id = (int)($input['id'] ?? 0);
-            $is_active = isset($input['is_active']) ? (bool)$input['is_active'] : true;
+            $is_active = normalize_bool_products_api($input['is_active'] ?? null, true);
             
             if ($id <= 0) {
                 $response = ['success' => false, 'message' => 'ID inválido'];
@@ -212,7 +233,7 @@ try {
             $updated = false;
             try {
                 $stmt = $pdo->prepare("UPDATE products SET is_active = ? WHERE id = ?");
-                $stmt->execute([$is_active ? 1 : 0, $id]);
+                $stmt->execute([$is_active ? true : false, $id]);
                 $updated = $stmt->rowCount() > 0;
             } catch (Exception $e1) {
                 try {

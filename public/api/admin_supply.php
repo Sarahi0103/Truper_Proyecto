@@ -39,6 +39,27 @@ function normalize_date_value($value): ?string {
     return null;
 }
 
+function normalize_bool_admin_supply($value, bool $default = false): bool {
+    if ($value === null) {
+        return $default;
+    }
+
+    if (is_bool($value)) {
+        return $value;
+    }
+
+    if (is_int($value) || is_float($value)) {
+        return ((int)$value) !== 0;
+    }
+
+    $raw = trim((string)$value);
+    if ($raw === '') {
+        return $default;
+    }
+
+    return in_array(strtolower($raw), ['1', 'true', 't', 'yes', 'y', 'on'], true);
+}
+
 function normalize_sku_admin_supply($value): string {
     $sku = trim((string)$value);
     return preg_replace('/\D+/', '', $sku) ?: '';
@@ -1161,10 +1182,10 @@ function create_product_compatible($pdo, array $payload): void {
 
     if (db_column_exists('products', 'is_active')) {
         $columns[] = 'is_active';
-        $values[] = isset($payload['is_active']) ? !empty($payload['is_active']) : true;
+        $values[] = normalize_bool_admin_supply($payload['is_active'] ?? null, true);
     } elseif (db_column_exists('products', 'active')) {
         $columns[] = 'active';
-        $values[] = isset($payload['is_active']) ? (!empty($payload['is_active']) ? 1 : 0) : 1;
+        $values[] = normalize_bool_admin_supply($payload['is_active'] ?? null, true) ? 1 : 0;
     }
 
     if (count($columns) === 0) {
@@ -1211,8 +1232,8 @@ function update_product_compatible($pdo, int $id, array $payload): void {
     if (db_column_exists('products', 'reorder_level')) { $sets[] = 'reorder_level = ?'; $values[] = (int)$payload['reorder_level']; }
     if (db_column_exists('products', 'unit_price')) { $sets[] = 'unit_price = ?'; $values[] = (float)$payload['price']; }
     elseif (db_column_exists('products', 'sell_price')) { $sets[] = 'sell_price = ?'; $values[] = (float)$payload['price']; }
-    if (array_key_exists('is_active', $payload) && db_column_exists('products', 'is_active')) { $sets[] = 'is_active = ?'; $values[] = !empty($payload['is_active']); }
-    elseif (array_key_exists('is_active', $payload) && db_column_exists('products', 'active')) { $sets[] = 'active = ?'; $values[] = !empty($payload['is_active']) ? 1 : 0; }
+    if (array_key_exists('is_active', $payload) && db_column_exists('products', 'is_active')) { $sets[] = 'is_active = ?'; $values[] = normalize_bool_admin_supply($payload['is_active'] ?? null, true); }
+    elseif (array_key_exists('is_active', $payload) && db_column_exists('products', 'active')) { $sets[] = 'active = ?'; $values[] = normalize_bool_admin_supply($payload['is_active'] ?? null, true) ? 1 : 0; }
     if (db_column_exists('products', 'updated_at')) { $sets[] = 'updated_at = CURRENT_TIMESTAMP'; }
 
     if (empty($sets)) {
@@ -1252,13 +1273,13 @@ function set_product_visibility_compatible($pdo, int $id, bool $isVisible): void
 
     if (db_column_exists('products', 'is_active')) {
         $stmt = $pdo->prepare('UPDATE products SET is_active = ? WHERE id = ?');
-        $stmt->execute([$isVisible, $id]);
+        $stmt->execute([$isVisible ? true : false, $id]);
         return;
     }
 
     if (db_column_exists('products', 'active')) {
-        $stmt = $pdo->prepare('UPDATE products SET active = ? WHERE id = ?');
-        $stmt->execute([$isVisible ? 1 : 0, $id]);
+            $stmt = $pdo->prepare('UPDATE products SET active = ? WHERE id = ?');
+            $stmt->execute([$isVisible ? 1 : 0, $id]);
         return;
     }
 
@@ -1882,7 +1903,7 @@ try {
             $stockQty = (int)($input['stock_quantity'] ?? 50);
             $reorder = (int)($input['reorder_level'] ?? 10);
             $imageUrl = sanitize($input['image_url'] ?? 'images/products/default-product.svg');
-            $isVisible = (int)(isset($input['is_visible']) ? (bool)$input['is_visible'] : true);
+            $isVisible = normalize_bool_admin_supply($input['is_visible'] ?? null, true);
             $allowSeedSku = in_array((string)($input['allow_seed_sku'] ?? '0'), ['1', 'true', 'TRUE', 'yes', 'on'], true);
 
             if ($sku === '' || $name === '') {
@@ -1993,7 +2014,7 @@ try {
             }
 
             $id = (int)($input['id'] ?? 0);
-            $isVisible = isset($input['is_visible']) ? !empty($input['is_visible']) : true;
+            $isVisible = normalize_bool_admin_supply($input['is_visible'] ?? null, true);
             if ($id <= 0) {
                 $response = ['success' => false, 'message' => 'Producto inválido'];
                 break;
@@ -2014,7 +2035,7 @@ try {
             }
 
             $id = (int)($input['id'] ?? 0);
-            $isVisible = isset($input['is_visible']) ? !empty($input['is_visible']) : true;
+            $isVisible = normalize_bool_admin_supply($input['is_visible'] ?? null, true);
             if ($id <= 0) {
                 $response = ['success' => false, 'message' => 'Artículo CE inválido'];
                 break;
@@ -2372,8 +2393,7 @@ try {
             $id = (int)($_POST['id'] ?? ($input['id'] ?? 0));
             $name = trim((string)($_POST['name'] ?? ($input['name'] ?? '')));
             $sortOrder = (int)($_POST['sort_order'] ?? ($input['sort_order'] ?? 0));
-            $rawIsActive = $_POST['is_active'] ?? ($input['is_active'] ?? 1);
-            $isActive = !in_array((string)$rawIsActive, ['0', 'false', 'False', 'FALSE', ''], true);
+            $isActive = normalize_bool_admin_supply($_POST['is_active'] ?? ($input['is_active'] ?? null), true);
 
             if ($name === '') {
                 $response = ['success' => false, 'message' => 'El nombre de la categoría es obligatorio'];

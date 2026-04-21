@@ -982,6 +982,7 @@ async function toggleProductVisibility(productId, newState) {
                 filterVisibilityProducts();
             }
             window.showAlert?.apply(null, [data.message || 'Actualizado', 'success']);
+            document.getElementById('visibilityList')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         } else {
             window.showAlert?.apply(null, ['Error: ' + (data.message || 'desconocido'), 'error']);
         }
@@ -1655,7 +1656,9 @@ async function toggleStockVisibility(id, nextVisible) {
         box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Visibilidad actualizada')}</div>`;
     }
 
+    showAlert(res.message || 'Visibilidad actualizada', 'success');
     await loadStock();
+    document.getElementById('visibilityList')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 async function toggleMarketplaceVisibility(id, nextVisible) {
@@ -1678,7 +1681,9 @@ async function toggleMarketplaceVisibility(id, nextVisible) {
         box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Visibilidad actualizada')}</div>`;
     }
 
+    showAlert(res.message || 'Visibilidad actualizada', 'success');
     await loadMarketplaceCeAdmin();
+    document.getElementById('marketplaceList')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 async function createVisit() {
@@ -2678,6 +2683,7 @@ async function createProductByAdmin() {
     loadStock();
     loadSupplierProducts();
     loadProductGalleryForCurrentSku();
+    document.getElementById('productCreateResult')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function resetMarketplaceForm() {
@@ -2952,9 +2958,11 @@ async function saveMarketplaceCeByAdmin() {
     }
 
     if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Artículo CE guardado')}</div>`;
+    showAlert(res.message || 'Artículo CE guardado correctamente', 'success');
     resetMarketplaceForm();
     loadMarketplaceCeAdmin();
     loadStock();
+    document.getElementById('marketplaceResult')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 async function deleteMarketplaceCeByAdmin(id) {
