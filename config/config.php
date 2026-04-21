@@ -801,7 +801,7 @@ function ensure_xlsx_products_seeded() {
 
 function route_by_role($role) {
     if ($role === 'admin') {
-        return '/admin_supply.php';
+        return '/dashboard.php';
     }
     if ($role === 'employee') {
         return '/tasks.php';
