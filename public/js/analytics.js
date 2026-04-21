@@ -140,16 +140,28 @@ function updateMetricsUI(metrics) {
         pendingTasks.textContent = metrics.pending_tasks || 0;
     }
     
-    // Top productos
+    // Top productos — diseño con ranking visual
     const topProducts = document.getElementById('topProducts');
-    if (topProducts && metrics.top_products) {
-        let html = '<ul>';
-        metrics.top_products.forEach(product => {
-            html += `<li>${product.name}: ${product.total_sold} unidades</li>`;
-        });
-        html += '</ul>';
-        topProducts.innerHTML = html;
+    if (!topProducts) return;
+
+    const products = Array.isArray(metrics.top_products) ? metrics.top_products : [];
+
+    if (products.length === 0) {
+        topProducts.innerHTML = '<p class="text-muted" style="padding: 0.5rem 0;">Sin ventas registradas este mes.</p>';
+        return;
     }
+
+    topProducts.innerHTML = products.map((product, index) => {
+        const rank = index + 1;
+        const rankColor = rank === 1 ? '#ff8a1f' : rank === 2 ? '#94a3b8' : rank === 3 ? '#b45309' : 'var(--theme-text-muted)';
+        const sold = Number(product.total_sold || 0);
+        const name = String(product.name || 'Producto');
+        return `<div class="top-product-row" style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0.5rem;border-bottom:1px solid var(--theme-border);">
+            <span class="top-product-rank" style="width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.82rem;background:rgba(255,138,31,0.12);color:${rankColor};flex-shrink:0;">${rank}</span>
+            <span style="flex:1;font-size:0.92rem;color:var(--theme-text);">${name}</span>
+            <span class="top-product-sold" style="font-size:0.88rem;color:var(--theme-text-muted);white-space:nowrap;">${sold} uds.</span>
+        </div>`;
+    }).join('');
 }
 
 /**
@@ -225,6 +237,13 @@ async function loadClientAnalytics() {
 function displayClientAnalytics(clients) {
     const container = document.getElementById('clientAnalytics');
     if (!container) return;
+
+    // Helper: normalize PostgreSQL boolean (true, false, 't', 'f', 1, 0)
+    function isTruthy(val) {
+        if (val === true || val === 1 || val === '1') return true;
+        if (typeof val === 'string') return val.toLowerCase() === 't' || val.toLowerCase() === 'true';
+        return false;
+    }
     
     let html = `
         <table>
@@ -241,13 +260,14 @@ function displayClientAnalytics(clients) {
     `;
     
     clients.forEach(client => {
+        const active = isTruthy(client.is_active);
         html += `
             <tr>
-                <td>${client.name}</td>
-                <td>${formatCurrency(client.total_spent)}</td>
-                <td>${client.order_count}</td>
-                <td>${client.loyalty_points}</td>
-                <td><span class="badge badge-${client.is_active ? 'success' : 'danger'}">${client.is_active ? 'Activo' : 'Inactivo'}</span></td>
+                <td>${client.name || '—'}</td>
+                <td>${formatCurrency(client.total_spent || 0)}</td>
+                <td>${client.order_count || 0}</td>
+                <td>${client.loyalty_points || 0}</td>
+                <td><span class="badge badge-${active ? 'success' : 'danger'}">${active ? 'Activo' : 'Inactivo'}</span></td>
             </tr>
         `;
     });

@@ -722,3 +722,129 @@ tbody td,
         width: 100%;
     }
 }
+
+/* ============================================================
+   MODO OSCURO — Badges y etiquetas de estado adaptables
+   ============================================================ */
+
+/* Badge success (Activo) — fondo verde-naranja suave, texto claro */
+:root[data-theme="dark"] .badge-success {
+    background-color: rgba(255, 138, 31, 0.22);
+    color: #ffd8a0;
+    border: 1px solid rgba(255, 138, 31, 0.4);
+}
+
+/* Badge danger (Inactivo) — fondo rojo/gris oscuro, texto claro */
+:root[data-theme="dark"] .badge-danger {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+/* Badge warning */
+:root[data-theme="dark"] .badge-warning {
+    background-color: rgba(251, 191, 36, 0.2);
+    color: #fde68a;
+    border: 1px solid rgba(251, 191, 36, 0.35);
+}
+
+/* Badge info */
+:root[data-theme="dark"] .badge-info {
+    background-color: rgba(147, 197, 253, 0.15);
+    color: #bfdbfe;
+    border: 1px solid rgba(147, 197, 253, 0.3);
+}
+
+/* Badge primary — ya usa naranja sólido, bien visible */
+:root[data-theme="dark"] .badge-primary {
+    background-color: var(--theme-accent);
+    color: #ffffff;
+}
+
+/* ============================================================
+   MODO OSCURO — Status badges del dashboard
+   ============================================================ */
+
+:root[data-theme="dark"] .status-badge,
+:root[data-theme="dark"] .status-pending {
+    background-color: rgba(255, 138, 31, 0.2);
+    color: #ffd8a0;
+}
+
+:root[data-theme="dark"] .status-paid {
+    background-color: rgba(34, 197, 94, 0.18);
+    color: #86efac;
+}
+
+:root[data-theme="dark"] .status-partial {
+    background-color: rgba(251, 191, 36, 0.2);
+    color: #fde68a;
+}
+
+:root[data-theme="dark"] .status-cancelled,
+:root[data-theme="dark"] .status-canceled {
+    background-color: rgba(239, 68, 68, 0.18);
+    color: #fca5a5;
+}
+
+/* ============================================================
+   MODO OSCURO — Priority badges
+   ============================================================ */
+
+:root[data-theme="dark"] .priority-badge,
+:root[data-theme="dark"] .priority-high {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+}
+
+:root[data-theme="dark"] .priority-medium {
+    background-color: rgba(255, 138, 31, 0.2);
+    color: #ffd8a0;
+}
+
+:root[data-theme="dark"] .priority-low {
+    background-color: rgba(147, 197, 253, 0.15);
+    color: #bfdbfe;
+}
+
+/* ============================================================
+   MODO OSCURO — Task items y order items
+   ============================================================ */
+
+:root[data-theme="dark"] .task-item {
+    background: var(--theme-surface-strong);
+    border-color: var(--theme-border);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+
+:root[data-theme="dark"] .task-title,
+:root[data-theme="dark"] .order-number {
+    color: var(--theme-text);
+}
+
+:root[data-theme="dark"] .order-total {
+    color: var(--theme-accent);
+}
+
+:root[data-theme="dark"] .order-item {
+    border-bottom-color: var(--theme-border);
+}
+
+/* ============================================================
+   MODO OSCURO — Top products list en dashboard
+   ============================================================ */
+
+:root[data-theme="dark"] .top-product-row {
+    background: var(--theme-surface-strong);
+    border-color: var(--theme-border);
+    color: var(--theme-text);
+}
+
+:root[data-theme="dark"] .top-product-rank {
+    background: rgba(255, 138, 31, 0.2);
+    color: var(--theme-accent);
+}
+
+:root[data-theme="dark"] .top-product-sold {
+    color: var(--theme-text-muted);
+}

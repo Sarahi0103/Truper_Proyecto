@@ -181,26 +181,43 @@ class AnalyticsController {
     }
     
     public function getDashboardMetrics() {
+        $monthly_orders  = 0;
+        $monthly_revenue = 0;
+        $pending_payments = 0;
+        $pending_tasks   = 0;
+        $top_products    = [];
+
         try {
             // Órdenes del mes
             $stmt = $this->pdo->prepare("
-                SELECT COUNT(*) as total, SUM(total_amount) as revenue
+                SELECT COUNT(*) as total, COALESCE(SUM(total_amount),0) as revenue
                 FROM orders
                 WHERE EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM NOW())
                 AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM NOW())
             ");
             $stmt->execute();
             $monthly_stats = $stmt->fetch();
-            
+            $monthly_orders  = (int)($monthly_stats['total'] ?? 0);
+            $monthly_revenue = (float)($monthly_stats['revenue'] ?? 0);
+        } catch (Exception $e) {
+            error_log('getDashboardMetrics orders: ' . $e->getMessage());
+        }
+
+        try {
             // Órdenes pendientes de pago
             $stmt = $this->pdo->prepare("
-                SELECT COUNT(*) as pending_payment, SUM(balance) as pending_amount
+                SELECT COUNT(*) as pending_payment
                 FROM orders
                 WHERE payment_status IN ('pending', 'partial')
             ");
             $stmt->execute();
-            $payment_stats = $stmt->fetch();
-            
+            $payment_stats   = $stmt->fetch();
+            $pending_payments = (int)($payment_stats['pending_payment'] ?? 0);
+        } catch (Exception $e) {
+            error_log('getDashboardMetrics payments: ' . $e->getMessage());
+        }
+
+        try {
             // Tareas pendientes
             $stmt = $this->pdo->prepare("
                 SELECT COUNT(*) as pending_tasks
@@ -208,9 +225,14 @@ class AnalyticsController {
                 WHERE status IN ('pending', 'in_progress')
             ");
             $stmt->execute();
-            $task_stats = $stmt->fetch();
-            
-            // Top productos
+            $task_stats    = $stmt->fetch();
+            $pending_tasks = (int)($task_stats['pending_tasks'] ?? 0);
+        } catch (Exception $e) {
+            error_log('getDashboardMetrics tasks: ' . $e->getMessage());
+        }
+
+        try {
+            // Top productos vendidos este mes
             $stmt = $this->pdo->prepare("
                 SELECT p.name, SUM(oi.quantity) as total_sold
                 FROM order_items oi
@@ -222,19 +244,18 @@ class AnalyticsController {
             ");
             $stmt->execute();
             $top_products = $stmt->fetchAll();
-            
-            return [
-                'monthly_orders' => $monthly_stats['total'] ?? 0,
-                'monthly_revenue' => $monthly_stats['revenue'] ?? 0,
-                'pending_payments' => $payment_stats['pending_payment'] ?? 0,
-                'pending_amount' => $payment_stats['pending_amount'] ?? 0,
-                'pending_tasks' => $task_stats['pending_tasks'] ?? 0,
-                'top_products' => $top_products
-            ];
-        } catch (PDOException $e) {
-            error_log("Error obteniendo métricas: " . $e->getMessage());
-            return [];
+        } catch (Exception $e) {
+            error_log('getDashboardMetrics top_products: ' . $e->getMessage());
+            $top_products = [];
         }
+
+        return [
+            'monthly_orders'   => $monthly_orders,
+            'monthly_revenue'  => $monthly_revenue,
+            'pending_payments' => $pending_payments,
+            'pending_tasks'    => $pending_tasks,
+            'top_products'     => $top_products
+        ];
     }
     
     private function getSeason() {
