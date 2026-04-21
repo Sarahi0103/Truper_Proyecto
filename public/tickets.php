@@ -277,12 +277,17 @@ async function submitCreateTicket(event) {
     const response = await apiCall(`${apiBase}?action=create`, 'POST', data);
     
     if (response.success) {
-        alert('✅ Ticket creado: ' + response.folio);
-        closeCreateTicketModal();
-        loadTickets();
-        loadStatistics();
+        handleSuccessResponse(response, {
+            scrollTarget: '#ticketsTableBody',
+            successMessage: response.message || ('Ticket creado: ' + (response.folio || '')), 
+            onSuccess: () => {
+                closeCreateTicketModal();
+                loadTickets();
+                loadStatistics();
+            }
+        });
     } else {
-        alert('❌ Error: ' + response.message);
+        showAlert(response.message || 'Error creando ticket', 'error');
     }
 }
 
@@ -305,11 +310,16 @@ async function archivePreviousMonth() {
     const response = await apiCall(`${apiBase}?action=archive-previous-month`, 'POST', { csrf_token: window.csrfToken });
     
     if (response.success) {
-        alert('✅ ' + response.message);
-        loadTickets();
-        loadStatistics();
+        handleSuccessResponse(response, {
+            scrollTarget: '#ticketsTableBody',
+            successMessage: response.message || 'Tickets archivados correctamente',
+            onSuccess: () => {
+                loadTickets();
+                loadStatistics();
+            }
+        });
     } else {
-        alert('❌ Error: ' + response.message);
+        showAlert(response.message || 'Error archivando tickets', 'error');
     }
 }
 

@@ -27,12 +27,18 @@ async function createTask() {
     const response = await apiCall('/tasks.php?action=create', 'POST', taskData);
     
     if (response && response.success) {
-        showAlert(response.message, 'success');
-        form.reset();
-        closeModal('taskModal');
-        setTimeout(() => {
-            location.reload();
-        }, 1000);
+        handleSuccessResponse(response, {
+            scrollTarget: '#tasksList',
+            successMessage: response.message || 'Tarea creada correctamente',
+            onSuccess: () => {
+                form.reset();
+                closeModal('taskModal');
+                loadTasks();
+                if (TASKS_IS_ADMIN) {
+                    loadAssignees();
+                }
+            }
+        });
         return;
     }
 
@@ -49,10 +55,11 @@ async function updateTaskStatus(taskId, newStatus) {
     });
     
     if (response && response.success) {
-        showAlert('Tarea actualizada exitosamente', 'success');
-        setTimeout(() => {
-            location.reload();
-        }, 1000);
+        handleSuccessResponse(response, {
+            scrollTarget: '#tasksList',
+            successMessage: response.message || 'Tarea actualizada exitosamente',
+            onSuccess: loadTasks
+        });
     }
 }
 
@@ -73,11 +80,12 @@ async function logTaskHours(taskId) {
     });
     
     if (response && response.success) {
-        showAlert(response.message, 'success');
+        handleSuccessResponse(response, {
+            scrollTarget: '#tasksList',
+            successMessage: response.message || 'Horas registradas correctamente',
+            onSuccess: loadTasks
+        });
         document.getElementById(`hours_${taskId}`).value = '';
-        setTimeout(() => {
-            location.reload();
-        }, 1000);
     }
 }
 
@@ -179,10 +187,11 @@ async function deleteTask(taskId) {
     const response = await apiCall('/tasks.php?action=delete', 'DELETE', { task_id: taskId });
     
     if (response && response.success) {
-        showAlert('Tarea eliminada', 'success');
-        setTimeout(() => {
-            location.reload();
-        }, 1000);
+        handleSuccessResponse(response, {
+            scrollTarget: '#tasksList',
+            successMessage: response.message || 'Tarea eliminada',
+            onSuccess: loadTasks
+        });
     }
 }
 

@@ -86,6 +86,57 @@ function showAlert(message, type = 'info') {
     }, 5000);
 }
 
+function handleSuccessResponse(response, options = {}) {
+    if (!response || !response.success) {
+        return false;
+    }
+
+    const successMessage = options.successMessage || response.message || 'Operación completada';
+    if (options.notify !== false) {
+        showAlert(successMessage, 'success');
+    }
+
+    const redirectTarget = options.redirect || response.redirect || '';
+    const reloadAfterSuccess = options.reloadAfterSuccess || Boolean(response.reload);
+    const scrollTarget = options.scrollTarget || response.scroll_to || response.scrollTarget || '';
+    const tabTarget = options.tabTarget || response.tab || '';
+
+    const finish = () => {
+        if (reloadAfterSuccess) {
+            window.location.reload();
+            return;
+        }
+
+        if (redirectTarget) {
+            window.location.href = redirectTarget;
+            return;
+        }
+
+        if (typeof options.onSuccess === 'function') {
+            options.onSuccess(response);
+        }
+
+        if (tabTarget) {
+            const tabButton = document.querySelector(`[data-tab="${tabTarget}"]`);
+            if (tabButton) {
+                tabButton.click();
+            }
+        }
+
+        if (scrollTarget) {
+            const target = document.querySelector(scrollTarget) || document.getElementById(scrollTarget.replace(/^#/, ''));
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+    };
+
+    const delay = typeof options.successDelay === 'number' ? options.successDelay : 900;
+    window.setTimeout(finish, delay);
+    return true;
+}
+
 /**
  * Hacer petición AJAX
  */
@@ -116,8 +167,12 @@ async function apiCall(endpoint, method = 'GET', data = null, options = {}) {
         if (!response.ok) {
             throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
-        
-        return await response.json();
+
+        const result = await response.json();
+        if (options.autoHandleSuccess) {
+            handleSuccessResponse(result, options);
+        }
+        return result;
     } catch (error) {
         console.error('API Error:', error);
         if (!silent) {
@@ -246,6 +301,11 @@ async function handleFormSubmit(e) {
     const formData = new FormData(form);
     const action = form.getAttribute('action');
     const method = form.getAttribute('method') || 'POST';
+    const redirectTarget = form.dataset.successRedirect || '';
+    const scrollTarget = form.dataset.successScroll || '';
+    const tabTarget = form.dataset.successTab || '';
+    const successMessage = form.dataset.successMessage || '';
+    const reloadAfterSuccess = form.dataset.successReload === 'true';
     
     if (!action) {
         showAlert('Formulario sin acción configurada', 'error');
@@ -271,17 +331,23 @@ async function handleFormSubmit(e) {
         const result = await response.json();
         
         if (result.success) {
-            showAlert(result.message, 'success');
-            
-            // Limpiar formulario si es registro/login
+            const mergedOptions = {
+                redirect: redirectTarget || result.redirect || '',
+                scrollTarget,
+                tabTarget,
+                reloadAfterSuccess,
+                successMessage: successMessage || result.message || 'Operación completada',
+                successDelay: Number(form.dataset.successDelay || 900),
+                onSuccess: () => {
+                    form.reset();
+                }
+            };
+
             if (form.id === 'registerForm' || form.id === 'loginForm') {
-                form.reset();
-                setTimeout(() => {
-                    window.location.href = result.redirect || '/dashboard.php';
-                }, 1500);
-            } else {
-                form.reset();
+                mergedOptions.successDelay = Number(form.dataset.successDelay || 1400);
             }
+
+            handleSuccessResponse(result, mergedOptions);
         } else {
             showAlert(result.message || 'Error procesando el formulario', 'error');
         }

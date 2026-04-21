@@ -142,7 +142,7 @@ if (!empty($profile['birthdate'])) {
                 <div class="card">
                     <div class="card-header">Información de Perfil</div>
                     <div class="card-body">
-                        <form id="profileForm" action="api/profile.php?action=update" method="POST">
+                        <form id="profileForm" action="api/profile.php?action=update" method="POST" data-success-scroll="#profileInfo" data-success-message="Perfil actualizado correctamente">
                             <div class="form-group">
                                 <label>Nombre</label>
                                 <input type="text" name="first_name" value="<?php echo htmlspecialchars($profile['first_name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" required>
@@ -238,7 +238,7 @@ if (!empty($profile['birthdate'])) {
                 <div class="card">
                     <div class="card-header">Cambiar Contraseña</div>
                     <div class="card-body">
-                        <form id="passwordForm" action="api/profile.php?action=change-password" method="POST">
+                        <form id="passwordForm" action="api/profile.php?action=change-password" method="POST" data-success-scroll="#passwordChange" data-success-message="Contraseña actualizada correctamente">
                             <div class="form-group">
                                 <label>Contraseña Actual</label>
                                 <input type="password" name="current_password" required>

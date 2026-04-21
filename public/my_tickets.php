@@ -338,12 +338,19 @@ async function sendViaWhatsApp(event) {
     });
     
     if (response.success) {
-        closeWhatsAppModal();
-        window.open(response.whatsapp_url, '_blank');
-        alert('✅ Comprobante enviado a WhatsApp');
-        loadTickets();
+        handleSuccessResponse(response, {
+            scrollTarget: '#ticketsListContainer',
+            successMessage: response.message || 'Comprobante enviado a WhatsApp',
+            onSuccess: () => {
+                closeWhatsAppModal();
+                if (response.whatsapp_url) {
+                    window.open(response.whatsapp_url, '_blank');
+                }
+                loadTickets();
+            }
+        });
     } else {
-        alert('Error: ' + response.message);
+        showAlert(response.message || 'Error enviando comprobante', 'error');
     }
 }
 

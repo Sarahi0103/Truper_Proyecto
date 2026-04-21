@@ -90,8 +90,11 @@ async function submitWholesale(e) {
   };
   const res = await apiCall('/wholesale.php?action=request', 'POST', payload);
   if (res && res.success) {
-    showAlert(res.message, 'success');
-    loadWholesale();
+    handleSuccessResponse(res, {
+      scrollTarget: '#wholesaleForm',
+      successMessage: res.message || 'Solicitud enviada correctamente',
+      onSuccess: () => loadWholesale()
+    });
   } else if (res) {
     showAlert(res.message, 'error');
   }
@@ -100,8 +103,11 @@ async function submitWholesale(e) {
 async function approveWholesale(id) {
   const res = await apiCall('/wholesale.php?action=approve', 'POST', { id });
   if (res && res.success) {
-    showAlert(res.message, 'success');
-    loadWholesale();
+    handleSuccessResponse(res, {
+      scrollTarget: '#wholesaleRows',
+      successMessage: res.message || 'Solicitud aprobada',
+      onSuccess: () => loadWholesale()
+    });
   } else if (res) {
     showAlert(res.message, 'error');
   }
