@@ -658,11 +658,11 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     <div class="admin-quick-grid">
                         <div>
                             <select id="marketplaceBulkSelect" class="admin-quick-select" multiple size="7"></select>
-                            <small class="text-muted">Selecciona uno o varios artículos CE para editar u ocultar.</small>
+                            <small class="text-muted">Selecciona uno o varios artículos CE para editar o eliminar.</small>
                         </div>
                         <div class="admin-quick-actions">
                             <button class="btn btn-secondary" type="button" onclick="editMarketplaceSelectedItem()">Editar seleccionado</button>
-                            <button class="btn btn-danger" type="button" onclick="deleteMarketplaceSelectedItems()">Ocultar seleccionados</button>
+                            <button class="btn btn-danger" type="button" onclick="deleteMarketplaceSelectedItems()">Eliminar seleccionados</button>
                         </div>
                     </div>
                     <div id="marketplaceQuickResult" class="text-muted" style="font-size:12px; margin-top:8px;"></div>
@@ -718,6 +718,7 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
         ? `
             <button class="btn btn-small btn-secondary" type="button" onclick="fillMarketplaceFormById(${id})">Editar</button>
             <button class="btn btn-small btn-ghost" type="button" onclick="toggleMarketplaceVisibility(${id}, ${inactive ? 1 : 0})">${inactive ? 'Activar' : 'Ocultar'}</button>
+            <button class="btn btn-small btn-danger" type="button" onclick="deleteMarketplaceCeByAdmin(${id})">Eliminar</button>
         `
         : (seedOnly
             ? `
@@ -2866,15 +2867,15 @@ async function deleteMarketplaceSelectedItems() {
     const selectedIds = getMarketplaceBulkSelectedIds();
 
     if (selectedIds.length === 0) {
-        if (quickBox) quickBox.innerHTML = '<span style="color:#f59e0b;">Selecciona al menos un artículo para ocultar.</span>';
+        if (quickBox) quickBox.innerHTML = '<span style="color:#f59e0b;">Selecciona al menos un artículo para eliminar.</span>';
         return;
     }
 
-    if (!confirm(`¿Ocultar ${selectedIds.length} artículo(s) seleccionado(s)?`)) {
+    if (!confirm(`¿Eliminar ${selectedIds.length} artículo(s) seleccionado(s)? Se ocultarán del Marketplace CE.`)) {
         return;
     }
 
-    if (quickBox) quickBox.innerHTML = '<span style="color:#cbd5e1;">Ocultando artículos...</span>';
+    if (quickBox) quickBox.innerHTML = '<span style="color:#cbd5e1;">Eliminando artículos...</span>';
 
     let successCount = 0;
     let firstError = '';
@@ -2883,13 +2884,13 @@ async function deleteMarketplaceSelectedItems() {
         if (res && res.success) {
             successCount += 1;
         } else if (!firstError) {
-            firstError = (res && res.message) ? res.message : `No se pudo ocultar el artículo ${id}`;
+            firstError = (res && res.message) ? res.message : `No se pudo eliminar el artículo ${id}`;
         }
     }
 
     if (successCount > 0) {
-        if (quickBox) quickBox.innerHTML = `<span style="color:#22c55e;">${successCount} artículo(s) ocultado(s).</span>`;
-        showAlert(`${successCount} artículo(s) CE ocultado(s)`, 'success');
+        if (quickBox) quickBox.innerHTML = `<span style="color:#22c55e;">${successCount} artículo(s) eliminado(s).</span>`;
+        showAlert(`${successCount} artículo(s) CE eliminado(s)`, 'success');
     }
     if (firstError) {
         if (quickBox) quickBox.innerHTML += ` <span style="color:#f87171;">${escapeHtml(firstError)}</span>`;
@@ -2982,16 +2983,16 @@ async function saveMarketplaceCeByAdmin() {
 
 async function deleteMarketplaceCeByAdmin(id) {
     if (!id) return;
-    if (!confirm('¿Deseas ocultar este artículo CE?')) return;
+    if (!confirm('¿Deseas eliminar este artículo CE? Se ocultará del Marketplace CE.')) return;
 
     const box = document.getElementById('marketplaceResult');
     const res = await apiCall('/admin_supply.php?action=marketplace-delete', 'POST', { id: id });
     if (!res || !res.success) {
-        if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible ocultar artículo CE')}</div>`;
+        if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible eliminar artículo CE')}</div>`;
         return;
     }
 
-    if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Artículo CE ocultado')}</div>`;
+    if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Artículo CE eliminado del Marketplace CE')}</div>`;
     loadMarketplaceCeAdmin();
 }
 
