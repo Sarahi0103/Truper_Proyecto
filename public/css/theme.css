@@ -141,8 +141,6 @@ thead th,
     border-color: var(--theme-border);
 }
 
-.card-header,
-thead th,
 .catalog-categories-title,
 .metric-label,
 .login-subtitle,
@@ -153,13 +151,79 @@ thead th,
     color: var(--theme-text-muted);
 }
 
+.card-header {
+    color: #ffffff;
+}
+
+thead,
+thead th {
+    background: var(--theme-surface-strong);
+    color: var(--theme-text);
+}
+
+td,
+tbody td {
+    color: var(--theme-text);
+}
+
+tbody tr:hover {
+    background: var(--theme-accent-soft);
+}
+
+label {
+    color: var(--theme-text);
+}
+
+.modal-content,
+.modal-whatsapp .modal-content {
+    background: var(--theme-surface);
+    color: var(--theme-text);
+    border: 1px solid var(--theme-border);
+}
+
+.modal-title {
+    color: var(--theme-text);
+}
+
+:root[data-theme="dark"] .card-header {
+    color: #ffffff;
+}
+
+:root[data-theme="dark"] .modal-content,
+:root[data-theme="dark"] .modal-whatsapp .modal-content {
+    background: var(--theme-surface);
+}
+
+:root[data-theme="dark"] .btn-view,
+:root[data-theme="dark"] .btn-cancel {
+    background: var(--theme-surface-strong);
+    color: var(--theme-text);
+}
+
+:root[data-theme="dark"] .stat-box {
+    color: #ffffff;
+}
+
+:root[data-theme="dark"] .admin-tabs .tab-button {
+    color: var(--theme-text);
+}
+
+:root[data-theme="dark"] .admin-tabs .tab-button.active {
+    color: #ffffff;
+}
+
+:root[data-theme="dark"] .ticket-info-value,
+:root[data-theme="dark"] .history-action,
+:root[data-theme="dark"] .detail-title {
+    color: var(--theme-text);
+}
+
 :root[data-theme="dark"] h1,
 :root[data-theme="dark"] h2,
 :root[data-theme="dark"] h3,
 :root[data-theme="dark"] h4,
 :root[data-theme="dark"] h5,
 :root[data-theme="dark"] h6,
-:root[data-theme="dark"] label,
 :root[data-theme="dark"] strong {
     color: var(--theme-text);
 }

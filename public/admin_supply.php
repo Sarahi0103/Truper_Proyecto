@@ -55,10 +55,10 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             border-radius: 12px;
             padding: 0.35rem;
             background: var(--ui-surface);
-            position: sticky;
-            top: 72px;
+            position: static;
+            top: auto;
             z-index: 25;
-            box-shadow: 0 8px 20px rgba(17, 24, 39, 0.08);
+            box-shadow: 0 6px 14px rgba(17, 24, 39, 0.06);
             gap: 0.35rem;
         }
 
@@ -103,11 +103,11 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
         }
         .admin-editor-card-stock {
             border-left: 4px solid #f59e0b;
-            background: linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, rgba(0, 0, 0, 0) 42%);
+            background: linear-gradient(180deg, rgba(245, 158, 11, 0.04) 0%, rgba(0, 0, 0, 0) 48%);
         }
         .admin-editor-card-marketplace {
             border-left: 4px solid #38bdf8;
-            background: linear-gradient(180deg, rgba(56, 189, 248, 0.1) 0%, rgba(0, 0, 0, 0) 42%);
+            background: linear-gradient(180deg, rgba(56, 189, 248, 0.05) 0%, rgba(0, 0, 0, 0) 48%);
         }
         .section-kicker {
             display: inline-flex;
@@ -209,9 +209,6 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             background: var(--ui-surface);
         }
         @media (max-width: 900px) {
-            .admin-tabs {
-                top: 64px;
-            }
             .admin-quick-grid {
                 grid-template-columns: 1fr;
             }
