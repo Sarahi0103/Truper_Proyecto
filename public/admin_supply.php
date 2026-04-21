@@ -900,6 +900,23 @@ function normalizeUpdateTypeLabel(type) {
     return 'Noticia';
 }
 
+function activateAdminSupplyTab(tabName, scrollTargetId = '') {
+    const tabButton = document.querySelector(`[data-tab="${tabName}"]`);
+    if (tabButton) {
+        tabButton.click();
+    }
+
+    const target = scrollTargetId ? document.getElementById(scrollTargetId) : null;
+    if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+    }
+
+    if (tabButton) {
+        tabButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
 // ===== PRODUCT VISIBILITY FUNCTIONS =====
 let allProductsVisibility = [];
 
@@ -982,7 +999,7 @@ async function toggleProductVisibility(productId, newState) {
                 filterVisibilityProducts();
             }
             window.showAlert?.apply(null, [data.message || 'Actualizado', 'success']);
-            document.getElementById('visibilityList')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            activateAdminSupplyTab('visibilityTab', 'visibilityList');
         } else {
             window.showAlert?.apply(null, ['Error: ' + (data.message || 'desconocido'), 'error']);
         }
@@ -1683,7 +1700,7 @@ async function toggleMarketplaceVisibility(id, nextVisible) {
 
     showAlert(res.message || 'Visibilidad actualizada', 'success');
     await loadMarketplaceCeAdmin();
-    document.getElementById('marketplaceList')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    activateAdminSupplyTab('marketplaceTab', 'marketplaceList');
 }
 
 async function createVisit() {
@@ -2683,7 +2700,7 @@ async function createProductByAdmin() {
     loadStock();
     loadSupplierProducts();
     loadProductGalleryForCurrentSku();
-    document.getElementById('productCreateResult')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    activateAdminSupplyTab('stockTab', 'productCreateResult');
 }
 
 function resetMarketplaceForm() {
@@ -2962,7 +2979,7 @@ async function saveMarketplaceCeByAdmin() {
     resetMarketplaceForm();
     loadMarketplaceCeAdmin();
     loadStock();
-    document.getElementById('marketplaceResult')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    activateAdminSupplyTab('marketplaceTab', 'marketplaceResult');
 }
 
 async function deleteMarketplaceCeByAdmin(id) {
