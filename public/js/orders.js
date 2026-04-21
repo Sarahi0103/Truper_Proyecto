@@ -232,18 +232,63 @@ function normalizeCategoryText(value) {
 }
 
 function categoryMatches(productCategory, selectedFilter) {
-    if (!selectedFilter) return true;
+    if (!selectedFilter) {
+        return true;
+    }
 
-    const normalized = normalizeCategoryText(productCategory);
-    const categoryMap = {
-        'material-electrico': ['material electrico', 'electrica', 'electricidad', 'electrico'],
-        'fontaneria': ['fontaneria'],
-        'cerrajeria': ['cerrajeria'],
-        'herreria': ['herreria']
-    };
+    return normalizeCategoryText(productCategory) === normalizeCategoryText(selectedFilter);
+}
 
-    const candidates = categoryMap[selectedFilter] || [];
-    return candidates.some(term => normalized.includes(term));
+function updateCategoryFilter(products) {
+    const select = document.getElementById('productCategoryFilter');
+    if (!select) {
+        return;
+    }
+
+    const previousValue = select.value || '';
+    const categories = [...new Set(
+        (products || [])
+            .map(product => String(product.category || '').trim())
+            .filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+
+    const options = ['<option value="">Todas las categorías</option>'];
+    categories.forEach(category => {
+        const escapedValue = category
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+        options.push(`<option value="${escapedValue}">${escapedValue}</option>`);
+    });
+
+    select.innerHTML = options.join('');
+
+    if (previousValue && categories.some(category => normalizeCategoryText(category) === normalizeCategoryText(previousValue))) {
+        select.value = categories.find(category => normalizeCategoryText(category) === normalizeCategoryText(previousValue)) || '';
+    }
+}
+
+function removePayButtonsFromOrders() {
+    const ordersList = document.getElementById('ordersList');
+    if (!ordersList) {
+        return;
+    }
+
+    const actionButtons = ordersList.querySelectorAll('a, button');
+    actionButtons.forEach(element => {
+        const text = String(element.textContent || '').trim().toLowerCase();
+        if (text === 'pagar' || text.includes('pagar')) {
+            element.remove();
+        }
+    });
+
+    ordersList.querySelectorAll('td:last-child').forEach(cell => {
+        if (!cell.textContent.trim()) {
+            cell.textContent = '-';
+        }
+    });
 }
 
 async function loadOrders() {
@@ -273,18 +318,23 @@ async function loadOrders() {
             </td>
         </tr>
     `).join('');
+
+    removePayButtonsFromOrders();
 }
 
 async function loadProducts() {
     const response = await apiCall('/products.php?action=list');
     const productsList = document.getElementById('productsList');
-    const selectedCategory = document.getElementById('productCategoryFilter')?.value || '';
+    const categoryFilter = document.getElementById('productCategoryFilter');
+    const selectedCategory = categoryFilter?.value || '';
     if (!productsList) return;
 
     if (!response || !response.success || !Array.isArray(response.products)) {
         productsList.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No fue posible cargar productos</td></tr>';
         return;
     }
+
+    updateCategoryFilter(response.products);
 
     const filteredProducts = response.products.filter(product => categoryMatches(product.category, selectedCategory));
 

@@ -73,6 +73,18 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
             border-color: var(--ui-border);
             background: transparent;
         }
+
+        .orders-page tbody tr {
+            background: var(--ui-surface);
+        }
+
+        .orders-page tbody tr:nth-child(2n) {
+            background: var(--ui-surface-soft);
+        }
+
+        .orders-page tbody tr:hover {
+            background: var(--theme-accent-soft);
+        }
     </style>
 </head>
 <body class="orders-page">
@@ -165,10 +177,6 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
                             <input type="text" id="productSearch" placeholder="Buscar productos..." onkeyup="searchProducts()" style="padding: 0.5rem; margin-bottom: 1rem; width: 100%;">
                             <select id="productCategoryFilter" onchange="loadProducts()" style="padding: 0.5rem; margin-bottom: 1rem; width: 100%; max-width: 360px;">
                                 <option value="">Todas las categorías</option>
-                                <option value="material-electrico">Material eléctrico</option>
-                                <option value="fontaneria">Fontanería</option>
-                                <option value="cerrajeria">Cerrajería</option>
-                                <option value="herreria">Herrería</option>
                             </select>
                             
                             <table>
@@ -275,7 +283,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
     <script>
         window.TRUPER_COMPANY_WHATSAPP = '<?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?>';
     </script>
-    <script src="js/orders.js"></script>
+    <script src="js/orders.js?v=20260420"></script>
     <script src="js/barcode-scanner.js"></script>
     <script>
         function logout() {
