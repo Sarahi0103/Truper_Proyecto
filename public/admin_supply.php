@@ -1734,6 +1734,28 @@ async function deleteProductByAdmin(id) {
     loadSupplierProducts();
 }
 
+function syncStockVisibilityState(id, nextVisible) {
+    const normalized = Number(nextVisible) ? 1 : 0;
+    const target = stockItemsCache.find((row) => Number(row.id) === Number(id));
+    if (target) {
+        target.is_active = normalized;
+    }
+
+    const currentEditId = Number(document.getElementById('newProductEditId')?.value || 0);
+    if (currentEditId === Number(id)) {
+        const visibleField = document.getElementById('newProductVisible');
+        if (visibleField) {
+            visibleField.value = String(normalized);
+        }
+        updateStockPreview();
+    }
+
+    const visibilityIdx = allProductsVisibility.findIndex((p) => Number(p.id) === Number(id));
+    if (visibilityIdx >= 0) {
+        allProductsVisibility[visibilityIdx].is_active = normalized;
+    }
+}
+
 async function toggleStockVisibility(id, nextVisible) {
     if (!id) return;
 
@@ -1754,9 +1776,12 @@ async function toggleStockVisibility(id, nextVisible) {
         box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Visibilidad actualizada')}</div>`;
     }
 
+    syncStockVisibilityState(id, nextVisible);
+    renderStockList();
+    filterVisibilityProducts();
+
     showAlert(res.message || 'Visibilidad actualizada', 'success');
     await loadStock();
-    document.getElementById('visibilityList')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 async function toggleMarketplaceVisibility(id, nextVisible) {

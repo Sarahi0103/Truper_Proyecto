@@ -273,7 +273,7 @@ if (!empty($profile['birthdate'])) {
             </div>
         </div>
         <div class="footer-bottom">
-            <p>&copy; 2024 Truper Platform. Todos los derechos reservados.</p>
+            <p>&copy; 2026 Truper Platform. Todos los derechos reservados.</p>
         </div>
     </footer>
 

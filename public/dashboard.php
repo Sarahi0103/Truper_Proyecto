@@ -144,18 +144,13 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
                 <p>Plataforma de Gestión Empresarial</p>
             </div>
             <div class="footer-section">
-                <h4>Contacto</h4>
-                <p>Email: soporte@truper.com</p>
-                <p>Teléfono: +56 2 1234 5678</p>
-            </div>
-            <div class="footer-section">
                 <h4>Enlaces</h4>
                 <a href="/dashboard.php">Dashboard</a>
                 <a href="/analytics.php">Estadísticas</a>
             </div>
         </div>
         <div class="footer-bottom">
-            <p>&copy; 2024 Truper Platform. Todos los derechos reservados.</p>
+            <p>&copy; 2026 Truper Platform. Todos los derechos reservados.</p>
         </div>
     </footer>
 

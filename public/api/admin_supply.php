@@ -1598,16 +1598,11 @@ function list_stock_products_compatible($pdo): array {
         ? "COALESCE(is_active, true) AS is_active"
         : (db_column_exists('products', 'active') ? "(active = 1) AS is_active" : "true AS is_active");
 
-    $queries = [];
-
-    if (db_column_exists('products', 'is_active')) {
-        $queries[] = "SELECT id, {$skuSelect}, {$nameSelect}, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} FROM products WHERE is_active = true ORDER BY stock_quantity ASC, {$nameOrderExpr} LIMIT 500";
-    }
-    if (db_column_exists('products', 'active')) {
-        $queries[] = "SELECT id, {$skuSelect}, {$nameSelect}, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} FROM products WHERE active = 1 ORDER BY stock_quantity ASC, {$nameOrderExpr} LIMIT 500";
-    }
-
-    $queries[] = "SELECT id, {$skuSelect}, {$nameSelect}, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} FROM products ORDER BY stock_quantity ASC, {$nameOrderExpr} LIMIT 500";
+    // Admin inventory must include both visible and hidden products so
+    // the UI can toggle between Ocultar/Activar without items disappearing.
+    $queries = [
+        "SELECT id, {$skuSelect}, {$nameSelect}, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} FROM products ORDER BY stock_quantity ASC, {$nameOrderExpr} LIMIT 500"
+    ];
 
     $items = [];
     foreach ($queries as $sql) {
