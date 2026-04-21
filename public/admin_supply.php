@@ -792,7 +792,7 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
     const condition = mode === 'marketplace' ? String(item.condition_label || 'Seminuevo') : 'Modelo estándar';
     const stockText = stock <= (mode === 'marketplace' ? 2 : reorder) ? 'Stock bajo: ' : 'Stock: ';
     const stockClass = stock <= (mode === 'marketplace' ? 2 : reorder) ? 'stock-low' : 'stock-ok';
-    const inactive = Number(item.is_active) === 0;
+    const inactive = Number(item.is_active) === 0 || item.is_active === false || item.is_active === 'f' || item.is_active === 'false' || item.is_active === 'False' || item.is_active === 'FALSE';
     const seedOnly = Boolean(item.seed_only || item.__seed_only);
     const visibilityLabel = inactive ? 'Oculto' : 'Visible';
     const actions = mode === 'marketplace'

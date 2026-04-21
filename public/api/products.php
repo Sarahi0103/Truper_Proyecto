@@ -200,8 +200,8 @@ try {
             // For admin visibility control
             require_admin();
             $queries = [
-                ["SELECT id, name, sku, unit_price, is_active FROM products ORDER BY name LIMIT 500", []],
-                ["SELECT id, name, sku, sell_price AS unit_price, active AS is_active FROM products ORDER BY name LIMIT 500", []]
+                ["SELECT id, name, sku, unit_price, (CASE WHEN is_active IS NULL THEN 1 WHEN LOWER(CAST(is_active AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) AS is_active FROM products ORDER BY name LIMIT 500", []],
+                ["SELECT id, name, sku, sell_price AS unit_price, (CASE WHEN active = 1 THEN 1 ELSE 0 END) AS is_active FROM products ORDER BY name LIMIT 500", []]
             ];
             $products = [];
             foreach ($queries as $q) {

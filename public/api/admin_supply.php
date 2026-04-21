@@ -1226,7 +1226,7 @@ function update_product_compatible($pdo, int $id, array $payload): void {
     if ($nameColumn !== null) { $sets[] = $nameColumn . ' = ?'; $values[] = $payload['name']; }
     if (db_column_exists('products', 'description') && $nameColumn !== 'description') { $sets[] = 'description = ?'; $values[] = $payload['description']; }
     if (db_column_exists('products', 'category')) { $sets[] = 'category = ?'; $values[] = $payload['category']; }
-    if (db_column_exists('products', 'barcode')) { $sets[] = 'barcode = ?'; $values[] = $payload['barcode']; }
+    if (db_column_exists('products', 'barcode')) { $sets[] = 'barcode = ?'; $values[] = $payload['barcode'] ?? null; }
     if (db_column_exists('products', 'image_url')) { $sets[] = 'image_url = ?'; $values[] = $payload['image_url']; }
     if (db_column_exists('products', 'stock_quantity')) { $sets[] = 'stock_quantity = ?'; $values[] = (int)$payload['stock_quantity']; }
     if (db_column_exists('products', 'reorder_level')) { $sets[] = 'reorder_level = ?'; $values[] = (int)$payload['reorder_level']; }
@@ -1595,8 +1595,8 @@ function list_stock_products_compatible($pdo): array {
         ? "COALESCE(unit_price, 0) AS unit_price"
         : (db_column_exists('products', 'sell_price') ? "COALESCE(sell_price, 0) AS unit_price" : "0 AS unit_price");
     $isActiveSelect = db_column_exists('products', 'is_active')
-        ? "COALESCE(is_active, true) AS is_active"
-        : (db_column_exists('products', 'active') ? "(active = 1) AS is_active" : "true AS is_active");
+        ? "(CASE WHEN is_active IS NULL THEN 1 WHEN LOWER(CAST(is_active AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) AS is_active"
+        : (db_column_exists('products', 'active') ? "(CASE WHEN active = 1 THEN 1 ELSE 0 END) AS is_active" : "1 AS is_active");
 
     // Admin inventory must include both visible and hidden products so
     // the UI can toggle between Ocultar/Activar without items disappearing.
@@ -1894,6 +1894,7 @@ try {
             $name = sanitize($input['name'] ?? '');
             $category = sanitize($input['category'] ?? 'General');
             $description = sanitize($input['description'] ?? '');
+            $barcode = sanitize($input['barcode'] ?? '');
             $price = (float)($input['price'] ?? 0);
             $stockQty = (int)($input['stock_quantity'] ?? 50);
             $reorder = (int)($input['reorder_level'] ?? 10);
@@ -1942,6 +1943,7 @@ try {
                     'name' => $name,
                     'category' => $category,
                     'description' => $description,
+                    'barcode' => $barcode,
                     'price' => $price,
                     'stock_quantity' => max(0, $stockQty),
                     'reorder_level' => max(0, $reorder),
@@ -1966,6 +1968,7 @@ try {
                 'name' => $name,
                 'category' => $category,
                 'description' => $description,
+                'barcode' => $barcode,
                 'price' => $price,
                 'stock_quantity' => max(0, $stockQty),
                 'reorder_level' => max(0, $reorder),
