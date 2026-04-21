@@ -46,14 +46,21 @@ function display_product_code($sku) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ticket cliente <?php echo htmlspecialchars($order['order_number'], ENT_QUOTES, 'UTF-8'); ?></title>
+    <link rel="stylesheet" href="css/theme.css">
     <style>
-        body { font-family: monospace; margin: 0; padding: 10px; }
-        .ticket { width: <?php echo $format === 'a4' ? '760px' : '300px'; ?>; margin: 0 auto; }
+        body { font-family: monospace; margin: 0; padding: 10px; background: var(--ui-bg); color: var(--ui-text); }
+        .ticket { width: <?php echo $format === 'a4' ? '760px' : '300px'; ?>; margin: 0 auto; background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: 6px; padding: 10px; box-sizing: border-box; }
         h1 { text-align: center; font-size: 18px; margin: 0 0 8px; }
-        .line { border-top: 1px dashed #000; margin: 8px 0; }
+        .line { border-top: 1px dashed var(--ui-border); margin: 8px 0; }
         .row { margin-bottom: 5px; }
         .format-switch { text-align: center; margin-bottom: 8px; }
-        @media print { .format-switch { display: none; } }
+        .format-switch a { color: var(--theme-accent); }
+        @media print {
+            html, body { background: #fff !important; color: #000 !important; }
+            .ticket { background: #fff !important; color: #000 !important; border: 1px solid #000 !important; }
+            .line { border-top-color: #000 !important; }
+            .format-switch, .theme-toggle { display: none !important; }
+        }
     </style>
 </head>
 <body onload="window.print()">
@@ -76,5 +83,6 @@ function display_product_code($sku) {
     <?php endforeach; ?>
     <div class="row"><strong>Total: $<?php echo number_format((float)$order['total_amount'], 2, '.', ''); ?></strong></div>
 </div>
+<script src="js/main.js"></script>
 </body>
 </html>

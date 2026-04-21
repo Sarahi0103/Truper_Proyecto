@@ -534,6 +534,7 @@ $stock = (int)($product['stock_quantity'] ?? 0);
 </div>
 
 <script src="js/catalog.js"></script>
+<script src="js/main.js"></script>
 <script>
     (function () {
         const galleryImages = <?php echo json_encode($galleryImages); ?>;

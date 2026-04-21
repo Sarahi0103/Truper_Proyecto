@@ -109,19 +109,20 @@ function ticket_quote_product_code($item) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ticket de cotización <?php echo htmlspecialchars($folio, ENT_QUOTES, 'UTF-8'); ?></title>
+    <link rel="stylesheet" href="css/theme.css">
     <style>
         body {
             margin: 0;
             padding: 16px;
-            background: #ececec;
-            color: #111;
+            background: var(--ui-bg);
+            color: var(--ui-text);
             font-family: Arial, Helvetica, sans-serif;
         }
         .ticket {
             width: <?php echo $format === 'a4' ? '760px' : '340px'; ?>;
             margin: 0 auto;
-            background: #ffffff;
-            border: 1px solid #d9d9d9;
+            background: var(--ui-surface);
+            border: 1px solid var(--ui-border);
             border-radius: 6px;
             padding: 14px;
             box-sizing: border-box;
@@ -133,25 +134,27 @@ function ticket_quote_product_code($item) {
             font-weight: 800;
             letter-spacing: 0.2px;
         }
-        .line { border-top: 1px solid #c8c8c8; margin: 12px 0; }
+        .line { border-top: 1px solid var(--ui-border); margin: 12px 0; }
         .row { margin-bottom: 6px; font-size: 34px; }
         .format-switch { text-align: center; margin-bottom: 10px; }
-        .format-switch a { color: #1d4ed8; }
+        .format-switch a { color: var(--theme-accent); }
         .section-title {
             font-size: 36px;
             font-weight: 700;
             margin: 4px 0 8px;
         }
         .item-name { font-size: 34px; margin-bottom: 2px; }
-        .item-code { font-size: 28px; color: #444; margin-bottom: 2px; }
+        .item-code { font-size: 28px; color: var(--ui-text-muted); margin-bottom: 2px; }
         .item-line { display: flex; justify-content: space-between; gap: 10px; font-size: 33px; }
         .item-separator { border-top: 1px solid #dfdfdf; margin: 8px 0 10px; }
         .total-row { text-align: right; font-size: 40px; font-weight: 800; margin-top: 8px; }
         .thanks { margin-top: 12px; font-size: 33px; }
         @media print {
-            .format-switch { display: none; }
-            body { background: #fff; padding: 0; }
-            .ticket { border: none; border-radius: 0; width: 100%; }
+            .format-switch, .theme-toggle { display: none; }
+            html, body { background: #fff !important; color: #000 !important; padding: 0; }
+            .ticket { border: 1px solid #000 !important; border-radius: 0; width: 100%; background: #fff !important; color: #000 !important; }
+            .line, .item-separator { border-top-color: #000 !important; }
+            .item-code { color: #000 !important; }
         }
     </style>
     <script src="/js/jspdf.umd.min.js"></script>
@@ -195,6 +198,7 @@ function ticket_quote_product_code($item) {
     <div class="total-row">Total: $<?php echo ticket_quote_number($total); ?></div>
     <div class="thanks">Gracias por su compra</div>
 </div>
+<script src="js/main.js"></script>
 <script>
 const ticketData = {
     folio: <?php echo json_encode($folio); ?>,
