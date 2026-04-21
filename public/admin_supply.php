@@ -728,6 +728,7 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
             : `
                 <button class="btn btn-small btn-secondary" type="button" onclick="fillProductFormById(${id})">Editar</button>
                 <button class="btn btn-small btn-ghost" type="button" onclick="toggleStockVisibility(${id}, ${inactive ? 1 : 0})">${inactive ? 'Activar' : 'Ocultar'}</button>
+                <button class="btn btn-small btn-danger" type="button" onclick="deleteProductByAdmin(${id})">Eliminar</button>
             `);
 
     return `
@@ -1635,16 +1636,16 @@ function prepareSeedProductForEditing(id) {
 
 async function deleteProductByAdmin(id) {
     if (!id) return;
-    if (!confirm('¿Deseas desactivar este producto?')) return;
+    if (!confirm('¿Deseas eliminar este producto? Se quitará del catálogo principal.')) return;
 
     const box = document.getElementById('productCreateResult');
     const res = await apiCall('/admin_supply.php?action=product-delete', 'POST', { id: id });
     if (!res || !res.success) {
-        if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible desactivar producto')}</div>`;
+        if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible eliminar producto')}</div>`;
         return;
     }
 
-    if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Producto desactivado')}</div>`;
+    if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Producto eliminado')}</div>`;
     if (Number(document.getElementById('newProductEditId').value || 0) === Number(id)) {
         resetProductForm();
     }
