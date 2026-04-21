@@ -119,7 +119,7 @@ function ticket_quote_product_code($item) {
             font-family: Arial, Helvetica, sans-serif;
         }
         .ticket {
-            width: <?php echo $format === 'a4' ? '760px' : '340px'; ?>;
+            width: min(100%, <?php echo $format === 'a4' ? '760px' : '340px'; ?>);
             margin: 0 auto;
             background: var(--ui-surface);
             border: 1px solid var(--ui-border);
@@ -149,6 +149,17 @@ function ticket_quote_product_code($item) {
         .item-separator { border-top: 1px solid #dfdfdf; margin: 8px 0 10px; }
         .total-row { text-align: right; font-size: 40px; font-weight: 800; margin-top: 8px; }
         .thanks { margin-top: 12px; font-size: 33px; }
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            h1 { font-size: 28px; }
+            .row { font-size: 20px; }
+            .section-title { font-size: 22px; }
+            .item-name { font-size: 20px; }
+            .item-code { font-size: 16px; }
+            .item-line { font-size: 18px; }
+            .total-row { font-size: 24px; }
+            .thanks { font-size: 18px; }
+        }
         @media print {
             .format-switch, .theme-toggle { display: none; }
             html, body { background: #fff !important; color: #000 !important; padding: 0; }

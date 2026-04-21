@@ -285,3 +285,37 @@
     gap: 1rem;
     justify-content: flex-end;
 }
+
+@media (max-width: 1024px) {
+    .dashboard-container {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .order-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.55rem;
+    }
+
+    .product-card {
+        grid-template-columns: 1fr;
+        gap: 0.7rem;
+    }
+
+    .task-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.4rem;
+    }
+
+    .task-actions {
+        flex-wrap: wrap;
+    }
+
+    .summary-row.total {
+        font-size: 1.1rem;
+    }
+}

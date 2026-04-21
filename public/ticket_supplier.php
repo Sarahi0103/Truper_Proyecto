@@ -49,7 +49,7 @@ function display_product_code($sku) {
     <link rel="stylesheet" href="css/theme.css">
     <style>
         body { font-family: monospace; margin: 0; padding: 10px; background: var(--ui-bg); color: var(--ui-text); }
-        .ticket { width: <?php echo $format === 'a4' ? '760px' : '300px'; ?>; margin: 0 auto; background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: 6px; padding: 10px; box-sizing: border-box; }
+        .ticket { width: min(100%, <?php echo $format === 'a4' ? '760px' : '300px'; ?>); margin: 0 auto; background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: 6px; padding: 10px; box-sizing: border-box; }
         h1 { text-align: center; font-size: 18px; margin: 0 0 8px; }
         .line { border-top: 1px dashed var(--ui-border); margin: 8px 0; }
         .row { margin-bottom: 6px; }
