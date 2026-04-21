@@ -117,55 +117,75 @@ function ticket_quote_product_code($item) {
             background: var(--ui-bg);
             color: var(--ui-text);
             font-family: Arial, Helvetica, sans-serif;
+            font-size: 15px;
         }
         .ticket {
-            width: min(100%, <?php echo $format === 'a4' ? '760px' : '340px'; ?>);
+            width: min(100%, <?php echo $format === 'a4' ? '760px' : '400px'; ?>);
             margin: 0 auto;
             background: var(--ui-surface);
             border: 1px solid var(--ui-border);
-            border-radius: 6px;
-            padding: 14px;
+            border-radius: 8px;
+            padding: 20px;
             box-sizing: border-box;
         }
         h1 {
             text-align: left;
-            font-size: 38px;
+            font-size: 1.8rem;
             margin: 0 0 12px;
             font-weight: 800;
-            letter-spacing: 0.2px;
+            letter-spacing: 0.5px;
+            color: var(--theme-accent);
         }
         .line { border-top: 1px solid var(--ui-border); margin: 12px 0; }
-        .row { margin-bottom: 6px; font-size: 34px; }
-        .format-switch { text-align: center; margin-bottom: 10px; }
-        .format-switch a { color: var(--theme-accent); }
+        .row { margin-bottom: 6px; font-size: 0.97rem; }
+        .format-switch { text-align: center; margin-bottom: 14px; font-size: 0.9rem; }
+        .format-switch a { color: var(--theme-accent); text-decoration: none; margin: 0 6px; }
+        .format-switch a:hover { text-decoration: underline; }
         .section-title {
-            font-size: 36px;
+            font-size: 1rem;
             font-weight: 700;
-            margin: 4px 0 8px;
+            margin: 8px 0 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--theme-text-muted);
         }
-        .item-name { font-size: 34px; margin-bottom: 2px; }
-        .item-code { font-size: 28px; color: var(--ui-text-muted); margin-bottom: 2px; }
-        .item-line { display: flex; justify-content: space-between; gap: 10px; font-size: 33px; }
-        .item-separator { border-top: 1px solid #dfdfdf; margin: 8px 0 10px; }
-        .total-row { text-align: right; font-size: 40px; font-weight: 800; margin-top: 8px; }
-        .thanks { margin-top: 12px; font-size: 33px; }
-        @media (max-width: 768px) {
-            body { padding: 10px; }
-            h1 { font-size: 28px; }
-            .row { font-size: 20px; }
-            .section-title { font-size: 22px; }
-            .item-name { font-size: 20px; }
-            .item-code { font-size: 16px; }
-            .item-line { font-size: 18px; }
-            .total-row { font-size: 24px; }
-            .thanks { font-size: 18px; }
+        .item-name { font-size: 0.95rem; font-weight: 600; margin-bottom: 2px; }
+        .item-code { font-size: 0.82rem; color: var(--ui-text-muted); margin-bottom: 2px; }
+        .item-line { display: flex; justify-content: space-between; gap: 10px; font-size: 0.92rem; }
+        .item-separator { border-top: 1px solid var(--ui-border); margin: 8px 0 10px; }
+        .total-row { text-align: right; font-size: 1.35rem; font-weight: 800; margin-top: 12px; color: var(--theme-accent); }
+        .thanks { margin-top: 12px; font-size: 0.88rem; color: var(--ui-text-muted); text-align: center; }
+
+        @media (max-width: 480px) {
+            body { padding: 8px; }
+            .ticket { padding: 14px; }
         }
+
         @media print {
-            .format-switch, .theme-toggle { display: none; }
-            html, body { background: #fff !important; color: #000 !important; padding: 0; }
-            .ticket { border: 1px solid #000 !important; border-radius: 0; width: 100%; background: #fff !important; color: #000 !important; }
+            .format-switch, .theme-toggle { display: none !important; }
+            html, body {
+                background: #fff !important;
+                color: #000 !important;
+                padding: 0;
+                font-size: 9pt;
+            }
+            .ticket {
+                border: none !important;
+                border-radius: 0;
+                width: 72mm;
+                padding: 4mm;
+                background: #fff !important;
+                color: #000 !important;
+            }
+            h1 { font-size: 14pt; color: #000 !important; margin-bottom: 4mm; }
+            .row { font-size: 9pt; }
+            .section-title { font-size: 9pt; }
+            .item-name { font-size: 9pt; }
+            .item-code { font-size: 8pt; color: #000 !important; }
+            .item-line { font-size: 9pt; }
+            .total-row { font-size: 12pt; color: #000 !important; }
+            .thanks { font-size: 8pt; }
             .line, .item-separator { border-top-color: #000 !important; }
-            .item-code { color: #000 !important; }
         }
     </style>
     <script src="/js/jspdf.umd.min.js"></script>

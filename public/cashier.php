@@ -24,18 +24,20 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
     <div class="header-content">
         <a href="dashboard.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
         <nav class="nav-menu">
-            <a href="index.php">Productos</a>
+            <a href="/" >Inicio</a>
             <a href="orders.php">Pedidos</a>
             <a href="wholesale.php">Mayoreo</a>
             <a href="cashier.php" class="active">Caja</a>
           <a href="admin_supply.php">Abastecimiento</a>
             <a href="analytics.php">Estadisticas</a>
+            <a href="marketplace_ce.php">Marketplace CE</a>
           <a href="profile.php">Perfil</a>
         </nav>
     </div>
     <div class="user-menu">
+        <div class="theme-toggle"><button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo claro</span></button></div>
         <div class="user-info"><div class="user-name"><?php echo $user_name; ?></div></div>
-      <a href="index.php" class="btn btn-small btn-ghost">Ver portada</a>
+      <a href="/" class="btn btn-small btn-ghost">Ver portada</a>
         <button class="btn-logout" onclick="window.location.href='api/auth.php?action=logout'">Cerrar Sesion</button>
     </div>
 </header>

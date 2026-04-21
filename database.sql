@@ -335,3 +335,87 @@ INSERT INTO system_config (config_key, config_value) VALUES
 ('currency', 'CLP'),
 ('timezone', 'America/Santiago')
 ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- Tablas complementarias (creadas dinámicamente por el sistema)
+-- ============================================================
+
+-- Actualizaciones en el banner/héroe de la página principal
+CREATE TABLE IF NOT EXISTS homepage_updates (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(220),
+    body TEXT,
+    link_url TEXT,
+    link_label VARCHAR(100),
+    image_url TEXT,
+    position INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT true,
+    created_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Artículos de segunda mano (Marketplace CE)
+CREATE TABLE IF NOT EXISTS marketplace_ce_products (
+    id SERIAL PRIMARY KEY,
+    sku VARCHAR(100) UNIQUE NOT NULL,
+    name VARCHAR(220) NOT NULL,
+    description TEXT NOT NULL,
+    condition_label VARCHAR(80) NOT NULL DEFAULT 'Seminuevo',
+    category VARCHAR(120),
+    unit_price DECIMAL(12,2) NOT NULL DEFAULT 0,
+    stock_quantity INTEGER NOT NULL DEFAULT 1,
+    image_url TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_by INTEGER REFERENCES users(id),
+    updated_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Metas mensuales de caja
+CREATE TABLE IF NOT EXISTS cash_monthly_goals (
+    id SERIAL PRIMARY KEY,
+    month_key VARCHAR(7) NOT NULL UNIQUE,   -- YYYY-MM
+    target_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+    created_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Notas de control de pago (cliente / proveedor, plazos)
+CREATE TABLE IF NOT EXISTS cash_control_notes (
+    id SERIAL PRIMARY KEY,
+    note_folio VARCHAR(60) NOT NULL UNIQUE,
+    note_type VARCHAR(20) NOT NULL DEFAULT 'customer', -- customer, supplier
+    total_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+    amount_paid DECIMAL(12,2) NOT NULL DEFAULT 0,
+    payment_term VARCHAR(20) NOT NULL DEFAULT 'contado', -- contado, 15dias, 30dias
+    due_date DATE,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending', -- pending, partial, paid, overdue
+    reference_ticket VARCHAR(80),
+    description TEXT,
+    created_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Pagos/abonos a notas de control
+CREATE TABLE IF NOT EXISTS cash_note_payments (
+    id SERIAL PRIMARY KEY,
+    note_id INTEGER NOT NULL REFERENCES cash_control_notes(id) ON DELETE CASCADE,
+    amount DECIMAL(12,2) NOT NULL,
+    payment_method VARCHAR(40) NOT NULL DEFAULT 'cash',
+    payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    notes TEXT,
+    created_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Índices adicionales
+CREATE INDEX IF NOT EXISTS idx_marketplace_ce_active ON marketplace_ce_products(is_active);
+CREATE INDEX IF NOT EXISTS idx_cash_goals_month ON cash_monthly_goals(month_key);
+CREATE INDEX IF NOT EXISTS idx_cash_notes_status ON cash_control_notes(status);
+CREATE INDEX IF NOT EXISTS idx_cash_notes_due ON cash_control_notes(due_date);
+CREATE INDEX IF NOT EXISTS idx_cash_note_payments_note ON cash_note_payments(note_id);
+

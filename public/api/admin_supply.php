@@ -2997,6 +2997,25 @@ try {
             $response = ['success' => true, 'items' => $stmt->fetchAll()];
             break;
 
+        case 'history-clear':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+            $month = (int)($input['month'] ?? 0);
+            $year  = (int)($input['year'] ?? 0);
+            if ($month < 1 || $month > 12 || $year < 2020) {
+                $response = ['success' => false, 'message' => 'Mes o año inválido'];
+                break;
+            }
+            $stmt = $pdo->prepare(
+                "DELETE FROM transaction_history WHERE EXTRACT(MONTH FROM created_at) = ? AND EXTRACT(YEAR FROM created_at) = ?"
+            );
+            $stmt->execute([$month, $year]);
+            $deleted = $stmt->rowCount();
+            $response = ['success' => true, 'message' => "Se eliminaron {$deleted} registros del historial", 'deleted' => $deleted];
+            break;
+
         default:
             $response = ['success' => false, 'message' => 'Accion no reconocida'];
     }

@@ -29,15 +29,17 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                 <?php if ($is_admin): ?><a href="admin_supply.php">Abastecimiento</a><?php endif; ?>
                 <a href="tasks.php">Tareas</a>
                 <a href="analytics.php" class="active">Estadísticas</a>
+                <a href="marketplace_ce.php">Marketplace CE</a>
                 <a href="profile.php">Perfil</a>
             </nav>
         </div>
         <div class="user-menu">
+            <div class="theme-toggle"><button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo claro</span></button></div>
             <div class="user-info">
                 <div class="user-name"><?php echo $user_name; ?></div>
                 <div class="user-role"><?php echo ucfirst($user_role); ?></div>
             </div>
-            <a href="index.php" class="btn btn-small btn-ghost">Ver portada</a>
+            <a href="/" class="btn btn-small btn-ghost">Ver portada</a>
             <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
         </div>
     </header>
