@@ -13,6 +13,75 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/theme.css">
     <style>
+        .admin-supply-shell {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .admin-supply-shell .page-hero {
+            background: linear-gradient(145deg, var(--ui-surface), var(--ui-surface-soft));
+            border: 1px solid var(--ui-border);
+            border-radius: 14px;
+            padding: 1.05rem 1.1rem;
+            box-shadow: var(--ui-shadow);
+            margin-bottom: 0;
+        }
+
+        .admin-overview-grid {
+            margin-top: 0;
+            gap: 1rem;
+        }
+
+        .admin-overview-card {
+            border-radius: 12px;
+            border: 1px solid var(--ui-border);
+            background: var(--ui-surface);
+            box-shadow: 0 10px 24px rgba(17, 24, 39, 0.08);
+        }
+
+        .admin-overview-card .card-body {
+            padding: 1.1rem;
+        }
+
+        .admin-overview-card h3 {
+            margin-bottom: 0.3rem;
+            font-size: 1.15rem;
+        }
+
+        .admin-tabs {
+            margin-top: 0;
+            border: 1px solid var(--ui-border);
+            border-radius: 12px;
+            padding: 0.35rem;
+            background: var(--ui-surface);
+            position: sticky;
+            top: 72px;
+            z-index: 25;
+            box-shadow: 0 8px 20px rgba(17, 24, 39, 0.08);
+            gap: 0.35rem;
+        }
+
+        .admin-tabs .tab-button {
+            border-radius: 10px;
+            border-bottom: 0;
+            padding: 0.72rem 0.95rem;
+            font-weight: 600;
+        }
+
+        .admin-tabs .tab-button.active {
+            background: var(--theme-accent);
+            color: #fff;
+        }
+
+        .admin-tab-panel {
+            margin-top: 0;
+        }
+
+        .admin-tab-panel .card {
+            border-radius: 12px;
+        }
+
         .grid-4 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
         .calendar-weekdays,
         .calendar-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
@@ -140,6 +209,9 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             background: var(--ui-surface);
         }
         @media (max-width: 900px) {
+            .admin-tabs {
+                top: 64px;
+            }
             .admin-quick-grid {
                 grid-template-columns: 1fr;
             }
@@ -147,6 +219,18 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 min-width: 0;
                 flex-direction: row;
                 flex-wrap: wrap;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .admin-tabs {
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                padding-bottom: 0.4rem;
+            }
+
+            .admin-tabs .tab-button {
+                white-space: nowrap;
             }
         }
     </style>
@@ -172,22 +256,22 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
 </header>
 
 <main>
-    <div class="container-fluid">
+    <div class="container-fluid admin-supply-shell">
         <div class="page-hero">
             <div class="module-badge module-admin"><span class="module-glyph">AD</span> Módulo administrativo</div>
             <h1>Panel de Abastecimiento</h1>
             <p class="text-muted">Control de existencias, calendario de proveedores, ordenes de compra y historico.</p>
         </div>
 
-        <div class="grid grid-2 mt-3">
-            <div class="card">
+        <div class="grid grid-2 mt-3 admin-overview-grid">
+            <div class="card admin-overview-card">
                 <div class="card-body">
                     <h3>Acceso rápido a clientes</h3>
                     <p class="text-muted">Registrar y consultar el acceso del cliente sin usar contraseña.</p>
                     <button class="btn btn-primary" onclick="goToClientsTab()">Ir al registro de cliente</button>
                 </div>
             </div>
-            <div class="card">
+            <div class="card admin-overview-card">
                 <div class="card-body">
                     <h3>Inicio de sesión del cliente</h3>
                     <p class="text-muted">El cliente entra con código único y fecha de nacimiento obligatoria.</p>
@@ -196,7 +280,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             </div>
         </div>
 
-        <div class="tabs mt-3">
+        <div class="tabs mt-3 admin-tabs">
             <button class="tab-button active" data-tab="stockTab">Stock</button>
             <button class="tab-button" data-tab="calendarTab">Calendario</button>
             <button class="tab-button" data-tab="supplierOrderTab">Orden Proveedor</button>
@@ -209,7 +293,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             <button class="tab-button" data-tab="marketplaceTab">Marketplace CE</button>
         </div>
 
-        <section id="stockTab" class="tab-content active">
+        <section id="stockTab" class="tab-content active admin-tab-panel">
             <div class="card mb-3 admin-editor-card admin-editor-card-stock"><div class="card-body">
                 <div class="section-kicker section-kicker-stock">Stock interno</div>
                 <h3>Agregar Producto</h3>
@@ -312,7 +396,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             </div></div>
         </section>
 
-        <section id="updatesTab" class="tab-content">
+        <section id="updatesTab" class="tab-content admin-tab-panel">
             <div class="card mb-3 admin-editor-card"><div class="card-body">
                 <h3>Noticias y promociones de portada</h3>
                 <p class="text-muted">Administra el carrusel automático que se muestra en la página principal.</p>
@@ -363,7 +447,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             </div></div>
         </section>
 
-        <section id="calendarTab" class="tab-content">
+        <section id="calendarTab" class="tab-content admin-tab-panel">
             <div class="grid grid-2">
                 <div class="card"><div class="card-body">
                     <h3>Registrar visita de proveedor</h3>
@@ -385,7 +469,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             </div>
         </section>
 
-        <section id="supplierOrderTab" class="tab-content">
+        <section id="supplierOrderTab" class="tab-content admin-tab-panel">
             <div class="card mb-3"><div class="card-body">
                 <h3>Asignar producto a proveedor</h3>
                 <p class="text-muted">Un mismo producto puede estar ligado a varios proveedores.</p>
@@ -426,7 +510,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             </div></div>
         </section>
 
-        <section id="clientsTab" class="tab-content">
+        <section id="clientsTab" class="tab-content admin-tab-panel">
             <div class="card"><div class="card-body">
                 <h3>Registrar Cliente (Admin)</h3>
                 <p class="text-muted">Crea clientes y genera su código único para identificación rápida.</p>
@@ -462,7 +546,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             </div></div>
         </section>
 
-        <section id="historyTab" class="tab-content">
+        <section id="historyTab" class="tab-content admin-tab-panel">
             <div class="card"><div class="card-body">
                 <h3>Historico de Transacciones</h3>
                 <table>
@@ -472,7 +556,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             </div></div>
         </section>
 
-        <section id="visibilityTab" class="tab-content">
+        <section id="visibilityTab" class="tab-content admin-tab-panel">
             <div class="card mb-3"><div class="card-body">
                 <h3>Control de Visibilidad de Productos</h3>
                 <p class="text-muted">Marca o desmarca productos para mostrar/ocultar en el catálogo público. Los cambios aplican inmediatamente.</p>
@@ -485,7 +569,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             </div></div>
         </section>
 
-        <section id="pricesTab" class="tab-content">
+        <section id="pricesTab" class="tab-content admin-tab-panel">
             <div class="card mb-3"><div class="card-body">
                 <h3>Ajuste de Precios Masivo</h3>
                 <p class="text-muted">Aplica un cambio de precio a múltiples productos. Usa % para porcentaje o $ para monto fijo.</p>
@@ -523,7 +607,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             </div></div>
         </section>
 
-        <section id="categoriesTab" class="tab-content">
+        <section id="categoriesTab" class="tab-content admin-tab-panel">
             <div class="card mb-3"><div class="card-body">
                 <h3>Gestión de Categorías</h3>
                 <p class="text-muted">Administra las categorías disponibles para alta de productos. Esto evita duplicados por errores de escritura.</p>
@@ -556,7 +640,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             </div></div>
         </section>
 
-        <section id="marketplaceTab" class="tab-content">
+        <section id="marketplaceTab" class="tab-content admin-tab-panel">
             <div class="card mb-3 admin-editor-card admin-editor-card-marketplace"><div class="card-body">
                 <div class="section-kicker section-kicker-marketplace">Marketplace CE</div>
                 <h3>Marketplace CE - Gestión de artículos</h3>
