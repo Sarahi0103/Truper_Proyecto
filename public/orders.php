@@ -12,8 +12,70 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pedidos - Truper Platform</title>
     <link rel="stylesheet" href="css/styles.css">    <link rel="stylesheet" href="css/theme.css">    <link rel="stylesheet" href="css/dashboard.css">
+    <style>
+        .orders-page .tabs {
+            border: 1px solid var(--ui-border);
+            border-radius: 12px;
+            padding: 0.35rem;
+            background: var(--ui-surface);
+            gap: 0.4rem;
+        }
+
+        .orders-page .tab-button {
+            border-radius: 9px;
+            border-bottom: 0;
+        }
+
+        .orders-page .tab-button.active {
+            color: #fff;
+        }
+
+        .orders-page .form-section h3 {
+            color: var(--ui-text);
+        }
+
+        .orders-page #orderSearch,
+        .orders-page #orderFilter,
+        .orders-page #productSearch,
+        .orders-page #productCategoryFilter,
+        .orders-page #qty {
+            background: var(--ui-surface);
+            color: var(--ui-text);
+            border: 1px solid var(--ui-border);
+        }
+
+        .orders-page .order-summary {
+            background: var(--ui-surface);
+            border: 1px solid var(--ui-border);
+            border-radius: 12px;
+        }
+
+        .orders-page .summary-row {
+            color: var(--ui-text);
+        }
+
+        .orders-page table {
+            background: var(--ui-surface);
+            border: 1px solid var(--ui-border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .orders-page thead,
+        .orders-page thead th {
+            background: var(--ui-surface-soft);
+            color: var(--ui-text);
+            border-color: var(--ui-border);
+        }
+
+        .orders-page tbody td {
+            color: var(--ui-text);
+            border-color: var(--ui-border);
+            background: transparent;
+        }
+    </style>
 </head>
-<body>
+<body class="orders-page">
     <!-- HEADER -->
     <header>
         <div class="header-content">
@@ -97,9 +159,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
                 <div class="card">
                     <div class="card-header">Crear Nueva Cotización</div>
                     <div class="card-body">
-                        <div class="alert alert-info" style="margin-bottom: 1rem;">
-                            Este portal no procesa pagos en línea. Las cotizaciones y dudas se envían por WhatsApp al <strong><?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?></strong>.
-                        </div>
+                        <div class="alert alert-info" style="margin-bottom: 1rem;">Este portal no procesa pagos en línea.</div>
                         <div class="form-section">
                             <h3>Seleccionar Productos</h3>
                             <input type="text" id="productSearch" placeholder="Buscar productos..." onkeyup="searchProducts()" style="padding: 0.5rem; margin-bottom: 1rem; width: 100%;">
