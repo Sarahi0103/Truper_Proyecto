@@ -133,27 +133,29 @@ function set_marketplace_visibility_compatible($pdo, int $id, bool $isVisible): 
         throw new Exception('ID de artículo CE inválido');
     }
 
-    $activeColumn = first_existing_column_admin_supply('marketplace_ce_products', ['is_active', 'active']);
-    if ($activeColumn === null) {
-        throw new Exception('No existe columna de visibilidad en marketplace_ce_products');
+    // Try 'is_active' column first
+    try {
+        $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET is_active = ? WHERE id = ?');
+        $stmt->execute([$isVisible ? 1 : 0, $id]);
+        if ($stmt->rowCount() > 0) {
+            return;
+        }
+    } catch (Exception $e) {
+        // Column may not exist, try next
     }
 
-    $sets = [
-        $activeColumn . ' = ?'
-    ];
-    $values = [$isVisible ? 1 : 0];
-
-    if (db_column_exists('marketplace_ce_products', 'updated_by')) {
-        $sets[] = 'updated_by = ?';
-        $values[] = (int)($_SESSION['user_id'] ?? 0);
-    }
-    if (db_column_exists('marketplace_ce_products', 'updated_at')) {
-        $sets[] = 'updated_at = CURRENT_TIMESTAMP';
+    // Try 'active' column second
+    try {
+        $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET active = ? WHERE id = ?');
+        $stmt->execute([$isVisible ? 1 : 0, $id]);
+        if ($stmt->rowCount() > 0) {
+            return;
+        }
+    } catch (Exception $e) {
+        // Column may not exist, try next
     }
 
-    $values[] = $id;
-    $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET ' . implode(', ', $sets) . ' WHERE id = ?');
-    $stmt->execute($values);
+    throw new Exception('No existe columna de visibilidad (is_active o active) en marketplace_ce_products');
 }
 
 function normalized_sku_exists_in_table_admin_supply($pdo, string $table, string $sku, int $excludeId = 0): bool {
@@ -1271,19 +1273,29 @@ function set_product_visibility_compatible($pdo, int $id, bool $isVisible): void
         throw new Exception('ID de producto inválido');
     }
 
-    if (db_column_exists('products', 'is_active')) {
+    // Try 'active' column first (most common)
+    try {
+        $stmt = $pdo->prepare('UPDATE products SET active = ? WHERE id = ?');
+        $stmt->execute([$isVisible ? 1 : 0, $id]);
+        if ($stmt->rowCount() > 0) {
+            return;
+        }
+    } catch (Exception $e) {
+        // Column may not exist, try next
+    }
+
+    // Try 'is_active' column second
+    try {
         $stmt = $pdo->prepare('UPDATE products SET is_active = ? WHERE id = ?');
         $stmt->execute([$isVisible ? true : false, $id]);
-        return;
+        if ($stmt->rowCount() > 0) {
+            return;
+        }
+    } catch (Exception $e) {
+        // Column may not exist, try next
     }
 
-    if (db_column_exists('products', 'active')) {
-            $stmt = $pdo->prepare('UPDATE products SET active = ? WHERE id = ?');
-            $stmt->execute([$isVisible ? 1 : 0, $id]);
-        return;
-    }
-
-    throw new Exception('No existe columna de visibilidad en products');
+    throw new Exception('No existe columna de visibilidad (active o is_active) en la tabla products');
 }
 
 function ensure_products_seeded_for_admin_supply($pdo): void {
@@ -2044,6 +2056,56 @@ try {
             $response = [
                 'success' => true,
                 'message' => $isVisible ? 'Artículo CE visible' : 'Artículo CE oculto'
+            ];
+            break;
+
+        case 'marketplace-image-upload':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $sku = normalize_sku_admin_supply($_POST['sku'] ?? ($input['sku'] ?? ''));
+            if (!is_valid_numeric_sku_admin_supply($sku)) {
+                $response = ['success' => false, 'message' => 'SKU inválido'];
+                break;
+            }
+
+            $uploaded = [];
+            $fileInput = $_FILES['images'] ?? $_FILES['image'] ?? null;
+            if (!$fileInput) {
+                $response = ['success' => false, 'message' => 'Selecciona una o varias imágenes'];
+                break;
+            }
+
+            $files = isset($fileInput['name']) && is_array($fileInput['name']) ? normalize_uploaded_files($fileInput) : [$fileInput];
+            foreach ($files as $file) {
+                if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                    continue;
+                }
+                $uploaded[] = store_product_image($file);
+            }
+
+            if (empty($uploaded)) {
+                $response = ['success' => false, 'message' => 'No se pudieron subir las imágenes'];
+                break;
+            }
+
+            // Update marketplace product with the first uploaded image
+            if (!empty($uploaded)) {
+                $mkImageCol = first_existing_column_admin_supply('marketplace_ce_products', ['image_url', 'image', 'photo_url']);
+                if ($mkImageCol !== null) {
+                    $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET ' . $mkImageCol . ' = ? WHERE sku = ? LIMIT 1');
+                    $stmt->execute([$uploaded[0], $sku]);
+                }
+            }
+
+            $response = [
+                'success' => true,
+                'message' => 'Imágenes CE cargadas correctamente',
+                'sku' => $sku,
+                'uploaded' => $uploaded,
+                'cover' => $uploaded[0] ?? null
             ];
             break;
 
@@ -2995,25 +3057,6 @@ try {
             }
             $stmt = $pdo->query("SELECT id, transaction_type, reference_folio, data_json, created_at FROM transaction_history ORDER BY created_at DESC LIMIT 300");
             $response = ['success' => true, 'items' => $stmt->fetchAll()];
-            break;
-
-        case 'history-clear':
-            if ($method !== 'POST') {
-                $response = ['success' => false, 'message' => 'Metodo no permitido'];
-                break;
-            }
-            $month = (int)($input['month'] ?? 0);
-            $year  = (int)($input['year'] ?? 0);
-            if ($month < 1 || $month > 12 || $year < 2020) {
-                $response = ['success' => false, 'message' => 'Mes o año inválido'];
-                break;
-            }
-            $stmt = $pdo->prepare(
-                "DELETE FROM transaction_history WHERE EXTRACT(MONTH FROM created_at) = ? AND EXTRACT(YEAR FROM created_at) = ?"
-            );
-            $stmt->execute([$month, $year]);
-            $deleted = $stmt->rowCount();
-            $response = ['success' => true, 'message' => "Se eliminaron {$deleted} registros del historial", 'deleted' => $deleted];
             break;
 
         default:

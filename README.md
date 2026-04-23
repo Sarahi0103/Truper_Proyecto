@@ -65,8 +65,6 @@ CREATE DATABASE truper_platform OWNER truper_admin;
 \i database.sql
 ```
 
-Nota:
-- Si usas Docker Compose, este paso es opcional porque el esquema se inicializa automaticamente al primer arranque.
 
 ### 2. Configurar PHP
 

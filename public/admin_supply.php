@@ -544,19 +544,11 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
         </section>
 
         <section id="historyTab" class="tab-content admin-tab-panel">
-            <div class="card" style="margin-bottom:1rem;">
-                <div class="card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
-                    <div>
-                        <h3 style="margin:0 0 4px;">Histórico de Transacciones</h3>
-                        <p class="text-muted" style="margin:0;font-size:0.88rem;">Registro mensual de tickets y órdenes. El historial puede limpiarse al inicio de cada mes.</p>
-                    </div>
-                    <button class="btn btn-danger btn-small" onclick="clearHistoryMonth()" title="Elimina registros del mes anterior">🗑️ Limpiar historial mes anterior</button>
-                </div>
-            </div>
             <div class="card"><div class="card-body">
+                <h3>Historico de Transacciones</h3>
                 <table>
-                    <thead><tr><th>Tipo</th><th>Folio/Ref</th><th>Fecha</th><th>Datos</th><th>Acciones</th></tr></thead>
-                    <tbody id="historyRows"><tr><td colspan="5">Cargando...</td></tr></tbody>
+                    <thead><tr><th>Tipo</th><th>Folio/Ref</th><th>Fecha</th><th>Datos</th></tr></thead>
+                    <tbody id="historyRows"><tr><td colspan="4">Cargando...</td></tr></tbody>
                 </table>
             </div></div>
         </section>
@@ -2078,61 +2070,15 @@ async function loadHistory() {
     const res = await apiCall('/admin_supply.php?action=history', 'GET', null, { silent: true });
     const body = document.getElementById('historyRows');
     if (!res || !res.success || !Array.isArray(res.items) || res.items.length === 0) {
-        body.innerHTML = '<tr><td colspan="5">Sin registros en el historial</td></tr>';
+        body.innerHTML = '<tr><td colspan="4">Sin registros</td></tr>';
         return;
     }
-    body.innerHTML = res.items.map(i => {
-        // Build reprint URL based on transaction type
-        let reprintBtn = '<span class="text-muted" style="font-size:0.8rem;">—</span>';
-        const folio = escapeHtml(i.reference_folio || '');
-        const type = (i.transaction_type || '').toLowerCase();
-        const dataRaw = i.data_json || '{}';
-        let parsedData = {};
-        try { parsedData = JSON.parse(dataRaw); } catch(e) {}
-
-        if (type === 'quote' || type === 'ticket' || type === 'cotizacion') {
-            const client = encodeURIComponent(parsedData.client || 'PUBLICO');
-            const total = encodeURIComponent(parsedData.total || '0');
-            const issuedAt = encodeURIComponent(parsedData.issued_at || i.created_at || '');
-            const itemsB64 = parsedData.items_b64 ? encodeURIComponent(parsedData.items_b64) : '';
-            const url = `/ticket_quote.php?folio=${encodeURIComponent(folio)}&issued_at=${issuedAt}&client=${client}&total=${total}&items=${itemsB64}`;
-            reprintBtn = `<a class="btn btn-small btn-primary" href="${url}" target="_blank">🖨️ Reimprimir</a>`;
-        } else if (type.includes('supplier') || type.includes('orden') || type.includes('order')) {
-            if (parsedData.supplier_order_id) {
-                reprintBtn = `<a class="btn btn-small btn-secondary" href="/ticket_supplier.php?id=${encodeURIComponent(parsedData.supplier_order_id)}" target="_blank">🖨️ Reimprimir</a>`;
-            }
-        }
-
-        const dataPreview = Object.keys(parsedData).length > 0
-            ? Object.entries(parsedData).slice(0, 3).map(([k, v]) => `<b>${escapeHtml(String(k))}:</b> ${escapeHtml(String(v).slice(0, 30))}`).join(' · ')
-            : escapeHtml(String(dataRaw).slice(0, 80));
-
-        return `<tr>
-            <td><span class="badge badge-info">${escapeHtml(i.transaction_type)}</span></td>
-            <td><strong>${folio}</strong></td>
-            <td><small>${escapeHtml(i.created_at)}</small></td>
-            <td><small>${dataPreview}</small></td>
-            <td>${reprintBtn}</td>
-        </tr>`;
-    }).join('');
-}
-
-async function clearHistoryMonth() {
-    const prevMonth = new Date();
-    prevMonth.setMonth(prevMonth.getMonth() - 1);
-    const label = prevMonth.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
-    if (!confirm(`¿Confirmas eliminar todos los registros del historial de ${label}? Esta acción no se puede deshacer.`)) return;
-
-    const res = await apiCall('/admin_supply.php?action=history-clear', 'POST', {
-        month: prevMonth.getMonth() + 1,
-        year: prevMonth.getFullYear()
-    });
-    if (res && res.success) {
-        showAlert(res.message || 'Historial limpiado', 'success');
-        await loadHistory();
-    } else {
-        showAlert((res && res.message) ? res.message : 'No fue posible limpiar el historial', 'error');
-    }
+    body.innerHTML = res.items.map(i => `<tr>
+        <td>${escapeHtml(i.transaction_type)}</td>
+        <td>${escapeHtml(i.reference_folio)}</td>
+        <td>${escapeHtml(i.created_at)}</td>
+        <td><small>${escapeHtml(i.data_json || '')}</small></td>
+    </tr>`).join('');
 }
 
 async function saveClientByAdmin() {
@@ -2746,7 +2692,7 @@ async function uploadMarketplaceImages() {
     });
 
     try {
-        const response = await fetch('/api/admin_supply.php?action=product-gallery-upload', {
+        const response = await fetch('/api/admin_supply.php?action=marketplace-image-upload', {
             method: 'POST',
             body: formData,
             credentials: 'same-origin',
