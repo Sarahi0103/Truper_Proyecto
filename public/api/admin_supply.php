@@ -1234,10 +1234,8 @@ function update_product_compatible($pdo, int $id, array $payload): void {
     if (db_column_exists('products', 'reorder_level')) { $sets[] = 'reorder_level = ?'; $values[] = (int)$payload['reorder_level']; }
     if (db_column_exists('products', 'unit_price')) { $sets[] = 'unit_price = ?'; $values[] = (float)$payload['price']; }
     elseif (db_column_exists('products', 'sell_price')) { $sets[] = 'sell_price = ?'; $values[] = (float)$payload['price']; }
-    if (array_key_exists('is_active', $payload) && db_column_exists('products', 'is_active')) { $sets[] = 'is_active = ?'; $values[] = normalize_bool_admin_supply($payload['is_active'] ?? null, true); }
-    elseif (array_key_exists('is_active', $payload) && db_column_exists('products', 'active')) { $sets[] = 'active = ?'; $values[] = normalize_bool_admin_supply($payload['is_active'] ?? null, true) ? 1 : 0; }
     if (db_column_exists('products', 'updated_at')) { $sets[] = 'updated_at = CURRENT_TIMESTAMP'; }
-
+    
     if (empty($sets)) {
         throw new Exception('No hay columnas disponibles para actualizar el producto');
     }
@@ -1245,57 +1243,11 @@ function update_product_compatible($pdo, int $id, array $payload): void {
     $values[] = $id;
     $stmt = $pdo->prepare('UPDATE products SET ' . implode(', ', $sets) . ' WHERE id = ?');
     $stmt->execute($values);
-}
-
-function deactivate_product_compatible($pdo, int $id): void {
-    if ($id <= 0) {
-        throw new Exception('ID de producto inválido');
+    
+    // Handle visibility separately to avoid type errors
+    if (array_key_exists('is_active', $payload)) {
+        set_product_visibility_compatible($pdo, $id, normalize_bool_admin_supply($payload['is_active'] ?? null, true));
     }
-
-    if (db_column_exists('products', 'is_active')) {
-        $stmt = $pdo->prepare('UPDATE products SET is_active = false WHERE id = ?');
-        $stmt->execute([$id]);
-        return;
-    }
-
-    if (db_column_exists('products', 'active')) {
-        $stmt = $pdo->prepare('UPDATE products SET active = 0 WHERE id = ?');
-        $stmt->execute([$id]);
-        return;
-    }
-
-    $stmt = $pdo->prepare('DELETE FROM products WHERE id = ?');
-    $stmt->execute([$id]);
-}
-
-function set_product_visibility_compatible($pdo, int $id, bool $isVisible): void {
-    if ($id <= 0) {
-        throw new Exception('ID de producto inválido');
-    }
-
-    // Try 'active' column first (most common)
-    try {
-        $stmt = $pdo->prepare('UPDATE products SET active = ? WHERE id = ?');
-        $stmt->execute([$isVisible ? 1 : 0, $id]);
-        if ($stmt->rowCount() > 0) {
-            return;
-        }
-    } catch (Exception $e) {
-        // Column may not exist, try next
-    }
-
-    // Try 'is_active' column second
-    try {
-        $stmt = $pdo->prepare('UPDATE products SET is_active = ? WHERE id = ?');
-        $stmt->execute([$isVisible ? true : false, $id]);
-        if ($stmt->rowCount() > 0) {
-            return;
-        }
-    } catch (Exception $e) {
-        // Column may not exist, try next
-    }
-
-    throw new Exception('No existe columna de visibilidad (active o is_active) en la tabla products');
 }
 
 function ensure_products_seeded_for_admin_supply($pdo): void {
