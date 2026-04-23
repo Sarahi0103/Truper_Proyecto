@@ -1553,12 +1553,12 @@ async function addCategoryFromQuickForm(selectId, inputId, resultId) {
         String(opt.value || '').trim().toLowerCase() === raw.toLowerCase()
     );
     if (alreadyExists) {
-        if (quickBox) quickBox.innerHTML = '<span style="color:#f59e0b;">Esa categoría ya existe.</span>';
-        showAlert('Esa categoría ya existe', 'warning');
+        if (quickBox) quickBox.innerHTML = '<span style="color:#ef4444;">❌ Esta categoría ya está agregada.</span>';
+        showAlert('Esta categoría ya está agregada', 'warning');
         return;
     }
 
-    if (quickBox) quickBox.innerHTML = '<span style="color:#cbd5e1;">Guardando categoría...</span>';
+    if (quickBox) quickBox.innerHTML = '<span style="color:#cbd5e1;">⏳ Guardando categoría...</span>';
 
     const payload = {
         id: 0,
@@ -1569,7 +1569,7 @@ async function addCategoryFromQuickForm(selectId, inputId, resultId) {
 
     const res = await apiCall('/admin_supply.php?action=categories-save', 'POST', payload);
     if (!res || !res.success) {
-        if (quickBox) quickBox.innerHTML = `<span style="color:#f87171;">${escapeHtml((res && res.message) ? res.message : 'No fue posible guardar la categoría.')}</span>`;
+        if (quickBox) quickBox.innerHTML = `<span style="color:#f87171;">❌ ${escapeHtml((res && res.message) ? res.message : 'No fue posible guardar la categoría.')}</span>`;
         showAlert((res && res.message) ? res.message : 'No fue posible guardar la categoría', 'error');
         return;
     }
@@ -1585,7 +1585,7 @@ async function addCategoryFromQuickForm(selectId, inputId, resultId) {
     }
 
     if (input) input.value = '';
-    if (quickBox) quickBox.innerHTML = '<span style="color:#22c55e;">Categoría guardada correctamente.</span>';
+    if (quickBox) quickBox.innerHTML = '<span style="color:#22c55e;">✓ Categoría guardada correctamente.</span>';
     showAlert(res.message || 'Categoría guardada', 'success');
     await refreshCategoriesUi();
 
@@ -2220,13 +2220,23 @@ async function loadProductCategories(onlyActive = true) {
             const selectedValues = new Set(
                 Array.from(selectEl.selectedOptions || []).map((option) => String(option.value || '').trim().toLowerCase())
             );
+            const seenCategories = new Set(); // Track categories we've already added to prevent duplicates
             selectEl.innerHTML = '';
             res.items.forEach((cat) => {
+                const categoryName = String(cat.name || '').trim();
+                const categoryNameLower = categoryName.toLowerCase();
+                
+                // Skip if we've already added this category
+                if (seenCategories.has(categoryNameLower)) {
+                    return;
+                }
+                seenCategories.add(categoryNameLower);
+                
                 const option = document.createElement('option');
-                option.value = cat.name;
-                option.textContent = cat.name;
+                option.value = categoryName;
+                option.textContent = categoryName;
                 option.dataset.id = String(Number(cat.id || 0));
-                option.selected = selectedValues.has(String(cat.name || '').trim().toLowerCase());
+                option.selected = selectedValues.has(categoryNameLower);
                 selectEl.appendChild(option);
             });
         };
