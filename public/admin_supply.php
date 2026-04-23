@@ -1287,21 +1287,62 @@ async function loadHomepageUpdatesAdmin() {
 }
 
 async function saveHomepageUpdate() {
+    // Validation
+    const title = document.getElementById('updateTitle')?.value?.trim() || '';
+    const body = document.getElementById('updateBody')?.value?.trim() || '';
+    const box = document.getElementById('updateResult');
+
+    if (!title) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El título es requerido.</div>';
+        showAlert('Título requerido', 'warning');
+        return;
+    }
+    if (title.length > 220) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El título no puede exceder 220 caracteres.</div>';
+        showAlert('Título muy largo', 'warning');
+        return;
+    }
+    if (!body) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El contenido es requerido.</div>';
+        showAlert('Contenido requerido', 'warning');
+        return;
+    }
+    if (body.length > 1200) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El contenido no puede exceder 1200 caracteres.</div>';
+        showAlert('Contenido muy largo', 'warning');
+        return;
+    }
+
+    const imageInput = document.getElementById('updateImage');
+    if (imageInput && imageInput.files.length > 0) {
+        const file = imageInput.files[0];
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (file.size > maxSize) {
+            if (box) box.innerHTML = '<div class="alert alert-error">La imagen no puede exceder 5MB.</div>';
+            showAlert('Imagen muy grande', 'warning');
+            return;
+        }
+        // Validate image type
+        if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+            if (box) box.innerHTML = '<div class="alert alert-error">Formato de imagen no soportado. Usa JPG, PNG, WebP o GIF.</div>';
+            showAlert('Formato de imagen inválido', 'warning');
+            return;
+        }
+    }
+
     // Use FormData to support file uploads
     const formData = new FormData();
     formData.append('id', Number(document.getElementById('updateEditId').value || 0));
     formData.append('update_type', document.getElementById('updateType').value);
     formData.append('sort_order', Number(document.getElementById('updateOrder').value || 0));
     formData.append('is_active', document.getElementById('updateActive').value === '1');
-    formData.append('title', document.getElementById('updateTitle').value);
-    formData.append('body', document.getElementById('updateBody').value);
+    formData.append('title', title);
+    formData.append('body', body);
     
-    const imageInput = document.getElementById('updateImage');
     if (imageInput && imageInput.files.length > 0) {
         formData.append('image', imageInput.files[0]);
     }
 
-    const box = document.getElementById('updateResult');
     try {
         const response = await fetch('/api/admin_supply.php?action=updates-save', {
             method: 'POST',
@@ -1828,13 +1869,34 @@ function syncMarketplaceVisibilityState(id, nextVisible) {
 }
 
 async function createVisit() {
+    const supplierName = document.getElementById('supplierName')?.value?.trim() || '';
+    const visitDate = document.getElementById('visitDate')?.value || '';
+    const notes = document.getElementById('visitNotes')?.value?.trim() || '';
+
+    // Validation
+    if (!supplierName) {
+        showAlert('El nombre del proveedor es requerido', 'warning');
+        return;
+    }
+    if (!visitDate) {
+        showAlert('La fecha y hora son requeridas', 'warning');
+        return;
+    }
+
     const payload = {
-        supplier_name: document.getElementById('supplierName').value,
-        visit_datetime: document.getElementById('visitDate').value,
-        notes: document.getElementById('visitNotes').value
+        supplier_name: supplierName,
+        visit_datetime: visitDate,
+        notes: notes
     };
     const res = await apiCall('/admin_supply.php?action=calendar-create', 'POST', payload);
-    if (res && res.success) showAlert(res.message, 'success'); else if (res) showAlert(res.message, 'error');
+    if (res && res.success) {
+        showAlert(res.message || 'Visita registrada correctamente', 'success');
+        document.getElementById('supplierName').value = '';
+        document.getElementById('visitDate').value = '';
+        document.getElementById('visitNotes').value = '';
+    } else if (res) {
+        showAlert(res.message || 'No fue posible guardar la visita', 'error');
+    }
     loadCalendar();
 }
 
@@ -1929,11 +1991,21 @@ async function loadCalendar() {
 
 function addMappedProductToOrder() {
     const select = document.getElementById('poMappedProduct');
-    const quantity = Number(document.getElementById('poQty').value || 0);
-    const estimated_cost = Number(document.getElementById('poCost').value || 0);
+    const quantityInput = document.getElementById('poQty');
+    const costInput = document.getElementById('poCost');
+    const quantity = Number(quantityInput?.value || 0);
+    const estimated_cost = Number(costInput?.value || 0);
 
     if (!select || !select.value || quantity <= 0) {
-        showAlert('Selecciona producto proveedor y cantidad', 'warning');
+        showAlert('Selecciona producto proveedor y cantidad mayor a 0', 'warning');
+        return;
+    }
+    if (quantity > 999999) {
+        showAlert('Cantidad muy grande (máximo 999999)', 'warning');
+        return;
+    }
+    if (estimated_cost < 0) {
+        showAlert('El costo estimado no puede ser negativo', 'warning');
         return;
     }
 
@@ -1944,6 +2016,9 @@ function addMappedProductToOrder() {
 
     supplierOrderItems.push({ supplier_product_id, product_name, sku, quantity, estimated_cost });
     renderPoItems();
+    quantityInput.value = '1';
+    costInput.value = '0';
+    select.selectedIndex = 0;
 }
 
 function renderPoItems() {
@@ -2008,14 +2083,40 @@ async function loadSupplierProducts() {
 }
 
 async function createSupplierProductLink() {
+    const productId = Number(document.getElementById('spProduct')?.value || 0);
+    const supplierName = document.getElementById('spSupplier')?.value?.trim() || '';
+    const unitCost = Number(document.getElementById('spUnitCost')?.value || 0);
+    const resultBox = document.getElementById('supplierProductResult');
+
+    // Validation
+    if (productId <= 0) {
+        if (resultBox) resultBox.innerHTML = '<div class="alert alert-error">Selecciona un producto.</div>';
+        showAlert('Producto requerido', 'warning');
+        return;
+    }
+    if (!supplierName) {
+        if (resultBox) resultBox.innerHTML = '<div class="alert alert-error">El nombre del proveedor es requerido.</div>';
+        showAlert('Proveedor requerido', 'warning');
+        return;
+    }
+    if (supplierName.length > 200) {
+        if (resultBox) resultBox.innerHTML = '<div class="alert alert-error">El nombre del proveedor es muy largo.</div>';
+        showAlert('Nombre de proveedor muy largo', 'warning');
+        return;
+    }
+    if (unitCost < 0) {
+        if (resultBox) resultBox.innerHTML = '<div class="alert alert-error">El costo unitario no puede ser negativo.</div>';
+        showAlert('Costo inválido', 'warning');
+        return;
+    }
+
     const payload = {
-        product_id: Number(document.getElementById('spProduct').value || 0),
-        supplier_name: document.getElementById('spSupplier').value,
-        supplier_sku: document.getElementById('spSupplierSku').value,
-        unit_cost: Number(document.getElementById('spUnitCost').value || 0)
+        product_id: productId,
+        supplier_name: supplierName,
+        supplier_sku: document.getElementById('spSupplierSku')?.value?.trim() || '',
+        unit_cost: unitCost
     };
 
-    const resultBox = document.getElementById('supplierProductResult');
     const res = await apiCall('/admin_supply.php?action=supplier-product-create', 'POST', payload);
     if (!res || !res.success) {
         if (resultBox) resultBox.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible guardar')}</div>`;
@@ -2023,6 +2124,10 @@ async function createSupplierProductLink() {
     }
 
     if (resultBox) resultBox.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Asignacion guardada')}</div>`;
+    document.getElementById('spSupplier').value = '';
+    document.getElementById('spSupplierSku').value = '';
+    document.getElementById('spUnitCost').value = '0';
+    document.getElementById('spProduct').value = '';
     await loadSupplierProducts();
     await loadMappedProductsBySupplier();
 }
@@ -2050,19 +2155,42 @@ async function loadMappedProductsBySupplier() {
 }
 
 async function createSupplierOrder() {
+    const supplierName = document.getElementById('poSupplier')?.value?.trim() || '';
+    const expectedDate = document.getElementById('poDate')?.value || '';
+
+    // Validation
+    if (!supplierName) {
+        showAlert('El nombre del proveedor es requerido', 'warning');
+        return;
+    }
+    if (supplierName.length > 200) {
+        showAlert('Nombre de proveedor muy largo', 'warning');
+        return;
+    }
+    if (!expectedDate) {
+        showAlert('La fecha de recepción es requerida', 'warning');
+        return;
+    }
+    if (supplierOrderItems.length === 0) {
+        showAlert('Agrega al menos un producto a la orden', 'warning');
+        return;
+    }
+
     const payload = {
-        supplier_name: document.getElementById('poSupplier').value,
-        expected_date: document.getElementById('poDate').value,
+        supplier_name: supplierName,
+        expected_date: expectedDate,
         items: supplierOrderItems
     };
     const res = await apiCall('/admin_supply.php?action=supplier-order-create', 'POST', payload);
     if (!res || !res.success) {
-        if (res) showAlert(res.message, 'error');
+        if (res) showAlert(res.message || 'No fue posible guardar la orden', 'error');
         return;
     }
-    showAlert(res.message, 'success');
+    showAlert(res.message || 'Orden guardada correctamente', 'success');
     supplierOrderItems = [];
     renderPoItems();
+    document.getElementById('poSupplier').value = '';
+    document.getElementById('poDate').value = '';
     if (res.ticket_url) window.open(res.ticket_url, '_blank');
     loadSupplierOrders();
     loadHistory();
@@ -2101,21 +2229,60 @@ async function loadHistory() {
 
 async function saveClientByAdmin() {
     const clientId = document.getElementById('clientEditId').value || '';
+    const firstName = document.getElementById('clientFirstName').value?.trim() || '';
+    const lastName = document.getElementById('clientLastName').value?.trim() || '';
+    const phone = document.getElementById('clientPhone').value?.trim() || '';
+    const email = document.getElementById('clientEmail').value?.trim() || '';
+    const company = document.getElementById('clientCompany').value?.trim() || '';
+    const birthdate = document.getElementById('clientBirthdate').value || null;
+    const box = document.getElementById('clientCreateResult');
+
+    // Validation
+    if (!firstName) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El nombre es requerido.</div>';
+        showAlert('Nombre requerido', 'warning');
+        return;
+    }
+    if (!lastName) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El apellido es requerido.</div>';
+        showAlert('Apellido requerido', 'warning');
+        return;
+    }
+    if (!phone) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El teléfono es requerido.</div>';
+        showAlert('Teléfono requerido', 'warning');
+        return;
+    }
+    if (!/^\d{10,15}$/.test(phone.replace(/[\s\-\(\)]/g, ''))) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El teléfono debe tener entre 10 y 15 dígitos.</div>';
+        showAlert('Formato de teléfono inválido', 'warning');
+        return;
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El email tiene un formato inválido.</div>';
+        showAlert('Email inválido', 'warning');
+        return;
+    }
+    if (birthdate && new Date(birthdate) > new Date()) {
+        if (box) box.innerHTML = '<div class="alert alert-error">La fecha de nacimiento no puede ser en el futuro.</div>';
+        showAlert('Fecha de nacimiento inválida', 'warning');
+        return;
+    }
+
     const payload = {
         id: clientId,
-        first_name: document.getElementById('clientFirstName').value,
-        last_name: document.getElementById('clientLastName').value,
-        phone: document.getElementById('clientPhone').value,
-        email: document.getElementById('clientEmail').value,
-        company_name: document.getElementById('clientCompany').value,
-        birthdate: document.getElementById('clientBirthdate').value || null
+        first_name: firstName,
+        last_name: lastName,
+        phone: phone,
+        email: email,
+        company_name: company,
+        birthdate: birthdate || null
     };
 
     const endpoint = clientId
         ? '/admin_supply.php?action=client-update'
         : '/admin_clients.php?action=create';
     const res = await apiCall(endpoint, 'POST', payload);
-    const box = document.getElementById('clientCreateResult');
 
     if (!res || !res.success) {
         if (box) {
@@ -2317,13 +2484,35 @@ function fillCategoryForm(category) {
 }
 
 async function saveCategoryByAdmin() {
-    const payload = {
-        id: Number(document.getElementById('categoryEditId').value || 0),
-        name: document.getElementById('categoryName').value || '',
-        sort_order: Number(document.getElementById('categoryOrder').value || 0),
-        is_active: document.getElementById('categoryActive').value === '1'
-    };
+    const categoryId = Number(document.getElementById('categoryEditId')?.value || 0);
+    const categoryName = document.getElementById('categoryName')?.value?.trim() || '';
+    const categoryOrder = Number(document.getElementById('categoryOrder')?.value || 0);
+    const categoryActive = document.getElementById('categoryActive')?.value === '1';
     const box = document.getElementById('categoryResult');
+
+    // Validation
+    if (!categoryName) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El nombre de la categoría es requerido.</div>';
+        showAlert('Nombre de categoría requerido', 'warning');
+        return;
+    }
+    if (categoryName.length > 120) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El nombre de la categoría es muy largo (máximo 120 caracteres).</div>';
+        showAlert('Nombre muy largo', 'warning');
+        return;
+    }
+    if (categoryOrder < 0 || categoryOrder > 999) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El orden debe estar entre 0 y 999.</div>';
+        showAlert('Orden inválido', 'warning');
+        return;
+    }
+
+    const payload = {
+        id: categoryId,
+        name: categoryName,
+        sort_order: categoryOrder,
+        is_active: categoryActive
+    };
     const res = await apiCall('/admin_supply.php?action=categories-save', 'POST', payload);
     if (!res || !res.success) {
         if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible guardar categoría')}</div>`;
@@ -2764,22 +2953,67 @@ async function createProductByAdmin() {
     const seedMode = Number(document.getElementById('newProductSeedMode')?.value || 0) === 1;
     const skuInput = document.getElementById('newProductSku');
     const normalizedSku = normalizeNumericSku(skuInput?.value || '');
+    const productName = document.getElementById('newProductName')?.value?.trim() || '';
+    const price = Number(document.getElementById('newProductPrice')?.value || 0);
+    const stock = Number(document.getElementById('newProductStock')?.value || 0);
+    const reorder = Number(document.getElementById('newProductReorder')?.value || 0);
+    const box = document.getElementById('productCreateResult');
+
     if (skuInput) {
         skuInput.value = normalizedSku;
     }
 
+    // Validation
     if (!/^\d{5}$/.test(normalizedSku)) {
-        const box = document.getElementById('productCreateResult');
         if (box) {
             box.innerHTML = '<div class="alert alert-error">El código del producto debe tener exactamente 5 números.</div>';
         }
         setSkuStatus('newProductSkuStatus', 'El código debe tener exactamente 5 números.', 'warning');
+        showAlert('SKU inválido', 'warning');
+        return;
+    }
+
+    if (!productName) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El nombre del producto es requerido.</div>';
+        showAlert('Nombre requerido', 'warning');
+        return;
+    }
+    if (productName.length > 255) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El nombre del producto es muy largo (máximo 255 caracteres).</div>';
+        showAlert('Nombre muy largo', 'warning');
+        return;
+    }
+
+    if (price < 0) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El precio no puede ser negativo.</div>';
+        showAlert('Precio inválido', 'warning');
+        return;
+    }
+    if (price > 999999.99) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El precio es demasiado alto.</div>';
+        showAlert('Precio muy alto', 'warning');
+        return;
+    }
+
+    if (stock < 0) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El stock no puede ser negativo.</div>';
+        showAlert('Stock inválido', 'warning');
+        return;
+    }
+    if (stock > 999999) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El stock es demasiado alto.</div>';
+        showAlert('Stock muy alto', 'warning');
+        return;
+    }
+
+    if (reorder < 0) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El nivel de reorden no puede ser negativo.</div>';
+        showAlert('Reorden inválido', 'warning');
         return;
     }
 
     const skuOk = await validateSkuAvailability('product');
     if (!skuOk) {
-        const box = document.getElementById('productCreateResult');
         if (box) {
             box.innerHTML = '<div class="alert alert-error">No fue posible guardar: código inválido o duplicado.</div>';
         }
@@ -2788,29 +3022,28 @@ async function createProductByAdmin() {
 
     const selectedCategoryOptions = Array.from(document.getElementById('newProductCategory').selectedOptions || []);
     const selectedCategories = selectedCategoryOptions.map((option) => option.value).filter(Boolean);
+
+    if (selectedCategories.length === 0) {
+        if (box) {
+            box.innerHTML = '<div class="alert alert-error">Selecciona al menos una categoría para el producto.</div>';
+        }
+        showAlert('Selecciona una categoría', 'warning');
+        return;
+    }
+
     const payload = {
         id: editId,
         sku: normalizedSku,
-        name: document.getElementById('newProductName').value || '',
+        name: productName,
         category: selectedCategories.join(', '),
-        description: document.getElementById('newProductDescription').value || '',
-        price: document.getElementById('newProductPrice').value || '0',
-        stock_quantity: document.getElementById('newProductStock').value || '50',
-        reorder_level: document.getElementById('newProductReorder').value || '10',
+        description: document.getElementById('newProductDescription')?.value?.trim() || '',
+        price: price,
+        stock_quantity: stock,
+        reorder_level: reorder,
         image_url: document.getElementById('newProductImageRef').value || 'images/products/default-product.svg',
         is_visible: Number(document.getElementById('newProductVisible')?.value || 1) === 1 ? 1 : 0,
         allow_seed_sku: seedMode ? 1 : 0
     };
-
-    if (selectedCategories.length === 0) {
-        const box = document.getElementById('productCreateResult');
-        if (box) {
-            box.innerHTML = '<div class="alert alert-error">Selecciona al menos una categoría para el producto.</div>';
-        }
-        return;
-    }
-
-    const box = document.getElementById('productCreateResult');
 
     let res = await apiCall('/admin_supply.php?action=product-save', 'POST', payload);
     if ((!res || !res.success) && editId <= 0) {
@@ -3066,20 +3299,58 @@ function renderMarketplaceList() {
 async function saveMarketplaceCeByAdmin() {
     const skuInput = document.getElementById('marketplaceSku');
     const normalizedSku = normalizeNumericSku(skuInput?.value || '');
+    const marketplaceName = document.getElementById('marketplaceName')?.value?.trim() || '';
+    const price = Number(document.getElementById('marketplacePrice')?.value || 0);
+    const stock = Number(document.getElementById('marketplaceStock')?.value || 0);
+    const box = document.getElementById('marketplaceResult');
+
     if (skuInput) {
         skuInput.value = normalizedSku;
     }
 
+    // Validation
     if (!/^\d{5}$/.test(normalizedSku)) {
-        const box = document.getElementById('marketplaceResult');
         if (box) box.innerHTML = '<div class="alert alert-error">El código SKU CE debe tener exactamente 5 números.</div>';
         setSkuStatus('marketplaceSkuStatus', 'El código debe tener exactamente 5 números.', 'warning');
+        showAlert('SKU inválido', 'warning');
+        return;
+    }
+
+    if (!marketplaceName) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El nombre del artículo CE es requerido.</div>';
+        showAlert('Nombre requerido', 'warning');
+        return;
+    }
+    if (marketplaceName.length > 255) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El nombre es muy largo (máximo 255 caracteres).</div>';
+        showAlert('Nombre muy largo', 'warning');
+        return;
+    }
+
+    if (price < 0) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El precio no puede ser negativo.</div>';
+        showAlert('Precio inválido', 'warning');
+        return;
+    }
+    if (price > 999999.99) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El precio es demasiado alto.</div>';
+        showAlert('Precio muy alto', 'warning');
+        return;
+    }
+
+    if (stock < 0) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El stock no puede ser negativo.</div>';
+        showAlert('Stock inválido', 'warning');
+        return;
+    }
+    if (stock > 999999) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El stock es demasiado alto.</div>';
+        showAlert('Stock muy alto', 'warning');
         return;
     }
 
     const skuOk = await validateSkuAvailability('marketplace');
     if (!skuOk) {
-        const box = document.getElementById('marketplaceResult');
         if (box) box.innerHTML = '<div class="alert alert-error">No fue posible guardar: código inválido o duplicado.</div>';
         return;
     }
@@ -3087,20 +3358,26 @@ async function saveMarketplaceCeByAdmin() {
     const currentId = Number(document.getElementById('marketplaceEditId').value || 0);
     const selectedCategoryOptions = Array.from(document.getElementById('marketplaceCategory')?.selectedOptions || []);
     const selectedCategories = selectedCategoryOptions.map((option) => option.value).filter(Boolean);
+
+    if (selectedCategories.length === 0) {
+        if (box) box.innerHTML = '<div class="alert alert-error">Selecciona al menos una categoría.</div>';
+        showAlert('Selecciona una categoría', 'warning');
+        return;
+    }
+
     const payload = {
         id: currentId,
         sku: normalizedSku,
-        name: document.getElementById('marketplaceName').value || '',
-        condition_label: document.getElementById('marketplaceCondition').value || 'Seminuevo',
+        name: marketplaceName,
+        condition_label: document.getElementById('marketplaceCondition')?.value || 'Seminuevo',
         category: selectedCategories.join(', '),
-        unit_price: document.getElementById('marketplacePrice').value || '0',
-        stock_quantity: document.getElementById('marketplaceStock').value || '1',
-        is_active: document.getElementById('marketplaceActive').value === '1' ? 1 : 0,
-        description: document.getElementById('marketplaceDescription').value || '',
+        unit_price: price,
+        stock_quantity: stock,
+        is_active: document.getElementById('marketplaceActive')?.value === '1' ? 1 : 0,
+        description: document.getElementById('marketplaceDescription')?.value?.trim() || '',
         image_url: document.getElementById('marketplaceImageRef')?.value || 'images/products/default-product.svg'
     };
 
-    const box = document.getElementById('marketplaceResult');
     const res = await apiCall('/admin_supply.php?action=marketplace-save', 'POST', payload);
     if (!res || !res.success) {
         const detail = res && res.debug && res.debug.detail ? ` (${res.debug.detail})` : '';
