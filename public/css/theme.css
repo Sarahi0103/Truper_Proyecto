@@ -329,6 +329,17 @@ textarea:focus,
     border-color: var(--theme-accent);
 }
 
+.btn-danger {
+    background: #DC3545;
+    color: #ffffff;
+    border-color: #DC3545;
+}
+
+.btn-danger:hover {
+    background: #C82333;
+    border-color: #C82333;
+}
+
 .alert {
     background: var(--theme-surface);
     color: var(--theme-text);
@@ -555,6 +566,17 @@ textarea:focus,
     color: #ffffff;
     border-color: var(--theme-accent);
     background: rgba(255, 138, 31, 0.14);
+}
+
+:root[data-theme="dark"] .btn-danger {
+    background: #EF4444;
+    color: #ffffff;
+    border-color: #EF4444;
+}
+
+:root[data-theme="dark"] .btn-danger:hover {
+    background: #DC2626;
+    border-color: #DC2626;
 }
 
 :root[data-theme="dark"] .cart-drawer {

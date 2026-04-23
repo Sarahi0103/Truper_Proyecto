@@ -114,12 +114,12 @@ textarea {
 }
 
 .btn-danger {
-    background-color: var(--color-negro);
+    background-color: var(--color-error);
     color: var(--color-blanco);
 }
 
 .btn-danger:hover {
-    background-color: #000000;
+    background-color: #C82333;
 }
 
 .btn-small {
@@ -909,15 +909,6 @@ textarea {
 
 .btn-success:hover {
     background-color: #218838;
-}
-
-.btn-danger {
-    background-color: var(--color-error);
-    color: var(--color-blanco);
-}
-
-.btn-danger:hover {
-    background-color: #C82333;
 }
 
 .btn-small {
