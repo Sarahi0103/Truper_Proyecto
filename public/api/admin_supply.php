@@ -2670,7 +2670,6 @@ try {
                 if ($mkConditionCol !== null) { $sets[] = $mkConditionCol . ' = ?'; $values[] = $conditionLabel; }
                 if ($mkPriceCol !== null) { $sets[] = $mkPriceCol . ' = ?'; $values[] = $unitPrice; }
                 if ($mkStockCol !== null) { $sets[] = $mkStockCol . ' = ?'; $values[] = max(0, $stockQuantity); }
-                if ($mkActiveCol !== null) { $sets[] = $mkActiveCol . ' = ?'; $values[] = $isActive ? 1 : 0; }
                 if ($mkUpdatedByCol !== null) { $sets[] = $mkUpdatedByCol . ' = ?'; $values[] = (int)($_SESSION['user_id'] ?? 0); }
                 if ($mkUpdatedAtCol !== null) { $sets[] = $mkUpdatedAtCol . ' = CURRENT_TIMESTAMP'; }
                 if ($mkCategoryCol !== null) { $sets[] = $mkCategoryCol . ' = ?'; $values[] = $category; }
@@ -2679,6 +2678,10 @@ try {
                 $values[] = $id;
                 $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET ' . implode(', ', $sets) . ' WHERE id = ?');
                 $stmt->execute($values);
+                
+                // Update visibility separately to avoid type conflicts
+                set_marketplace_visibility_compatible($pdo, $id, $isActive);
+                
                 $response = ['success' => true, 'message' => 'Artículo CE actualizado'];
             } else {
                 $columns = [$mkSkuCol, $mkNameCol, $mkDescriptionCol];
@@ -2689,13 +2692,23 @@ try {
                 if ($mkPriceCol !== null) { $columns[] = $mkPriceCol; $placeholders[] = '?'; $values[] = $unitPrice; }
                 if ($mkStockCol !== null) { $columns[] = $mkStockCol; $placeholders[] = '?'; $values[] = max(0, $stockQuantity); }
                 if ($mkImageCol !== null) { $columns[] = $mkImageCol; $placeholders[] = '?'; $values[] = $imageUrl; }
-                if ($mkActiveCol !== null) { $columns[] = $mkActiveCol; $placeholders[] = '?'; $values[] = $isActive ? 1 : 0; }
                 if ($mkCreatedByCol !== null) { $columns[] = $mkCreatedByCol; $placeholders[] = '?'; $values[] = (int)($_SESSION['user_id'] ?? 0); }
                 if ($mkUpdatedByCol !== null) { $columns[] = $mkUpdatedByCol; $placeholders[] = '?'; $values[] = (int)($_SESSION['user_id'] ?? 0); }
                 if ($mkCategoryCol !== null) { $columns[] = $mkCategoryCol; $placeholders[] = '?'; $values[] = $category; }
+                // Set visibility to true by default for new items
+                if ($mkActiveCol !== null) { $columns[] = $mkActiveCol; $placeholders[] = '?'; $values[] = $isActive ? 1 : 0; }
 
                 $stmt = $pdo->prepare('INSERT INTO marketplace_ce_products (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ')');
                 $stmt->execute($values);
+                
+                // If insertion succeeded and we have is_active column issue, ensure it's set
+                try {
+                    $lastId = $pdo->lastInsertId('marketplace_ce_products_id_seq');
+                    if ($lastId && $mkActiveCol === null) {
+                        set_marketplace_visibility_compatible($pdo, (int)$lastId, $isActive);
+                    }
+                } catch (Exception $ignored) {}
+                
                 $response = ['success' => true, 'message' => 'Artículo CE creado'];
             }
             break;

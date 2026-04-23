@@ -1804,9 +1804,27 @@ async function toggleMarketplaceVisibility(id, nextVisible) {
         box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Visibilidad actualizada')}</div>`;
     }
 
+    syncMarketplaceVisibilityState(id, nextVisible);
     showAlert(res.message || 'Visibilidad actualizada', 'success');
     await loadMarketplaceCeAdmin();
     activateAdminSupplyTab('marketplaceTab', 'marketplaceList');
+}
+
+function syncMarketplaceVisibilityState(id, nextVisible) {
+    const normalized = Number(nextVisible) ? 1 : 0;
+    const target = marketplaceItemsCache.find((row) => Number(row.id) === Number(id));
+    if (target) {
+        target.is_active = normalized;
+    }
+
+    const currentEditId = Number(document.getElementById('marketplaceEditId')?.value || 0);
+    if (currentEditId === Number(id)) {
+        const activeField = document.getElementById('marketplaceActive');
+        if (activeField) {
+            activeField.value = String(normalized);
+        }
+        updateMarketplacePreview();
+    }
 }
 
 async function createVisit() {
