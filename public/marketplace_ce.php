@@ -134,7 +134,7 @@ $whatsappPhone = function_exists('whatsapp_phone_digits') ? whatsapp_phone_digit
 
     <header>
         <div class="header-content">
-            <a href="/" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
+            <a href="/" class="logo"><img src="/truper_logo2.png" alt="Truper" style="height: 38px; width: auto;"></a>
             <nav class="nav-menu">
                 <a href="/">Productos</a>
                 <a href="/marketplace_ce.php" class="active">Marketplace CE</a>

@@ -25,7 +25,7 @@ if (is_logged_in() && !$force_login_screen) {
     <div class="login-container">
         <div class="auth-shell">
             <aside class="auth-side">
-                <div class="login-logo"><img src="images/truper-logo.svg" alt="Truper" style="height: 46px;"></div>
+                <div class="login-logo"><img src="/truper_logo2.png" alt="Truper" style="height: 56px; width: auto;"></div>
                 <h2>Bienvenido</h2>
                 <p>Gestiona pedidos, pagos, tareas y analítica de tu negocio en un solo lugar.</p>
                 <ul>

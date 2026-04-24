@@ -46,7 +46,7 @@ $company_whatsapp = htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8
 <body>
 <header>
     <div class="header-content">
-        <a href="index.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
+        <a href="index.php" class="logo"><img src="/truper_logo2.png" alt="Truper" style="height: 38px; width: auto;"></a>
         <nav class="nav-menu">
             <a href="index.php">Productos</a>
             <a href="orders.php">Mis Pedidos</a>

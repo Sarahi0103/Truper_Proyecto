@@ -23,7 +23,7 @@ if ($category_filter) {
 <body>
     <nav class="navbar">
         <div class="nav-container">
-            <div class="logo">Truper</div>
+            <div class="logo"><img src="/truper_logo2.png" alt="Truper" style="height: 38px; width: auto;"></div>
             <ul class="nav-menu">
                 <li><a href="/index.php">Inicio</a></li>
                 <li><a href="/views/products.php">Catálogo</a></li>

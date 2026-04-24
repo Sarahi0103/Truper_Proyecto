@@ -12,9 +12,7 @@
 <body>
     <nav class="navbar">
         <div class="nav-container">
-            <div class="logo">
-                <span class="logo-text">Truper</span>
-            </div>
+            <div class="logo"><img src="/truper_logo2.png" alt="Truper" style="height: 38px; width: auto;"></div>
             <ul class="nav-menu">
                 <li><a href="/">Inicio</a></li>
                 <li><a href="/views/products.php">Catálogo</a></li>

@@ -21,7 +21,7 @@ if (is_logged_in()) {
     <div class="login-container">
         <div class="auth-shell register-shell">
             <aside class="auth-side">
-                <div class="login-logo"><img src="images/truper-logo.svg" alt="Truper" style="height: 46px;"></div>
+                <div class="login-logo"><img src="/truper_logo2.png" alt="Truper" style="height: 56px; width: auto;"></div>
                 <h2>Registro de Cliente</h2>
                 <p>Crea tu cuenta con fecha de nacimiento obligatoria. Tu código único se usará para iniciar sesión.</p>
                 <ul>

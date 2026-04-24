@@ -24,7 +24,7 @@ if (is_logged_in()) {
     <div class="login-container">
         <div class="auth-shell">
             <aside class="auth-side">
-                <div class="login-logo"><img src="images/truper-logo.svg" alt="Truper" style="height: 46px;"></div>
+                <div class="login-logo"><img src="/truper_logo2.png" alt="Truper" style="height: 56px; width: auto;"></div>
                 <h2>Solo Administradores</h2>
                 <p>Acceso restringido al panel administrativo, abastecimiento, caja y analítica interna.</p>
                 <ul>

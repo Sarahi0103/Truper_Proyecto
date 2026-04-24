@@ -28,7 +28,7 @@ $top_products = $analytics->getTopPurchasedProducts(5);
 <body>
     <nav class="navbar">
         <div class="nav-container">
-            <div class="logo">Truper ADMIN</div>
+            <div class="logo"><img src="/truper_logo2.png" alt="Truper" style="height: 38px; width: auto;"></div>
             <ul class="nav-menu">
                 <li><a href="/admin/dashboard.php">Dashboard</a></li>
                 <li><a href="/admin/users.php">Usuarios</a></li>
