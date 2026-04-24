@@ -43,6 +43,7 @@ function display_product_code($sku) {
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <link rel="icon" type="image/png" href="/truper_logo2.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ticket proveedor <?php echo htmlspecialchars($order['folio'], ENT_QUOTES, 'UTF-8'); ?></title>
