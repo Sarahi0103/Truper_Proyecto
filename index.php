@@ -19,7 +19,7 @@
                 <li><a href="/">Inicio</a></li>
                 <li><a href="/views/products.php">Catálogo</a></li>
                 <li><a href="/views/wholesale.php">Mayoreo</a></li>
-
+                <li><a href="/admin_login.php" class="btn-primary">Solo para administradores</a></li>
             </ul>
         </div>
     </nav>
