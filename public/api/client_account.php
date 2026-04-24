@@ -264,12 +264,11 @@ try {
             }
 
             $items = $input['items'] ?? [];
-            $total_amount = (float)($input['total'] ?? 0);
             $whatsapp_phone = sanitize($input['whatsapp_phone'] ?? '');
             $target_phone = whatsapp_phone_digits($whatsapp_phone);
 
-            if (empty($items) || $total_amount <= 0) {
-                $response = ['success' => false, 'message' => 'Carrito vacio o total invalido'];
+            if (empty($items)) {
+                $response = ['success' => false, 'message' => 'Carrito vacio'];
                 break;
             }
 
@@ -294,10 +293,12 @@ try {
             }
 
             $normalizedItems = [];
+            $subtotal_amount = 0;
             foreach ($items as $item) {
                 $qty = max(1, (int)($item['quantity'] ?? 1));
                 $unitPrice = (float)($item['price'] ?? ($item['unit_price'] ?? 0));
                 $code = quote_item_code((array)$item, $skuByProductId);
+                $subtotal_amount += ($qty * $unitPrice);
                 $normalizedItems[] = [
                     'product_id' => (int)($item['product_id'] ?? 0),
                     'name' => trim((string)($item['name'] ?? 'Producto')),
@@ -305,6 +306,23 @@ try {
                     'price' => $unitPrice,
                     'sku' => $code
                 ];
+            }
+
+            $pointsColumn = db_column_exists('users', 'loyalty_points') ? 'loyalty_points' : (db_column_exists('users', 'points') ? 'points' : null);
+            $userPoints = 0;
+            if ($pointsColumn) {
+                $stmtPoints = $pdo->prepare("SELECT COALESCE({$pointsColumn}, 0) FROM users WHERE id = ? LIMIT 1");
+                $stmtPoints->execute([$user_id]);
+                $userPoints = (int)$stmtPoints->fetchColumn();
+            }
+
+            $loyaltyRate = calculateDiscountByPoints($userPoints);
+            $loyaltyDiscountAmount = $subtotal_amount * $loyaltyRate;
+            $total_amount = max(0, $subtotal_amount - $loyaltyDiscountAmount);
+
+            if ($total_amount <= 0) {
+                $response = ['success' => false, 'message' => 'Total invalido'];
+                break;
             }
 
             // Save quote
@@ -350,6 +368,10 @@ try {
                 }
             }
             $message .= "---------------------------\n";
+            if ($loyaltyDiscountAmount > 0) {
+                $message .= "SUBTOTAL: $" . number_format($subtotal_amount, 2) . "\n";
+                $message .= "DESC. LEALTAD (" . (int)round($loyaltyRate * 100) . "%): -$" . number_format($loyaltyDiscountAmount, 2) . "\n";
+            }
             $message .= "TOTAL: $" . number_format($total_amount, 2) . "\n";
             $message .= "PDF/Ticket: {$ticket_url}\n";
             $message .= "\nQuedo atento(a) a disponibilidad y tiempo de entrega.";
@@ -361,6 +383,9 @@ try {
                 'quote_id' => $quote_id,
                 'ticket_code' => $ticket_code,
                 'ticket_url' => $ticket_url,
+                'subtotal' => $subtotal_amount,
+                'loyalty_discount_rate' => $loyaltyRate,
+                'loyalty_discount_amount' => $loyaltyDiscountAmount,
                 'whatsapp_url' => $whatsapp_url,
                 'whatsapp_phone' => $target_phone,
                 'message' => 'Cotizacion creada y ticket generado'

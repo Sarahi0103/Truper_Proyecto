@@ -71,6 +71,9 @@ class OrderController {
             $client = $this->getClient($client_id);
             $loyalty_discount = calculateDiscountByPoints($client['loyalty_points']);
             $total_amount = $total_amount * (1 - $loyalty_discount);
+
+            // Acumular puntos por compra (1 punto por cada $10 del total final)
+            $earned_points = (int)floor(max(0, (float)$total_amount) / 10);
             
             // Crear orden
             $stmt = $this->pdo->prepare("
@@ -132,6 +135,10 @@ class OrderController {
                     $context['special_event'] ?? null
                 );
             }
+
+            if ($earned_points > 0) {
+                $this->addLoyaltyPointsByClient($client_id, $earned_points);
+            }
             
             $this->pdo->commit();
 
@@ -148,6 +155,7 @@ class OrderController {
                 'order_id' => $order_id,
                 'order_number' => $order_number,
                 'total' => $total_amount,
+                'earned_points' => $earned_points,
                 'ticket_url' => '/ticket_client.php?id=' . $order_id
             ];
         } catch (Exception $e) {
@@ -243,14 +251,46 @@ class OrderController {
     }
     
     private function getClient($client_id) {
-        $stmt = $this->pdo->prepare("
-            SELECT u.loyalty_points FROM clients c
+        $pointsColumn = '0';
+        if ($this->columnExists('users', 'loyalty_points')) {
+            $pointsColumn = 'COALESCE(u.loyalty_points, 0)';
+        } elseif ($this->columnExists('users', 'points')) {
+            $pointsColumn = 'COALESCE(u.points, 0)';
+        }
+
+        $stmt = $this->pdo->prepare(" 
+            SELECT {$pointsColumn} AS loyalty_points FROM clients c
             JOIN users u ON c.user_id = u.id
             WHERE c.id = ?
         ");
         $stmt->execute([$client_id]);
         $client = $stmt->fetch();
         return $client ?: ['loyalty_points' => 0];
+    }
+
+    private function addLoyaltyPointsByClient($client_id, $points) {
+        $points = (int)$points;
+        if ($client_id <= 0 || $points <= 0) {
+            return;
+        }
+
+        $column = null;
+        if ($this->columnExists('users', 'loyalty_points')) {
+            $column = 'loyalty_points';
+        } elseif ($this->columnExists('users', 'points')) {
+            $column = 'points';
+        }
+
+        if (!$column) {
+            return;
+        }
+
+        $stmt = $this->pdo->prepare(" 
+            UPDATE users
+            SET {$column} = COALESCE({$column}, 0) + ?
+            WHERE id = (SELECT user_id FROM clients WHERE id = ? LIMIT 1)
+        ");
+        $stmt->execute([$points, $client_id]);
     }
 
     private function extractProductId($item) {

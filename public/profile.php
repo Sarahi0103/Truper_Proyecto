@@ -105,7 +105,77 @@ if (!empty($profile['birthdate'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Perfil - Truper Platform</title>
-    <link rel="stylesheet" href="css/styles.css">    <link rel="stylesheet" href="css/theme.css"></head>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/theme.css">
+    <style>
+        .loyalty-wrap {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .loyalty-star {
+            font-size: 2rem;
+            color: var(--theme-accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .loyalty-points-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--theme-accent);
+        }
+
+        .loyalty-points-label {
+            color: var(--theme-text-muted);
+            margin-bottom: 2rem;
+        }
+
+        .loyalty-discount-box {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            border-radius: 8px;
+            background: var(--theme-accent-soft);
+            border: 1px solid rgba(255, 138, 31, 0.4);
+            color: var(--theme-text);
+        }
+
+        .loyalty-discount-title {
+            font-weight: 700;
+            margin-bottom: 0.35rem;
+        }
+
+        .loyalty-hint {
+            color: var(--theme-text-muted);
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .loyalty-rules {
+            background: var(--theme-surface-strong);
+            border: 1px solid var(--theme-border);
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: left;
+            color: var(--theme-text);
+        }
+
+        .loyalty-rules h4 {
+            margin-bottom: 1rem;
+            color: var(--theme-text);
+        }
+
+        .loyalty-rules ul {
+            line-height: 2;
+            margin: 0;
+            padding-left: 1.2rem;
+        }
+
+        .loyalty-birthday {
+            margin-top: 2rem;
+            color: var(--theme-text);
+        }
+    </style>
+</head>
 <body>
     <!-- HEADER -->
     <header>
@@ -196,24 +266,24 @@ if (!empty($profile['birthdate'])) {
                 <div class="card">
                     <div class="card-header">Programa de Lealtad</div>
                     <div class="card-body">
-                        <div style="text-align: center; padding: 2rem;">
-                            <div style="font-size: 2rem; color: #FF7F00; margin-bottom: 0.5rem;">⭐</div>
-                            <div style="font-size: 2.5rem; font-weight: bold; color: #FF7F00;"><?php echo $loyalty_points; ?></div>
-                            <div style="color: #666; margin-bottom: 2rem;">Puntos Disponibles</div>
+                        <div class="loyalty-wrap">
+                            <div class="loyalty-star">⭐</div>
+                            <div class="loyalty-points-number"><?php echo $loyalty_points; ?></div>
+                            <div class="loyalty-points-label">Puntos Disponibles</div>
 
-                            <div style="margin-bottom: 1.5rem; padding: 1rem; border-radius: 8px; background: #fff4e7; border: 1px solid #ffd3a5;">
-                                <div style="font-weight: 700; margin-bottom: 0.35rem;">Descuento actual: <?php echo (int)round($current_discount_rate * 100); ?>%</div>
+                            <div class="loyalty-discount-box">
+                                <div class="loyalty-discount-title">Descuento actual: <?php echo (int)round($current_discount_rate * 100); ?>%</div>
                                 <?php if ($next_goal_points !== null): ?>
-                                <div style="color: #555;">Te faltan <?php echo max(0, $next_goal_points - $loyalty_points); ?> puntos para llegar al siguiente nivel.</div>
+                                <div>Te faltan <?php echo max(0, $next_goal_points - $loyalty_points); ?> puntos para llegar al siguiente nivel.</div>
                                 <?php else: ?>
-                                <div style="color: #555;">Ya tienes el nivel máximo de descuento por puntos.</div>
+                                <div>Ya tienes el nivel máximo de descuento por puntos.</div>
                                 <?php endif; ?>
-                                <div style="color: #666; margin-top: 0.5rem; font-size: 0.9rem;">El descuento se aplica automáticamente al confirmar tu pedido.</div>
+                                <div class="loyalty-hint">El descuento se aplica automáticamente al confirmar tu pedido.</div>
                             </div>
 
-                            <div style="background-color: #f5f5f5; padding: 1.5rem; border-radius: 8px; text-align: left;">
-                                <h4 style="margin-bottom: 1rem;">Cómo canjear tus puntos:</h4>
-                                <ul style="line-height: 2;">
+                            <div class="loyalty-rules">
+                                <h4>Cómo canjear tus puntos:</h4>
+                                <ul>
                                     <li>💰 100 puntos = 5% descuento</li>
                                     <li>💰 250 puntos = 10% descuento</li>
                                     <li>💰 500 puntos = 15% descuento</li>
@@ -221,7 +291,7 @@ if (!empty($profile['birthdate'])) {
                                 </ul>
                             </div>
 
-                            <div style="margin-top: 2rem;">
+                            <div class="loyalty-birthday">
                                 <h4>Próximo Cumpleaños</h4>
                                 <p><?php echo htmlspecialchars($birthday_text, ENT_QUOTES, 'UTF-8'); ?> - ¡Recibirás un bono especial! 🎂</p>
                             </div>
