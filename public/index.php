@@ -9,7 +9,14 @@ try {
     $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url TEXT");
     $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS variants_json TEXT");
 
-    $stmt = $pdo->prepare("SELECT id, name, sku, unit_price, category, description, technical_specs, stock_quantity, image_url, variants_json FROM products WHERE is_active = true ORDER BY name LIMIT 200");
+    $visibilityWhere = '';
+    if (db_column_exists('products', 'is_active')) {
+        $visibilityWhere = " WHERE (CASE WHEN is_active IS NULL THEN 1 WHEN LOWER(CAST(is_active AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
+    } elseif (db_column_exists('products', 'active')) {
+        $visibilityWhere = " WHERE active = 1";
+    }
+
+    $stmt = $pdo->prepare("SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category, description, technical_specs, stock_quantity, image_url, variants_json FROM products" . $visibilityWhere . " ORDER BY name LIMIT 200");
     $stmt->execute();
     $products = $stmt->fetchAll();
 } catch (Exception $e) {

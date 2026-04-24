@@ -328,13 +328,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <div class="grid grid-3">
                     <div class="form-group"><label>Precio</label><input id="newProductPrice" type="number" min="0" step="0.01" value="0"></div>
                     <div class="form-group"><label>Stock inicial</label><input id="newProductStock" type="number" min="0" step="1" value="50"></div>
-                    <div class="form-group">
-                        <label>Visible en tienda</label>
-                        <select id="newProductVisible">
-                            <option value="1">Sí</option>
-                            <option value="0">No</option>
-                        </select>
-                    </div>
+                    <input id="newProductVisible" type="hidden" value="0">
                 </div>
 
                 <div class="grid grid-3">
@@ -658,13 +652,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <div class="grid grid-3">
                     <div class="form-group"><label>Precio</label><input id="marketplacePrice" type="number" min="0" step="0.01" value="0"></div>
                     <div class="form-group"><label>Stock</label><input id="marketplaceStock" type="number" min="0" step="1" value="1"></div>
-                    <div class="form-group">
-                        <label>Visible en Marketplace</label>
-                        <select id="marketplaceActive">
-                            <option value="1">Sí</option>
-                            <option value="0">No</option>
-                        </select>
-                    </div>
+                    <input id="marketplaceActive" type="hidden" value="0">
                 </div>
 
                 <div class="form-group"><label>Descripción</label><textarea id="marketplaceDescription" rows="4" maxlength="1800"></textarea></div>
@@ -776,7 +764,6 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
     const stockClass = stock <= (mode === 'marketplace' ? 2 : reorder) ? 'stock-low' : 'stock-ok';
     const inactive = Number(item.is_active) === 0 || item.is_active === false || item.is_active === 'f' || item.is_active === 'false' || item.is_active === 'False' || item.is_active === 'FALSE';
     const seedOnly = Boolean(item.seed_only || item.__seed_only);
-    const visibilityLabel = inactive ? 'Oculto' : 'Visible';
     const actions = mode === 'marketplace'
         ? `
             <button class="btn btn-small btn-secondary" type="button" onclick="fillMarketplaceFormById(${id})">Editar</button>
@@ -806,7 +793,6 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
                 <p class="product-spec">${escapeHtml(description)}</p>
                 <div><span class="variant-pill">${escapeHtml(condition)}</span></div>
                 <span class="stock-badge ${stockClass}">${stockText}${stock}</span>
-                <div class="text-muted" style="font-size:12px; margin-top:4px;">Visibilidad: ${visibilityLabel}</div>
                 <div class="catalog-price">$${Math.round(unitPrice).toLocaleString('es-MX')}</div>
                 ${withActions ? `<div class="product-actions">${actions}</div>` : '<div class="text-muted" style="font-size:12px;margin-top:8px;">Vista previa del diseño en portada.</div>'}
                 ${inactive ? '<div class="text-muted" style="font-size:12px;margin-top:6px;">Producto oculto/desactivado.</div>' : ''}
@@ -1772,7 +1758,7 @@ function resetProductForm() {
     document.getElementById('newProductReorder').value = '10';
     document.getElementById('newProductDescription').value = '';
     document.getElementById('newProductImageRef').value = 'images/products/default-product.svg';
-    document.getElementById('newProductVisible').value = '1';
+    document.getElementById('newProductVisible').value = '0';
 
     Array.from(document.getElementById('newProductCategory').options || []).forEach((opt) => {
         opt.selected = false;
@@ -3170,7 +3156,7 @@ function resetMarketplaceForm() {
     document.getElementById('marketplaceCondition').value = 'Seminuevo';
     document.getElementById('marketplacePrice').value = '0';
     document.getElementById('marketplaceStock').value = '1';
-    document.getElementById('marketplaceActive').value = '1';
+    document.getElementById('marketplaceActive').value = '0';
     document.getElementById('marketplaceDescription').value = '';
     Array.from(document.getElementById('marketplaceCategory')?.options || []).forEach((opt) => {
         opt.selected = false;

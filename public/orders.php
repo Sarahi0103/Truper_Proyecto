@@ -79,7 +79,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
         .orders-page .order-layout {
             --orders-panel-height: auto;
             display: grid;
-            grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.85fr);
+            grid-template-columns: 1fr;
             gap: 1.25rem;
             align-items: start;
         }

@@ -167,7 +167,70 @@ function set_marketplace_visibility_compatible($pdo, int $id, bool $isVisible): 
         // Column may not exist, try next
     }
 
+    // Legacy schemas may use visible/is_visible columns.
+    try {
+        $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET is_visible = ? WHERE id = ?');
+        $stmt->execute([$isVisible ? 1 : 0, $id]);
+        if ($stmt->rowCount() > 0) {
+            return;
+        }
+    } catch (Exception $e) {
+    }
+
+    try {
+        $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET visible = ? WHERE id = ?');
+        $stmt->execute([$isVisible ? 1 : 0, $id]);
+        if ($stmt->rowCount() > 0) {
+            return;
+        }
+    } catch (Exception $e) {
+    }
+
     throw new Exception('No existe columna de visibilidad (is_active o active) en marketplace_ce_products');
+}
+
+function set_product_visibility_compatible($pdo, int $id, bool $isVisible): void {
+    if ($id <= 0) {
+        throw new Exception('ID de producto inválido');
+    }
+
+    try {
+        $stmt = $pdo->prepare('UPDATE products SET is_active = ? WHERE id = ?');
+        $stmt->execute([$isVisible ? 1 : 0, $id]);
+        if ($stmt->rowCount() > 0) {
+            return;
+        }
+    } catch (Exception $e) {
+    }
+
+    try {
+        $stmt = $pdo->prepare('UPDATE products SET active = ? WHERE id = ?');
+        $stmt->execute([$isVisible ? 1 : 0, $id]);
+        if ($stmt->rowCount() > 0) {
+            return;
+        }
+    } catch (Exception $e) {
+    }
+
+    try {
+        $stmt = $pdo->prepare('UPDATE products SET is_visible = ? WHERE id = ?');
+        $stmt->execute([$isVisible ? 1 : 0, $id]);
+        if ($stmt->rowCount() > 0) {
+            return;
+        }
+    } catch (Exception $e) {
+    }
+
+    try {
+        $stmt = $pdo->prepare('UPDATE products SET visible = ? WHERE id = ?');
+        $stmt->execute([$isVisible ? 1 : 0, $id]);
+        if ($stmt->rowCount() > 0) {
+            return;
+        }
+    } catch (Exception $e) {
+    }
+
+    throw new Exception('No existe columna de visibilidad compatible en products');
 }
 
 function normalized_sku_exists_in_table_admin_supply($pdo, string $table, string $sku, int $excludeId = 0): bool {
@@ -2664,8 +2727,8 @@ try {
                 break;
             }
 
-            if ($sku === '' || $name === '' || $description === '') {
-                $response = ['success' => false, 'message' => 'SKU, nombre y descripción son obligatorios'];
+            if ($sku === '' || $name === '') {
+                $response = ['success' => false, 'message' => 'SKU y nombre son obligatorios'];
                 break;
             }
             if (!is_valid_numeric_sku_admin_supply($sku)) {
@@ -2681,6 +2744,10 @@ try {
             $allowedConditions = ['Seminuevo', 'Usado', 'Reacondicionado'];
             if (!in_array($conditionLabel, $allowedConditions, true)) {
                 $conditionLabel = 'Seminuevo';
+            }
+
+            if ($description === '') {
+                $description = 'Sin descripción';
             }
 
             $usage = sku_usage_admin_supply($pdo, $sku, $id);

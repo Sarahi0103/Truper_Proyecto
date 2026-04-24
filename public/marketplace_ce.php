@@ -37,7 +37,14 @@ try {
     /* Add category column if missing (migration guard) */
     try { $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS category VARCHAR(120)"); } catch (Exception $ig) {}
 
-    $stmtCe = $pdo->query("SELECT id, sku, name, description, condition_label, COALESCE(category,'Marketplace CE') AS category, unit_price, stock_quantity, COALESCE(image_url,'images/products/default-product.svg') AS image_url FROM marketplace_ce_products WHERE is_active = true ORDER BY created_at DESC LIMIT 300");
+    $marketplaceVisibilityWhere = '';
+    if (db_column_exists('marketplace_ce_products', 'is_active')) {
+        $marketplaceVisibilityWhere = " WHERE (CASE WHEN is_active IS NULL THEN 1 WHEN LOWER(CAST(is_active AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
+    } elseif (db_column_exists('marketplace_ce_products', 'active')) {
+        $marketplaceVisibilityWhere = " WHERE active = 1";
+    }
+
+    $stmtCe = $pdo->query("SELECT id, sku, name, description, condition_label, COALESCE(category,'Marketplace CE') AS category, unit_price, stock_quantity, COALESCE(image_url,'images/products/default-product.svg') AS image_url FROM marketplace_ce_products" . $marketplaceVisibilityWhere . " ORDER BY created_at DESC LIMIT 300");
     $marketplaceItems = $stmtCe ? $stmtCe->fetchAll() : [];
 
     $categoriesTotals = [];
