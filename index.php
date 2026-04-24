@@ -12,7 +12,9 @@
 <body>
     <nav class="navbar">
         <div class="nav-container">
-            <div class="logo"><img src="/truper_logo2.png" alt="Truper" style="height: 38px; width: auto;"></div>
+            <div class="logo">
+                <span class="logo-text">Truper</span>
+            </div>
             <ul class="nav-menu">
                 <li><a href="/">Inicio</a></li>
                 <li><a href="/views/products.php">Catálogo</a></li>
@@ -24,13 +26,16 @@
 
     <section class="hero">
         <div class="hero-content">
+        <link rel="icon" type="image/png" href="/truper_logo2.png">
             <h1>Truper</h1>
             <p>Tu Distribuidor de Herramientas y Productos de Confianza</p>
             <a href="/views/products.php" class="btn-primary">Ver Catálogo</a>
         </div>
     </section>
 
-    <section class="features">
+                <div class="logo">
+                    <span class="logo-text">Truper</span>
+                </div>
         <div class="feature">
             <div class="feature-icon">📦</div>
             <h3>Catálogo Digital</h3>

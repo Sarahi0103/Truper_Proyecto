@@ -285,7 +285,7 @@ function homepage_update_label($type) {
 <body class="catalog-minimal" data-client-code="<?php echo htmlspecialchars($clientTicketCode, ENT_QUOTES, 'UTF-8'); ?>" data-client-number="<?php echo htmlspecialchars($clientTicketNumber, ENT_QUOTES, 'UTF-8'); ?>">
     <header>
         <div class="header-content">
-            <a href="/" class="logo"><img src="/truper_logo2.png" alt="Truper" style="height: 38px; width: auto;"></a>
+            <a href="/" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
             <nav class="nav-menu">
                 <a href="/" class="active">Productos</a>
                 <a href="/marketplace_ce.php">Marketplace CE</a>

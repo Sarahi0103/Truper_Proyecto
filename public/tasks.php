@@ -20,7 +20,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
     <!-- HEADER -->
     <header>
         <div class="header-content">
-            <a href="dashboard.php" class="logo"><img src="/truper_logo2.png" alt="Truper" style="height: 38px; width: auto;"></a>
+            <a href="dashboard.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
             <nav class="nav-menu">
                 <a href="dashboard.php">Dashboard</a>
                 <a href="orders.php">Pedidos</a>

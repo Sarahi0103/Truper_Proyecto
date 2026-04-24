@@ -17,6 +17,7 @@ if (is_logged_in()) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Acceso Administrador - Truper Platform</title>
+    <link rel="icon" type="image/png" href="/truper_logo2.png">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/theme.css">
 </head>
@@ -24,7 +25,7 @@ if (is_logged_in()) {
     <div class="login-container">
         <div class="auth-shell">
             <aside class="auth-side">
-                <div class="login-logo"><img src="/truper_logo2.png" alt="Truper" style="height: 56px; width: auto;"></div>
+                <div class="login-logo"><img src="images/truper-logo.svg" alt="Truper" style="height: 46px;"></div>
                 <h2>Solo Administradores</h2>
                 <p>Acceso restringido al panel administrativo, abastecimiento, caja y analítica interna.</p>
                 <ul>

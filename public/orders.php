@@ -11,6 +11,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pedidos - Truper Platform</title>
+    <link rel="icon" type="image/png" href="/truper_logo2.png">
     <link rel="stylesheet" href="css/styles.css">    <link rel="stylesheet" href="css/theme.css">    <link rel="stylesheet" href="css/dashboard.css">
     <style>
         .orders-page .tabs {
@@ -169,7 +170,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
     <!-- HEADER -->
     <header>
         <div class="header-content">
-            <a href="dashboard.php" class="logo"><img src="/truper_logo2.png" alt="Truper" style="height: 38px; width: auto;"></a>
+            <a href="dashboard.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
             <nav class="nav-menu">
                 <a href="dashboard.php">Dashboard</a>
                 <a href="orders.php" class="active">Pedidos</a>

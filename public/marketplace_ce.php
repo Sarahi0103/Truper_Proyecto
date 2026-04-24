@@ -134,7 +134,7 @@ $whatsappPhone = function_exists('whatsapp_phone_digits') ? whatsapp_phone_digit
 
     <header>
         <div class="header-content">
-            <a href="/" class="logo"><img src="/truper_logo2.png" alt="Truper" style="height: 38px; width: auto;"></a>
+            <a href="/" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
             <nav class="nav-menu">
                 <a href="/">Productos</a>
                 <a href="/marketplace_ce.php" class="active">Marketplace CE</a>
@@ -151,9 +151,9 @@ $whatsappPhone = function_exists('whatsapp_phone_digits') ? whatsapp_phone_digit
                 <?php if ($whatsappPhone): ?>
                 <a href="https://wa.me/<?php echo htmlspecialchars($whatsappPhone,ENT_QUOTES,'UTF-8'); ?>?text=Hola%2C+me+interesa+un+art%C3%ADculo+del+Marketplace+CE"
                    target="_blank" rel="noopener" class="btn btn-secondary btn-small">Dudas por WhatsApp</a>
-                <?php endif; ?>
                 <?php if (!$isLogged): ?>
                     <a href="/admin_login.php" class="btn btn-primary btn-small">Solo para administradores</a>
+                <?php endif; ?>
                 <?php endif; ?>
             </div>
         </div>

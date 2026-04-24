@@ -24,7 +24,7 @@ $orders = $order_model->getUserOrders($_SESSION['user_id']);
 <body>
     <nav class="navbar">
         <div class="nav-container">
-            <div class="logo"><img src="/truper_logo2.png" alt="Truper" style="height: 38px; width: auto;"></div>
+            <div class="logo">Truper</div>
             <ul class="nav-menu">
                 <li><a href="/index.php">Inicio</a></li>
                 <li><a href="/views/products.php">Catálogo</a></li>
@@ -40,7 +40,7 @@ $orders = $order_model->getUserOrders($_SESSION['user_id']);
                 <h3><?php echo htmlspecialchars($user['name']); ?></h3>
                 <p><?php echo htmlspecialchars($user['email']); ?></p>
             </div>
-            
+                <div class="logo">Truper</div>
             <nav class="sidebar-nav">
                 <a href="/views/dashboard.php" class="nav-link active">Dashboard</a>
                 <a href="/views/my_orders.php" class="nav-link">Mis Pedidos</a>

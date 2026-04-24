@@ -36,7 +36,7 @@ $payment_status = $payment_tracker->getPaymentStatus($order_id);
 <body>
     <nav class="navbar">
         <div class="nav-container">
-            <div class="logo"><img src="/truper_logo2.png" alt="Truper" style="height: 38px; width: auto;"></div>
+            <div class="logo">Truper</div>
             <ul class="nav-menu">
                 <li><a href="/views/my_orders.php">← Volver</a></li>
                 <li><a href="/views/dashboard.php">Dashboard</a></li>
