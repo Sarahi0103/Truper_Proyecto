@@ -286,7 +286,6 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             <button class="tab-button" data-tab="updatesTab">Portada</button>
             <button class="tab-button" data-tab="clientsTab">Clientes</button>
             <button class="tab-button" data-tab="historyTab">Historico</button>
-            <button class="tab-button" data-tab="visibilityTab">Visibilidad</button>
             <button class="tab-button" data-tab="pricesTab">Precios</button>
             <button class="tab-button" data-tab="marketplaceTab">Marketplace CE</button>
         </div>
@@ -562,19 +561,6 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             </div></div>
         </section>
 
-        <section id="visibilityTab" class="tab-content admin-tab-panel">
-            <div class="card mb-3"><div class="card-body">
-                <h3>Control de Visibilidad de Productos</h3>
-                <p class="text-muted">Marca o desmarca productos para mostrar/ocultar en el catálogo público. Los cambios aplican inmediatamente.</p>
-                <div class="form-group mt-2">
-                    <input id="visibilitySearch" type="text" class="search-input" placeholder="Buscar producto por nombre o código...">
-                </div>
-            </div></div>
-            <div class="card"><div class="card-body">
-                <div id="visibilityList" class="text-muted">Cargando productos...</div>
-            </div></div>
-        </section>
-
         <section id="pricesTab" class="tab-content admin-tab-panel">
             <div class="card mb-3"><div class="card-body">
                 <h3>Ajuste de Precios Masivo</h3>
@@ -764,10 +750,12 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
     const stockClass = stock <= (mode === 'marketplace' ? 2 : reorder) ? 'stock-low' : 'stock-ok';
     const inactive = Number(item.is_active) === 0 || item.is_active === false || item.is_active === 'f' || item.is_active === 'false' || item.is_active === 'False' || item.is_active === 'FALSE';
     const seedOnly = Boolean(item.seed_only || item.__seed_only);
+    const stateLabel = inactive ? 'Oculto' : 'Visible';
+    const stateBadgeClass = inactive ? 'badge-danger' : 'badge-success';
     const actions = mode === 'marketplace'
         ? `
             <button class="btn btn-small btn-secondary" type="button" onclick="fillMarketplaceFormById(${id})">Editar</button>
-            <button class="btn btn-small btn-ghost" type="button" onclick="toggleMarketplaceVisibility(${id}, ${inactive ? 1 : 0})">${inactive ? 'Activar' : 'Ocultar'}</button>
+            <button class="btn btn-small btn-ghost" type="button" onclick="toggleMarketplaceVisibility(${id}, ${inactive ? 1 : 0})">${inactive ? 'Mostrar' : 'Ocultar'}</button>
             <button class="btn btn-small btn-danger" type="button" onclick="deleteMarketplaceCeByAdmin(${id})">Eliminar</button>
         `
         : (seedOnly
@@ -777,7 +765,7 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
             `
             : `
                 <button class="btn btn-small btn-secondary" type="button" onclick="fillProductFormById(${id})">Editar</button>
-                <button class="btn btn-small btn-ghost" type="button" onclick="toggleStockVisibility(${id}, ${inactive ? 1 : 0})">${inactive ? 'Activar' : 'Ocultar'}</button>
+                <button class="btn btn-small btn-ghost" type="button" onclick="toggleStockVisibility(${id}, ${inactive ? 1 : 0})">${inactive ? 'Mostrar' : 'Ocultar'}</button>
                 <button class="btn btn-small btn-danger" type="button" onclick="deleteProductByAdmin(${id})">Eliminar</button>
             `);
 
@@ -793,6 +781,7 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
                 <p class="product-spec">${escapeHtml(description)}</p>
                 <div><span class="variant-pill">${escapeHtml(condition)}</span></div>
                 <span class="stock-badge ${stockClass}">${stockText}${stock}</span>
+                <div style="margin-top:4px;"><span class="badge ${stateBadgeClass}">Estado: ${stateLabel}</span></div>
                 <div class="catalog-price">$${Math.round(unitPrice).toLocaleString('es-MX')}</div>
                 ${withActions ? `<div class="product-actions">${actions}</div>` : '<div class="text-muted" style="font-size:12px;margin-top:8px;">Vista previa del diseño en portada.</div>'}
                 ${inactive ? '<div class="text-muted" style="font-size:12px;margin-top:6px;">Producto oculto/desactivado.</div>' : ''}
@@ -1809,12 +1798,18 @@ function fillProductFormById(id) {
     });
 
     const saveBtn = document.getElementById('newProductSaveButton');
+    const box = document.getElementById('productCreateResult');
     if (saveBtn) saveBtn.textContent = 'Actualizar producto';
     if (isSeedOnly) {
         if (saveBtn) saveBtn.textContent = 'Guardar en stock';
         setSkuStatus('newProductSkuStatus', 'Producto base: al guardar se crea editable en stock.', 'warning');
+        if (box) box.innerHTML = '<div class="alert alert-info">Editando producto base. Al guardar se crea en stock y quedará oculto hasta mostrarlo.</div>';
     } else {
         setSkuStatus('newProductSkuStatus', 'Editando producto existente.', 'muted');
+        if (box) {
+            const visibility = Number(item.is_active) ? 'Visible' : 'Oculto';
+            box.innerHTML = `<div class="alert alert-info">Editando producto: estado actual <strong>${visibility}</strong>.</div>`;
+        }
     }
     updateStockPreview();
     loadProductGalleryForCurrentSku();
@@ -1892,7 +1887,6 @@ async function toggleStockVisibility(id, nextVisible) {
 
     syncStockVisibilityState(id, nextVisible);
     renderStockList();
-    filterVisibilityProducts();
 
     showAlert(res.message || 'Visibilidad actualizada', 'success');
     await loadStock();
@@ -3214,8 +3208,13 @@ function fillMarketplaceForm(item) {
     }
 
     const saveBtn = document.getElementById('marketplaceSaveButton');
+    const box = document.getElementById('marketplaceResult');
     if (saveBtn) saveBtn.textContent = 'Actualizar artículo CE';
     validateSkuAvailability('marketplace');
+    if (box) {
+        const visibility = Number(item.is_active) ? 'Visible' : 'Oculto';
+        box.innerHTML = `<div class="alert alert-info">Editando artículo CE: estado actual <strong>${visibility}</strong>.</div>`;
+    }
     updateMarketplacePreview();
     loadMarketplaceGalleryForCurrentSku();
 }
@@ -3643,10 +3642,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
-
-    // VISIBILITY TAB
-    loadProductsVisibility();
-    document.getElementById('visibilitySearch').addEventListener('input', filterVisibilityProducts);
 
     // PRICES TAB
     ['priceAdjustType', 'priceAdjustValue', 'priceExcludeSkus'].forEach(id => {
