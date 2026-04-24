@@ -141,7 +141,6 @@ $whatsappPhone = function_exists('whatsapp_phone_digits') ? whatsapp_phone_digit
                 <?php if ($isAdmin): ?><a href="/admin_supply.php">Abastecimiento</a><?php endif; ?>
                 <?php if ($isLogged): ?>
                     <a href="/orders.php">Pedidos</a>
-                    <a href="/account.php">Mi Cuenta</a>
                     <?php if ($isAdmin): ?><a href="/cashier.php">Caja</a><?php endif; ?>
                 <?php endif; ?>
             </nav>
@@ -237,7 +236,7 @@ $whatsappPhone = function_exists('whatsapp_phone_digits') ? whatsapp_phone_digit
                         <span class="stock-badge <?php echo $stockClass; ?>">
                             <?php echo $stockLabel . $itemStock; ?>
                         </span>
-                        <div class="catalog-price">$<?php echo number_format($itemPrice, 0, ',', '.'); ?></div>
+                        <div class="catalog-price">$<?php echo number_format($itemPrice, 2, '.', ','); ?></div>
                         <div class="product-actions">
                             <button
                                 type="button"
