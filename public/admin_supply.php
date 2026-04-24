@@ -2387,23 +2387,29 @@ async function loadProductCategories(onlyActive = true) {
             const selectedValues = new Set(
                 Array.from(selectEl.selectedOptions || []).map((option) => String(option.value || '').trim().toLowerCase())
             );
-            const seenCategories = new Set(); // Track categories we've already added to prevent duplicates
+            const normalizeForDedup = (value) => {
+                return String(value || '')
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .toLowerCase()
+                    .trim();
+            };
+            const seenCategories = new Set();
             selectEl.innerHTML = '';
             res.items.forEach((cat) => {
                 const categoryName = String(cat.name || '').trim();
-                const categoryNameLower = categoryName.toLowerCase();
+                const categoryNameNormalized = normalizeForDedup(categoryName);
                 
-                // Skip if we've already added this category
-                if (seenCategories.has(categoryNameLower)) {
+                if (seenCategories.has(categoryNameNormalized)) {
                     return;
                 }
-                seenCategories.add(categoryNameLower);
+                seenCategories.add(categoryNameNormalized);
                 
                 const option = document.createElement('option');
                 option.value = categoryName;
                 option.textContent = categoryName;
                 option.dataset.id = String(Number(cat.id || 0));
-                option.selected = selectedValues.has(categoryNameLower);
+                option.selected = selectedValues.has(categoryNameNormalized);
                 selectEl.appendChild(option);
             });
         };

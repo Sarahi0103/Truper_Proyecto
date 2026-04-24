@@ -69,6 +69,18 @@ function is_valid_numeric_sku_admin_supply(string $sku): bool {
     return (bool)preg_match('/^\d{5}$/', $sku);
 }
 
+function normalize_category_admin_supply($value): string {
+    $text = trim((string)$value);
+    $text = mb_strtolower($text, 'UTF-8');
+    $normalized = iconv('UTF-8', 'ASCII//TRANSLIT', $text);
+    if ($normalized === false) {
+        $normalized = strtr($text, [
+            'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n',
+        ]);
+    }
+    return $normalized;
+}
+
 function first_existing_column_admin_supply(string $table, array $candidates): ?string {
     foreach ($candidates as $candidate) {
         if (db_column_exists($table, (string)$candidate)) {
@@ -267,6 +279,26 @@ function record_matches_normalized_sku_admin_supply($pdo, string $table, int $id
 }
 
 function insert_category_and_get_id_admin_supply($pdo, string $name, int $sortOrder, bool $isActive): int {
+    $name = trim((string)$name);
+    if ($name === '') {
+        return 0;
+    }
+    
+    // Check for existing category with normalized name
+    $nameNormalized = normalize_category_admin_supply($name);
+    try {
+        $stmt = $pdo->query("SELECT id, name FROM product_categories");
+        $allCategories = $stmt ? $stmt->fetchAll() : [];
+        foreach ($allCategories as $cat) {
+            $catNormalized = normalize_category_admin_supply($cat['name']);
+            if ($catNormalized === $nameNormalized) {
+                return (int)$cat['id'];
+            }
+        }
+    } catch (Exception $ignored) {
+        // Continue with insertion
+    }
+    
     // PostgreSQL supports RETURNING; MySQL/MariaDB may not.
     try {
         $stmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order, is_active) VALUES (?, ?, ?) RETURNING id");
@@ -2412,11 +2444,19 @@ try {
                 break;
             }
 
-            $duplicateStmt = $pdo->prepare("SELECT id FROM product_categories WHERE LOWER(name) = LOWER(?) AND id <> ? LIMIT 1");
-            $duplicateStmt->execute([$name, $id]);
-            if ($duplicateStmt->fetch()) {
-                $response = ['success' => false, 'message' => 'Ya existe una categoría con ese nombre'];
-                break;
+            $nameNormalized = normalize_category_admin_supply($name);
+            $allCategoriesStmt = $pdo->query("SELECT id, name FROM product_categories");
+            $allCategories = $allCategoriesStmt ? $allCategoriesStmt->fetchAll() : [];
+            
+            foreach ($allCategories as $cat) {
+                if ($cat['id'] == $id) {
+                    continue;
+                }
+                $catNormalized = normalize_category_admin_supply($cat['name']);
+                if ($catNormalized === $nameNormalized) {
+                    $response = ['success' => false, 'message' => 'Ya existe una categoría con ese nombre (sin diferencia de acentos)'];
+                    break 2;
+                }
             }
 
             if ($id > 0) {

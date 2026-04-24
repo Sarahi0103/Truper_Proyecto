@@ -122,6 +122,24 @@ if (count($products) < 10) {
 }
 
 $quickCategoriesMap = [];
+$normalizeCategoryKey = function ($value) {
+    $text = trim((string)$value);
+    if (function_exists('mb_strtolower')) {
+        $text = mb_strtolower($text, 'UTF-8');
+    } else {
+        $text = strtolower($text);
+    }
+    return strtr($text, [
+        'á' => 'a',
+        'é' => 'e',
+        'í' => 'i',
+        'ó' => 'o',
+        'ú' => 'u',
+        'ü' => 'u',
+        'ñ' => 'n',
+    ]);
+};
+
 foreach ($products as $item) {
     $rawCategory = trim((string)($item['category'] ?? ''));
     if ($rawCategory === '') {
@@ -134,9 +152,7 @@ foreach ($products as $item) {
         if ($category === '') {
             continue;
         }
-        $key = function_exists('mb_strtolower')
-            ? mb_strtolower($category, 'UTF-8')
-            : strtolower($category);
+        $key = $normalizeCategoryKey($category);
         if (!isset($quickCategoriesMap[$key])) {
             $quickCategoriesMap[$key] = $category;
         }

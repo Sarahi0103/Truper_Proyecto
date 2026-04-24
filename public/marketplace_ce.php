@@ -40,11 +40,20 @@ try {
     $stmtCe = $pdo->query("SELECT id, sku, name, description, condition_label, COALESCE(category,'Marketplace CE') AS category, unit_price, stock_quantity, COALESCE(image_url,'images/products/default-product.svg') AS image_url FROM marketplace_ce_products WHERE is_active = true ORDER BY created_at DESC LIMIT 300");
     $marketplaceItems = $stmtCe ? $stmtCe->fetchAll() : [];
 
+    $categoriesTotals = [];
     foreach ($marketplaceItems as $mi) {
         $cat = trim((string)($mi['category'] ?? ''));
-        if ($cat && $cat !== 'Marketplace CE') { $allCategories[$cat] = $cat; }
+        if ($cat && $cat !== 'Marketplace CE') {
+            $catLower = function_exists('mb_strtolower') 
+                ? mb_strtolower($cat, 'UTF-8') 
+                : strtolower($cat);
+            $catNorm = strtr($catLower, ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n']);
+            if (!isset($categoriesTotals[$catNorm])) {
+                $categoriesTotals[$catNorm] = $cat;
+            }
+        }
     }
-    $allCategories = array_values($allCategories);
+    $allCategories = array_values($categoriesTotals);
 } catch (Exception $e) {
     $marketplaceItems = [];
 }
