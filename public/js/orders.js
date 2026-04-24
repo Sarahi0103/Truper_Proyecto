@@ -272,11 +272,30 @@ function getStatusLabel(status) {
     return labels[status] || status || 'N/A';
 }
 
+function getOrderStatusClass(status) {
+    const normalized = normalizeOrderStatus(status);
+    if (!ORDER_STATUS_OPTIONS.includes(normalized)) {
+        return 'status-pending';
+    }
+    return `status-${normalized}`;
+}
+
+function syncOrderStatusSelectVisual(selectElement, statusValue) {
+    if (!selectElement) return;
+
+    ORDER_STATUS_OPTIONS.forEach((value) => {
+        selectElement.classList.remove(`status-${value}`);
+    });
+
+    selectElement.classList.add(getOrderStatusClass(statusValue));
+}
+
 function renderOrderStatusCell(status, orderId) {
     const normalizedStatus = normalizeOrderStatus(status);
+    const statusClass = getOrderStatusClass(normalizedStatus);
 
     if (!ORDERS_IS_ADMIN) {
-        return `<span class="order-status-readonly">${getStatusLabel(normalizedStatus)}</span>`;
+        return `<span class="order-status-readonly ${statusClass}">${getStatusLabel(normalizedStatus)}</span>`;
     }
 
     const options = ORDER_STATUS_OPTIONS.map((value) => {
@@ -285,7 +304,7 @@ function renderOrderStatusCell(status, orderId) {
     }).join('');
 
     return `
-        <select class="order-status-select" onchange="updateOrderStatus(${Number(orderId || 0)}, this.value)">
+        <select class="order-status-select ${statusClass}" onchange="syncOrderStatusSelectVisual(this, this.value); updateOrderStatus(${Number(orderId || 0)}, this.value)">
             ${options}
         </select>
     `;

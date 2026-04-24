@@ -224,11 +224,79 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
             border: 1px solid var(--ui-border);
             background: var(--ui-surface);
             color: var(--ui-text);
+            font-weight: 700;
         }
 
         .orders-page .order-status-readonly {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 110px;
+            padding: 0.28rem 0.6rem;
+            border-radius: 999px;
+            border: 1px solid transparent;
             font-weight: 600;
-            color: var(--ui-text);
+            line-height: 1.2;
+        }
+
+        .orders-page .status-pending {
+            background: rgba(245, 158, 11, 0.16);
+            border-color: rgba(245, 158, 11, 0.45);
+            color: #b45309;
+        }
+
+        .orders-page .status-confirmed {
+            background: rgba(59, 130, 246, 0.14);
+            border-color: rgba(59, 130, 246, 0.45);
+            color: #1d4ed8;
+        }
+
+        .orders-page .status-processing {
+            background: rgba(124, 58, 237, 0.16);
+            border-color: rgba(124, 58, 237, 0.45);
+            color: #6d28d9;
+        }
+
+        .orders-page .status-shipped {
+            background: rgba(14, 165, 233, 0.16);
+            border-color: rgba(14, 165, 233, 0.45);
+            color: #0369a1;
+        }
+
+        .orders-page .status-delivered {
+            background: rgba(34, 197, 94, 0.15);
+            border-color: rgba(34, 197, 94, 0.45);
+            color: #15803d;
+        }
+
+        .orders-page .status-cancelled {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.45);
+            color: #b91c1c;
+        }
+
+        :root[data-theme="dark"] .orders-page .status-pending {
+            color: #fbbf24;
+        }
+
+        :root[data-theme="dark"] .orders-page .status-confirmed {
+            color: #93c5fd;
+        }
+
+        :root[data-theme="dark"] .orders-page .status-processing {
+            color: #c4b5fd;
+        }
+
+        :root[data-theme="dark"] .orders-page .status-shipped {
+            color: #7dd3fc;
+        }
+
+        :root[data-theme="dark"] .orders-page .status-delivered {
+            color: #86efac;
+        }
+
+        :root[data-theme="dark"] .orders-page .status-cancelled {
+            color: #fca5a5;
         }
 
         @media (max-width: 900px) {
