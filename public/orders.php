@@ -52,19 +52,25 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
         }
 
         .orders-page .order-layout {
+            --orders-panel-height: clamp(620px, calc(100vh - 235px), 860px);
             display: grid;
             grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.85fr);
             gap: 1.25rem;
-            align-items: start;
+            align-items: stretch;
         }
 
         .orders-page .order-panel {
             min-width: 0;
+            min-height: var(--orders-panel-height);
+            height: var(--orders-panel-height);
+            display: flex;
+            flex-direction: column;
         }
 
         .orders-page .order-panel.sticky-panel {
             position: sticky;
             top: 1rem;
+            overflow: hidden;
         }
 
         .orders-page .form-section {
@@ -112,7 +118,8 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
         }
 
         .orders-page .products-scroll {
-            max-height: min(56vh, 420px);
+            flex: 1 1 auto;
+            min-height: 0;
             overflow: auto;
             border: 1px solid var(--ui-border);
             border-radius: 12px;
@@ -131,11 +138,44 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
             z-index: 2;
         }
 
+        .orders-page .cart-scroll {
+            flex: 1 1 auto;
+            min-height: 180px;
+            overflow: auto;
+            border: 1px solid var(--ui-border);
+            border-radius: 12px;
+            background: var(--ui-surface);
+        }
+
+        .orders-page .cart-scroll table {
+            margin: 0;
+            border: 0;
+            border-radius: 0;
+        }
+
+        .orders-page .cart-scroll thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
         .orders-page #productsList td,
         .orders-page #productsList th {
             padding-top: 0.55rem;
             padding-bottom: 0.55rem;
             vertical-align: middle;
+        }
+
+        .orders-page #cartItems td,
+        .orders-page #cartItems th {
+            vertical-align: middle;
+        }
+
+        .orders-page #cartItems input[type="number"] {
+            max-width: 82px;
+            min-height: 36px;
+            text-align: center;
+            margin: 0;
         }
 
         .orders-page #productsList input[type="number"] {
@@ -154,13 +194,23 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
         @media (max-width: 900px) {
             .orders-page .order-layout {
                 grid-template-columns: 1fr;
+                --orders-panel-height: auto;
             }
 
             .orders-page .order-panel.sticky-panel {
                 position: static;
             }
 
+            .orders-page .order-panel {
+                min-height: auto;
+                height: auto;
+            }
+
             .orders-page .products-scroll {
+                max-height: 340px;
+            }
+
+            .orders-page .cart-scroll {
                 max-height: 340px;
             }
         }
@@ -219,7 +269,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
                                 <option value="confirmed">Confirmado</option>
                                 <option value="processing">En Proceso</option>
                                 <option value="shipped">Enviado</option>
-                                <option value="delivered">Entregado</option>
+                                <option value="delivered">Completado</option>
                                 <option value="cancelled">Cancelado</option>
                             </select>
                         </div>
@@ -296,6 +346,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
                                     </div>
                                 </div>
 
+                                <div class="cart-scroll">
                                 <table>
                                     <thead>
                                         <tr>
@@ -314,6 +365,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
                                         </tr>
                                     </tbody>
                                 </table>
+                                </div>
 
                                 <div class="form-group mt-3">
                                     <label>

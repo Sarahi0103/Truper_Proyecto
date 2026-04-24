@@ -10,6 +10,37 @@ function displayProductCode(rawSku) {
     return String(rawSku || '').replace(/^\s*XLS-/i, '').trim();
 }
 
+function resetOrderForm() {
+    const isWholesale = document.getElementById('isWholesale');
+    const specialEvent = document.getElementById('specialEvent');
+    const orderNotes = document.getElementById('orderNotes');
+
+    if (isWholesale) {
+        isWholesale.checked = false;
+    }
+    if (specialEvent) {
+        specialEvent.value = '';
+    }
+    if (orderNotes) {
+        orderNotes.value = '';
+    }
+}
+
+function activateOrdersTab(tabName) {
+    const tabButton = document.querySelector(`.tab-button[data-tab="${tabName}"]`);
+    if (tabButton) {
+        tabButton.click();
+    }
+}
+
+function normalizeOrderStatus(status) {
+    if (status === 'completed') {
+        return 'delivered';
+    }
+
+    return status || 'pending';
+}
+
 /**
  * Agregar producto al carrito
  */
@@ -372,6 +403,119 @@ async function loadProducts() {
             </td>
         </tr>
     `).join('');
+}
+
+function getStatusLabel(status) {
+    const labels = {
+        pending: 'Pendiente',
+        confirmed: 'Confirmado',
+        processing: 'En Proceso',
+        shipped: 'Enviado',
+        delivered: 'Completado',
+        completed: 'Completado',
+        cancelled: 'Cancelado'
+    };
+    return labels[status] || status || 'N/A';
+}
+
+async function createOrder(buttonElement = null) {
+    if (currentCart.length === 0) {
+        showAlert('Agrega productos al pedido primero', 'warning');
+        return;
+    }
+
+    const submitButton = buttonElement || document.querySelector('.orders-page .btn-group .btn-primary');
+    const originalButtonText = submitButton ? submitButton.textContent : '';
+
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Enviando...';
+    }
+
+    const isWholesale = document.getElementById('isWholesale')?.checked || false;
+    const specialEvent = document.getElementById('specialEvent')?.value || null;
+    const notes = document.getElementById('orderNotes')?.value || null;
+
+    const quoteItems = currentCart.map(item => ({
+        product_id: item.productId,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity
+    }));
+
+    const orderData = {
+        items: quoteItems,
+        total: currentTotal,
+        whatsapp_phone: COMPANY_WHATSAPP,
+        is_wholesale: isWholesale,
+        special_event: specialEvent,
+        notes: notes
+    };
+
+    try {
+        const response = await apiCall('/client_account.php?action=whatsapp-quote', 'POST', orderData);
+
+        if (response && response.success) {
+            showAlert(response.message || 'Pedido registrado. Abriendo ticket y WhatsApp...', 'success');
+            if (response.ticket_url) {
+                window.open(response.ticket_url, '_blank');
+            }
+            if (response.whatsapp_url) {
+                window.open(response.whatsapp_url, '_blank');
+            }
+
+            currentCart = [];
+            updateCartUI();
+            resetOrderForm();
+            await loadOrders();
+            activateOrdersTab('myOrders');
+            return;
+        }
+
+        showAlert((response && response.message) ? response.message : 'No se pudo crear la cotizacion', 'error');
+    } finally {
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = originalButtonText;
+        }
+    }
+}
+
+async function loadOrders() {
+    const response = await apiCall('/orders.php?action=list');
+    const ordersList = document.getElementById('ordersList');
+    if (!ordersList) return;
+
+    if (!response || !response.success || !Array.isArray(response.orders)) {
+        ordersList.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No fue posible cargar Ã³rdenes</td></tr>';
+        return;
+    }
+
+    if (response.orders.length === 0) {
+        ordersList.innerHTML = '<tr><td colspan="6" class="text-center text-muted">AÃºn no tienes pedidos</td></tr>';
+        return;
+    }
+
+    ordersList.innerHTML = response.orders.map(order => {
+        const normalizedStatus = normalizeOrderStatus(order.status);
+
+        return `
+        <tr data-status="${normalizedStatus}">
+            <td>${order.order_number}</td>
+            <td>${formatDate(order.created_at)}</td>
+            <td>${formatCurrency(order.total_amount)}</td>
+            <td>WhatsApp</td>
+            <td>${getStatusLabel(normalizedStatus)}</td>
+            <td>
+                <a class="btn btn-small btn-primary" href="/ticket_client.php?id=${order.id}" target="_blank">Ticket</a>
+            </td>
+        </tr>
+    `;
+    }).join('');
+
+    removePayButtonsFromOrders();
+    filterOrders();
+    searchOrders();
 }
 
 document.addEventListener('DOMContentLoaded', function() {

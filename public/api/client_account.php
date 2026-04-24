@@ -1,5 +1,6 @@
 <?php
 require_once '../../config/config.php';
+require_once '../../src/controllers/OrderController.php';
 require_login();
 
 header('Content-Type: application/json');
@@ -10,6 +11,53 @@ $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
 
 $response = [];
 $user_id = (int)$_SESSION['user_id'];
+
+function ensure_client_profile_id_for_user($pdo, int $userId): int {
+    if ($userId <= 0) {
+        return 0;
+    }
+
+    $stmt = $pdo->prepare("SELECT id FROM clients WHERE user_id = ? LIMIT 1");
+    $stmt->execute([$userId]);
+    $existingId = (int)$stmt->fetchColumn();
+    if ($existingId > 0) {
+        return $existingId;
+    }
+
+    $company = 'Cliente';
+
+    try {
+        $userStmt = $pdo->prepare("SELECT COALESCE(name, '') AS full_name, COALESCE(first_name, '') AS first_name, COALESCE(last_name, '') AS last_name FROM users WHERE id = ? LIMIT 1");
+        $userStmt->execute([$userId]);
+        $user = $userStmt->fetch();
+
+        $fullName = trim((string)($user['full_name'] ?? ''));
+        if ($fullName === '') {
+            $fullName = trim((string)($user['first_name'] ?? '') . ' ' . (string)($user['last_name'] ?? ''));
+        }
+
+        if ($fullName !== '') {
+            $company = $fullName;
+        }
+    } catch (Exception $ignored) {
+        $company = 'Cliente';
+    }
+
+    try {
+        $insert = $pdo->prepare("INSERT INTO clients (user_id, company_name) VALUES (?, ?) ON CONFLICT (user_id) DO NOTHING");
+        $insert->execute([$userId, $company]);
+    } catch (Exception $ignored) {
+        try {
+            $insert = $pdo->prepare("INSERT INTO clients (user_id, company_name) VALUES (?, ?)");
+            $insert->execute([$userId, $company]);
+        } catch (Exception $ignoredAgain) {
+        }
+    }
+
+    $stmt = $pdo->prepare("SELECT id FROM clients WHERE user_id = ? LIMIT 1");
+    $stmt->execute([$userId]);
+    return (int)$stmt->fetchColumn();
+}
 
 function client_account_json_response(array $payload): void {
     $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
@@ -266,6 +314,9 @@ try {
             $items = $input['items'] ?? [];
             $whatsapp_phone = sanitize($input['whatsapp_phone'] ?? '');
             $target_phone = whatsapp_phone_digits($whatsapp_phone);
+            $is_wholesale = !empty($input['is_wholesale']);
+            $special_event = sanitize($input['special_event'] ?? '');
+            $notes = sanitize($input['notes'] ?? '');
 
             if (empty($items)) {
                 $response = ['success' => false, 'message' => 'Carrito vacio'];
@@ -308,62 +359,132 @@ try {
                 ];
             }
 
-            $pointsColumn = db_column_exists('users', 'loyalty_points') ? 'loyalty_points' : (db_column_exists('users', 'points') ? 'points' : null);
-            $userPoints = 0;
-            if ($pointsColumn) {
-                $stmtPoints = $pdo->prepare("SELECT COALESCE({$pointsColumn}, 0) FROM users WHERE id = ? LIMIT 1");
-                $stmtPoints->execute([$user_id]);
-                $userPoints = (int)$stmtPoints->fetchColumn();
-            }
-
-            $loyaltyRate = calculateDiscountByPoints($userPoints);
-            $loyaltyDiscountAmount = $subtotal_amount * $loyaltyRate;
-            $total_amount = max(0, $subtotal_amount - $loyaltyDiscountAmount);
-
-            if ($total_amount <= 0) {
-                $response = ['success' => false, 'message' => 'Total invalido'];
+            $client_id = ensure_client_profile_id_for_user($pdo, $user_id);
+            if ($client_id <= 0) {
+                $response = ['success' => false, 'message' => 'No fue posible identificar al cliente'];
                 break;
             }
 
-            // Save quote
-            $stmt = $pdo->prepare("
-                INSERT INTO whatsapp_quotes (user_id, quote_data, total_amount, items_count, whatsapp_phone, status)
-                VALUES (?, ?, ?, ?, ?, 'pending')
-            ");
-            $stmt->execute([
-                $user_id,
-                json_encode($normalizedItems, JSON_UNESCAPED_UNICODE),
-                $total_amount,
-                count($normalizedItems),
-                $whatsapp_phone
-            ]);
-            $quote_id = (int)$pdo->lastInsertId();
-            $ticket_code = 'COT-' . str_pad((string)$quote_id, 6, '0', STR_PAD_LEFT);
+            $orderController = new OrderController($pdo);
+            $orderResponse = $orderController->createOrder(
+                $client_id,
+                $normalizedItems,
+                $is_wholesale,
+                [
+                    'special_event' => $special_event !== '' ? $special_event : null,
+                    'notes' => $notes !== '' ? $notes : null
+                ]
+            );
+
+            if (empty($orderResponse['success'])) {
+                $response = [
+                    'success' => false,
+                    'message' => $orderResponse['message'] ?? 'No se pudo registrar el pedido'
+                ];
+                break;
+            }
+
+            $order_id = (int)($orderResponse['order_id'] ?? 0);
+            $ticket_code = (string)($orderResponse['order_number'] ?? ('ORD-' . $order_id));
             $issued_at = date('Y-m-d H:i');
             $client_ref = 'U' . str_pad((string)$user_id, 5, '0', STR_PAD_LEFT);
-            $ticket_url = app_base_url() . '/ticket_quote.php?quote_id=' . $quote_id
-                . '&folio=' . rawurlencode($ticket_code)
-                . '&format=thermal'
-                . '&auto_pdf=1';
+            $ticket_path = (string)($orderResponse['ticket_url'] ?? ('/ticket_client.php?id=' . $order_id));
+            $ticket_url = preg_match('/^https?:\\/\\//i', $ticket_path)
+                ? $ticket_path
+                : app_base_url() . $ticket_path;
+
+            if (db_column_exists('users', 'user_code')) {
+                $stmtUser = $pdo->prepare("SELECT COALESCE(user_code, '') AS user_code FROM users WHERE id = ? LIMIT 1");
+                $stmtUser->execute([$user_id]);
+                $userRow = $stmtUser->fetch();
+                if (!empty($userRow['user_code'])) {
+                    $client_ref = (string)$userRow['user_code'];
+                }
+            }
+
+            $stmtOrderItems = $pdo->prepare("
+                SELECT
+                    oi.product_id,
+                    oi.quantity,
+                    oi.unit_price,
+                    COALESCE(oi.subtotal, oi.quantity * oi.unit_price) AS subtotal,
+                    oi.line_total,
+                    COALESCE(oi.discount_amount, 0) AS discount_amount,
+                    p.name,
+                    COALESCE(p.sku, '') AS sku
+                FROM order_items oi
+                INNER JOIN products p ON p.id = oi.product_id
+                WHERE oi.order_id = ?
+                ORDER BY oi.id ASC
+            ");
+            $stmtOrderItems->execute([$order_id]);
+            $storedOrderItems = $stmtOrderItems->fetchAll();
+
+            $messageItems = [];
+            $subtotal_amount = 0.0;
+            $preLoyaltyTotal = 0.0;
+            foreach ($storedOrderItems as $storedItem) {
+                $itemSubtotal = (float)($storedItem['subtotal'] ?? 0);
+                $itemLineTotal = (float)($storedItem['line_total'] ?? 0);
+                $subtotal_amount += $itemSubtotal;
+                $preLoyaltyTotal += $itemLineTotal;
+                $messageItems[] = [
+                    'product_id' => (int)($storedItem['product_id'] ?? 0),
+                    'name' => trim((string)($storedItem['name'] ?? 'Producto')),
+                    'quantity' => (int)($storedItem['quantity'] ?? 0),
+                    'price' => (float)($storedItem['unit_price'] ?? 0),
+                    'subtotal' => $itemSubtotal,
+                    'line_total' => $itemLineTotal,
+                    'discount_amount' => (float)($storedItem['discount_amount'] ?? 0),
+                    'sku' => quote_item_code((array)$storedItem, $skuByProductId)
+                ];
+            }
+
+            if (empty($messageItems)) {
+                $messageItems = $normalizedItems;
+                $preLoyaltyTotal = (float)($orderResponse['total'] ?? 0);
+            }
+
+            $total_amount = (float)($orderResponse['total'] ?? 0);
+            $loyaltyDiscountAmount = max(0, $preLoyaltyTotal - $total_amount);
+            $loyaltyRate = $preLoyaltyTotal > 0 ? ($loyaltyDiscountAmount / $preLoyaltyTotal) : 0;
+
+            $quote_id = 0;
+            try {
+                $stmt = $pdo->prepare("
+                    INSERT INTO whatsapp_quotes (user_id, quote_data, total_amount, items_count, whatsapp_phone, status)
+                    VALUES (?, ?, ?, ?, ?, 'converted_to_order')
+                ");
+                $stmt->execute([
+                    $user_id,
+                    json_encode($messageItems, JSON_UNESCAPED_UNICODE),
+                    $total_amount,
+                    count($messageItems),
+                    $whatsapp_phone
+                ]);
+                $quote_id = (int)$pdo->lastInsertId();
+            } catch (Exception $quoteError) {
+                error_log('Client account whatsapp quote persistence error: ' . $quoteError->getMessage());
+            }
 
             // Generate WhatsApp message
-            $message = "TRUPER - COTIZACION\n";
+            $message = "TRUPER - PEDIDO\n";
             $message .= "===========================\n";
             $message .= "Folio: {$ticket_code}\n";
             $message .= "Fecha: {$issued_at}\n";
             $message .= "Cliente: {$client_ref}\n";
             $message .= "---------------------------\n";
             $message .= "PRODUCTOS:\n";
-            foreach ($normalizedItems as $idx => $item) {
+            foreach ($messageItems as $idx => $item) {
                 $qty = (int)($item['quantity'] ?? 0);
                 $name = trim((string)($item['name'] ?? ''));
                 $unit_price = (float)($item['price'] ?? ($item['unit_price'] ?? 0));
                 $code = quote_item_code((array)$item);
-                $line_total = $qty * $unit_price;
+                $line_total = (float)($item['line_total'] ?? ($qty * $unit_price));
                 $message .= "- {$name}\n";
                 $message .= "  Codigo: {$code}\n";
                 $message .= "  {$qty} x $" . number_format($unit_price, 2) . " = $" . number_format($line_total, 2) . "\n";
-                if ($idx < (count($normalizedItems) - 1)) {
+                if ($idx < (count($messageItems) - 1)) {
                     $message .= "---------------------------\n";
                 }
             }
@@ -381,14 +502,16 @@ try {
             $response = [
                 'success' => true,
                 'quote_id' => $quote_id,
+                'order_id' => $order_id,
+                'order_number' => $ticket_code,
                 'ticket_code' => $ticket_code,
-                'ticket_url' => $ticket_url,
+                'ticket_url' => $ticket_path,
                 'subtotal' => $subtotal_amount,
                 'loyalty_discount_rate' => $loyaltyRate,
                 'loyalty_discount_amount' => $loyaltyDiscountAmount,
                 'whatsapp_url' => $whatsapp_url,
                 'whatsapp_phone' => $target_phone,
-                'message' => 'Cotizacion creada y ticket generado'
+                'message' => 'Pedido registrado automaticamente y enviado por WhatsApp'
             ];
             break;
 
