@@ -227,6 +227,7 @@ $isAdmin = $isLogged && (($_SESSION['role'] ?? '') === 'admin');
             <nav class="nav-menu">
                 <a href="index.php">Productos</a>
                 <a href="marketplace_ce.php">Marketplace CE</a>
+                <a href="cart.php" class="active">Carrito</a>
                 <?php if ($isAdmin): ?><a href="admin_supply.php">Abastecimiento</a><?php endif; ?>
                 <?php if ($isLogged): ?>
                     <a href="orders.php">Pedidos</a>

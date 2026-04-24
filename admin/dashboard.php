@@ -1,4 +1,4 @@
-<!-- Truper - Dashboard Administrativo -->
+ Truper - Dashboard Administrativo -->
 <?php
 require_once __DIR__ . '/../backend/config/security.php';
 require_once __DIR__ . '/../backend/config/database.php';

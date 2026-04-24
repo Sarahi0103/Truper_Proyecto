@@ -25,6 +25,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
         <a href="dashboard.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
         <nav class="nav-menu">
             <a href="/" >Inicio</a>
+            <a href="cart.php">Carrito</a>
             <a href="orders.php">Pedidos</a>
             <a href="wholesale.php">Mayoreo</a>
             <a href="cashier.php" class="active">Caja</a>

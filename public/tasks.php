@@ -24,6 +24,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
             <nav class="nav-menu">
                 <a href="dashboard.php">Dashboard</a>
                 <a href="orders.php">Pedidos</a>
+                <a href="cart.php">Carrito</a>
                 <a href="wholesale.php">Mayoreo</a>
                 <?php if (($_SESSION['role'] ?? '') === 'admin'): ?><a href="cashier.php">Caja</a><?php endif; ?>
                 <a href="tasks.php" class="active">Tareas</a>

@@ -289,6 +289,7 @@ function homepage_update_label($type) {
             <nav class="nav-menu">
                 <a href="/" class="active">Productos</a>
                 <a href="/marketplace_ce.php">Marketplace CE</a>
+                <a href="/cart.php">Carrito</a>
                 <?php if ($isAdmin): ?><a href="/admin_supply.php">Abastecimiento</a><?php endif; ?>
                 <?php if ($isLogged): ?>
                     <a href="/orders.php">Pedidos</a>
