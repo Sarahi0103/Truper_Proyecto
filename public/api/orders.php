@@ -143,6 +143,51 @@ try {
             }
             break;
 
+        case 'update-status':
+            if ($method !== 'PUT') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            require_admin();
+
+            $orderId = (int)($input['order_id'] ?? 0);
+            $status = strtolower(trim((string)($input['status'] ?? '')));
+            $allowedStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+
+            if ($orderId <= 0) {
+                $response = ['success' => false, 'message' => 'ID de pedido inválido'];
+                break;
+            }
+
+            if (!in_array($status, $allowedStatuses, true)) {
+                $response = ['success' => false, 'message' => 'Estado no permitido'];
+                break;
+            }
+
+            $stmt = $pdo->prepare("UPDATE orders SET status = ?, updated_at = NOW() WHERE id = ?");
+            $stmt->execute([$status, $orderId]);
+
+            if ($stmt->rowCount() <= 0) {
+                $response = ['success' => false, 'message' => 'Pedido no encontrado o sin cambios'];
+                break;
+            }
+
+            log_action(
+                $_SESSION['user_id'],
+                'UPDATE_ORDER_STATUS',
+                'Pedido #' . $orderId . ' actualizado a estado: ' . $status,
+                getTrusSIDBug()
+            );
+
+            $response = [
+                'success' => true,
+                'message' => 'Estado de pedido actualizado',
+                'order_id' => $orderId,
+                'status' => $status
+            ];
+            break;
+
         default:
             $response = ['success' => false, 'message' => 'Acción no reconocida'];
     }

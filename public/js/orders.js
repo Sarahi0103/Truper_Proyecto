@@ -5,6 +5,9 @@
 let currentCart = [];
 let currentTotal = 0;
 const COMPANY_WHATSAPP = String(window.TRUPER_COMPANY_WHATSAPP || '3317915887');
+const ORDERS_ROLE = String(window.TRUPER_ORDERS_ROLE || 'client').toLowerCase();
+const ORDERS_IS_ADMIN = ORDERS_ROLE === 'admin';
+const ORDER_STATUS_OPTIONS = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
 
 function displayProductCode(rawSku) {
     return String(rawSku || '').replace(/^\s*XLS-/i, '').trim();
@@ -269,6 +272,49 @@ function getStatusLabel(status) {
     return labels[status] || status || 'N/A';
 }
 
+function renderOrderStatusCell(status, orderId) {
+    const normalizedStatus = normalizeOrderStatus(status);
+
+    if (!ORDERS_IS_ADMIN) {
+        return `<span class="order-status-readonly">${getStatusLabel(normalizedStatus)}</span>`;
+    }
+
+    const options = ORDER_STATUS_OPTIONS.map((value) => {
+        const selected = value === normalizedStatus ? 'selected' : '';
+        return `<option value="${value}" ${selected}>${getStatusLabel(value)}</option>`;
+    }).join('');
+
+    return `
+        <select class="order-status-select" onchange="updateOrderStatus(${Number(orderId || 0)}, this.value)">
+            ${options}
+        </select>
+    `;
+}
+
+async function updateOrderStatus(orderId, newStatus) {
+    if (!ORDERS_IS_ADMIN) {
+        return;
+    }
+
+    if (!orderId || !ORDER_STATUS_OPTIONS.includes(newStatus)) {
+        showAlert('Estado de pedido inválido', 'warning');
+        return;
+    }
+
+    const response = await apiCall('/orders.php?action=update-status', 'PUT', {
+        order_id: Number(orderId),
+        status: newStatus
+    });
+
+    if (response && response.success) {
+        showAlert(response.message || 'Estado actualizado', 'success');
+        await loadOrders();
+        return;
+    }
+
+    showAlert((response && response.message) ? response.message : 'No se pudo actualizar el estado del pedido', 'error');
+}
+
 function normalizeCategoryText(value) {
     return String(value || '')
         .normalize('NFD')
@@ -505,7 +551,7 @@ async function loadOrders() {
             <td>${formatDate(order.created_at)}</td>
             <td>${formatCurrency(order.total_amount)}</td>
             <td>WhatsApp</td>
-            <td>${getStatusLabel(normalizedStatus)}</td>
+            <td>${renderOrderStatusCell(normalizedStatus, order.id)}</td>
             <td>
                 <a class="btn btn-small btn-primary" href="/ticket_client.php?id=${order.id}" target="_blank">Ticket</a>
             </td>

@@ -287,7 +287,6 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             <button class="tab-button" data-tab="historyTab">Historico</button>
             <button class="tab-button" data-tab="visibilityTab">Visibilidad</button>
             <button class="tab-button" data-tab="pricesTab">Precios</button>
-            <button class="tab-button" data-tab="categoriesTab">Categorías</button>
             <button class="tab-button" data-tab="marketplaceTab">Marketplace CE</button>
         </div>
 
@@ -616,39 +615,6 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     <button class="btn btn-secondary mt-2" onclick="cancelPriceAdjustment()">Cancelar</button>
                 </div>
                 <div id="priceResult" class="mt-2"></div>
-            </div></div>
-        </section>
-
-        <section id="categoriesTab" class="tab-content admin-tab-panel">
-            <div class="card mb-3"><div class="card-body">
-                <h3>Gestión de Categorías</h3>
-                <p class="text-muted">Administra las categorías disponibles para alta de productos. Esto evita duplicados por errores de escritura.</p>
-
-                <input type="hidden" id="categoryEditId" value="">
-
-                <div class="grid grid-3">
-                    <div class="form-group"><label>Nombre</label><input id="categoryName" type="text" maxlength="120" placeholder="Ej. Material eléctrico"></div>
-                    <div class="form-group"><label>Orden</label><input id="categoryOrder" type="number" min="0" step="1" value="0"></div>
-                    <div class="form-group">
-                        <label>Activa</label>
-                        <select id="categoryActive">
-                            <option value="1">Sí</option>
-                            <option value="0">No</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap;">
-                    <button class="btn btn-primary" type="button" id="categorySaveButton" onclick="saveCategoryByAdmin()">Guardar categoría</button>
-                    <button class="btn btn-secondary" type="button" onclick="resetCategoryForm()">Limpiar formulario</button>
-                </div>
-
-                <div id="categoryResult" class="mt-2"></div>
-            </div></div>
-
-            <div class="card"><div class="card-body">
-                <h3>Categorías registradas</h3>
-                <div id="categoriesList" class="text-muted">Cargando categorías...</div>
             </div></div>
         </section>
 

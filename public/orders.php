@@ -15,6 +15,10 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <link rel="stylesheet" href="css/styles.css">    <link rel="stylesheet" href="css/theme.css">    <link rel="stylesheet" href="css/dashboard.css">
     <style>
+        .orders-page main {
+            padding-top: 2rem;
+        }
+
         .orders-page .tabs {
             border: 1px solid var(--ui-border);
             border-radius: 12px;
@@ -35,6 +39,17 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
         .orders-page .header-actions {
             flex-wrap: wrap;
             justify-content: flex-end;
+        }
+
+        .orders-page .nav-menu {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            scrollbar-width: thin;
+            gap: 0.5rem;
+        }
+
+        .orders-page .nav-menu a {
+            white-space: nowrap;
         }
 
         .orders-page .header-actions .user-menu {
@@ -62,24 +77,23 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
         }
 
         .orders-page .order-layout {
-            --orders-panel-height: clamp(620px, calc(100vh - 235px), 860px);
+            --orders-panel-height: auto;
             display: grid;
             grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.85fr);
             gap: 1.25rem;
-            align-items: stretch;
+            align-items: start;
         }
 
         .orders-page .order-panel {
             min-width: 0;
-            min-height: var(--orders-panel-height);
-            height: var(--orders-panel-height);
+            min-height: 0;
+            height: auto;
             display: flex;
             flex-direction: column;
         }
 
         .orders-page .order-panel.sticky-panel {
-            position: sticky;
-            top: 1rem;
+            position: static;
             overflow: hidden;
         }
 
@@ -130,6 +144,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
         .orders-page .products-scroll {
             flex: 1 1 auto;
             min-height: 0;
+            max-height: clamp(340px, calc(100vh - 360px), 620px);
             overflow: auto;
             border: 1px solid var(--ui-border);
             border-radius: 12px;
@@ -151,6 +166,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
         .orders-page .cart-scroll {
             flex: 1 1 auto;
             min-height: 180px;
+            max-height: clamp(280px, calc(100vh - 430px), 460px);
             overflow: auto;
             border: 1px solid var(--ui-border);
             border-radius: 12px;
@@ -201,7 +217,25 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
             border-radius: 10px;
         }
 
+        .orders-page .order-status-select {
+            min-width: 150px;
+            padding: 0.35rem 0.55rem;
+            border-radius: 8px;
+            border: 1px solid var(--ui-border);
+            background: var(--ui-surface);
+            color: var(--ui-text);
+        }
+
+        .orders-page .order-status-readonly {
+            font-weight: 600;
+            color: var(--ui-text);
+        }
+
         @media (max-width: 900px) {
+            .orders-page main {
+                padding-top: 1.2rem;
+            }
+
             .orders-page .order-layout {
                 grid-template-columns: 1fr;
                 --orders-panel-height: auto;
@@ -431,8 +465,9 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
     <script>
         window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>';
         window.TRUPER_COMPANY_WHATSAPP = '<?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?>';
+        window.TRUPER_ORDERS_ROLE = '<?php echo htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'); ?>';
     </script>
-    <script src="js/orders.js?v=20260420"></script>
+    <script src="js/orders.js?v=20260424"></script>
     <script src="js/barcode-scanner.js"></script>
     <script>
         function logout() {
