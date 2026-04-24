@@ -276,7 +276,6 @@ function homepage_update_label($type) {
                 <?php if ($isAdmin): ?><a href="/admin_supply.php">Abastecimiento</a><?php endif; ?>
                 <?php if ($isLogged): ?>
                     <a href="/orders.php">Pedidos</a>
-                    <a href="/account.php">Mi Cuenta</a>
                     <a href="/wholesale.php">Mayoreo</a>
                     <?php if ($isAdmin): ?><a href="/cashier.php">Caja</a><?php endif; ?>
                     <a href="/dashboard.php">Dashboard</a>
@@ -284,7 +283,7 @@ function homepage_update_label($type) {
             </nav>
             <div class="header-actions">
                 <div class="theme-toggle">
-                    <button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo claro</span></button>
+                    <button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo obscuro</span></button>
                 </div>
                 <a href="<?php echo htmlspecialchars($whatsappHelpUrl, ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener" class="btn btn-secondary btn-small">Dudas por WhatsApp</a>
                 <?php if (!$isLogged): ?>

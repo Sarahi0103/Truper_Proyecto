@@ -20,7 +20,7 @@ function setThemePreference(theme) {
 
     const toggleLabel = document.querySelector('[data-theme-toggle-label]');
     if (toggleLabel) {
-        toggleLabel.textContent = next === 'dark' ? 'Modo oscuro' : 'Modo claro';
+        toggleLabel.textContent = next === 'dark' ? 'Modo obscuro' : 'Modo claro';
     }
 }
 
@@ -43,7 +43,7 @@ function ensureThemeToggleButton() {
     if (!wrap) {
         wrap = document.createElement('div');
         wrap.className = 'theme-toggle';
-        wrap.innerHTML = '<button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo claro</span></button>';
+        wrap.innerHTML = '<button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo obscuro</span></button>';
     }
 
     if (target && wrap.parentElement !== target) {

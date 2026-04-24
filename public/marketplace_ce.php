@@ -138,7 +138,7 @@ $whatsappPhone = function_exists('whatsapp_phone_digits') ? whatsapp_phone_digit
             </nav>
             <div class="header-actions">
                 <div class="theme-toggle">
-                    <button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo claro</span></button>
+                    <button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo obscuro</span></button>
                 </div>
                 <?php if ($whatsappPhone): ?>
                 <a href="https://wa.me/<?php echo htmlspecialchars($whatsappPhone,ENT_QUOTES,'UTF-8'); ?>?text=Hola%2C+me+interesa+un+art%C3%ADculo+del+Marketplace+CE"

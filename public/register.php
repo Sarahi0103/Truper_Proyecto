@@ -33,7 +33,7 @@ if (is_logged_in()) {
 
             <div class="auth-form-wrap">
                 <div class="theme-toggle">
-                    <button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo claro</span></button>
+                    <button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo obscuro</span></button>
                 </div>
                 <div class="login-box register-box">
                     <div class="auth-back-row">

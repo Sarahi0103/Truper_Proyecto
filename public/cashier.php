@@ -35,7 +35,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
         </nav>
     </div>
     <div class="user-menu">
-        <div class="theme-toggle"><button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo claro</span></button></div>
+        <div class="theme-toggle"><button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo obscuro</span></button></div>
         <div class="user-info"><div class="user-name"><?php echo $user_name; ?></div></div>
       <a href="/" class="btn btn-small btn-ghost">Ver portada</a>
         <button class="btn-logout" onclick="window.location.href='api/auth.php?action=logout'">Cerrar Sesion</button>
