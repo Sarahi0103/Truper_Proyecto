@@ -4,6 +4,7 @@ require_login();
 
 $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8');
 $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8');
+$is_admin = (($_SESSION['role'] ?? '') === 'admin');
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -29,6 +30,15 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
 
         .orders-page .tab-button.active {
             color: #fff;
+        }
+
+        .orders-page .header-actions {
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .orders-page .header-actions .user-menu {
+            margin-left: 0;
         }
 
         .orders-page .form-section h3 {
@@ -225,19 +235,25 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
                 <a href="dashboard.php">Dashboard</a>
                 <a href="orders.php" class="active">Pedidos</a>
                 <a href="wholesale.php">Mayoreo</a>
-                <?php if (($_SESSION['role'] ?? '') === 'admin'): ?><a href="cashier.php">Caja</a><?php endif; ?>
-                <?php if (($_SESSION['role'] ?? '') === 'admin'): ?><a href="admin_supply.php">Abastecimiento</a><?php endif; ?>
+                <?php if ($is_admin): ?><a href="cashier.php">Caja</a><?php endif; ?>
+                <?php if ($is_admin): ?><a href="admin_supply.php">Abastecimiento</a><?php endif; ?>
                 <a href="tasks.php">Tareas</a>
                 <a href="analytics.php">Estadísticas</a>
                 <a href="profile.php">Perfil</a>
             </nav>
-        </div>
-        <div class="user-menu">
-            <div class="user-info">
-                <div class="user-name"><?php echo $user_name; ?></div>
-                <div class="user-role"><?php echo ucfirst($user_role); ?></div>
-            </div>
+            <div class="header-actions">
+                <div class="theme-toggle">
+                    <button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo obscuro</span></button>
+                </div>
+                <a href="<?php echo htmlspecialchars(whatsapp_url('Hola, tengo una duda sobre pedidos y cotizaciones.'), ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener" class="btn btn-secondary btn-small">Dudas por WhatsApp</a>
+                <div class="user-menu">
+                    <div class="user-info">
+                        <div class="user-name"><?php echo $user_name; ?></div>
+                        <div class="user-role"><?php echo ucfirst($user_role); ?></div>
+                    </div>
             <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
+                </div>
+            </div>
         </div>
     </header>
 
@@ -412,6 +428,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
 
     <script src="js/main.js"></script>
     <script>
+        window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>';
         window.TRUPER_COMPANY_WHATSAPP = '<?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?>';
     </script>
     <script src="js/orders.js?v=20260420"></script>

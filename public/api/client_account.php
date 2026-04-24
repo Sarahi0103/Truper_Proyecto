@@ -12,6 +12,10 @@ $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
 $response = [];
 $user_id = (int)$_SESSION['user_id'];
 
+if (in_array($method, ['POST', 'PUT', 'DELETE'], true)) {
+    require_csrf_token();
+}
+
 function ensure_client_profile_id_for_user($pdo, int $userId): int {
     if ($userId <= 0) {
         return 0;

@@ -89,7 +89,29 @@ define('COMPANY_WHATSAPP_PHONE', getenv('COMPANY_WHATSAPP_PHONE') ?: '3317915887
 
 // Funciones de utilidad
 function sanitize($data) {
-    return htmlspecialchars(trim($data), ENT_QUOTES, 'UTF-8');
+    if (is_array($data)) {
+        return array_map('sanitize', $data);
+    }
+
+    return trim((string)$data);
+}
+
+function decode_legacy_entities($value, int $passes = 3) {
+    $result = (string)$value;
+    if ($result === '') {
+        return '';
+    }
+
+    $passes = max(1, $passes);
+    for ($i = 0; $i < $passes; $i++) {
+        $decoded = html_entity_decode($result, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        if ($decoded === $result) {
+            break;
+        }
+        $result = $decoded;
+    }
+
+    return $result;
 }
 
 function whatsapp_phone_digits($phone = null) {
@@ -165,6 +187,11 @@ function rotate_csrf_token() {
  * Checks: $_POST['csrf_token'], JSON body, X-CSRF-Token header
  */
 function get_csrf_token_from_request() {
+    // Try GET parameter for navigations like signed downloads
+    if (!empty($_GET['csrf_token'])) {
+        return $_GET['csrf_token'];
+    }
+
     // Try POST parameter
     if (!empty($_POST['csrf_token'])) {
         return $_POST['csrf_token'];

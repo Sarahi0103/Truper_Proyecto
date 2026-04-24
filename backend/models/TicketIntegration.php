@@ -248,7 +248,7 @@ class TicketIntegration {
                 SELECT 
                     st.id, st.folio, st.ticket_type, st.total_amount,
                     st.payment_status, st.issued_date,
-                    COUNT(ti.id) as item_count,
+                       COUNT(DISTINCT ti.id) as item_count,
                     COUNT(DISTINCT tws.id) as whatsapp_sends,
                     COUNT(DISTINCT td.id) as downloads
                 FROM sales_tickets st
@@ -358,6 +358,21 @@ class TicketIntegration {
      */
     public static function createTables($pdo) {
         try {
+            // Tabla de auditoría de tickets
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS ticket_audit_log (
+                    id SERIAL PRIMARY KEY,
+                    ticket_id INT NOT NULL REFERENCES sales_tickets(id) ON DELETE CASCADE,
+                    action VARCHAR(50),
+                    description TEXT,
+                    admin_id INT REFERENCES users(id) ON DELETE SET NULL,
+                    old_value JSON,
+                    new_value JSON,
+                    ip_address VARCHAR(45),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ");
+
             // Tabla de envíos WhatsApp
             $pdo->exec("
                 CREATE TABLE IF NOT EXISTS ticket_whatsapp_sends (
@@ -391,11 +406,27 @@ class TicketIntegration {
                     downloaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ");
+
+            // Tabla de estadísticas mensuales
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS sales_monthly_statistics (
+                    id SERIAL PRIMARY KEY,
+                    year_month VARCHAR(7) NOT NULL UNIQUE,
+                    total_sales DECIMAL(12,2) DEFAULT 0,
+                    total_returns DECIMAL(12,2) DEFAULT 0,
+                    total_adjustments DECIMAL(12,2) DEFAULT 0,
+                    ticket_count INT DEFAULT 0,
+                    return_count INT DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ");
             
             // Índices
             $pdo->exec("CREATE INDEX IF NOT EXISTS idx_whatsapp_ticket ON ticket_whatsapp_sends(ticket_id)");
             $pdo->exec("CREATE INDEX IF NOT EXISTS idx_generations_ticket ON ticket_generations(ticket_id)");
             $pdo->exec("CREATE INDEX IF NOT EXISTS idx_downloads_ticket ON ticket_downloads(ticket_id)");
+            $pdo->exec("CREATE INDEX IF NOT EXISTS idx_monthly_statistics_year_month ON sales_monthly_statistics(year_month)");
             
             return ['success' => true, 'message' => 'Tablas creadas correctamente'];
         } catch (Exception $e) {

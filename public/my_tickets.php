@@ -147,6 +147,9 @@ $userName = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8'
     </div>
 </div>
 
+<script>
+window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>';
+</script>
 <script src="js/main.js"></script>
 <script>
 const apiBase = '/api/client_tickets.php';
@@ -315,7 +318,8 @@ function getHistoryIcon(type) {
 }
 
 function downloadPDF(ticketId) {
-    window.location.href = `/api/client_tickets.php?action=download-pdf&ticket_id=${ticketId}`;
+    const token = encodeURIComponent(window.csrfToken || '');
+    window.location.href = `/api/client_tickets.php?action=download-pdf&ticket_id=${ticketId}&csrf_token=${token}`;
 }
 
 function openWhatsAppModal(ticketId) {

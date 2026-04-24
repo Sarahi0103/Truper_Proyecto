@@ -43,6 +43,10 @@ function image_priority_score($fileName): int {
     return 90;
 }
 
+$productName = decode_legacy_entities((string)($product['name'] ?? ''));
+$productDescription = decode_legacy_entities((string)($product['description'] ?? ''));
+$productTechnicalSpecs = decode_legacy_entities((string)($product['technical_specs'] ?? ''));
+$productCategory = decode_legacy_entities((string)($product['category'] ?? ''));
 $imagePath = !empty($product['image_url']) ? $product['image_url'] : 'images/products/default-product.svg';
 $galleryImages = [];
 
@@ -429,15 +433,15 @@ $stock = (int)($product['stock_quantity'] ?? 0);
         <div class="breadcrumb">
             <a href="index.php">Catálogo</a>
             <span>/</span>
-            <span><?php echo htmlspecialchars($product['category'] ?: 'General', ENT_QUOTES, 'UTF-8'); ?></span>
+            <span><?php echo htmlspecialchars($productCategory !== '' ? $productCategory : 'General', ENT_QUOTES, 'UTF-8'); ?></span>
             <span>/</span>
-            <span><?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?></span>
+            <span><?php echo htmlspecialchars($productName, ENT_QUOTES, 'UTF-8'); ?></span>
         </div>
 
         <div class="product-detail-hero">
             <div class="detail-gallery">
                 <div class="detail-main-image" data-lightbox-trigger>
-                    <img id="mainImage" src="<?php echo htmlspecialchars($galleryImages[0], ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <img id="mainImage" src="<?php echo htmlspecialchars($galleryImages[0], ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($productName, ENT_QUOTES, 'UTF-8'); ?>">
                 </div>
                 <?php if (count($galleryImages) > 1): ?>
                     <div class="detail-thumbnails" data-thumbnails-container>
@@ -453,8 +457,8 @@ $stock = (int)($product['stock_quantity'] ?? 0);
             <div class="product-info">
                 <div>
                     <div class="detail-header">
-                        <span class="catalog-tag"><?php echo htmlspecialchars($product['category'] ?: 'General', ENT_QUOTES, 'UTF-8'); ?></span>
-                        <h1><?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?></h1>
+                        <span class="catalog-tag"><?php echo htmlspecialchars($productCategory !== '' ? $productCategory : 'General', ENT_QUOTES, 'UTF-8'); ?></span>
+                        <h1><?php echo htmlspecialchars($productName, ENT_QUOTES, 'UTF-8'); ?></h1>
                         <div class="detail-sku"><strong>Código:</strong> <?php echo htmlspecialchars($displaySku, ENT_QUOTES, 'UTF-8'); ?></div>
                     </div>
 
@@ -474,17 +478,17 @@ $stock = (int)($product['stock_quantity'] ?? 0);
                         </div>
                     </div>
 
-                    <?php if (!empty($product['description'])): ?>
+                    <?php if ($productDescription !== ''): ?>
                         <div class="detail-description">
                             <h3>Descripción</h3>
-                            <p><?php echo htmlspecialchars($product['description'], ENT_QUOTES, 'UTF-8'); ?></p>
+                            <p><?php echo htmlspecialchars($productDescription, ENT_QUOTES, 'UTF-8'); ?></p>
                         </div>
                     <?php endif; ?>
 
-                    <?php if (!empty($product['technical_specs'])): ?>
+                    <?php if ($productTechnicalSpecs !== ''): ?>
                         <div class="detail-specs">
                             <h3>Especificaciones técnicas</h3>
-                            <p><?php echo htmlspecialchars($product['technical_specs'], ENT_QUOTES, 'UTF-8'); ?></p>
+                            <p><?php echo htmlspecialchars($productTechnicalSpecs, ENT_QUOTES, 'UTF-8'); ?></p>
                         </div>
                     <?php endif; ?>
 
@@ -507,7 +511,8 @@ $stock = (int)($product['stock_quantity'] ?? 0);
                         data-add-product
                         data-id="<?php echo (int)$product['id']; ?>"
                         data-sku="<?php echo htmlspecialchars($displaySku, ENT_QUOTES, 'UTF-8'); ?>"
-                        data-name="<?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                        data-name="<?php echo htmlspecialchars($productName, ENT_QUOTES, 'UTF-8'); ?>"
+                        data-image="<?php echo htmlspecialchars($galleryImages[0] ?? $imagePath, ENT_QUOTES, 'UTF-8'); ?>"
                         data-price="<?php echo (float)$product['unit_price']; ?>"
                         <?php echo $stock <= 0 ? 'disabled' : ''; ?>>
                         <?php echo $stock <= 0 ? 'Producto Agotado' : 'Agregar al Carrito'; ?>
@@ -619,6 +624,7 @@ $stock = (int)($product['stock_quantity'] ?? 0);
                     id: this.dataset.id,
                     sku: this.dataset.sku,
                     name: this.dataset.name,
+                    image_url: this.dataset.image || 'images/products/default-product.svg',
                     unit_price: Number(this.dataset.price || 0),
                     quantity: 1
                 });

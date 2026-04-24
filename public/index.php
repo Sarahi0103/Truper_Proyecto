@@ -389,6 +389,9 @@ function homepage_update_label($type) {
                     <?php
                         $rawSku = (string)($product['sku'] ?? '');
                         $displaySku = normalize_product_code($rawSku);
+                        $productName = decode_legacy_entities((string)($product['name'] ?? ''));
+                        $productDescription = decode_legacy_entities((string)($product['description'] ?? ''));
+                        $productCategory = decode_legacy_entities((string)($product['category'] ?? ''));
                         $imagePath = !empty($product['image_url']) ? $product['image_url'] : 'images/products/default-product.svg';
                         $galleryImages = resolve_images_by_product_code($displaySku);
                         if (empty($galleryImages)) {
@@ -409,9 +412,9 @@ function homepage_update_label($type) {
                     ?>
                     <article class="product-card-min"
                         data-product-card
-                        data-name="<?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                        data-name="<?php echo htmlspecialchars($productName, ENT_QUOTES, 'UTF-8'); ?>"
                         data-sku="<?php echo htmlspecialchars($displaySku, ENT_QUOTES, 'UTF-8'); ?>"
-                        data-category="<?php echo htmlspecialchars($product['category'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                        data-category="<?php echo htmlspecialchars($productCategory, ENT_QUOTES, 'UTF-8'); ?>"
                         data-price="<?php echo (float)$product['unit_price']; ?>"
                         data-stock="<?php echo $stock; ?>">
                         <a href="product_detail.php?id=<?php echo (int)$product['id']; ?>" class="product-media-link" data-product-gallery>
@@ -420,7 +423,7 @@ function homepage_update_label($type) {
                                 <img
                                     class="product-gallery-image <?php echo $idx === 0 ? 'active' : ''; ?>"
                                     src="<?php echo htmlspecialchars($galleryImage, ENT_QUOTES, 'UTF-8'); ?>"
-                                    alt="<?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    alt="<?php echo htmlspecialchars($productName, ENT_QUOTES, 'UTF-8'); ?>"
                                     loading="lazy">
                             <?php endforeach; ?>
                             <?php if (count($galleryImages) > 1): ?>
@@ -431,10 +434,10 @@ function homepage_update_label($type) {
                             </div>
                         </a>
                         <div class="product-content">
-                            <div class="catalog-tag"><?php echo htmlspecialchars($product['category'] ?: 'General', ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div class="catalog-tag"><?php echo htmlspecialchars($productCategory !== '' ? $productCategory : 'General', ENT_QUOTES, 'UTF-8'); ?></div>
                             <div class="product-code-label"><strong>Código:</strong> <strong><?php echo htmlspecialchars($displaySku, ENT_QUOTES, 'UTF-8'); ?></strong></div>
-                            <h3 class="product-title"><?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?></h3>
-                            <p class="product-spec"><?php echo htmlspecialchars($product['description'] ?: 'Descripción pendiente', ENT_QUOTES, 'UTF-8'); ?></p>
+                            <h3 class="product-title"><?php echo htmlspecialchars($productName, ENT_QUOTES, 'UTF-8'); ?></h3>
+                            <p class="product-spec"><?php echo htmlspecialchars($productDescription !== '' ? $productDescription : 'Descripción pendiente', ENT_QUOTES, 'UTF-8'); ?></p>
                             <div>
                                 <?php if (!empty($variants)): ?>
                                     <?php foreach ($variants as $variant): ?>
@@ -455,7 +458,8 @@ function homepage_update_label($type) {
                                     data-add-product
                                     data-id="<?php echo (int)$product['id']; ?>"
                                     data-sku="<?php echo htmlspecialchars($displaySku, ENT_QUOTES, 'UTF-8'); ?>"
-                                    data-name="<?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-name="<?php echo htmlspecialchars($productName, ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-image="<?php echo htmlspecialchars($galleryImages[0] ?? $imagePath, ENT_QUOTES, 'UTF-8'); ?>"
                                     data-price="<?php echo (float)$product['unit_price']; ?>">Agregar</button>
                             </div>
                         </div>

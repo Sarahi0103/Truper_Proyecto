@@ -20,10 +20,87 @@ function display_product_code($sku) {
     return preg_replace('/^\s*XLS-/i', '', (string)$sku);
 }
 
+function image_priority_score_products_api($fileName) {
+    $name = strtoupper((string)pathinfo((string)$fileName, PATHINFO_FILENAME));
+    if (preg_match('/\+FC1$/', $name)) {
+        return 0;
+    }
+    if (preg_match('/\+E1$/', $name)) {
+        return 1;
+    }
+    if (preg_match('/\+D1$/', $name)) {
+        return 2;
+    }
+    if (preg_match('/\+O\d+$/', $name)) {
+        return 3;
+    }
+    if (strpos($name, '+') === false) {
+        return 50;
+    }
+    return 90;
+}
+
+function resolve_product_image_from_catalog($sku, $currentImage = ''): string {
+    $currentImage = trim((string)$currentImage);
+    if ($currentImage !== '' && strcasecmp($currentImage, 'images/products/default-product.svg') !== 0) {
+        return $currentImage;
+    }
+
+    static $cache = null;
+    if ($cache === null) {
+        $cache = [];
+        $baseDir = __DIR__ . '/../images/products/by_code';
+        if (is_dir($baseDir)) {
+            $dirs = scandir($baseDir);
+            foreach ($dirs as $dir) {
+                if ($dir === '.' || $dir === '..') {
+                    continue;
+                }
+
+                $fullDir = $baseDir . '/' . $dir;
+                if (!is_dir($fullDir)) {
+                    continue;
+                }
+
+                $matches = glob($fullDir . '/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', GLOB_BRACE);
+                if (empty($matches)) {
+                    continue;
+                }
+
+                usort($matches, function ($a, $b) {
+                    $scoreA = image_priority_score_products_api($a);
+                    $scoreB = image_priority_score_products_api($b);
+                    if ($scoreA === $scoreB) {
+                        return strcmp((string)$a, (string)$b);
+                    }
+                    return $scoreA <=> $scoreB;
+                });
+
+                $cache[$dir] = 'images/products/by_code/' . $dir . '/' . basename((string)$matches[0]);
+            }
+        }
+    }
+
+    $normalizedSku = display_product_code($sku);
+    return $cache[$normalizedSku] ?? 'images/products/default-product.svg';
+}
+
 function normalize_product_sku_for_response(array $product) {
     if (array_key_exists('sku', $product)) {
         $product['sku'] = display_product_code($product['sku']);
     }
+
+    foreach (['name', 'description', 'technical_specs', 'category'] as $textField) {
+        if (array_key_exists($textField, $product)) {
+            $product[$textField] = decode_legacy_entities((string)$product[$textField]);
+        }
+    }
+
+    $product['image_url'] = resolve_product_image_from_catalog(
+        $product['sku'] ?? '',
+        $product['image_url'] ?? ''
+    );
+
     return $product;
 }
 
@@ -110,28 +187,28 @@ try {
             $queries = [];
             if ($category !== '') {
                 $queries[] = [
-                    "SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category FROM products WHERE is_active = true AND category = ? ORDER BY name LIMIT 200",
+                    "SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE is_active = true AND category = ? ORDER BY name LIMIT 200",
                     [$category]
                 ];
                 $queries[] = [
-                    "SELECT id, name, sku, COALESCE(sell_price, unit_price, 0) AS unit_price, category FROM products WHERE active = 1 AND category = ? ORDER BY name LIMIT 200",
+                    "SELECT id, name, sku, COALESCE(sell_price, unit_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE active = 1 AND category = ? ORDER BY name LIMIT 200",
                     [$category]
                 ];
                 $queries[] = [
-                    "SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category FROM products WHERE category = ? ORDER BY name LIMIT 200",
+                    "SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE category = ? ORDER BY name LIMIT 200",
                     [$category]
                 ];
             } else {
                 $queries[] = [
-                    "SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category FROM products WHERE is_active = true ORDER BY name LIMIT 200",
+                    "SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE is_active = true ORDER BY name LIMIT 200",
                     []
                 ];
                 $queries[] = [
-                    "SELECT id, name, sku, COALESCE(sell_price, unit_price, 0) AS unit_price, category FROM products WHERE active = 1 ORDER BY name LIMIT 200",
+                    "SELECT id, name, sku, COALESCE(sell_price, unit_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE active = 1 ORDER BY name LIMIT 200",
                     []
                 ];
                 $queries[] = [
-                    "SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category FROM products ORDER BY name LIMIT 200",
+                    "SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products ORDER BY name LIMIT 200",
                     []
                 ];
             }
@@ -166,7 +243,8 @@ try {
                             'name' => $p['name'],
                             'sku' => display_product_code($p['sku']),
                             'unit_price' => $p['unit_price'],
-                            'category' => $p['category']
+                            'category' => decode_legacy_entities($p['category']),
+                            'image_url' => (string)($p['image_url'] ?? 'images/products/default-product.svg')
                         ];
                     }, $products);
                 }

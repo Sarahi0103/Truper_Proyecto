@@ -22,6 +22,10 @@ $userId = $_SESSION['user_id'];
 $integration = new TicketIntegration($pdo);
 $response = ['success' => false, 'message' => 'Acción no reconocida'];
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    require_csrf_token();
+}
+
 try {
     switch ($action) {
         // Listar todos los tickets del cliente
@@ -125,6 +129,8 @@ try {
                 $response = ['success' => false, 'message' => 'Método no permitido'];
                 break;
             }
+
+            require_csrf_token();
             
             $ticketId = (int)($_GET['ticket_id'] ?? 0);
             if (!$ticketId) {

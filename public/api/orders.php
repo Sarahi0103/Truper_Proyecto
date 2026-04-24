@@ -15,6 +15,10 @@ $rawInput = file_get_contents('php://input');
 $decodedInput = json_decode($rawInput, true);
 $input = is_array($decodedInput) ? $decodedInput : (is_array($_POST) ? $_POST : []);
 
+if (in_array($method, ['POST', 'PUT', 'DELETE'], true)) {
+    require_csrf_token();
+}
+
 $orderController = new OrderController($pdo);
 $response = [];
 

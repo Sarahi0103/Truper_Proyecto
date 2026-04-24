@@ -40,6 +40,21 @@
     return String(rawSku || '').replace(/^XLS-/i, '');
   }
 
+  function decodeHtmlEntities(value) {
+    let result = String(value || '');
+    if (!result) return '';
+
+    const textarea = document.createElement('textarea');
+    for (let i = 0; i < 3; i += 1) {
+      textarea.innerHTML = result;
+      const decoded = textarea.value;
+      if (decoded === result) break;
+      result = decoded;
+    }
+
+    return result;
+  }
+
   function money(v) {
     return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(toNumber(v));
   }
@@ -57,7 +72,7 @@
     if (existing) {
       existing.quantity += 1;
     } else {
-      cart.push({ ...product, quantity: 1 });
+      cart.push({ ...product, image_url: product.image_url || 'images/products/default-product.svg', quantity: 1 });
     }
     setCart(cart);
     updateCartBadge();
@@ -310,7 +325,8 @@
         const product = {
           id: btn.dataset.id,
           sku: btn.dataset.sku,
-          name: btn.dataset.name,
+          name: decodeHtmlEntities(btn.dataset.name),
+          image_url: btn.dataset.image || 'images/products/default-product.svg',
           unit_price: toNumber(btn.dataset.price)
         };
         addToCart(product);

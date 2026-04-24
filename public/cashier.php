@@ -158,6 +158,9 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
             </section>
     </div>
 </main>
+<script>
+window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>';
+</script>
 <script src="js/main.js"></script>
 <script>
 function formatMoney(value) {

@@ -175,6 +175,9 @@ $company_whatsapp = htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8
     </div>
 </main>
 
+<script>
+window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>';
+</script>
 <script src="js/main.js"></script>
 <script>
 function setupTabs() {

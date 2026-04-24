@@ -288,9 +288,91 @@ $isAdmin = $isLogged && (($_SESSION['role'] ?? '') === 'admin');
     <script src="js/main.js"></script>
     <script src="js/catalog.js"></script>
     <script>
-        function renderCartPage() {
+        function decodeCartText(value) {
+            let result = String(value || '');
+            if (!result) return '';
+
+            const textarea = document.createElement('textarea');
+            for (let i = 0; i < 3; i += 1) {
+                textarea.innerHTML = result;
+                const decoded = textarea.value;
+                if (decoded === result) break;
+                result = decoded;
+            }
+
+            return result;
+        }
+
+        function getStoredCart() {
+            try {
+                return JSON.parse(localStorage.getItem('truper_cart') || '[]');
+            } catch (_) {
+                return [];
+            }
+        }
+
+        async function hydrateCartImages() {
+            const cart = getStoredCart();
+            const needsHydration = cart.some((item) => !item.image_url || item.image_url === 'images/products/default-product.svg');
+            if (!needsHydration || cart.length === 0) {
+                return cart;
+            }
+
+            try {
+                const response = await fetch('/api/products.php?action=list', {
+                    credentials: 'same-origin'
+                });
+                const payload = await response.json();
+                const catalog = Array.isArray(payload?.products) ? payload.products : [];
+                if (catalog.length === 0) {
+                    return cart;
+                }
+
+                const bySku = new Map();
+                const byId = new Map();
+                catalog.forEach((product) => {
+                    const sku = String(product?.sku || '').replace(/^XLS-/i, '').trim();
+                    const id = String(product?.id || '').trim();
+                    if (sku) bySku.set(sku, product);
+                    if (id) byId.set(id, product);
+                });
+
+                let changed = false;
+                const nextCart = cart.map((item) => {
+                    const normalizedSku = String(item?.sku || '').replace(/^XLS-/i, '').trim();
+                    const candidate = bySku.get(normalizedSku) || byId.get(String(item?.id || '').trim());
+                    if (!candidate) {
+                        return item;
+                    }
+
+                    const nextItem = { ...item };
+                    if (!nextItem.image_url || nextItem.image_url === 'images/products/default-product.svg') {
+                        nextItem.image_url = candidate.image_url || nextItem.image_url || 'images/products/default-product.svg';
+                    }
+                    if (!nextItem.name || nextItem.name !== decodeCartText(nextItem.name)) {
+                        nextItem.name = candidate.name || decodeCartText(nextItem.name);
+                    }
+
+                    if (nextItem.image_url !== item.image_url || nextItem.name !== item.name) {
+                        changed = true;
+                    }
+
+                    return nextItem;
+                });
+
+                if (changed) {
+                    localStorage.setItem('truper_cart', JSON.stringify(nextCart));
+                    return nextCart;
+                }
+            } catch (_) {
+                return cart;
+            }
+
+            return cart;
+        }
+
+        function renderCartPage(cart = getStoredCart()) {
             const cartList = document.getElementById('cartList');
-            const cart = JSON.parse(localStorage.getItem('truper_cart') || '[]');
 
             if (cart.length === 0) {
                 cartList.innerHTML = `
@@ -300,17 +382,17 @@ $isAdmin = $isLogged && (($_SESSION['role'] ?? '') === 'admin');
                         <a href="index.php" class="btn btn-primary cart-empty-btn">Ir al Catálogo</a>
                     </div>
                 `;
-                updateSummary();
+                updateSummary(cart);
                 return;
             }
 
             cartList.innerHTML = cart.map((item, idx) => `
                 <div class="cart-item">
                     <div class="cart-item-image">
-                        <img src="images/products/default-product.svg" alt="${item.name}" onerror="this.src='images/products/default-product.svg'">
+                        <img src="${item.image_url || 'images/products/default-product.svg'}" alt="${decodeCartText(item.name)}" onerror="this.src='images/products/default-product.svg'">
                     </div>
                     <div class="cart-item-details">
-                        <p class="cart-item-name">${item.name}</p>
+                        <p class="cart-item-name">${decodeCartText(item.name)}</p>
                         <span class="cart-item-sku">SKU: ${String(item.sku || '').replace(/^XLS-/i, '')}</span>
                         <span class="cart-item-price">$${Number(item.unit_price).toFixed(2)}</span>
                     </div>
@@ -325,11 +407,10 @@ $isAdmin = $isLogged && (($_SESSION['role'] ?? '') === 'admin');
                 </div>
             `).join('');
 
-            updateSummary();
+            updateSummary(cart);
         }
 
-        function updateSummary() {
-            const cart = JSON.parse(localStorage.getItem('truper_cart') || '[]');
+        function updateSummary(cart = getStoredCart()) {
             const items = cart.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
             const total = cart.reduce((sum, item) => sum + (Number(item.unit_price || 0) * Number(item.quantity || 0)), 0);
 
@@ -339,7 +420,7 @@ $isAdmin = $isLogged && (($_SESSION['role'] ?? '') === 'admin');
         }
 
         function changeCartQty(sku, delta) {
-            const cart = JSON.parse(localStorage.getItem('truper_cart') || '[]');
+            const cart = getStoredCart();
             const item = cart.find(p => p.sku === sku);
             if (item) {
                 item.quantity = Math.max(1, Number(item.quantity || 1) + delta);
@@ -349,7 +430,7 @@ $isAdmin = $isLogged && (($_SESSION['role'] ?? '') === 'admin');
         }
 
         function setCartQty(sku, qty) {
-            const cart = JSON.parse(localStorage.getItem('truper_cart') || '[]');
+            const cart = getStoredCart();
             const item = cart.find(p => p.sku === sku);
             if (item) {
                 item.quantity = Math.max(1, Number(qty) || 1);
@@ -360,7 +441,7 @@ $isAdmin = $isLogged && (($_SESSION['role'] ?? '') === 'admin');
 
         function removeFromCart(sku) {
             if (!confirm('¿Eliminar este producto del carrito?')) return;
-            const cart = JSON.parse(localStorage.getItem('truper_cart') || '[]');
+            const cart = getStoredCart();
             const filtered = cart.filter(p => p.sku !== sku);
             localStorage.setItem('truper_cart', JSON.stringify(filtered));
             renderCartPage();
@@ -372,7 +453,10 @@ $isAdmin = $isLogged && (($_SESSION['role'] ?? '') === 'admin');
             renderCartPage();
         });
 
-        document.addEventListener('DOMContentLoaded', renderCartPage);
+        document.addEventListener('DOMContentLoaded', async function() {
+            const cart = await hydrateCartImages();
+            renderCartPage(cart);
+        });
     </script>
 </body>
 </html>

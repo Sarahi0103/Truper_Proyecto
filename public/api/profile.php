@@ -11,6 +11,10 @@ header('Content-Type: application/json');
 $action = $_GET['action'] ?? null;
 $method = $_SERVER['REQUEST_METHOD'];
 
+if (in_array($method, ['POST', 'PUT', 'DELETE'], true)) {
+    require_csrf_token();
+}
+
 $response = [];
 
 try {
