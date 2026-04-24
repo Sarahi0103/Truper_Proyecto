@@ -50,6 +50,30 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
             border-radius: 12px;
         }
 
+        .orders-page .order-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.85fr);
+            gap: 1.25rem;
+            align-items: start;
+        }
+
+        .orders-page .order-panel {
+            min-width: 0;
+        }
+
+        .orders-page .order-panel.sticky-panel {
+            position: sticky;
+            top: 1rem;
+        }
+
+        .orders-page .form-section {
+            margin-bottom: 0;
+        }
+
+        .orders-page .form-section + .form-section {
+            margin-top: 1.25rem;
+        }
+
         .orders-page .summary-row {
             color: var(--ui-text);
         }
@@ -84,6 +108,60 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
 
         .orders-page tbody tr:hover {
             background: var(--theme-accent-soft);
+        }
+
+        .orders-page .products-scroll {
+            max-height: min(56vh, 420px);
+            overflow: auto;
+            border: 1px solid var(--ui-border);
+            border-radius: 12px;
+            background: var(--ui-surface);
+        }
+
+        .orders-page .products-scroll table {
+            margin: 0;
+            border: 0;
+            border-radius: 0;
+        }
+
+        .orders-page .products-scroll thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        .orders-page #productsList td,
+        .orders-page #productsList th {
+            padding-top: 0.55rem;
+            padding-bottom: 0.55rem;
+            vertical-align: middle;
+        }
+
+        .orders-page #productsList input[type="number"] {
+            max-width: 70px;
+            min-height: 36px;
+            text-align: center;
+            margin: 0;
+        }
+
+        .orders-page #productsList .btn {
+            min-height: 36px;
+            padding: 0.4rem 0.85rem;
+            border-radius: 10px;
+        }
+
+        @media (max-width: 900px) {
+            .orders-page .order-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .orders-page .order-panel.sticky-panel {
+                position: static;
+            }
+
+            .orders-page .products-scroll {
+                max-height: 340px;
+            }
         }
     </style>
 </head>
@@ -172,88 +250,92 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
                     <div class="card-header">Crear Nueva Cotización</div>
                     <div class="card-body">
                         <div class="alert alert-info" style="margin-bottom: 1rem;">Este portal no procesa pagos en línea.</div>
-                        <div class="form-section">
-                            <h3>Seleccionar Productos</h3>
-                            <input type="text" id="productSearch" placeholder="Buscar productos..." onkeyup="searchProducts()" style="padding: 0.5rem; margin-bottom: 1rem; width: 100%;">
-                            <select id="productCategoryFilter" onchange="loadProducts()" style="padding: 0.5rem; margin-bottom: 1rem; width: 100%; max-width: 360px;">
-                                <option value="">Todas las categorías</option>
-                            </select>
-                            
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Producto</th>
-                                        <th>SKU</th>
-                                        <th>Precio Unitario</th>
-                                        <th>Cantidad</th>
-                                        <th>Acción</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="productsList">
-                                    <tr>
-                                        <td colspan="5" class="text-center text-muted">Cargando productos...</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                        <div class="order-layout">
+                            <div class="form-section order-panel">
+                                <h3>Seleccionar Productos</h3>
+                                <input type="text" id="productSearch" placeholder="Buscar productos..." onkeyup="searchProducts()" style="padding: 0.5rem; margin-bottom: 1rem; width: 100%;">
+                                <select id="productCategoryFilter" onchange="loadProducts()" style="padding: 0.5rem; margin-bottom: 1rem; width: 100%; max-width: 360px;">
+                                    <option value="">Todas las categorías</option>
+                                </select>
 
-                        <div class="form-section">
-                            <h3>Resumen del Pedido</h3>
-                            <div class="order-summary" style="margin-bottom: 1rem;">
-                                <div class="summary-row">
-                                    <span>Subtotal:</span>
-                                    <span id="cartSubtotal">$0</span>
-                                </div>
-                                <div class="summary-row">
-                                    <span>Descuentos:</span>
-                                    <span id="cartDiscount">$0</span>
-                                </div>
-                                <div class="summary-row total">
-                                    <span>Total estimado:</span>
-                                    <span id="cartTotal">$0</span>
+                                <div class="products-scroll">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Producto</th>
+                                                <th>SKU</th>
+                                                <th>Precio Unitario</th>
+                                                <th>Cantidad</th>
+                                                <th>Acción</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="productsList">
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted">Cargando productos...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
 
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Producto</th>
-                                        <th>Cantidad</th>
-                                        <th>Precio Unit.</th>
-                                        <th>Subtotal</th>
-                                        <th>Descuento</th>
-                                        <th>Total</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="cartItems">
-                                    <tr>
-                                        <td colspan="7" class="text-center text-muted">Tu carrito está vacío</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-
-                            <div class="form-group mt-3">
-                                <label>
-                                    <input type="checkbox" id="isWholesale"> Este es un pedido al por mayor
-                                </label>
-                            </div>
-
-                            <div class="form-group mt-3">
-                                <label for="orderNotes">Notas Adicionales</label>
-                                <textarea id="orderNotes" placeholder="Agrega notas sobre tu pedido..." style="width: 100%;"></textarea>
-                            </div>
-
-                            <div class="grid grid-2 mt-3">
-                                <div class="form-group">
-                                    <label for="specialEvent">Fecha o evento especial (opcional)</label>
-                                    <input type="text" id="specialEvent" placeholder="Ej. Buen Fin, Navidad, Inicio de obra">
+                            <div class="form-section order-panel sticky-panel">
+                                <h3>Resumen del Pedido</h3>
+                                <div class="order-summary" style="margin-bottom: 1rem;">
+                                    <div class="summary-row">
+                                        <span>Subtotal:</span>
+                                        <span id="cartSubtotal">$0</span>
+                                    </div>
+                                    <div class="summary-row">
+                                        <span>Descuentos:</span>
+                                        <span id="cartDiscount">$0</span>
+                                    </div>
+                                    <div class="summary-row total">
+                                        <span>Total estimado:</span>
+                                        <span id="cartTotal">$0</span>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div class="btn-group mt-4">
-                                <button type="button" class="btn btn-secondary" onclick="clearCart()">Limpiar Carrito</button>
-                                <button type="button" class="btn btn-primary" onclick="createOrder()">Enviar Cotización por WhatsApp</button>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Producto</th>
+                                            <th>Cantidad</th>
+                                            <th>Precio Unit.</th>
+                                            <th>Subtotal</th>
+                                            <th>Descuento</th>
+                                            <th>Total</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="cartItems">
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted">Tu carrito está vacío</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <div class="form-group mt-3">
+                                    <label>
+                                        <input type="checkbox" id="isWholesale"> Este es un pedido al por mayor
+                                    </label>
+                                </div>
+
+                                <div class="form-group mt-3">
+                                    <label for="orderNotes">Notas Adicionales</label>
+                                    <textarea id="orderNotes" placeholder="Agrega notas sobre tu pedido..." style="width: 100%;"></textarea>
+                                </div>
+
+                                <div class="grid grid-2 mt-3">
+                                    <div class="form-group">
+                                        <label for="specialEvent">Fecha o evento especial (opcional)</label>
+                                        <input type="text" id="specialEvent" placeholder="Ej. Buen Fin, Navidad, Inicio de obra">
+                                    </div>
+                                </div>
+
+                                <div class="btn-group mt-4">
+                                    <button type="button" class="btn btn-secondary" onclick="clearCart()">Limpiar Carrito</button>
+                                    <button type="button" class="btn btn-primary" onclick="createOrder()">Enviar Cotización por WhatsApp</button>
+                                </div>
                             </div>
                         </div>
                     </div>
