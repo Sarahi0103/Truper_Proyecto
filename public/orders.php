@@ -199,6 +199,21 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
 
                         <div class="form-section">
                             <h3>Resumen del Pedido</h3>
+                            <div class="order-summary" style="margin-bottom: 1rem;">
+                                <div class="summary-row">
+                                    <span>Subtotal:</span>
+                                    <span id="cartSubtotal">$0</span>
+                                </div>
+                                <div class="summary-row">
+                                    <span>Descuentos:</span>
+                                    <span id="cartDiscount">$0</span>
+                                </div>
+                                <div class="summary-row total">
+                                    <span>Total estimado:</span>
+                                    <span id="cartTotal">$0</span>
+                                </div>
+                            </div>
+
                             <table>
                                 <thead>
                                     <tr>
@@ -217,21 +232,6 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
                                     </tr>
                                 </tbody>
                             </table>
-
-                            <div class="order-summary">
-                                <div class="summary-row">
-                                    <span>Subtotal:</span>
-                                    <span>$0</span>
-                                </div>
-                                <div class="summary-row">
-                                    <span>Descuentos:</span>
-                                    <span>$0</span>
-                                </div>
-                                <div class="summary-row total">
-                                    <span>Total estimado:</span>
-                                    <span id="cartTotal">$0</span>
-                                </div>
-                            </div>
 
                             <div class="form-group mt-3">
                                 <label>

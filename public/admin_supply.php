@@ -388,6 +388,20 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <div class="admin-search-row">
                     <input id="stockSearch" type="text" placeholder="Buscar por código, nombre o categoría...">
                 </div>
+                <div class="admin-section-subtitle">Gestión rápida (selección múltiple)</div>
+                <div class="admin-quick-panel">
+                    <div class="admin-quick-grid">
+                        <div>
+                            <select id="stockBulkSelect" class="admin-quick-select" multiple size="7"></select>
+                            <small class="text-muted">Selecciona uno o varios productos para editar u ocultar.</small>
+                        </div>
+                        <div class="admin-quick-actions">
+                            <button class="btn btn-secondary" type="button" onclick="editStockSelectedItem()">Editar seleccionado</button>
+                            <button class="btn btn-danger" type="button" onclick="deleteStockSelectedItems()">Eliminar seleccionados</button>
+                        </div>
+                    </div>
+                    <div id="stockQuickResult" class="text-muted" style="font-size:12px; margin-top:8px;"></div>
+                </div>
                 <div id="stockListCaption" class="admin-list-caption">Cargando productos...</div>
                 <div id="stockRows"><p class="text-muted">Cargando...</p></div>
             </div></div>
@@ -1667,12 +1681,117 @@ function renderStockList() {
         caption.textContent = `Mostrando ${filtered.length} de ${stockItemsCache.length} productos`;
     }
 
+    updateStockQuickSelection(filtered);
+
     if (filtered.length === 0) {
         body.innerHTML = '<p class="text-muted">No hay productos que coincidan con la búsqueda.</p>';
         return;
     }
 
     body.innerHTML = `<div class="catalog-grid-min">${filtered.map((item) => renderAdminProductCard(item, 'stock')).join('')}</div>`;
+}
+
+function updateStockQuickSelection(items = stockItemsCache) {
+    const select = document.getElementById('stockBulkSelect');
+    if (!select) return;
+
+    const previouslySelected = new Set(Array.from(select.selectedOptions || []).map((option) => Number(option.value || 0)));
+    select.innerHTML = '';
+
+    if (!Array.isArray(items) || items.length === 0) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Sin productos para mostrar';
+        option.disabled = true;
+        select.appendChild(option);
+        return;
+    }
+
+    items.forEach((item) => {
+        const id = Number(item.id || 0);
+        if (id <= 0) return;
+
+        const code = displayProductCode(item.sku || '');
+        const name = String(item.name || 'Sin nombre').trim();
+        const stock = Number(item.stock_quantity || 0);
+        const inactive = Number(item.is_active) === 0;
+
+        const option = document.createElement('option');
+        option.value = String(id);
+        option.textContent = `${code} | ${name} | Stock: ${stock}${inactive ? ' (Oculto)' : ''}`;
+        option.selected = previouslySelected.has(id);
+        select.appendChild(option);
+    });
+}
+
+function getStockBulkSelectedIds() {
+    const select = document.getElementById('stockBulkSelect');
+    return Array.from(select?.selectedOptions || [])
+        .map((option) => Number(option.value || 0))
+        .filter((id) => id > 0);
+}
+
+function editStockSelectedItem() {
+    const quickBox = document.getElementById('stockQuickResult');
+    const selectedIds = getStockBulkSelectedIds();
+
+    if (selectedIds.length === 0) {
+        if (quickBox) quickBox.innerHTML = '<span style="color:#f59e0b;">Selecciona un producto para editar.</span>';
+        return;
+    }
+
+    if (selectedIds.length > 1) {
+        if (quickBox) quickBox.innerHTML = '<span style="color:#f59e0b;">Selecciona solo un producto para editar.</span>';
+        return;
+    }
+
+    const target = stockItemsCache.find((item) => Number(item.id || 0) === selectedIds[0]);
+    if (!target) {
+        if (quickBox) quickBox.innerHTML = '<span style="color:#f87171;">No se encontró el producto seleccionado.</span>';
+        return;
+    }
+
+    fillProductFormById(target.id);
+    if (quickBox) quickBox.innerHTML = '<span style="color:#22c55e;">Producto cargado en el formulario.</span>';
+    document.getElementById('newProductSku')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function deleteStockSelectedItems() {
+    const quickBox = document.getElementById('stockQuickResult');
+    const selectedIds = getStockBulkSelectedIds();
+
+    if (selectedIds.length === 0) {
+        if (quickBox) quickBox.innerHTML = '<span style="color:#f59e0b;">Selecciona al menos un producto para eliminar.</span>';
+        return;
+    }
+
+    if (!confirm(`¿Eliminar ${selectedIds.length} producto(s) seleccionado(s)? Se quitarán del catálogo.`)) {
+        return;
+    }
+
+    if (quickBox) quickBox.innerHTML = '<span style="color:#cbd5e1;">Eliminando productos...</span>';
+
+    let successCount = 0;
+    let firstError = '';
+    for (const id of selectedIds) {
+        const res = await apiCall('/admin_supply.php?action=product-delete', 'POST', { id: id });
+        if (res && res.success) {
+            successCount += 1;
+        } else if (!firstError) {
+            firstError = (res && res.message) ? res.message : `No se pudo eliminar el producto ${id}`;
+        }
+    }
+
+    if (successCount > 0) {
+        if (quickBox) quickBox.innerHTML = `<span style="color:#22c55e;">${successCount} producto(s) eliminado(s).</span>`;
+        showAlert(`${successCount} producto(s) eliminado(s)`, 'success');
+    }
+    if (firstError) {
+        if (quickBox) quickBox.innerHTML += ` <span style="color:#f87171;">${escapeHtml(firstError)}</span>`;
+        showAlert(firstError, 'error');
+    }
+
+    await loadStock();
 }
 
 function resetProductForm() {
@@ -3499,6 +3618,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const marketplaceBulkSelect = document.getElementById('marketplaceBulkSelect');
     if (marketplaceBulkSelect) {
         marketplaceBulkSelect.addEventListener('dblclick', editMarketplaceSelectedItem);
+    }
+
+    const stockBulkSelect = document.getElementById('stockBulkSelect');
+    if (stockBulkSelect) {
+        stockBulkSelect.addEventListener('dblclick', editStockSelectedItem);
     }
 
     ['newProductName', 'newProductPrice', 'newProductStock', 'newProductReorder', 'newProductDescription', 'newProductImageRef', 'newProductVisible'].forEach((id) => {

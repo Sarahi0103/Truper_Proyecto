@@ -384,6 +384,58 @@ textarea:focus,
     border-color: #C82333;
 }
 
+:root[data-theme="dark"] .btn {
+    color: #f8fafc;
+    border-width: 1px;
+}
+
+:root[data-theme="dark"] .btn-secondary,
+:root[data-theme="dark"] .btn-logout,
+:root[data-theme="dark"] .quote-remove,
+:root[data-theme="dark"] .modal-close {
+    background: #30343a;
+    border-color: #434a54;
+    color: #f8fafc;
+}
+
+:root[data-theme="dark"] .btn-secondary:hover,
+:root[data-theme="dark"] .btn-logout:hover,
+:root[data-theme="dark"] .quote-remove:hover,
+:root[data-theme="dark"] .modal-close:hover {
+    background: #3b414b;
+    border-color: #5b6574;
+}
+
+:root[data-theme="dark"] .btn-ghost {
+    background: rgba(148, 163, 184, 0.08);
+    border-color: #4b5563;
+    color: #e5e7eb;
+}
+
+:root[data-theme="dark"] .btn-ghost:hover,
+:root[data-theme="dark"] .btn-ghost.active {
+    background: rgba(255, 138, 31, 0.16);
+    border-color: var(--theme-accent);
+    color: #ffd9b0;
+}
+
+:root[data-theme="dark"] .tab-button {
+    background: #20242a;
+    border-color: #3a414d;
+    color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .tab-button:hover {
+    background: #2a3038;
+    color: #f1f5f9;
+}
+
+:root[data-theme="dark"] .tab-button.active {
+    background: var(--theme-accent);
+    border-color: var(--theme-accent);
+    color: #ffffff;
+}
+
 .alert {
     background: var(--theme-surface);
     color: var(--theme-text);

@@ -61,11 +61,15 @@ function clearCart() {
 function updateCartUI() {
     const cartContainer = document.getElementById('cartItems');
     const totalContainer = document.getElementById('cartTotal');
+    const subtotalContainer = document.getElementById('cartSubtotal');
+    const discountContainer = document.getElementById('cartDiscount');
     
     if (!cartContainer) return;
     
     let html = '';
     let total = 0;
+    let subtotalAmount = 0;
+    let discountAmount = 0;
     
     currentCart.forEach(item => {
         const subtotal = item.price * item.quantity;
@@ -80,6 +84,8 @@ function updateCartUI() {
         }
         
         const lineTotal = subtotal - discount;
+        subtotalAmount += subtotal;
+        discountAmount += discount;
         total += lineTotal;
         
         html += `
@@ -110,6 +116,12 @@ function updateCartUI() {
     
     if (totalContainer) {
         totalContainer.textContent = formatCurrency(total);
+    }
+    if (subtotalContainer) {
+        subtotalContainer.textContent = formatCurrency(subtotalAmount);
+    }
+    if (discountContainer) {
+        discountContainer.textContent = formatCurrency(discountAmount);
     }
 }
 
@@ -160,7 +172,10 @@ async function createOrder() {
     const response = await apiCall('/client_account.php?action=whatsapp-quote', 'POST', orderData);
     
     if (response && response.success) {
-        showAlert('Cotizacion enviada. Abriendo WhatsApp...', 'success');
+        showAlert('Cotización creada. Descargando ticket y abriendo WhatsApp...', 'success');
+        if (response.ticket_url) {
+            window.open(response.ticket_url, '_blank');
+        }
         if (response.whatsapp_url) {
             window.open(response.whatsapp_url, '_blank');
         }
