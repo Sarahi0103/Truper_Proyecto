@@ -1030,16 +1030,6 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
     return convert_image_to_base64_admin_supply($tmp, $mimeType);
 }
 
-    $filename = $safeBase . $suffix . '-' . date('YmdHis') . '-' . substr(bin2hex(random_bytes(4)), 0, 8) . '.' . $ext;
-    $targetPath = $targetDir . DIRECTORY_SEPARATOR . $filename;
-
-    if (!move_uploaded_file($tmp, $targetPath)) {
-        throw new Exception('No se pudo guardar la imagen');
-    }
-
-    return 'images/products/by_code/' . $sku . '/' . $filename;
-}
-
 function set_product_main_image_by_sku_admin_supply($pdo, string $sku, string $imageUrl): void {
     if (!is_valid_numeric_sku_admin_supply($sku) || trim($imageUrl) === '') {
         return;
@@ -2748,6 +2738,49 @@ try {
                     } else {
                         $ins = $pdo->prepare("INSERT INTO products (sku, name, category, description, unit_price, stock_quantity, reorder_level, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 1)");
                         $ins->execute([$sku, $name, $category, $desc, $price, $stock, $reorder]);
+                    }
+                    $processed++;
+                }
+                $pdo->commit();
+                $response = ['success' => true, 'processed' => $processed];
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                $response = ['success' => false, 'message' => 'Error: ' . $e->getMessage()];
+            }
+            break;
+
+        case 'marketplace-batch-save':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+            $products = $input['products'] ?? [];
+            if (!is_array($products) || count($products) === 0) {
+                $response = ['success' => false, 'message' => 'No hay artículos CE para procesar'];
+                break;
+            }
+            $processed = 0;
+            $pdo->beginTransaction();
+            try {
+                foreach ($products as $p) {
+                    $sku = normalize_sku_admin_supply($p['sku'] ?? '');
+                    if ($sku === '') continue;
+                    $name = trim($p['name'] ?? 'Artículo CE CSV');
+                    $category = trim($p['category'] ?? 'Marketplace CE');
+                    $desc = trim($p['description'] ?? '');
+                    $condition = trim($p['condition_label'] ?? 'Seminuevo');
+                    $price = (float)($p['unit_price'] ?? 0);
+                    $stock = (int)($p['stock_quantity'] ?? 1);
+                    
+                    $check = $pdo->prepare("SELECT id FROM marketplace_ce_products WHERE sku = ?");
+                    $check->execute([$sku]);
+                    $exists = $check->fetchColumn();
+                    if ($exists) {
+                        $upd = $pdo->prepare("UPDATE marketplace_ce_products SET name=?, category=?, description=?, condition_label=?, unit_price=?, stock_quantity=? WHERE sku=?");
+                        $upd->execute([$name, $category, $desc, $condition, $price, $stock, $sku]);
+                    } else {
+                        $ins = $pdo->prepare("INSERT INTO marketplace_ce_products (sku, name, category, description, condition_label, unit_price, stock_quantity, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 1)");
+                        $ins->execute([$sku, $name, $category, $desc, $condition, $price, $stock]);
                     }
                     $processed++;
                 }

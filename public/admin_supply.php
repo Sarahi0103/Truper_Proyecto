@@ -713,6 +713,15 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     </div>
                     <div id="marketplaceQuickResult" class="text-muted" style="font-size:12px; margin-top:8px;"></div>
                 </div>
+                
+                <div class="admin-quick-panel mt-3">
+                    <div class="admin-section-subtitle">Carga Masiva (CSV)</div>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <input type="file" id="marketplaceCsvFileInput" accept=".csv">
+                        <button class="btn btn-secondary" onclick="processMarketplaceCsvUpload()">Cargar CSV en Lotes</button>
+                    </div>
+                    <div id="marketplaceCsvProgress" class="mt-2 text-muted" style="font-size:12px;"></div>
+                </div>
                 <div id="marketplaceListCaption" class="admin-list-caption">Cargando artículos CE...</div>
                 <div id="marketplaceList" class="text-muted">Cargando artículos CE...</div>
             </div></div>
@@ -3558,6 +3567,65 @@ async function processCsvUpload() {
         progressBox.innerHTML = `<strong class="text-success">Carga completa. Exitosos: ${successCount}, Fallidos: ${errorCount}</strong>`;
         fileInput.value = '';
         loadStock(); // reload list
+    };
+    reader.onerror = function() {
+        progressBox.innerHTML = '<span class="text-error">Error al leer el archivo.</span>';
+    };
+    reader.readAsText(file);
+}
+
+async function processMarketplaceCsvUpload() {
+    const fileInput = document.getElementById('marketplaceCsvFileInput');
+    const progressBox = document.getElementById('marketplaceCsvProgress');
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        showAlert('Selecciona un archivo CSV para Marketplace CE', 'warning');
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+
+    reader.onload = async function(e) {
+        const text = e.target.result;
+        const rows = text.split(/\r?\n/).filter(r => r.trim() !== '');
+        if (rows.length < 2) {
+            progressBox.innerHTML = '<span class="text-error">El archivo está vacío o no tiene encabezados.</span>';
+            return;
+        }
+
+        const headers = rows[0].split(',').map(h => h.trim().toLowerCase());
+        const data = [];
+        for (let i = 1; i < rows.length; i++) {
+            const cols = rows[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+            const rowData = {};
+            headers.forEach((h, idx) => { rowData[h] = cols[idx] || ''; });
+            data.push(rowData);
+        }
+
+        const batchSize = 250;
+        let successCount = 0;
+        let errorCount = 0;
+
+        progressBox.innerHTML = `Procesando ${data.length} artículos CE en lotes de ${batchSize}...`;
+
+        for (let i = 0; i < data.length; i += batchSize) {
+            const batch = data.slice(i, i + batchSize);
+            try {
+                const res = await apiCall('/admin_supply.php?action=marketplace-batch-save', 'POST', { products: batch });
+                if (res && res.success) {
+                    successCount += res.processed || batch.length;
+                } else {
+                    errorCount += batch.length;
+                }
+            } catch (err) {
+                errorCount += batch.length;
+            }
+            progressBox.innerHTML = `Progreso: ${Math.min(i + batchSize, data.length)} / ${data.length}...`;
+        }
+
+        progressBox.innerHTML = `<strong class="text-success">Carga CE completa. Exitosos: ${successCount}, Fallidos: ${errorCount}</strong>`;
+        fileInput.value = '';
+        loadMarketplaceCeAdmin(); // reload list
     };
     reader.onerror = function() {
         progressBox.innerHTML = '<span class="text-error">Error al leer el archivo.</span>';
