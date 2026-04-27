@@ -207,6 +207,24 @@ usort($quickCategories, function ($a, $b) use ($priorityCategories, $normalizeCa
     return strcasecmp((string)$a, (string)$b);
 });
 
+// Sobrescribir con categorías de la base de datos si la tabla existe
+try {
+    $catStmt = $pdo->query("SELECT name FROM product_categories WHERE is_active = true ORDER BY sort_order ASC, name ASC");
+    if ($catStmt) {
+        $dbCats = $catStmt->fetchAll(PDO::FETCH_COLUMN);
+        if (!empty($dbCats)) {
+            // Remove duplicates case-insensitively, but keep original case
+            $uniqueDbCats = [];
+            foreach ($dbCats as $c) {
+                $uniqueDbCats[$normalizeCategoryOrderKey($c)] = $c;
+            }
+            $quickCategories = array_values($uniqueDbCats);
+        }
+    }
+} catch (Exception $e) {
+    // Si la tabla no existe o hay error, mantenemos $quickCategories generado dinámicamente
+}
+
 $isLogged = is_logged_in();
 $isAdmin = (($_SESSION['role'] ?? '') === 'admin');
 $showSessionExpiredNotice = (($_GET['error'] ?? '') === 'expired');

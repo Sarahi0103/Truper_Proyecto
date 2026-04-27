@@ -49,19 +49,38 @@ try {
     $stmtCe = $pdo->query("SELECT id, sku, name, description, condition_label, COALESCE(category,'Marketplace CE') AS category, unit_price, stock_quantity, COALESCE(image_url,'images/products/default-product.svg') AS image_url, variants_json FROM marketplace_ce_products" . $marketplaceVisibilityWhere . " ORDER BY created_at DESC LIMIT 300");
     $marketplaceItems = $stmtCe ? $stmtCe->fetchAll() : [];
 
+    // Intentar cargar categorías directamente de la base de datos para mostrar incluso las vacías
     $categoriesTotals = [];
-    foreach ($marketplaceItems as $mi) {
-        $cat = trim((string)($mi['category'] ?? ''));
-        if ($cat && $cat !== 'Marketplace CE') {
-            $catLower = function_exists('mb_strtolower') 
-                ? mb_strtolower($cat, 'UTF-8') 
-                : strtolower($cat);
-            $catNorm = strtr($catLower, ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n']);
-            if (!isset($categoriesTotals[$catNorm])) {
-                $categoriesTotals[$catNorm] = $cat;
+    try {
+        $catStmt = $pdo->query("SELECT name FROM product_categories WHERE is_active = true ORDER BY sort_order ASC, name ASC");
+        if ($catStmt) {
+            $dbCats = $catStmt->fetchAll(PDO::FETCH_COLUMN);
+            foreach ($dbCats as $c) {
+                $c = trim((string)$c);
+                if ($c !== '') {
+                    $catNorm = strtr(function_exists('mb_strtolower') ? mb_strtolower($c, 'UTF-8') : strtolower($c), ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n']);
+                    $categoriesTotals[$catNorm] = $c;
+                }
+            }
+        }
+    } catch (Exception $ig) { }
+
+    // Fallback dinámico si la BD de categorías está vacía o falla
+    if (empty($categoriesTotals)) {
+        foreach ($marketplaceItems as $mi) {
+            $cat = trim((string)($mi['category'] ?? ''));
+            if ($cat && $cat !== 'Marketplace CE') {
+                $catLower = function_exists('mb_strtolower') 
+                    ? mb_strtolower($cat, 'UTF-8') 
+                    : strtolower($cat);
+                $catNorm = strtr($catLower, ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n']);
+                if (!isset($categoriesTotals[$catNorm])) {
+                    $categoriesTotals[$catNorm] = $cat;
+                }
             }
         }
     }
+    
     $allCategories = array_values($categoriesTotals);
 } catch (Exception $e) {
     $marketplaceItems = [];
