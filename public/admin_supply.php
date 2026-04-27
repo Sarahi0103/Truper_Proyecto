@@ -1480,37 +1480,45 @@ async function loadClients() {
     renderClientList(response.clients);
 }
 
-async function loadStock() {
-    const res = await apiCall('/admin_supply.php?action=stock', 'GET', null, { silent: true });
+let stockCurrentPage = 1;
+const stockPerPage = 50;
+
+async function loadStock(page = 1) {
+    const box = document.getElementById('stockRows');
+    const caption = document.getElementById('stockListCaption');
+    if (box) box.innerHTML = '<div style="padding:2rem; text-align:center;"><span class="spinner"></span><p class="text-muted">Cargando catálogo...</p></div>';
+    
+    stockCurrentPage = page;
+    const res = await apiCall(`/admin_supply.php?action=stock&page=${page}&per_page=${stockPerPage}`, 'GET', null, { silent: true });
     const body = document.getElementById('stockRows');
     const caption = document.getElementById('stockListCaption');
-    if (!res || !res.success || !Array.isArray(res.items) || res.items.length === 0) {
-        const fallback = await apiCall('/products.php?action=list', 'GET', null, { silent: true });
-        if (fallback && fallback.success && Array.isArray(fallback.products) && fallback.products.length > 0) {
-            stockItemsCache = fallback.products.map((p) => ({
-                id: Number(p.id || 0),
-                sku: p.sku || '',
-                name: p.name || '',
-                description: p.description || '',
-                category: p.category || 'General',
-                stock_quantity: Number(p.stock_quantity || 50),
-                reorder_level: Number(p.reorder_level || 10),
-                unit_price: Number(p.unit_price || 0),
-                image_url: p.image_url || 'images/products/default-product.svg',
-                is_active: 1,
-                __fallback: true
-            }));
-            renderStockList();
-            return;
-        }
-
-        if (body) body.innerHTML = '<p class="text-muted">Sin datos</p>';
-        if (caption) caption.textContent = 'No fue posible cargar productos.';
+    
+    if (!res || !res.success || !Array.isArray(res.items)) {
+        if (body) body.innerHTML = '<tr><td colspan="10" class="text-center text-muted">No fue posible cargar productos.</td></tr>';
         return;
     }
 
-    stockItemsCache = Array.isArray(res.items) ? res.items : [];
+    stockItemsCache = res.items;
     renderStockList();
+    renderStockPagination(res.pagination);
+}
+
+function renderStockPagination(pagination) {
+    const container = document.getElementById('stockPagination');
+    if (!container || !pagination) return;
+
+    const { current_page, total_pages, total_items } = pagination;
+    
+    container.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem; padding:1rem; background:var(--ui-surface-soft); border-radius:12px;">
+            <div class="text-muted">Total: <strong>${total_items}</strong> productos</div>
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+                <button class="btn btn-small" ${current_page <= 1 ? 'disabled' : ''} onclick="loadStock(${current_page - 1})">Anterior</button>
+                <span class="text-muted">Página <strong>${current_page}</strong> de ${total_pages}</span>
+                <button class="btn btn-small" ${current_page >= total_pages ? 'disabled' : ''} onclick="loadStock(${current_page + 1})">Siguiente</button>
+            </div>
+        </div>
+    `;
 }
 
 async function deleteCategoryQuickFromSelect(selectId, resultId) {
@@ -3751,7 +3759,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const stockSearch = document.getElementById('stockSearch');
     if (stockSearch) {
-        stockSearch.addEventListener('input', renderStockList);
+        stockSearch.addEventListener('input', debounce(renderStockList, 300));
     }
 
     const marketplaceSearch = document.getElementById('marketplaceSearch');

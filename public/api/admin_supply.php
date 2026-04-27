@@ -10,6 +10,12 @@ $action = $_GET['action'] ?? 'stock';
 $method = $_SERVER['REQUEST_METHOD'];
 $input = json_decode(file_get_contents('php://input'), true) ?: [];
 
+if ($method === 'GET') {
+    header('Cache-Control: public, max-age=60');
+} else {
+    header('Cache-Control: no-cache, must-revalidate');
+}
+
 set_error_handler(function ($severity, $message, $file, $line) {
     if (!(error_reporting() & $severity)) {
         return false;
@@ -1526,7 +1532,7 @@ function homepage_updates_active_column_admin_supply(): ?string {
     return first_existing_column_admin_supply('homepage_updates', ['is_active', 'active']);
 }
 
-function list_stock_products_compatible($pdo): array {
+function list_stock_products_compatible($pdo, int $limit = 50, int $offset = 0): array {
     try {
         $pdo->exec("CREATE TABLE IF NOT EXISTS products (id SERIAL PRIMARY KEY)");
     } catch (Exception $ignored) {
@@ -1562,75 +1568,33 @@ function list_stock_products_compatible($pdo): array {
         ? "(CASE WHEN is_active IS NULL THEN 1 WHEN LOWER(CAST(is_active AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) AS is_active"
         : (db_column_exists('products', 'active') ? "(CASE WHEN active = 1 THEN 1 ELSE 0 END) AS is_active" : "1 AS is_active");
 
-    // Admin inventory must include both visible and hidden products so
-    // the UI can toggle between Ocultar/Activar without items disappearing.
-    $queries = [
-        "SELECT id, {$skuSelect}, {$nameSelect}, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} FROM products ORDER BY stock_quantity ASC, {$nameOrderExpr} LIMIT 500"
-    ];
+    // Optimized SQL query with LIMIT and OFFSET
+    $sql = "SELECT id, {$skuSelect}, {$nameSelect}, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} 
+            FROM products 
+            ORDER BY stock_quantity ASC, {$nameOrderExpr} 
+            LIMIT ? OFFSET ?";
 
-    $items = [];
-    foreach ($queries as $sql) {
-        try {
-            $stmt = $pdo->query($sql);
-            $rows = $stmt ? $stmt->fetchAll() : [];
-            if (is_array($rows) && count($rows) > 0) {
-                $items = $rows;
-                break;
-            }
-        } catch (Exception $ignored) {
-        }
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$limit, $offset]);
+        $items = $stmt->fetchAll() ?: [];
+        
+        // Resolve image fallback for the current page only
+        $items = array_map('apply_catalog_image_fallback_admin_supply', $items);
+        
+        return $items;
+    } catch (Exception $e) {
+        return [];
     }
+}
 
-    $existingSkus = [];
-    foreach ($items as $row) {
-        $row = apply_catalog_image_fallback_admin_supply($row);
-        $normalized = normalize_sku_admin_supply($row['sku'] ?? '');
-        if ($normalized !== '') {
-            $existingSkus[$normalized] = true;
-        }
+function count_stock_products_compatible($pdo): int {
+    try {
+        return (int)$pdo->query("SELECT COUNT(*) FROM products")->fetchColumn();
+    } catch (Exception $e) {
+        return 0;
     }
-
-    // Keep resolved image fallback for DB-backed products.
-    $items = array_map('apply_catalog_image_fallback_admin_supply', $items);
-
-    if (function_exists('get_xlsx_seed_products')) {
-        try {
-            $seed = get_xlsx_seed_products();
-            if (is_array($seed)) {
-                foreach ($seed as $seedItem) {
-                    $seedSku = normalize_sku_admin_supply($seedItem['sku'] ?? '');
-                    if ($seedSku === '' || isset($existingSkus[$seedSku])) {
-                        continue;
-                    }
-
-                    $items[] = [
-                        'id' => (int)($seedItem['id'] ?? 0),
-                        'sku' => (string)($seedItem['sku'] ?? ''),
-                        'name' => (string)($seedItem['name'] ?? ''),
-                        'description' => (string)($seedItem['description'] ?? ''),
-                        'category' => (string)($seedItem['category'] ?? 'General'),
-                        'stock_quantity' => (int)($seedItem['stock_quantity'] ?? 50),
-                        'reorder_level' => (int)($seedItem['reorder_level'] ?? 10),
-                        'unit_price' => (float)($seedItem['unit_price'] ?? 0),
-                        'image_url' => (string)($seedItem['image_url'] ?? 'images/products/default-product.svg'),
-                        'is_active' => true,
-                        'seed_only' => true
-                    ];
-
-                    $items[count($items) - 1] = apply_catalog_image_fallback_admin_supply($items[count($items) - 1]);
-
-                    $existingSkus[$seedSku] = true;
-                }
-            }
-        } catch (Throwable $ignored) {
-        }
-    }
-
-    usort($items, function ($a, $b) {
-        return strcasecmp((string)($a['name'] ?? ''), (string)($b['name'] ?? ''));
-    });
-
-    return $items;
+}
 }
 
 function ensure_numeric_client_user_code_admin_supply($pdo, int $userId): string {
@@ -3140,24 +3104,26 @@ try {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];
                 break;
             }
-            // Paginación para mejorar rendimiento
+            
+            // Reales parámetros de paginación
             $page = max(1, (int)($_GET['page'] ?? 1));
-            $per_page = max(10, min(100, (int)($_GET['per_page'] ?? 50)));
+            $per_page = max(10, min(200, (int)($_GET['per_page'] ?? 100)));
             $offset = ($page - 1) * $per_page;
             
-            // Usar caché para lista completa
-            $cache_key = 'admin_stock_products_' . md5($per_page . '_' . $offset);
-            $items = cache_get($cache_key);
+            $items = list_stock_products_compatible($pdo, $per_page, $offset);
+            $total = count_stock_products_compatible($pdo);
             
-            if ($items === null) {
-                $all_items = list_stock_products_compatible($pdo);
-                $items = array_slice($all_items, $offset, $per_page);
-                cache_set($cache_key, $items, 300);
-            }
-            
-            // Optimizar imágenes: agregar lazy loading
-            $items = array_map(function($item) {
-                $item['image_url_thumb'] = str_replace('.svg', '_thumb.svg', $item['image_url']);
+            $response = [
+                'success' => true, 
+                'items' => $items,
+                'pagination' => [
+                    'current_page' => $page,
+                    'per_page' => $per_page,
+                    'total_items' => $total,
+                    'total_pages' => ceil($total / $per_page)
+                ]
+            ];
+            break;
                 return $item;
             }, $items);
             

@@ -86,6 +86,21 @@ function showAlert(message, type = 'info') {
     }, 5000);
 }
 
+/**
+ * Función para debouncing de eventos (optimización)
+ */
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
 function handleSuccessResponse(response, options = {}) {
     if (!response || !response.success) {
         return false;
