@@ -3084,7 +3084,7 @@ async function uploadMarketplaceImages() {
     });
 
     try {
-        const response = await fetch('/api/admin_supply.php?action=marketplace-image-upload', {
+        const response = await fetch('/api/admin_supply.php?action=product-gallery-upload', {
             method: 'POST',
             body: formData,
             credentials: 'same-origin',

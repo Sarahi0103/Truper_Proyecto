@@ -2085,6 +2085,8 @@ try {
             break;
 
         case 'product-gallery-upload':
+        case 'marketplace-image-upload':
+        case 'upload-marketplace-images':
             if ($method !== 'POST') {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];
                 break;
