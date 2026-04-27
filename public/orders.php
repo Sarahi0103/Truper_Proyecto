@@ -334,6 +334,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
         <div class="header-content">
             <a href="dashboard.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
             <nav class="nav-menu">
+                <a href="admin_supply.php#stockTab">Productos</a>
                 <a href="dashboard.php">Dashboard</a>
                 <a href="orders.php" class="active">Pedidos</a>
                 <a href="wholesale.php">Mayoreo</a>

@@ -23,10 +23,12 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
         <div class="header-content">
             <a href="dashboard.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
             <nav class="nav-menu">
+                <a href="admin_supply.php#stockTab">Productos</a>
                 <a href="dashboard.php">Dashboard</a>
                 <a href="orders.php">Pedidos</a>
                 <a href="wholesale.php">Mayoreo</a>
                 <?php if (($_SESSION['role'] ?? '') === 'admin'): ?><a href="cashier.php">Caja</a><?php endif; ?>
+                <?php if (($_SESSION['role'] ?? '') === 'admin'): ?><a href="admin_supply.php">Abastecimiento</a><?php endif; ?>
                 <a href="tasks.php" class="active">Tareas</a>
                 <a href="analytics.php">Estadísticas</a>
                 <a href="profile.php">Perfil</a>

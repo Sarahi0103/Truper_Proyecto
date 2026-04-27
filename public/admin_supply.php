@@ -239,9 +239,12 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
         <a href="dashboard.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
         <nav class="nav-menu">
             <a href="#stockTab" onclick="activateAdminSupplyTab('stockTab'); return false;">Productos</a>
+            <a href="dashboard.php">Dashboard</a>
             <a href="orders.php">Pedidos</a>
+            <a href="wholesale.php">Mayoreo</a>
             <a href="cashier.php">Caja</a>
             <a href="admin_supply.php" class="active">Abastecimiento</a>
+            <a href="tasks.php">Tareas</a>
             <a href="analytics.php">Estadisticas</a>
             <a href="profile.php">Perfil</a>
         </nav>

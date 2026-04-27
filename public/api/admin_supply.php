@@ -2118,7 +2118,6 @@ try {
                 break;
             }
 
-            $uploaded = [];
             $fileInput = $_FILES['images'] ?? $_FILES['image'] ?? null;
             if (!$fileInput) {
                 $response = ['success' => false, 'message' => 'Selecciona una o varias imágenes'];
@@ -2126,33 +2125,31 @@ try {
             }
 
             $files = isset($fileInput['name']) && is_array($fileInput['name']) ? normalize_uploaded_files($fileInput) : [$fileInput];
+            $uploaded = [];
             foreach ($files as $file) {
                 if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
                     continue;
                 }
-                $uploaded[] = store_product_image($file);
+                $uploaded[] = store_product_image_for_sku_admin_supply($file, $sku);
             }
 
             if (empty($uploaded)) {
-                $response = ['success' => false, 'message' => 'No se pudieron subir las imágenes'];
+                $response = ['success' => false, 'message' => 'No se pudieron subir las imágenes CE'];
                 break;
             }
 
-            // Update marketplace product with the first uploaded image
-            if (!empty($uploaded)) {
-                $mkImageCol = first_existing_column_admin_supply('marketplace_ce_products', ['image_url', 'image', 'photo_url']);
-                if ($mkImageCol !== null) {
-                    $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET ' . $mkImageCol . ' = ? WHERE sku = ? LIMIT 1');
-                    $stmt->execute([$uploaded[0], $sku]);
-                }
+            $images = list_product_gallery_images_admin_supply($sku);
+            if (!empty($images)) {
+                set_product_main_image_by_sku_admin_supply($pdo, $sku, $images[0]);
             }
 
             $response = [
                 'success' => true,
-                'message' => 'Imágenes CE cargadas correctamente',
+                'message' => 'Galería CE actualizada correctamente',
                 'sku' => $sku,
                 'uploaded' => $uploaded,
-                'cover' => $uploaded[0] ?? null
+                'images' => $images,
+                'cover' => $images[0] ?? null
             ];
             break;
 
@@ -2780,7 +2777,7 @@ try {
                 if ($mkUpdatedByCol !== null) { $sets[] = $mkUpdatedByCol . ' = ?'; $values[] = (int)($_SESSION['user_id'] ?? 0); }
                 if ($mkUpdatedAtCol !== null) { $sets[] = $mkUpdatedAtCol . ' = CURRENT_TIMESTAMP'; }
                 if ($mkCategoryCol !== null) { $sets[] = $mkCategoryCol . ' = ?'; $values[] = $category; }
-                if ($mkImageCol !== null && (isset($_FILES['image']) && ($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE)) { $sets[] = $mkImageCol . ' = ?'; $values[] = $imageUrl; }
+                if ($mkImageCol !== null) { $sets[] = $mkImageCol . ' = ?'; $values[] = $imageUrl; }
 
                 $values[] = $id;
                 $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET ' . implode(', ', $sets) . ' WHERE id = ?');

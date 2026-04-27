@@ -22,10 +22,14 @@ $column_count = $is_admin ? 7 : 5;
     <div class="header-content">
         <a href="dashboard.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
         <nav class="nav-menu">
-            <a href="index.php">Productos</a>
+            <a href="admin_supply.php#stockTab">Productos</a>
+            <a href="dashboard.php">Dashboard</a>
             <a href="orders.php">Pedidos</a>
             <a href="wholesale.php" class="active">Mayoreo</a>
           <?php if ($is_admin): ?><a href="cashier.php">Caja</a><?php endif; ?>
+            <?php if ($is_admin): ?><a href="admin_supply.php">Abastecimiento</a><?php endif; ?>
+            <a href="tasks.php">Tareas</a>
+            <a href="analytics.php">Estadísticas</a>
             <a href="profile.php">Perfil</a>
         </nav>
     </div>

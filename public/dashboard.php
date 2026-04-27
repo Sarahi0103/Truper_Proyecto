@@ -22,6 +22,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
         <div class="header-content">
             <a href="dashboard.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
             <nav class="nav-menu">
+                <a href="admin_supply.php#stockTab">Productos</a>
                 <a href="dashboard.php" class="active">Dashboard</a>
                 <a href="orders.php">Pedidos</a>
                 <a href="wholesale.php">Mayoreo</a>
