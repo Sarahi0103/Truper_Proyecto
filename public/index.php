@@ -207,21 +207,25 @@ usort($quickCategories, function ($a, $b) use ($priorityCategories, $normalizeCa
     return strcasecmp((string)$a, (string)$b);
 });
 
-// Sobrescribir con categorías de la base de datos si la tabla existe
+// Intento de cargar categorías desde la tabla oficial para consistencia
 try {
     $catStmt = $pdo->query("SELECT name FROM product_categories WHERE is_active = true ORDER BY sort_order ASC, name ASC");
     if ($catStmt) {
         $dbCats = $catStmt->fetchAll(PDO::FETCH_COLUMN);
         if (!empty($dbCats)) {
-            // Remove duplicates case-insensitively, but keep original case
             $uniqueDbCats = [];
             foreach ($dbCats as $c) {
-                $uniqueDbCats[$normalizeCategoryOrderKey($c)] = $c;
+                $c = trim((string)$c);
+                if ($c === '') continue;
+                $key = $normalizeCategoryKey($c);
+                if (!isset($uniqueDbCats[$key])) {
+                    $uniqueDbCats[$key] = $c;
+                }
             }
             $quickCategories = array_values($uniqueDbCats);
         }
     }
-} catch (Exception $e) {
+} catch (Exception $ig) {
     // Si la tabla no existe o hay error, mantenemos $quickCategories generado dinámicamente
 }
 

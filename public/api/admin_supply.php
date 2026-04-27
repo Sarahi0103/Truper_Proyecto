@@ -1568,16 +1568,15 @@ function list_stock_products_compatible($pdo, int $limit = 50, int $offset = 0):
         ? "(CASE WHEN is_active IS NULL THEN 1 WHEN LOWER(CAST(is_active AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) AS is_active"
         : (db_column_exists('products', 'active') ? "(CASE WHEN active = 1 THEN 1 ELSE 0 END) AS is_active" : "1 AS is_active");
 
-    // Optimized SQL query with LIMIT and OFFSET
+    // Optimized SQL query with LIMIT and OFFSET (Explicitly cast for PostgreSQL)
     $sql = "SELECT id, {$skuSelect}, {$nameSelect}, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} 
             FROM products 
             ORDER BY stock_quantity ASC, {$nameOrderExpr} 
-            LIMIT ? OFFSET ?";
+            LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
 
     try {
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([$limit, $offset]);
-        $items = $stmt->fetchAll() ?: [];
+        $stmt = $pdo->query($sql);
+        $items = $stmt ? $stmt->fetchAll() : [];
         
         // Resolve image fallback for the current page only
         $items = array_map('apply_catalog_image_fallback_admin_supply', $items);
@@ -3104,10 +3103,8 @@ try {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];
                 break;
             }
-            
-            // Reales parámetros de paginación
             $page = max(1, (int)($_GET['page'] ?? 1));
-            $per_page = max(10, min(200, (int)($_GET['per_page'] ?? 100)));
+            $per_page = max(10, min(200, (int)($_GET['per_page'] ?? 50)));
             $offset = ($page - 1) * $per_page;
             
             $items = list_stock_products_compatible($pdo, $per_page, $offset);
@@ -3121,19 +3118,6 @@ try {
                     'per_page' => $per_page,
                     'total_items' => $total,
                     'total_pages' => ceil($total / $per_page)
-                ]
-            ];
-            break;
-                return $item;
-            }, $items);
-            
-            $response = [
-                'success' => true,
-                'items' => $items,
-                'pagination' => [
-                    'page' => $page,
-                    'per_page' => $per_page,
-                    'total' => count(list_stock_products_compatible($pdo))
                 ]
             ];
             break;
