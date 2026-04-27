@@ -1860,7 +1860,12 @@ function resetProductForm() {
     if (box) box.innerHTML = '';
     setSkuStatus('newProductSkuStatus', 'Debe ser único y de 5 números.', 'muted');
     updateStockPreview();
-    loadProductGalleryForCurrentSku();
+    
+    // Clear gallery display since form is being reset
+    const galleryHost = document.getElementById('productGalleryList');
+    const galleryStatus = document.getElementById('productGalleryStatus');
+    if (galleryHost) galleryHost.innerHTML = '';
+    if (galleryStatus) galleryStatus.textContent = 'Escribe un código de 5 números para cargar su galería.';
 }
 
 function fillProductFormById(id) {
@@ -3041,10 +3046,13 @@ async function uploadProductImages() {
         }
 
         input.value = '';
-        await loadProductImageReferences();
+        
+        // Load gallery FIRST while SKU is still available
         await loadProductGalleryForCurrentSku();
-        await loadMarketplaceCeAdmin();
-
+        
+        // Update image references for cover selection
+        await loadProductImageReferences();
+        
         const select = document.getElementById('newProductImageRef');
         if (select && data.cover) {
             const exists = Array.from(select.options || []).some((o) => o.value === data.cover);
@@ -3056,6 +3064,9 @@ async function uploadProductImages() {
             }
             select.value = data.cover;
         }
+        
+        // Update preview after setting cover
+        updateStockPreview();
     } catch (error) {
         if (resultBox) {
             resultBox.innerHTML = '<div class="alert alert-error">Error al cargar imágenes</div>';
@@ -3101,11 +3112,13 @@ async function uploadMarketplaceImages() {
 
         showGalleryResult('marketplace', data.message || 'Imágenes CE cargadas correctamente', 'success');
         input.value = '';
-        await loadProductImageReferences();
+        
+        // Load gallery FIRST while SKU is still available
         await loadMarketplaceGalleryForCurrentSku();
-        await loadMarketplaceCeAdmin();
-        await loadStock();
-
+        
+        // Update image references for cover selection
+        await loadProductImageReferences();
+        
         const select = document.getElementById('marketplaceImageRef');
         if (select && data.cover) {
             const exists = Array.from(select.options || []).some((o) => o.value === data.cover);
@@ -3117,6 +3130,8 @@ async function uploadMarketplaceImages() {
             }
             select.value = data.cover;
         }
+        
+        // Update preview after setting cover
         updateMarketplacePreview();
     } catch (error) {
         showGalleryResult('marketplace', 'Error al cargar imágenes CE', 'error');
