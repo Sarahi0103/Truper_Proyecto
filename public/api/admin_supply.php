@@ -1621,6 +1621,10 @@ function apply_catalog_image_fallback_admin_supply(array $item): array {
     return $item;
 }
 
+function homepage_updates_active_column_admin_supply(): ?string {
+    return first_existing_column_admin_supply('homepage_updates', ['is_active', 'active']);
+}
+
 function list_stock_products_compatible($pdo): array {
     try {
         $pdo->exec("CREATE TABLE IF NOT EXISTS products (id SERIAL PRIMARY KEY)");
@@ -2839,12 +2843,28 @@ try {
                 break;
             }
 
+            $activeCol = homepage_updates_active_column_admin_supply();
+            $sortCol = first_existing_column_admin_supply('homepage_updates', ['sort_order', 'display_order', 'order_index']);
+            $imageCol = first_existing_column_admin_supply('homepage_updates', ['image_url', 'image', 'photo_url']);
+            $createdAtCol = first_existing_column_admin_supply('homepage_updates', ['created_at']);
+            $updatedAtCol = first_existing_column_admin_supply('homepage_updates', ['updated_at']);
+
+            $selectImage = $imageCol !== null ? ('COALESCE(' . $imageCol . ", '') AS image_url") : "'' AS image_url";
+            $selectSort = $sortCol !== null ? ('COALESCE(' . $sortCol . ', 0) AS sort_order') : '0 AS sort_order';
+            $selectActive = $activeCol !== null
+                ? ("(CASE WHEN " . $activeCol . " IS NULL THEN 1 WHEN LOWER(CAST(" . $activeCol . " AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) AS is_active")
+                : '1 AS is_active';
+            $selectCreatedAt = $createdAtCol !== null ? ($createdAtCol . ' AS created_at') : 'NULL AS created_at';
+            $selectUpdatedAt = $updatedAtCol !== null ? ($updatedAtCol . ' AS updated_at') : 'NULL AS updated_at';
+            $orderExpr = $sortCol !== null ? ($sortCol . ' ASC, id DESC') : 'id DESC';
+
             $onlyActive = isset($_GET['active']) && $_GET['active'] === '1';
-            if ($onlyActive) {
-                $stmt = $pdo->query("SELECT id, update_type, title, body, image_url, sort_order, is_active, created_at, updated_at FROM homepage_updates WHERE is_active = true ORDER BY sort_order ASC, id DESC LIMIT 40");
-            } else {
-                $stmt = $pdo->query("SELECT id, update_type, title, body, image_url, sort_order, is_active, created_at, updated_at FROM homepage_updates ORDER BY sort_order ASC, id DESC LIMIT 120");
+            $whereActive = '';
+            if ($onlyActive && $activeCol !== null) {
+                $whereActive = ' WHERE (CASE WHEN ' . $activeCol . " IS NULL THEN 1 WHEN LOWER(CAST(" . $activeCol . " AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
             }
+            $limit = $onlyActive ? 40 : 120;
+            $stmt = $pdo->query('SELECT id, update_type, title, body, ' . $selectImage . ', ' . $selectSort . ', ' . $selectActive . ', ' . $selectCreatedAt . ', ' . $selectUpdatedAt . ' FROM homepage_updates' . $whereActive . ' ORDER BY ' . $orderExpr . ' LIMIT ' . (int)$limit);
 
             $response = ['success' => true, 'items' => $stmt->fetchAll()];
             break;
@@ -2863,6 +2883,13 @@ try {
             $isActive = isset($_POST['is_active'])
                 ? normalize_bool_admin_supply($_POST['is_active'], true)
                 : (isset($input['is_active']) ? normalize_bool_admin_supply($input['is_active'], true) : true);
+
+            $activeCol = homepage_updates_active_column_admin_supply();
+            $sortCol = first_existing_column_admin_supply('homepage_updates', ['sort_order', 'display_order', 'order_index']);
+            $imageCol = first_existing_column_admin_supply('homepage_updates', ['image_url', 'image', 'photo_url']);
+            $createdByCol = first_existing_column_admin_supply('homepage_updates', ['created_by']);
+            $updatedByCol = first_existing_column_admin_supply('homepage_updates', ['updated_by']);
+            $updatedAtCol = first_existing_column_admin_supply('homepage_updates', ['updated_at']);
 
             $allowedTypes = ['noticia', 'promocion', 'evento'];
             if (!in_array($type, $allowedTypes, true)) {
@@ -2886,18 +2913,66 @@ try {
             }
 
             if ($id > 0) {
-                // If updating, preserve existing image if no new one is provided
-                if ($imageUrl === null) {
-                    $stmt = $pdo->prepare("UPDATE homepage_updates SET update_type = ?, title = ?, body = ?, sort_order = ?, is_active = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-                    $stmt->execute([$type, $title, $body, $sortOrder, $isActive, $_SESSION['user_id'], $id]);
-                } else {
-                    $stmt = $pdo->prepare("UPDATE homepage_updates SET update_type = ?, title = ?, body = ?, image_url = ?, sort_order = ?, is_active = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-                    $stmt->execute([$type, $title, $body, $imageUrl, $sortOrder, $isActive, $_SESSION['user_id'], $id]);
+                $sets = ['update_type = ?', 'title = ?', 'body = ?'];
+                $values = [$type, $title, $body];
+
+                if ($imageUrl !== null && $imageCol !== null) {
+                    $sets[] = $imageCol . ' = ?';
+                    $values[] = $imageUrl;
                 }
+                if ($sortCol !== null) {
+                    $sets[] = $sortCol . ' = ?';
+                    $values[] = $sortOrder;
+                }
+                if ($activeCol !== null) {
+                    $sets[] = $activeCol . ' = ?';
+                    $values[] = ($activeCol === 'active') ? ($isActive ? 1 : 0) : $isActive;
+                }
+                if ($updatedByCol !== null) {
+                    $sets[] = $updatedByCol . ' = ?';
+                    $values[] = (int)($_SESSION['user_id'] ?? 0);
+                }
+                if ($updatedAtCol !== null) {
+                    $sets[] = $updatedAtCol . ' = CURRENT_TIMESTAMP';
+                }
+
+                $values[] = $id;
+                $stmt = $pdo->prepare('UPDATE homepage_updates SET ' . implode(', ', $sets) . ' WHERE id = ?');
+                $stmt->execute($values);
                 $response = ['success' => true, 'message' => 'Publicacion actualizada'];
             } else {
-                $stmt = $pdo->prepare("INSERT INTO homepage_updates (update_type, title, body, image_url, sort_order, is_active, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$type, $title, $body, $imageUrl, $sortOrder, $isActive, $_SESSION['user_id'], $_SESSION['user_id']]);
+                $columns = ['update_type', 'title', 'body'];
+                $placeholders = ['?', '?', '?'];
+                $values = [$type, $title, $body];
+
+                if ($imageCol !== null) {
+                    $columns[] = $imageCol;
+                    $placeholders[] = '?';
+                    $values[] = $imageUrl;
+                }
+                if ($sortCol !== null) {
+                    $columns[] = $sortCol;
+                    $placeholders[] = '?';
+                    $values[] = $sortOrder;
+                }
+                if ($activeCol !== null) {
+                    $columns[] = $activeCol;
+                    $placeholders[] = '?';
+                    $values[] = ($activeCol === 'active') ? ($isActive ? 1 : 0) : $isActive;
+                }
+                if ($createdByCol !== null) {
+                    $columns[] = $createdByCol;
+                    $placeholders[] = '?';
+                    $values[] = (int)($_SESSION['user_id'] ?? 0);
+                }
+                if ($updatedByCol !== null) {
+                    $columns[] = $updatedByCol;
+                    $placeholders[] = '?';
+                    $values[] = (int)($_SESSION['user_id'] ?? 0);
+                }
+
+                $stmt = $pdo->prepare('INSERT INTO homepage_updates (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ')');
+                $stmt->execute($values);
                 $response = ['success' => true, 'message' => 'Publicacion creada'];
             }
             break;

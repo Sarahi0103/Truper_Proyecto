@@ -238,7 +238,6 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
     <div class="header-content">
         <a href="dashboard.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
         <nav class="nav-menu">
-            <a href="#stockTab" onclick="activateAdminSupplyTab('stockTab'); return false;">Productos</a>
             <a href="dashboard.php">Dashboard</a>
             <a href="orders.php">Pedidos</a>
             <a href="wholesale.php">Mayoreo</a>
@@ -939,6 +938,12 @@ function normalizeUpdateTypeLabel(type) {
     return 'Noticia';
 }
 
+function isTruthyFlag(value) {
+    if (value === true || value === 1) return true;
+    const raw = String(value ?? '').trim().toLowerCase();
+    return ['1', 'true', 't', 'yes', 'y', 'on'].includes(raw);
+}
+
 function activateAdminSupplyTab(tabName, scrollTargetId = '') {
     const tabButton = document.querySelector(`[data-tab="${tabName}"]`);
     if (tabButton) {
@@ -1221,7 +1226,10 @@ async function loadHomepageUpdatesAdmin() {
                             <div class="text-muted" style="font-size: 12px; max-width: 480px;">${escapeHtml(item.body || '')}</div>
                         </td>
                         <td>${Number(item.sort_order || 0)}</td>
-                        <td>${Number(item.is_active) ? '<span class="badge badge-success">Sí</span>' : '<span class="badge badge-danger">No</span>'}</td>
+                        <td>${isTruthyFlag(item.is_active)
+                            ? '<span class="badge badge-success" style="color:#dcfce7;background:rgba(22,101,52,.55);border:1px solid rgba(74,222,128,.75);font-weight:700;">Sí</span>'
+                            : '<span class="badge badge-danger" style="color:#fee2e2;background:rgba(127,29,29,.58);border:1px solid rgba(248,113,113,.75);font-weight:700;">No</span>'
+                        }</td>
                         <td>
                             <button class="btn btn-small btn-secondary" type="button" data-action="edit-update">Editar</button>
                             <button class="btn btn-small btn-danger" type="button" onclick="deleteHomepageUpdate(${Number(item.id)})">Eliminar</button>
@@ -1293,7 +1301,7 @@ async function saveHomepageUpdate() {
     formData.append('id', Number(document.getElementById('updateEditId').value || 0));
     formData.append('update_type', document.getElementById('updateType').value);
     formData.append('sort_order', Number(document.getElementById('updateOrder').value || 0));
-    formData.append('is_active', document.getElementById('updateActive').value === '1');
+    formData.append('is_active', document.getElementById('updateActive').value === '1' ? '1' : '0');
     formData.append('title', title);
     formData.append('body', body);
     formData.append('csrf_token', window.csrfToken || '');

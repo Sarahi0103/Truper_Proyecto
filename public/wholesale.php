@@ -22,7 +22,6 @@ $column_count = $is_admin ? 7 : 5;
     <div class="header-content">
         <a href="dashboard.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
         <nav class="nav-menu">
-            <a href="admin_supply.php#stockTab">Productos</a>
             <a href="dashboard.php">Dashboard</a>
             <a href="orders.php">Pedidos</a>
             <a href="wholesale.php" class="active">Mayoreo</a>
