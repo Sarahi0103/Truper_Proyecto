@@ -1594,7 +1594,6 @@ function count_stock_products_compatible($pdo): int {
         return 0;
     }
 }
-}
 
 function ensure_numeric_client_user_code_admin_supply($pdo, int $userId): string {
     if (!db_column_exists('users', 'user_code')) {
