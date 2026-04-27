@@ -854,6 +854,58 @@ function updateMarketplacePreview() {
     host.innerHTML = renderAdminProductCard(item, 'marketplace', false);
 }
 
+function normalizeCategoryValue(value) {
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+}
+
+function findCategoryOption(selectEl, categoryName) {
+    const normalizedName = normalizeCategoryValue(categoryName);
+    if (!normalizedName) return null;
+
+    return Array.from(selectEl?.options || []).find((option) =>
+        normalizeCategoryValue(option.value) === normalizedName
+    ) || null;
+}
+
+function ensureCategoryOptions(selectEl, categories, selected = true) {
+    if (!selectEl || !Array.isArray(categories)) return;
+
+    categories.forEach((categoryName) => {
+        const normalizedName = normalizeCategoryValue(categoryName);
+        if (!normalizedName) return;
+
+        let option = findCategoryOption(selectEl, categoryName);
+        if (!option) {
+            option = document.createElement('option');
+            option.value = String(categoryName).trim();
+            option.textContent = String(categoryName).trim();
+            selectEl.appendChild(option);
+        }
+
+        if (selected) {
+            option.selected = true;
+        }
+    });
+}
+
+function setCategorySelections(selectEl, categories) {
+    if (!selectEl) return;
+
+    const normalizedCategories = new Set(
+        Array.isArray(categories)
+            ? categories.map((category) => normalizeCategoryValue(category)).filter(Boolean)
+            : []
+    );
+
+    Array.from(selectEl.options || []).forEach((option) => {
+        option.selected = normalizedCategories.has(normalizeCategoryValue(option.value));
+    });
+}
+
 function setSkuStatus(statusId, message, tone = 'muted') {
     const el = document.getElementById(statusId);
     if (!el) return;
@@ -1588,7 +1640,7 @@ async function addCategoryFromQuickForm(selectId, inputId, resultId) {
 
     const categorySelect = document.getElementById(selectId);
     const alreadyExists = Array.from(categorySelect?.options || []).some((opt) =>
-        String(opt.value || '').trim().toLowerCase() === raw.toLowerCase()
+        normalizeCategoryValue(opt.value) === normalizeCategoryValue(raw)
     );
     if (alreadyExists) {
         if (quickBox) quickBox.innerHTML = '<span style="color:#ef4444;">❌ Esta categoría ya está agregada.</span>';
@@ -1614,12 +1666,18 @@ async function addCategoryFromQuickForm(selectId, inputId, resultId) {
 
     // Reflect creation immediately in the same select control.
     if (categorySelect) {
-        const option = document.createElement('option');
-        option.value = raw;
-        option.textContent = raw;
-        option.dataset.id = String(Number((res.item && res.item.id) ? res.item.id : 0));
-        option.selected = true;
-        categorySelect.appendChild(option);
+        const existingOption = findCategoryOption(categorySelect, raw);
+        if (existingOption) {
+            existingOption.selected = true;
+            existingOption.dataset.id = String(Number((res.item && res.item.id) ? res.item.id : existingOption.dataset.id || 0));
+        } else {
+            const option = document.createElement('option');
+            option.value = raw;
+            option.textContent = raw;
+            option.dataset.id = String(Number((res.item && res.item.id) ? res.item.id : 0));
+            option.selected = true;
+            categorySelect.appendChild(option);
+        }
     }
 
     if (input) input.value = '';
@@ -1628,9 +1686,7 @@ async function addCategoryFromQuickForm(selectId, inputId, resultId) {
     await refreshCategoriesUi();
 
     if (categorySelect) {
-        const target = Array.from(categorySelect.options || []).find((opt) =>
-            String(opt.value || '').trim().toLowerCase() === raw.toLowerCase()
-        );
+        const target = findCategoryOption(categorySelect, raw);
         if (target) {
             target.selected = true;
             target.scrollIntoView({ block: 'nearest' });
@@ -1835,9 +1891,9 @@ function fillProductFormById(id) {
         .split(',')
         .map((x) => x.trim())
         .filter(Boolean);
-    Array.from(document.getElementById('newProductCategory').options || []).forEach((opt) => {
-        opt.selected = categories.includes(opt.value);
-    });
+    const categorySelect = document.getElementById('newProductCategory');
+    ensureCategoryOptions(categorySelect, categories, true);
+    setCategorySelections(categorySelect, categories);
 
     const saveBtn = document.getElementById('newProductSaveButton');
     const box = document.getElementById('productCreateResult');
@@ -2494,20 +2550,13 @@ async function loadProductCategories(onlyActive = true) {
         const fillSelect = function (selectEl) {
             if (!selectEl) return;
             const selectedValues = new Set(
-                Array.from(selectEl.selectedOptions || []).map((option) => String(option.value || '').trim().toLowerCase())
+                Array.from(selectEl.selectedOptions || []).map((option) => normalizeCategoryValue(option.value))
             );
-            const normalizeForDedup = (value) => {
-                return String(value || '')
-                    .normalize('NFD')
-                    .replace(/[\u0300-\u036f]/g, '')
-                    .toLowerCase()
-                    .trim();
-            };
             const seenCategories = new Set();
             selectEl.innerHTML = '';
             res.items.forEach((cat) => {
                 const categoryName = String(cat.name || '').trim();
-                const categoryNameNormalized = normalizeForDedup(categoryName);
+                const categoryNameNormalized = normalizeCategoryValue(categoryName);
                 
                 if (seenCategories.has(categoryNameNormalized)) {
                     return;
@@ -3232,9 +3281,9 @@ function fillMarketplaceForm(item) {
         .split(',')
         .map((x) => x.trim())
         .filter(Boolean);
-    Array.from(document.getElementById('marketplaceCategory')?.options || []).forEach((opt) => {
-        opt.selected = categories.includes(opt.value);
-    });
+    const marketplaceCategorySelect = document.getElementById('marketplaceCategory');
+    ensureCategoryOptions(marketplaceCategorySelect, categories, true);
+    setCategorySelections(marketplaceCategorySelect, categories);
 
     const marketplaceImageRef = document.getElementById('marketplaceImageRef');
     if (marketplaceImageRef && item.image_url) {
