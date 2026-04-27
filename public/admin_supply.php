@@ -2754,6 +2754,7 @@ function renderProductGallery(images, sku, mode = 'stock') {
                 </select>
             </div>
             <div style="display:flex; gap:0.35rem; margin-top:0.45rem; flex-wrap:wrap;">
+                <button class="btn btn-small" type="button" style="background:#000; color:#fff;" onclick="${setCoverFn}('${escapeHtml(sku)}','${escapeHtml(img)}')">Portada</button>
                 <button class="btn btn-small btn-danger" type="button" onclick="${deleteFn}('${escapeHtml(sku)}','${escapeHtml(img)}')">Eliminar</button>
             </div>
         </div>
