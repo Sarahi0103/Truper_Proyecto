@@ -989,6 +989,13 @@ function list_product_gallery_images_admin_supply(string $sku): array {
         $stmt = $pdo->prepare("SELECT variants_json, image_url FROM products WHERE sku = ?");
         $stmt->execute([$sku]);
         $row = $stmt->fetch();
+        
+        if (!$row) {
+            $stmt = $pdo->prepare("SELECT variants_json, image_url FROM marketplace_ce_products WHERE sku = ?");
+            $stmt->execute([$sku]);
+            $row = $stmt->fetch();
+        }
+
         if ($row) {
             $images = [];
             if (!empty($row['variants_json'])) {
@@ -1075,159 +1082,26 @@ function reorder_product_gallery_images_admin_supply($pdo, string $sku, array $o
         throw new Exception('SKU inválido');
     }
 
-    $dir = product_gallery_dir_admin_supply($sku);
-    if (!is_dir($dir)) {
-        return [];
-    }
+    if (empty($orderedImages)) return [];
 
-    $currentImages = list_product_gallery_images_admin_supply($sku);
-    if (count($currentImages) <= 1) {
-        return $currentImages;
-    }
+    $json = json_encode($orderedImages);
+    $cover = $orderedImages[0];
 
-    $prefix = 'images/products/by_code/' . $sku . '/';
-    $currentMap = [];
-    foreach ($currentImages as $img) {
-        $fileName = basename((string)$img);
-        $fullPath = $dir . DIRECTORY_SEPARATOR . $fileName;
-        if (is_file($fullPath)) {
-            $currentMap[$img] = $fullPath;
-        }
-    }
+    // Update stock
+    try {
+        $stmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ?");
+        $stmt->execute([$cover, $json, $sku]);
+    } catch (Exception $ig) {}
 
-    $normalizedOrder = [];
-    foreach ($orderedImages as $candidate) {
-        $webPath = trim((string)$candidate);
-        if ($webPath === '' || strpos($webPath, $prefix) !== 0) {
-            continue;
-        }
-        if (!isset($currentMap[$webPath])) {
-            continue;
-        }
-        if (!in_array($webPath, $normalizedOrder, true)) {
-            $normalizedOrder[] = $webPath;
-        }
-    }
+    // Update marketplace
+    try {
+        $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET image_url = ?, variants_json = ? WHERE sku = ?");
+        $stmt->execute([$cover, $json, $sku]);
+    } catch (Exception $ig) {}
 
-    foreach (array_keys($currentMap) as $existingPath) {
-        if (!in_array($existingPath, $normalizedOrder, true)) {
-            $normalizedOrder[] = $existingPath;
-        }
-    }
-
-    if (empty($normalizedOrder)) {
-        return $currentImages;
-    }
-
-    $tempEntries = [];
-    foreach ($normalizedOrder as $index => $webPath) {
-        $sourcePath = $currentMap[$webPath] ?? '';
-        if ($sourcePath === '' || !is_file($sourcePath)) {
-            continue;
-        }
-
-        $ext = strtolower((string)pathinfo($sourcePath, PATHINFO_EXTENSION));
-        $tempName = '__tmp__' . $index . '-' . substr(bin2hex(random_bytes(4)), 0, 8) . '.' . $ext;
-        $tempPath = $dir . DIRECTORY_SEPARATOR . $tempName;
-        if (!@rename($sourcePath, $tempPath)) {
-            throw new Exception('No se pudo preparar el reordenamiento de imágenes');
-        }
-
-        $tempEntries[] = [
-            'temp_path' => $tempPath,
-            'original_web' => $webPath,
-            'index' => $index
-        ];
-    }
-
-    foreach ($tempEntries as $entry) {
-        $index = (int)$entry['index'];
-        $tempPath = (string)$entry['temp_path'];
-        $originalBase = pathinfo(basename((string)$entry['original_web']), PATHINFO_FILENAME);
-        $base = normalize_gallery_base_name_admin_supply((string)$originalBase);
-        if ($base === '') {
-            $base = 'product';
-        }
-
-        $ext = strtolower((string)pathinfo($tempPath, PATHINFO_EXTENSION));
-        $suffix = $index === 0 ? '+FC1' : ('+O' . str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT));
-        $targetName = $base . $suffix . '.' . $ext;
-        $targetPath = $dir . DIRECTORY_SEPARATOR . $targetName;
-
-        $counter = 1;
-        while (file_exists($targetPath)) {
-            $targetName = $base . $suffix . '-' . $counter . '.' . $ext;
-            $targetPath = $dir . DIRECTORY_SEPARATOR . $targetName;
-            $counter += 1;
-        }
-
-        if (!@rename($tempPath, $targetPath)) {
-            throw new Exception('No se pudo aplicar el nuevo orden de imágenes');
-        }
-    }
-
-    $images = list_product_gallery_images_admin_supply($sku);
-    if (!empty($images)) {
-        set_product_main_image_by_sku_admin_supply($pdo, $sku, $images[0]);
-    }
-
-    return $images;
+    return $orderedImages;
 }
 
-function set_gallery_cover_image_admin_supply(string $sku, string $imageWebPath): string {
-    if (!is_valid_numeric_sku_admin_supply($sku)) {
-        throw new Exception('SKU inválido');
-    }
-
-    $prefix = 'images/products/by_code/' . $sku . '/';
-    if (strpos($imageWebPath, $prefix) !== 0) {
-        throw new Exception('Imagen inválida para este SKU');
-    }
-
-    $filename = basename($imageWebPath);
-    $dir = product_gallery_dir_admin_supply($sku);
-    $fullPath = $dir . DIRECTORY_SEPARATOR . $filename;
-    if (!is_file($fullPath)) {
-        throw new Exception('No se encontró la imagen');
-    }
-
-    $currentImages = list_product_gallery_images_admin_supply($sku);
-    foreach ($currentImages as $img) {
-        $imgName = basename($img);
-        $imgFull = $dir . DIRECTORY_SEPARATOR . $imgName;
-        if (!is_file($imgFull)) {
-            continue;
-        }
-
-        $ext = pathinfo($imgName, PATHINFO_EXTENSION);
-        $base = pathinfo($imgName, PATHINFO_FILENAME);
-        $normalizedBase = normalize_gallery_base_name_admin_supply($base);
-        if ($normalizedBase !== $base) {
-            $newName = $normalizedBase . '.' . $ext;
-            $newFull = $dir . DIRECTORY_SEPARATOR . $newName;
-            if (!file_exists($newFull) && $newFull !== $imgFull) {
-                @rename($imgFull, $newFull);
-            }
-        }
-    }
-
-    $ext = pathinfo($filename, PATHINFO_EXTENSION);
-    $base = pathinfo($filename, PATHINFO_FILENAME);
-    $normalizedBase = normalize_gallery_base_name_admin_supply($base);
-    $coverName = $normalizedBase . '+FC1.' . $ext;
-    $coverFull = $dir . DIRECTORY_SEPARATOR . $coverName;
-
-    if ($coverFull !== $fullPath) {
-        if (file_exists($coverFull)) {
-            @unlink($coverFull);
-        }
-        if (!@rename($fullPath, $coverFull)) {
-            throw new Exception('No se pudo asignar la portada');
-        }
-    }
-
-    return 'images/products/by_code/' . $sku . '/' . $coverName;
-}
 
 function create_product_compatible($pdo, array $payload): void {
     try {
@@ -2271,7 +2145,13 @@ try {
             
             $json = json_encode($allImages);
             $cover = $allImages[0];
+            
+            // Update stock
             $stmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ?");
+            $stmt->execute([$cover, $json, $sku]);
+
+            // Update marketplace
+            $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET image_url = ?, variants_json = ? WHERE sku = ?");
             $stmt->execute([$cover, $json, $sku]);
 
             $response = [
@@ -2306,7 +2186,13 @@ try {
                 array_unshift($images, $cover);
                 
                 $json = json_encode(array_values($images));
+                
+                // Update stock
                 $stmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ?");
+                $stmt->execute([$cover, $json, $sku]);
+
+                // Update marketplace
+                $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET image_url = ?, variants_json = ? WHERE sku = ?");
                 $stmt->execute([$cover, $json, $sku]);
             } else {
                 $cover = $images[0] ?? null;
@@ -2342,7 +2228,12 @@ try {
                 $json = json_encode($images);
                 $cover = $images[0] ?? 'images/products/default-product.svg';
                 
+                // Update stock
                 $stmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ?");
+                $stmt->execute([$cover, $json, $sku]);
+
+                // Update marketplace
+                $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET image_url = ?, variants_json = ? WHERE sku = ?");
                 $stmt->execute([$cover, $json, $sku]);
             }
 

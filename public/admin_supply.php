@@ -1794,6 +1794,8 @@ function fillProductFormById(id) {
     const item = stockItemsCache.find((row) => Number(row.id) === Number(id));
     if (!item) return;
 
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
     const isSeedOnly = Boolean(item.seed_only || item.__seed_only);
     document.getElementById('newProductEditId').value = isSeedOnly ? '' : (item.id || '');
     document.getElementById('newProductSeedMode').value = isSeedOnly ? '1' : '0';
@@ -2748,10 +2750,8 @@ function renderProductGallery(images, sku, mode = 'stock') {
                 </select>
             </div>
             <div style="display:flex; gap:0.35rem; margin-top:0.45rem; flex-wrap:wrap;">
-                <button class="btn btn-small btn-secondary" type="button" onclick="${setCoverFn}('${escapeHtml(sku)}','${escapeHtml(img)}')">Portada</button>
                 <button class="btn btn-small btn-danger" type="button" onclick="${deleteFn}('${escapeHtml(sku)}','${escapeHtml(img)}')">Eliminar</button>
             </div>
-            ${idx === 0 ? '<div class="text-muted" style="font-size:11px; margin-top:4px;">Portada actual</div>' : ''}
         </div>
     `).join('');
 }
@@ -3202,6 +3202,7 @@ function resetMarketplaceForm() {
 
 function fillMarketplaceForm(item) {
     if (!item) return;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     document.getElementById('marketplaceEditId').value = item.id || '';
     document.getElementById('marketplaceSku').value = item.sku || '';
     document.getElementById('marketplaceName').value = item.name || '';
