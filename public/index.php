@@ -243,7 +243,24 @@ try {
         CHECK (update_type IN ('noticia', 'promocion', 'evento'))
     )");
 
-    $stmtUpdates = $pdo->query("SELECT update_type, title, body, image_url FROM homepage_updates WHERE is_active = true ORDER BY sort_order ASC, id DESC LIMIT 12");
+    $activeColumn = null;
+    if (db_column_exists('homepage_updates', 'is_active')) {
+        $activeColumn = 'is_active';
+    } elseif (db_column_exists('homepage_updates', 'active')) {
+        $activeColumn = 'active';
+    }
+
+    $sortColumn = db_column_exists('homepage_updates', 'sort_order') ? 'sort_order' : 'id';
+    $imageSelect = db_column_exists('homepage_updates', 'image_url')
+        ? "COALESCE(image_url, '') AS image_url"
+        : "'' AS image_url";
+
+    $whereActive = '';
+    if ($activeColumn !== null) {
+        $whereActive = " WHERE (CASE WHEN {$activeColumn} IS NULL THEN 1 WHEN LOWER(CAST({$activeColumn} AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
+    }
+
+    $stmtUpdates = $pdo->query("SELECT update_type, title, body, {$imageSelect} FROM homepage_updates{$whereActive} ORDER BY {$sortColumn} ASC, id DESC LIMIT 12");
     $homepageUpdates = $stmtUpdates ? $stmtUpdates->fetchAll() : [];
 } catch (Exception $ignored) {
     $homepageUpdates = [];
