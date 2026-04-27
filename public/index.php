@@ -243,30 +243,10 @@ try {
         CHECK (update_type IN ('noticia', 'promocion', 'evento'))
     )");
 
-    $stmtUpdates = $pdo->query("SELECT update_type, title, body FROM homepage_updates WHERE is_active = true ORDER BY sort_order ASC, id DESC LIMIT 12");
+    $stmtUpdates = $pdo->query("SELECT update_type, title, body, image_url FROM homepage_updates WHERE is_active = true ORDER BY sort_order ASC, id DESC LIMIT 12");
     $homepageUpdates = $stmtUpdates ? $stmtUpdates->fetchAll() : [];
 } catch (Exception $ignored) {
     $homepageUpdates = [];
-}
-
-if (empty($homepageUpdates)) {
-    $homepageUpdates = [
-        [
-            'update_type' => 'promocion',
-            'title' => 'Combo de herramientas eléctricas con precio especial',
-            'body' => 'Consulta disponibilidad por WhatsApp y recibe confirmación de stock para entrega rápida.'
-        ],
-        [
-            'update_type' => 'evento',
-            'title' => 'Capacitación técnica para instaladores este viernes',
-            'body' => 'Incluye demostración de productos y recomendaciones de uso en material eléctrico y herrería.'
-        ],
-        [
-            'update_type' => 'noticia',
-            'title' => 'Nuevos ingresos en fontanería y cerrajería',
-            'body' => 'Ya disponibles nuevas variantes de producto con ficha técnica y precio actualizado en catálogo.'
-        ]
-    ];
 }
 
 function homepage_update_label($type) {
@@ -347,22 +327,34 @@ function homepage_update_label($type) {
                 </div>
             </div>
 
-            <div class="promo-viewport" data-promo-viewport>
-                <div class="promo-track" data-promo-track>
-                    <?php foreach ($homepageUpdates as $update): ?>
-                        <article class="promo-slide" data-promo-slide>
-                            <?php if (!empty($update['image_url'])): ?>
-                                <img src="<?php echo htmlspecialchars($update['image_url'], ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($update['title'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="promo-image">
-                            <?php endif; ?>
-                            <span class="promo-kicker"><?php echo htmlspecialchars(homepage_update_label($update['update_type'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span>
-                            <h3><?php echo htmlspecialchars((string)($update['title'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></h3>
-                            <p><?php echo htmlspecialchars((string)($update['body'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></p>
-                        </article>
-                    <?php endforeach; ?>
+            <?php if (!empty($homepageUpdates)): ?>
+                <div class="promo-viewport" data-promo-viewport>
+                    <div class="promo-track" data-promo-track>
+                        <?php foreach ($homepageUpdates as $update): ?>
+                            <article class="promo-slide" data-promo-slide>
+                                <?php if (!empty($update['image_url'])): ?>
+                                    <img src="<?php echo htmlspecialchars($update['image_url'], ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($update['title'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="promo-image">
+                                <?php endif; ?>
+                                <span class="promo-kicker"><?php echo htmlspecialchars(homepage_update_label($update['update_type'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span>
+                                <h3><?php echo htmlspecialchars((string)($update['title'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></h3>
+                                <p><?php echo htmlspecialchars((string)($update['body'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></p>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
-            </div>
 
-            <div class="promo-dots" data-promo-dots></div>
+                <div class="promo-dots" data-promo-dots></div>
+            <?php else: ?>
+                <div class="promo-viewport" data-promo-viewport>
+                    <div class="promo-track" data-promo-track>
+                        <article class="promo-slide" data-promo-slide>
+                            <span class="promo-kicker">Portada</span>
+                            <h3>Publica tus promociones desde Abastecimiento</h3>
+                            <p>Usa el módulo Portada para crear tarjetas con imagen, título y contenido atractivo para tus clientes.</p>
+                        </article>
+                    </div>
+                </div>
+            <?php endif; ?>
         </section>
 
         <section class="catalog-shell">

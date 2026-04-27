@@ -38,7 +38,6 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                 <div class="user-name"><?php echo $user_name; ?></div>
                 <div class="user-role"><?php echo ucfirst($user_role); ?></div>
             </div>
-            <a href="index.php" class="btn btn-small btn-ghost">Ver portada</a>
             <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
         </div>
     </header>

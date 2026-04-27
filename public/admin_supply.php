@@ -248,7 +248,6 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
     </div>
     <div class="user-menu">
         <div class="user-info"><div class="user-name"><?php echo $user_name; ?></div><div class="user-role">Admin</div></div>
-        <a href="index.php" class="btn btn-small btn-ghost">Ver portada</a>
         <button class="btn-logout" onclick="window.location.href='api/auth.php?action=logout'">Cerrar Sesion</button>
     </div>
 </header>
@@ -1294,6 +1293,7 @@ async function saveHomepageUpdate() {
     formData.append('is_active', document.getElementById('updateActive').value === '1');
     formData.append('title', title);
     formData.append('body', body);
+    formData.append('csrf_token', window.csrfToken || '');
     
     if (imageInput && imageInput.files.length > 0) {
         formData.append('image', imageInput.files[0]);

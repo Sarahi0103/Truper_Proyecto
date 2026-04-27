@@ -37,9 +37,6 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
                 <div class="user-name"><?php echo $user_name; ?></div>
                 <div class="user-role"><?php echo ucfirst($user_role); ?></div>
             </div>
-            <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
-            <a href="index.php" class="btn btn-small btn-ghost">Ver portada</a>
-            <?php endif; ?>
             <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
         </div>
     </header>

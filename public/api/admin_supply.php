@@ -2858,12 +2858,14 @@ try {
                 break;
             }
 
-            $id = (int)($input['id'] ?? 0);
-            $type = sanitize($input['update_type'] ?? 'noticia');
-            $title = trim((string)($input['title'] ?? ''));
-            $body = trim((string)($input['body'] ?? ''));
-            $sortOrder = (int)($input['sort_order'] ?? 0);
-            $isActive = isset($input['is_active']) ? !empty($input['is_active']) : true;
+            $id = (int)($_POST['id'] ?? ($input['id'] ?? 0));
+            $type = sanitize($_POST['update_type'] ?? ($input['update_type'] ?? 'noticia'));
+            $title = trim((string)($_POST['title'] ?? ($input['title'] ?? ($_REQUEST['title'] ?? ''))));
+            $body = trim((string)($_POST['body'] ?? ($input['body'] ?? ($_REQUEST['body'] ?? ''))));
+            $sortOrder = (int)($_POST['sort_order'] ?? ($input['sort_order'] ?? 0));
+            $isActive = isset($_POST['is_active'])
+                ? normalize_bool_admin_supply($_POST['is_active'], true)
+                : (isset($input['is_active']) ? normalize_bool_admin_supply($input['is_active'], true) : true);
 
             $allowedTypes = ['noticia', 'promocion', 'evento'];
             if (!in_array($type, $allowedTypes, true)) {
