@@ -2836,7 +2836,11 @@ async function loadProductGalleryForCurrentSku() {
         return;
     }
 
-    renderProductGallery(Array.isArray(res.images) ? res.images : [], sku, 'stock');
+    const imagesToRender = Array.isArray(res.images) && res.images.length > 0 
+        ? res.images 
+        : (res.cover ? [res.cover] : []);
+
+    renderProductGallery(imagesToRender, sku, 'stock');
     if (res.cover) {
         const select = document.getElementById('newProductImageRef');
         if (select) {
@@ -2872,7 +2876,11 @@ async function loadMarketplaceGalleryForCurrentSku() {
         return;
     }
 
-    renderProductGallery(Array.isArray(res.images) ? res.images : [], sku, 'marketplace');
+    const imagesToRender = Array.isArray(res.images) && res.images.length > 0 
+        ? res.images 
+        : (res.cover ? [res.cover] : []);
+
+    renderProductGallery(imagesToRender, sku, 'marketplace');
     if (res.cover) {
         const select = document.getElementById('marketplaceImageRef');
         if (select) {

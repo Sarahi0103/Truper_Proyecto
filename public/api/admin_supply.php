@@ -1927,9 +1927,17 @@ try {
                 break;
             }
 
-            $stmt = $pdo->prepare("DELETE FROM products WHERE id = ?");
-            $stmt->execute([$id]);
-            $response = ['success' => true, 'message' => 'Producto eliminado correctamente'];
+            try {
+                $stmt = $pdo->prepare("DELETE FROM products WHERE id = ?");
+                $stmt->execute([$id]);
+                $response = ['success' => true, 'message' => 'Producto eliminado correctamente'];
+            } catch (PDOException $e) {
+                if ($e->getCode() === '23503') {
+                    $response = ['success' => false, 'message' => 'No se puede eliminar porque este producto tiene pedidos o historial asociado. Mejor ocúltalo (desactiva Visible).'];
+                } else {
+                    throw $e;
+                }
+            }
             break;
 
         case 'product-visibility':
@@ -2882,8 +2890,17 @@ try {
                 break;
             }
 
-            set_marketplace_visibility_compatible($pdo, $id, false);
-            $response = ['success' => true, 'message' => 'Artículo CE desactivado'];
+            try {
+                $stmt = $pdo->prepare("DELETE FROM marketplace_ce_products WHERE id = ?");
+                $stmt->execute([$id]);
+                $response = ['success' => true, 'message' => 'Artículo CE eliminado correctamente'];
+            } catch (PDOException $e) {
+                if ($e->getCode() === '23503') {
+                    $response = ['success' => false, 'message' => 'No se puede eliminar porque este artículo tiene historial asociado. Mejor ocúltalo.'];
+                } else {
+                    throw $e;
+                }
+            }
             break;
 
         case 'updates-list':
