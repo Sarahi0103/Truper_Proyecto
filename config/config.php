@@ -891,7 +891,7 @@ function apply_login_engagement_rules($user_id) {
         }
 
         if (db_table_exists('action_logs')) {
-            log_action($user_id, 'BIRTHDAY_BONUS', 'Bono de cumpleaños aplicado: +50 puntos y 10% promo', getTrusSIDBug());
+            log_action($user_id, 'BIRTHDAY_BONUS', 'Bono de cumpleaños aplicado: +50 puntos y 10% promo', $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
         }
 
         $_SESSION['birthday_bonus_notice'] = 'Feliz cumpleaños. Recibiste 50 puntos y un bono del 10%.';

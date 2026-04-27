@@ -748,15 +748,11 @@ function displayProductCode(rawSku) {
 }
 
 function normalizeNumericSku(rawValue) {
-    let sku = String(rawValue || '').trim();
-    // Remove XLS- prefix if present
-    sku = sku.replace(/^XLS-/i, '');
-    return sku;
+    return String(rawValue || '').replace(/\D+/g, '').slice(0, 5);
 }
 
 function isValidNumericSku(sku) {
-    // Alphanumeric, 3-50 chars
-    return /^[a-zA-Z0-9\-_]{3,50}$/.test(String(sku || '').trim());
+    return /^\d{5}$/.test(String(sku || '').trim());
 }
 
 const skuCheckVersion = { product: 0, marketplace: 0 };
