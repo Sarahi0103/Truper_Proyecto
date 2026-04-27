@@ -62,11 +62,14 @@ function normalize_bool_admin_supply($value, bool $default = false): bool {
 
 function normalize_sku_admin_supply($value): string {
     $sku = trim((string)$value);
-    return preg_replace('/\D+/', '', $sku) ?: '';
+    // Remove XLS- prefix if present (case insensitive)
+    $sku = preg_replace('/^XLS-/i', '', $sku);
+    return $sku;
 }
 
 function is_valid_numeric_sku_admin_supply(string $sku): bool {
-    return (bool)preg_match('/^\d{5}$/', $sku);
+    // More permissive: alphanumeric, 3-50 chars
+    return (bool)preg_match('/^[a-zA-Z0-9\-_]{3,50}$/', $sku);
 }
 
 function normalize_category_admin_supply($value): string {
@@ -986,13 +989,29 @@ function list_product_gallery_images_admin_supply(string $sku): array {
     if (!is_valid_numeric_sku_admin_supply($sku)) return [];
     
     try {
+        // Try exact match first
         $stmt = $pdo->prepare("SELECT variants_json, image_url FROM products WHERE sku = ?");
         $stmt->execute([$sku]);
         $row = $stmt->fetch();
         
         if (!$row) {
+            // Try with XLS- prefix
+            $stmt = $pdo->prepare("SELECT variants_json, image_url FROM products WHERE sku = ?");
+            $stmt->execute(['XLS-' . $sku]);
+            $row = $stmt->fetch();
+        }
+
+        if (!$row) {
+            // Try marketplace
             $stmt = $pdo->prepare("SELECT variants_json, image_url FROM marketplace_ce_products WHERE sku = ?");
             $stmt->execute([$sku]);
+            $row = $stmt->fetch();
+        }
+        
+        if (!$row) {
+            // Try marketplace with XLS-
+            $stmt = $pdo->prepare("SELECT variants_json, image_url FROM marketplace_ce_products WHERE sku = ?");
+            $stmt->execute(['XLS-' . $sku]);
             $row = $stmt->fetch();
         }
 
@@ -1000,10 +1019,14 @@ function list_product_gallery_images_admin_supply(string $sku): array {
             $images = [];
             if (!empty($row['variants_json'])) {
                 $images = json_decode($row['variants_json'], true) ?: [];
-            } elseif (!empty($row['image_url']) && strpos($row['image_url'], 'default-product.svg') === false) {
+            }
+            
+            // Fallback to image_url if images list is still empty
+            if (empty($images) && !empty($row['image_url']) && strpos($row['image_url'], 'default-product.svg') === false) {
                 $images[] = $row['image_url'];
             }
-            return $images;
+            
+            return array_values(array_filter($images));
         }
     } catch (Exception $e) {}
     
