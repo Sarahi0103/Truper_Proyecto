@@ -281,10 +281,10 @@ try {
             $data = $stmt->fetchAll();
 
             $filename = 'truper_report_' . date('Y-m-d_H-i') . '.' . $format;
-            $filepath = '../../exports/' . $filename;
+            $filepath = '../exports/' . $filename;
             
-            if (!is_dir('../../exports')) {
-                mkdir('../../exports', 0777, true);
+            if (!is_dir('../exports')) {
+                mkdir('../exports', 0777, true);
             }
 
             $fp = fopen($filepath, 'w');

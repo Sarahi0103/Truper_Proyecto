@@ -279,14 +279,9 @@ async function exportStats(format = 'csv') {
     try {
         const response = await apiCall(`/analytics.php?action=export&format=${format}`);
         if (response && response.success && response.file_url) {
-            // Fix URL if it doesn't start with /api/
-            let url = response.file_url;
-            if (!url.startsWith('http') && !url.startsWith('/')) {
-                url = '/api/' + url;
-            }
-            
+            // The file is in public/exports/
             const link = document.createElement('a');
-            link.href = url;
+            link.href = response.file_url; // This will be 'exports/filename.csv'
             link.download = response.filename;
             document.body.appendChild(link);
             link.click();
