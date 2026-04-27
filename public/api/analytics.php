@@ -263,12 +263,128 @@ try {
             }
 
             $format = $_GET['format'] ?? 'csv';
-            // Aquí se implementaría la lógica de exportación
-            $response = [
-                'success' => true,
-                'file_url' => '/truper_platform/exports/report.' . $format,
-                'filename' => 'truper_report_' . date('Y-m-d') . '.' . $format
-            ];
+            
+            // Fetch data for report
+            $stmt = $pdo->prepare("
+                SELECT 
+                    o.id AS order_id,
+                    o.created_at,
+                    o.total_amount,
+                    c.company_name,
+                    u.first_name || ' ' || u.last_name AS client_name
+                FROM orders o
+                LEFT JOIN clients c ON o.client_id = c.id
+                LEFT JOIN users u ON c.user_id = u.id
+                ORDER BY o.created_at DESC
+            ");
+            $stmt->execute();
+            $data = $stmt->fetchAll();
+
+            $filename = 'truper_report_' . date('Y-m-d_H-i') . '.' . $format;
+            $filepath = '../../exports/' . $filename;
+            
+            if (!is_dir('../../exports')) {
+                mkdir('../../exports', 0777, true);
+            }
+
+            $fp = fopen($filepath, 'w');
+            if ($fp) {
+                // BOM for Excel UTF-8
+                fputs($fp, $bom = chr(0xEF).chr(0xBB).chr(0xBF));
+                
+                // Headers
+                fputcsv($fp, ['ID Pedido', 'Fecha', 'Total', 'Empresa', 'Cliente']);
+                
+                // Data
+                foreach ($data as $row) {
+                    fputcsv($fp, [
+                        $row['order_id'],
+                        $row['created_at'],
+                        $row['total_amount'],
+                        $row['company_name'],
+                        $row['client_name']
+                    ]);
+                }
+                fclose($fp);
+                
+                $response = [
+                    'success' => true,
+                    'file_url' => 'exports/' . $filename,
+                    'filename' => $filename
+                ];
+            } else {
+                $response = ['success' => false, 'message' => 'No se pudo generar el archivo'];
+            }
+            break;
+
+        case 'yearly-stats':
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            if (is_admin_user()) {
+                $sql = "
+                    SELECT 
+                        EXTRACT(YEAR FROM created_at)::int as year_val,
+                        COUNT(*) as total_orders,
+                        COALESCE(SUM(total_amount), 0) as total_amount
+                    FROM orders
+                    GROUP BY year_val
+                    ORDER BY year_val DESC
+                ";
+                $stmt = $pdo->query($sql);
+                $stats = $stmt->fetchAll();
+            } else {
+                $clientId = get_current_client_id($pdo);
+                $sql = "
+                    SELECT 
+                        EXTRACT(YEAR FROM created_at)::int as year_val,
+                        COUNT(*) as total_orders,
+                        COALESCE(SUM(total_amount), 0) as total_amount
+                    FROM orders
+                    WHERE client_id = ?
+                    GROUP BY year_val
+                    ORDER BY year_val DESC
+                ";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$clientId]);
+                $stats = $stmt->fetchAll();
+            }
+            $response = ['success' => true, 'stats' => $stats];
+            break;
+
+        case 'calendar-data':
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+            
+            $month = isset($_GET['month']) ? (int)$_GET['month'] : (int)date('m');
+            $year = isset($_GET['year']) ? (int)$_GET['year'] : (int)date('Y');
+            
+            $clientId = is_admin_user() ? null : get_current_client_id($pdo);
+            
+            $sql = "
+                SELECT 
+                    EXTRACT(DAY FROM created_at)::int as day,
+                    COUNT(*) as count,
+                    COALESCE(SUM(total_amount), 0) as total
+                FROM orders
+                WHERE EXTRACT(MONTH FROM created_at) = ?
+                AND EXTRACT(YEAR FROM created_at) = ?
+            ";
+            
+            $params = [$month, $year];
+            if ($clientId) {
+                $sql .= " AND client_id = ?";
+                $params[] = $clientId;
+            }
+            $sql .= " GROUP BY day ORDER BY day ASC";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $response = ['success' => true, 'days' => $stmt->fetchAll()];
             break;
 
         case 'seasonal-report':

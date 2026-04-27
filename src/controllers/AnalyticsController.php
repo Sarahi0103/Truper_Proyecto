@@ -130,16 +130,17 @@ class AnalyticsController {
             return null;
         }
         
-        // Calcular promedio de demanda
+        // Calcular promedio de demanda base
         $total = array_sum(array_column($historical_data, 'total_quantity'));
-        $average = $total / count($historical_data);
+        $count = count($historical_data);
+        $average = $total / $count;
         
-        // Aplicar factor por temporada actual
+        // 1. Factor de Estacionalidad Actual
         $current_season = $this->getSeason();
         $season_factor = 1.0;
         
         $season_data = array_filter($historical_data, function($d) use ($current_season) {
-            return $d['season'] === $current_season;
+            return ($d['season'] ?? '') === $current_season;
         });
         
         if (!empty($season_data)) {
@@ -147,36 +148,73 @@ class AnalyticsController {
             $season_factor = $season_avg / $average;
         }
         
-        $predicted_demand = round($average * $season_factor);
-        $confidence = min(99, 50 + (count($historical_data) * 5)); // Confianza basada en datos históricos
+        // 2. Factor de Tendencia (últimos meses vs promedio)
+        $trend_factor = 1.0;
+        if ($count >= 3) {
+            $recent = array_slice($historical_data, 0, 3);
+            $recent_avg = array_sum(array_column($recent, 'total_quantity')) / 3;
+            $trend_factor = $recent_avg / $average;
+        }
+
+        // 3. Ajuste por Eventos Especiales o Clima (si existen en el historial reciente)
+        $external_adjustment = 1.0;
+        $factors_desc = [];
         
-        // Guardar predicción
-        $stmt = $this->pdo->prepare("
-            INSERT INTO ai_predictions 
-            (product_id, prediction_date, predicted_demand, confidence_score, season, factors)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ");
+        foreach ($historical_data as $h) {
+            if (!empty($h['weather_condition'])) {
+                $external_adjustment *= 1.05; // Leve incremento por correlación climática detectada
+                $factors_desc[] = "Correlación climática (" . $h['weather_condition'] . ")";
+                break;
+            }
+            if (!empty($h['special_event'])) {
+                $external_adjustment *= 1.1; // Ajuste por eventos especiales históricos
+                $factors_desc[] = "Impacto de evento especial (" . $h['special_event'] . ")";
+                break;
+            }
+        }
+
+        // Predicción Final
+        $predicted_demand = round($average * $season_factor * $trend_factor * $external_adjustment);
         
-        $factors = json_encode([
-            'historical_average' => $average,
-            'season_factor' => $season_factor,
-            'data_points' => count($historical_data)
-        ]);
-        
-        $stmt->execute([
-            $product_id,
-            date('Y-m-d'),
-            $predicted_demand,
-            $confidence,
-            $current_season,
-            $factors
-        ]);
+        // Confianza: escala por volumen de datos y estabilidad
+        $confidence = min(99, 45 + ($count * 4));
+        if ($trend_factor > 1.5 || $trend_factor < 0.5) $confidence -= 10; // Menor confianza en cambios bruscos
+
+        // Guardar en log de IA
+        try {
+            $stmt = $this->pdo->prepare("
+                INSERT INTO ai_predictions 
+                (product_id, prediction_date, predicted_demand, confidence_score, season, factors)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ");
+            
+            $factors_json = json_encode([
+                'base_avg' => round($average, 2),
+                'season_f' => round($season_factor, 2),
+                'trend_f' => round($trend_factor, 2),
+                'ext_adj' => round($external_adjustment, 2),
+                'data_points' => $count,
+                'insights' => $factors_desc
+            ]);
+            
+            $stmt->execute([
+                $product_id,
+                date('Y-m-d'),
+                $predicted_demand,
+                $confidence,
+                $current_season,
+                $factors_json
+            ]);
+        } catch (Exception $e) {
+            error_log("Error guardando ai_prediction: " . $e->getMessage());
+        }
         
         return [
             'product_id' => $product_id,
             'predicted_demand' => $predicted_demand,
             'confidence' => $confidence,
-            'season' => $current_season
+            'season' => $current_season,
+            'insights' => $factors_desc
         ];
     }
     

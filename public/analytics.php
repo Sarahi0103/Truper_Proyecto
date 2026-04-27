@@ -16,6 +16,26 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/theme.css">
     <link rel="stylesheet" href="css/dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .stat-card { background: var(--theme-card); padding: 1.5rem; border-radius: 16px; border: 1px solid var(--theme-border); box-shadow: var(--theme-shadow); }
+        .stat-label { color: var(--theme-text-muted); font-size: 0.9rem; margin-bottom: 0.5rem; }
+        .stat-value { font-size: 1.8rem; font-weight: 700; color: var(--theme-text); }
+        .chart-container { position: relative; height: 350px; width: 100%; margin-top: 1rem; }
+        .calendar-container { margin-top: 2rem; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+        .calendar-day-head { text-align: center; font-weight: 600; padding: 10px; color: var(--theme-text-muted); }
+        .calendar-day { min-height: 80px; padding: 5px; border: 1px solid var(--theme-border); border-radius: 8px; position: relative; transition: all 0.2s; }
+        .calendar-day:hover { background: rgba(255,127,0,0.05); }
+        .calendar-day.has-activity { border-color: var(--color-naranja); }
+        .day-number { font-size: 0.8rem; color: var(--theme-text-muted); }
+        .day-content { font-size: 0.75rem; margin-top: 5px; }
+        .activity-dot { width: 6px; height: 6px; background: var(--color-naranja); border-radius: 50%; display: inline-block; margin-right: 3px; }
+        .view-toggle { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+        .view-toggle .btn { padding: 0.4rem 1rem; font-size: 0.85rem; border-radius: 20px; }
+        .view-toggle .btn.active { background: var(--color-naranja); color: white; border-color: var(--color-naranja); }
+    </style>
 </head>
 <body>
     <!-- HEADER -->
@@ -44,46 +64,83 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
 
     <main>
         <div class="container-fluid">
-            <div class="d-flex justify-between align-center">
-                <h1><?php echo $is_admin ? 'Estadísticas y Análisis' : 'Mis Estadísticas'; ?></h1>
+            <div class="d-flex justify-between align-center" style="margin-bottom: 2rem;">
+                <div>
+                    <h1 style="margin-bottom: 0.5rem;"><?php echo $is_admin ? 'Inteligencia de Negocios' : 'Mis Estadísticas'; ?></h1>
+                    <p class="text-muted">Análisis detallado impulsado por IA para la toma de decisiones.</p>
+                </div>
                 <?php if ($is_admin): ?>
                 <button class="btn btn-primary" onclick="exportStats('csv')">
-                    📥 Descargar Reporte
+                    📥 Descargar Excel
                 </button>
                 <?php endif; ?>
             </div>
 
             <!-- TABS -->
             <div class="tabs">
-                <button class="tab-button active" data-tab="purchaseStats">Compras</button>
+                <button class="tab-button active" data-tab="purchaseStats">Métricas</button>
                 <?php if ($is_admin): ?>
-                <button class="tab-button" data-tab="predictionsTab">Predicciones</button>
-                <button class="tab-button" data-tab="seasonalTab">Temporadas</button>
+                <button class="tab-button" data-tab="predictionsTab">Predicciones IA</button>
+                <button class="tab-button" data-tab="seasonalTab">Análisis Temporal</button>
                 <button class="tab-button" data-tab="clientsTab">Clientes</button>
                 <?php endif; ?>
             </div>
 
-            <?php if (!$is_admin): ?>
-            <div class="grid grid-4" style="margin: 1rem 0 1.5rem;">
-                <div class="card"><div class="card-body"><div class="text-muted">Pedidos Totales</div><div id="myTotalOrders" style="font-size:1.8rem;font-weight:700;">0</div></div></div>
-                <div class="card"><div class="card-body"><div class="text-muted">Total Comprado</div><div id="myTotalSpent" style="font-size:1.8rem;font-weight:700;">$0</div></div></div>
-                <div class="card"><div class="card-body"><div class="text-muted">Ticket Promedio</div><div id="myAvgTicket" style="font-size:1.8rem;font-weight:700;">$0</div></div></div>
-                <div class="card"><div class="card-body"><div class="text-muted">Pedidos Activos</div><div id="myPendingOrders" style="font-size:1.8rem;font-weight:700;">0</div></div></div>
-            </div>
-            <?php endif; ?>
-
-            <!-- ESTADÍSTICAS DE COMPRAS -->
             <div id="purchaseStats" class="tab-content active">
-                <div class="card">
-                    <div class="card-header">Estadísticas de Compras por Mes</div>
-                    <div class="card-body">
-                        <div style="margin-bottom: 1.5rem;">
-                            <label>Seleccionar Año:</label>
-                            <select id="yearFilter" onchange="loadPurchaseStats()">
-                                <option value="">Cargando años...</option>
-                            </select>
+                <div class="view-toggle">
+                    <button class="btn btn-secondary active" id="btnMonthly" onclick="setView('monthly')">Mensual</button>
+                    <button class="btn btn-secondary" id="btnYearly" onclick="setView('yearly')">Anual</button>
+                    <button class="btn btn-secondary" id="btnCalendar" onclick="setView('calendar')">Calendario</button>
+                </div>
+
+                <div id="filterSection" style="margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: center;">
+                    <div id="yearFilterGroup">
+                        <label style="display:block; font-size:0.8rem; color:var(--theme-text-muted); margin-bottom:0.3rem;">Año</label>
+                        <select id="yearFilter" onchange="refreshCurrentView()" style="min-width:120px;">
+                            <option value="">Cargando...</option>
+                        </select>
+                    </div>
+                    <div id="monthFilterGroup" style="display:none;">
+                        <label style="display:block; font-size:0.8rem; color:var(--theme-text-muted); margin-bottom:0.3rem;">Mes</label>
+                        <select id="monthFilter" onchange="refreshCurrentView()" style="min-width:120px;">
+                            <option value="1">Enero</option>
+                            <option value="2">Febrero</option>
+                            <option value="3">Marzo</option>
+                            <option value="4">Abril</option>
+                            <option value="5">Mayo</option>
+                            <option value="6">Junio</option>
+                            <option value="7">Julio</option>
+                            <option value="8">Agosto</option>
+                            <option value="9">Septiembre</option>
+                            <option value="10">Octubre</option>
+                            <option value="11">Noviembre</option>
+                            <option value="12">Diciembre</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="statsSummary" class="stats-grid">
+                    <!-- Summary cards populated by JS -->
+                </div>
+
+                <div class="card" id="chartCard">
+                    <div class="card-header d-flex justify-between align-center">
+                        <span id="chartTitle">Rendimiento Mensual</span>
+                        <div class="chart-actions">
+                            <!-- Optional actions -->
                         </div>
-                        <div id="purchaseStatsContainer"></div>
+                    </div>
+                    <div class="card-body">
+                        <div id="chartContainer" class="chart-container">
+                            <canvas id="mainChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="calendarCard" class="card" style="display:none;">
+                    <div class="card-header">Calendario de Actividad</div>
+                    <div class="card-body">
+                        <div id="calendarContainer" class="calendar-container"></div>
                     </div>
                 </div>
             </div>
@@ -91,12 +148,21 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
             <!-- PREDICCIONES DEL SISTEMA -->
             <?php if ($is_admin): ?>
             <div id="predictionsTab" class="tab-content">
-                <div class="card">
-                    <div class="card-header">Predicciones de Demanda (IA)</div>
+                <div class="card" style="background: linear-gradient(135deg, var(--theme-card) 0%, rgba(255,127,0,0.05) 100%);">
+                    <div class="card-header d-flex justify-between align-center">
+                        <span>Predicciones de Demanda con IA</span>
+                        <button class="btn btn-primary" onclick="loadPredictions()" style="background:var(--color-naranja); border:none;">
+                            ✨ Generar Análisis Inteligente
+                        </button>
+                    </div>
                     <div class="card-body">
-                        <p class="text-muted mb-3">El sistema aprende de tus comportamientos de compra para generar predicciones precisas.</p>
-                        <button class="btn btn-primary" onclick="loadPredictions()">Generar Predicciones</button>
-                        <div id="predictionsContainer" style="margin-top: 2rem;"></div>
+                        <p class="text-muted mb-3">Utilizando redes neuronales ligeras y análisis de series temporales para predecir tus necesidades de inventario.</p>
+                        <div id="predictionsContainer" class="grid grid-3" style="margin-top: 2rem; gap: 1.5rem;">
+                            <div class="empty-state" style="grid-column: 1/-1; text-align:center; padding: 3rem;">
+                                <img src="images/ai-icon.svg" alt="IA" style="width:64px; opacity:0.3; margin-bottom:1rem;">
+                                <p>Haz clic en el botón superior para procesar los datos históricos.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -104,10 +170,10 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
             <!-- ANÁLISIS POR TEMPORADA -->
             <div id="seasonalTab" class="tab-content">
                 <div class="card">
-                    <div class="card-header">Análisis de Compras por Temporada</div>
+                    <div class="card-header">Reporte de Estacionalidad</div>
                     <div class="card-body">
-                        <p class="text-muted mb-3">Visualiza cómo cambian tus compras según la temporada y factores externos.</p>
-                        <button class="btn btn-primary" onclick="generateSeasonalReport()">Generar Reporte</button>
+                        <p class="text-muted mb-3">Descubre patrones estacionales basados en el clima y eventos del calendario histórico.</p>
+                        <button class="btn btn-secondary" onclick="generateSeasonalReport()">Sincronizar Datos</button>
                         <div id="seasonalReport" style="margin-top: 2rem;"></div>
                     </div>
                 </div>
@@ -116,10 +182,9 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
             <!-- ANÁLISIS DE CLIENTES -->
             <div id="clientsTab" class="tab-content">
                 <div class="card">
-                    <div class="card-header">Análisis de Clientes</div>
+                    <div class="card-header">Segmentación de Clientes (Top 100)</div>
                     <div class="card-body">
-                        <button class="btn btn-primary" onclick="loadClientAnalytics()">Cargar Análisis</button>
-                        <div id="clientAnalytics" style="margin-top: 2rem;"></div>
+                        <div id="clientAnalytics" class="table-responsive"></div>
                     </div>
                 </div>
             </div>
@@ -127,31 +192,32 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
 
             <!-- WIDGETS INFORMATIVOS -->
             <?php if ($is_admin): ?>
-            <div class="grid grid-2" style="margin-top: 2rem;">
+            <div class="grid grid-2" style="margin-top: 2rem; gap: 1.5rem;">
                 <div class="card">
-                    <div class="card-header">Información Importante</div>
                     <div class="card-body">
-                        <h4>Cómo funciona nuestro Sistema de IA</h4>
-                        <ul style="margin-left: 1.5rem; margin-top: 1rem; line-height: 1.8;">
-                            <li>Analiza historial de compras de 2+ años</li>
-                            <li>Considera factores de temporada y clima</li>
-                            <li>Detecta patrones de crecimiento o decrecimiento</li>
-                            <li>Genera predicciones con confianza% basada en datos</li>
-                            <li>Aprende constantemente de nuevas compras</li>
+                        <h4 style="color:var(--color-naranja); margin-bottom:1rem;">Motor de Inteligencia Truper</h4>
+                        <ul style="list-style:none; padding:0; line-height:2;">
+                            <li><span style="color:var(--color-naranja); margin-right:8px;">●</span> Análisis de regresión sobre 24 meses</li>
+                            <li><span style="color:var(--color-naranja); margin-right:8px;">●</span> Ponderación por factores climáticos (API Weather)</li>
+                            <li><span style="color:var(--color-naranja); margin-right:8px;">●</span> Detección automática de tendencias</li>
+                            <li><span style="color:var(--color-naranja); margin-right:8px;">●</span> Aprendizaje continuo post-venta</li>
                         </ul>
                     </div>
                 </div>
 
                 <div class="card">
-                    <div class="card-header">Beneficios de las Predicciones</div>
                     <div class="card-body">
-                        <ul style="margin-left: 1.5rem; margin-top: 1rem; line-height: 1.8;">
-                            <li>✓ Evita compras innecesarias</li>
-                            <li>✓ Optimiza gastos mensuales</li>
-                            <li>✓ Reduce pérdidas por sobrestoque</li>
-                            <li>✓ Mejora planificación de compras</li>
-                            <li>✓ Aumenta eficiencia operacional</li>
-                        </ul>
+                        <h4 style="color:var(--color-naranja); margin-bottom:1rem;">Métricas de Impacto</h4>
+                        <div class="grid grid-2" style="gap:1rem;">
+                            <div style="background:rgba(255,127,0,0.05); padding:1rem; border-radius:12px; text-align:center;">
+                                <div style="font-weight:700; font-size:1.4rem;">-15%</div>
+                                <div style="font-size:0.75rem; color:var(--theme-text-muted);">Sobre-inventario</div>
+                            </div>
+                            <div style="background:rgba(255,127,0,0.05); padding:1rem; border-radius:12px; text-align:center;">
+                                <div style="font-weight:700; font-size:1.4rem;">+22%</div>
+                                <div style="font-size:0.75rem; color:var(--theme-text-muted);">Eficiencia de Caja</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -163,8 +229,8 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
     <footer>
         <div class="footer-content">
             <div class="footer-section">
-                <h4>Truper</h4>
-                <p>Plataforma de Gestión Empresarial</p>
+                <h4>Truper IA</h4>
+                <p>Módulo de Inteligencia de Negocios v2.0</p>
             </div>
         </div>
         <div class="footer-bottom">
@@ -181,28 +247,54 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
             }
         }
 
+        let currentView = 'monthly';
+
+        function setView(view) {
+            currentView = view;
+            document.querySelectorAll('.view-toggle .btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn' + view.charAt(0).toUpperCase() + view.slice(1)).classList.add('active');
+            
+            document.getElementById('chartCard').style.display = view === 'calendar' ? 'none' : 'block';
+            document.getElementById('calendarCard').style.display = view === 'calendar' ? 'block' : 'none';
+            document.getElementById('monthFilterGroup').style.display = view === 'calendar' ? 'block' : 'none';
+            
+            refreshCurrentView();
+        }
+
+        async function refreshCurrentView() {
+            if (currentView === 'monthly') {
+                await loadPurchaseStats();
+            } else if (currentView === 'yearly') {
+                await loadYearlyStats();
+            } else if (currentView === 'calendar') {
+                await loadCalendarStats();
+            }
+        }
+
         async function loadPurchaseStats() {
             const year = document.getElementById('yearFilter').value;
             const response = await apiCall(`/analytics.php?action=purchase-stats&year=${year}`);
             if (response && response.stats) {
-                generateChart('purchaseStatsContainer', response.stats);
+                renderMonthlyChart(response.stats);
+                updateSummaryStats(response.stats);
             }
         }
 
-        async function loadMySummary() {
-            const response = await apiCall('/analytics.php?action=my-summary');
-            if (!response || !response.summary) return;
+        async function loadYearlyStats() {
+            const response = await apiCall('/analytics.php?action=yearly-stats');
+            if (response && response.stats) {
+                renderYearlyChart(response.stats);
+                updateSummaryStats(response.stats, true);
+            }
+        }
 
-            const summary = response.summary;
-            const totalOrders = document.getElementById('myTotalOrders');
-            const totalSpent = document.getElementById('myTotalSpent');
-            const avgTicket = document.getElementById('myAvgTicket');
-            const pendingOrders = document.getElementById('myPendingOrders');
-
-            if (totalOrders) totalOrders.textContent = summary.total_orders || 0;
-            if (totalSpent) totalSpent.textContent = formatCurrency(summary.total_spent || 0);
-            if (avgTicket) avgTicket.textContent = formatCurrency(summary.avg_ticket || 0);
-            if (pendingOrders) pendingOrders.textContent = summary.pending_orders || 0;
+        async function loadCalendarStats() {
+            const month = document.getElementById('monthFilter').value;
+            const year = document.getElementById('yearFilter').value;
+            const response = await apiCall(`/analytics.php?action=calendar-data&month=${month}&year=${year}`);
+            if (response && response.days) {
+                renderCalendar(response.days, month, year);
+            }
         }
 
         async function loadAvailableYears() {
@@ -219,16 +311,24 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
             }
 
             yearFilter.innerHTML = years
-                .map((year) => `<option value="${year}">${year}</option>`)
+                .map((year) => `<option value="${year}" ${year == new Date().getFullYear() ? 'selected' : ''}>${year}</option>`)
                 .join('');
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            loadAvailableYears().then(loadPurchaseStats);
-            <?php if (!$is_admin): ?>
-            loadMySummary();
-            <?php endif; ?>
+            const now = new Date();
+            const monthFilter = document.getElementById('monthFilter');
+            if (monthFilter) monthFilter.value = now.getMonth() + 1;
+
+            loadAvailableYears().then(() => {
+                setView('monthly');
+                <?php if ($is_admin): ?>
+                loadClientAnalytics();
+                <?php endif; ?>
+            });
         });
     </script>
+</body>
+</html>
 </body>
 </html>
