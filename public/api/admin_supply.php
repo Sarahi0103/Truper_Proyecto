@@ -863,8 +863,70 @@ function ensure_marketplace_integrity_admin_supply($pdo): void {
         if ($skuColumn !== null) {
             $pdo->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_marketplace_ce_sku_admin_supply ON marketplace_ce_products (' . $skuColumn . ')');
         }
+        $pdo->exec('ALTER TABLE products ALTER COLUMN image_url TYPE TEXT');
+        $pdo->exec('ALTER TABLE marketplace_ce_products ALTER COLUMN image_url TYPE TEXT');
+        $pdo->exec('ALTER TABLE homepage_updates ALTER COLUMN image_url TYPE TEXT');
     } catch (Exception $ignored) {
     }
+}
+
+function convert_image_to_base64_admin_supply(string $tmpName, string $mimeType): string {
+    $maxWidth = 800;
+    $maxHeight = 800;
+    
+    // Si no tenemos GD, regresamos el base64 sin procesar
+    if (!function_exists('imagecreatefromstring')) {
+        return 'data:' . $mimeType . ';base64,' . base64_encode(file_get_contents($tmpName));
+    }
+
+    $imageString = file_get_contents($tmpName);
+    $img = @imagecreatefromstring($imageString);
+    if (!$img) {
+        return 'data:' . $mimeType . ';base64,' . base64_encode($imageString);
+    }
+
+    $width = imagesx($img);
+    $height = imagesy($img);
+
+    if ($width > $maxWidth || $height > $maxHeight) {
+        $ratio = min($maxWidth / $width, $maxHeight / $height);
+        $newWidth = (int)($width * $ratio);
+        $newHeight = (int)($height * $ratio);
+
+        $newImg = imagecreatetruecolor($newWidth, $newHeight);
+        
+        // Mantener transparencia para PNG y WEBP
+        if ($mimeType === 'image/png' || $mimeType === 'image/webp' || $mimeType === 'image/gif') {
+            imagealphablending($newImg, false);
+            imagesavealpha($newImg, true);
+            $transparent = imagecolorallocatealpha($newImg, 255, 255, 255, 127);
+            imagefilledrectangle($newImg, 0, 0, $newWidth, $newHeight, $transparent);
+        }
+
+        imagecopyresampled($newImg, $img, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+        imagedestroy($img);
+        $img = $newImg;
+    }
+
+    ob_start();
+    // Siempre convertimos a WEBP (muy ligero) o JPEG para guardar espacio
+    if ($mimeType === 'image/png' || $mimeType === 'image/gif') {
+        if (function_exists('imagewebp')) {
+            imagewebp($img, null, 80);
+            $finalMime = 'image/webp';
+        } else {
+            imagepng($img, null, 8); // Compression 0-9
+            $finalMime = 'image/png';
+        }
+    } else {
+        imagejpeg($img, null, 75);
+        $finalMime = 'image/jpeg';
+    }
+    
+    $compressedData = ob_get_clean();
+    imagedestroy($img);
+
+    return 'data:' . $finalMime . ';base64,' . base64_encode($compressedData);
 }
 
 function store_product_image(array $file): string {
@@ -884,25 +946,10 @@ function store_product_image(array $file): string {
         throw new Exception('Formato de imagen no permitido');
     }
 
-    $targetDir = __DIR__ . '/../images/products';
-    if (!is_dir($targetDir)) {
-        mkdir($targetDir, 0775, true);
-    }
+    $mimeType = mime_content_type($tmp);
+    if (!$mimeType) $mimeType = 'image/jpeg';
 
-    $safeBase = preg_replace('/[^a-zA-Z0-9_-]/', '-', pathinfo($original, PATHINFO_FILENAME));
-    $safeBase = trim((string)$safeBase, '-');
-    if ($safeBase === '') {
-        $safeBase = 'product';
-    }
-
-    $filename = $safeBase . '-' . date('YmdHis') . '-' . substr(bin2hex(random_bytes(4)), 0, 8) . '.' . $ext;
-    $targetPath = $targetDir . DIRECTORY_SEPARATOR . $filename;
-
-    if (!move_uploaded_file($tmp, $targetPath)) {
-        throw new Exception('No se pudo guardar la imagen');
-    }
-
-    return 'images/products/' . $filename;
+    return convert_image_to_base64_admin_supply($tmp, $mimeType);
 }
 
 function normalize_uploaded_files(array $files): array {
@@ -935,32 +982,25 @@ function product_gallery_dir_admin_supply(string $sku): string {
 }
 
 function list_product_gallery_images_admin_supply(string $sku): array {
-    if (!is_valid_numeric_sku_admin_supply($sku)) {
-        return [];
-    }
-
-    $dir = product_gallery_dir_admin_supply($sku);
-    if (!is_dir($dir)) {
-        return [];
-    }
-
-    $files = glob($dir . '/*.{jpg,jpeg,png,webp,gif,JPG,JPEG,PNG,WEBP,GIF}', GLOB_BRACE);
-    if (empty($files)) {
-        return [];
-    }
-
-    usort($files, function ($a, $b) {
-        $scoreA = admin_supply_image_priority_score($a);
-        $scoreB = admin_supply_image_priority_score($b);
-        if ($scoreA === $scoreB) {
-            return strcmp((string)$a, (string)$b);
+    global $pdo;
+    if (!is_valid_numeric_sku_admin_supply($sku)) return [];
+    
+    try {
+        $stmt = $pdo->prepare("SELECT variants_json, image_url FROM products WHERE sku = ?");
+        $stmt->execute([$sku]);
+        $row = $stmt->fetch();
+        if ($row) {
+            $images = [];
+            if (!empty($row['variants_json'])) {
+                $images = json_decode($row['variants_json'], true) ?: [];
+            } elseif (!empty($row['image_url']) && strpos($row['image_url'], 'default-product.svg') === false) {
+                $images[] = $row['image_url'];
+            }
+            return $images;
         }
-        return $scoreA <=> $scoreB;
-    });
-
-    return array_map(function ($path) use ($sku) {
-        return 'images/products/by_code/' . $sku . '/' . basename((string)$path);
-    }, $files);
+    } catch (Exception $e) {}
+    
+    return [];
 }
 
 function store_product_image_for_sku_admin_supply(array $file, string $sku): string {
@@ -984,19 +1024,11 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
         throw new Exception('Formato de imagen no permitido');
     }
 
-    $targetDir = product_gallery_dir_admin_supply($sku);
-    if (!is_dir($targetDir)) {
-        mkdir($targetDir, 0775, true);
-    }
+    $mimeType = mime_content_type($tmp);
+    if (!$mimeType) $mimeType = 'image/jpeg';
 
-    $safeBase = preg_replace('/[^a-zA-Z0-9_-]/', '-', pathinfo($original, PATHINFO_FILENAME));
-    $safeBase = normalize_gallery_base_name_admin_supply((string)$safeBase);
-    if ($safeBase === '') {
-        $safeBase = 'product';
-    }
-
-    $existing = list_product_gallery_images_admin_supply($sku);
-    $suffix = empty($existing) ? '+FC1' : '';
+    return convert_image_to_base64_admin_supply($tmp, $mimeType);
+}
 
     $filename = $safeBase . $suffix . '-' . date('YmdHis') . '-' . substr(bin2hex(random_bytes(4)), 0, 8) . '.' . $ext;
     $targetPath = $targetDir . DIRECTORY_SEPARATOR . $filename;
@@ -1766,7 +1798,7 @@ $response = ['success' => false, 'message' => 'Accion no reconocida'];
 
 try {
     // CSRF validation for POST requests to write endpoints
-    $write_actions = ['product-save', 'product-delete', 'marketplace-save', 'marketplace-delete', 'stock-update', 'toggle-visibility'];
+    $write_actions = ['product-save', 'product-delete', 'marketplace-save', 'marketplace-delete', 'stock-update', 'toggle-visibility', 'product-batch-save', 'upload-marketplace-images'];
     if ($method === 'POST' && in_array($action, $write_actions, true)) {
         require_csrf_token();
     }
@@ -2245,17 +2277,20 @@ try {
             }
 
             $images = list_product_gallery_images_admin_supply($sku);
-            if (!empty($images)) {
-                set_product_main_image_by_sku_admin_supply($pdo, $sku, $images[0]);
-            }
+            $allImages = array_merge($images, $uploaded);
+            
+            $json = json_encode($allImages);
+            $cover = $allImages[0];
+            $stmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ?");
+            $stmt->execute([$cover, $json, $sku]);
 
             $response = [
                 'success' => true,
                 'message' => 'Galería actualizada correctamente',
                 'sku' => $sku,
                 'uploaded' => $uploaded,
-                'images' => $images,
-                'cover' => $images[0] ?? null
+                'images' => $allImages,
+                'cover' => $cover
             ];
             break;
 
@@ -2272,8 +2307,20 @@ try {
                 break;
             }
 
-            $cover = set_gallery_cover_image_admin_supply($sku, $image);
-            set_product_main_image_by_sku_admin_supply($pdo, $sku, $cover);
+            $images = list_product_gallery_images_admin_supply($sku);
+            $imageIndex = array_search($image, $images);
+            if ($imageIndex !== false) {
+                $cover = $images[$imageIndex];
+                // Move cover to index 0
+                unset($images[$imageIndex]);
+                array_unshift($images, $cover);
+                
+                $json = json_encode(array_values($images));
+                $stmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ?");
+                $stmt->execute([$cover, $json, $sku]);
+            } else {
+                $cover = $images[0] ?? null;
+            }
 
             $response = [
                 'success' => true,
@@ -2293,33 +2340,23 @@ try {
             $sku = normalize_sku_admin_supply($input['sku'] ?? '');
             $image = trim((string)($input['image'] ?? ''));
             if (!is_valid_numeric_sku_admin_supply($sku) || $image === '') {
-                $response = ['success' => false, 'message' => 'SKU o imagen inválidos'];
-                break;
-            }
-
-            $prefix = 'images/products/by_code/' . $sku . '/';
-            if (strpos($image, $prefix) !== 0) {
-                $response = ['success' => false, 'message' => 'Imagen inválida para este SKU'];
-                break;
-            }
-
-            $fileName = basename($image);
-            $fullPath = product_gallery_dir_admin_supply($sku) . DIRECTORY_SEPARATOR . $fileName;
-            if (!is_file($fullPath)) {
-                $response = ['success' => false, 'message' => 'No se encontró la imagen'];
-                break;
-            }
-
-            if (!@unlink($fullPath)) {
-                $response = ['success' => false, 'message' => 'No se pudo eliminar la imagen'];
+                $response = ['success' => false, 'message' => 'SKU o imagen inválida'];
                 break;
             }
 
             $images = list_product_gallery_images_admin_supply($sku);
-            if (!empty($images)) {
-                set_product_main_image_by_sku_admin_supply($pdo, $sku, $images[0]);
+            $imageIndex = array_search($image, $images);
+            if ($imageIndex !== false) {
+                unset($images[$imageIndex]);
+                $images = array_values($images);
+                $json = json_encode($images);
+                $cover = $images[0] ?? 'images/products/default-product.svg';
+                
+                $stmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ?");
+                $stmt->execute([$cover, $json, $sku]);
             }
 
+            $images = list_product_gallery_images_admin_supply($sku);
             $response = [
                 'success' => true,
                 'message' => 'Imagen eliminada correctamente',
@@ -2634,20 +2671,140 @@ try {
                 break;
             }
 
-            if ($id > 0) {
-                $stmt = $pdo->prepare("DELETE FROM product_categories WHERE id = ?");
-                $stmt->execute([$id]);
-            } elseif ($name !== '') {
-                $stmt = $pdo->prepare("DELETE FROM product_categories WHERE LOWER(name) = LOWER(?)");
-                $stmt->execute([$name]);
-            }
+            try {
+                if ($id > 0) {
+                    $stmt = $pdo->prepare("DELETE FROM product_categories WHERE id = ?");
+                    $stmt->execute([$id]);
+                } elseif ($name !== '') {
+                    $stmt = $pdo->prepare("DELETE FROM product_categories WHERE LOWER(name) = LOWER(?)");
+                    $stmt->execute([$name]);
+                }
 
-            if (($stmt->rowCount() ?? 0) <= 0) {
-                $response = ['success' => false, 'message' => 'No se encontró la categoría para eliminar'];
+                if (($stmt->rowCount() ?? 0) <= 0) {
+                    $response = ['success' => false, 'message' => 'No se encontró la categoría para eliminar'];
+                    break;
+                }
+
+                $response = ['success' => true, 'message' => 'Categoría eliminada'];
+            } catch (Exception $e) {
+                // If it fails, maybe it's in use or a constraint fails.
+                // Fallback: Just mark it as inactive or return a friendly error.
+                if ($id > 0) {
+                    try {
+                        $pdo->prepare("UPDATE product_categories SET is_active = false WHERE id = ?")->execute([$id]);
+                        $response = ['success' => true, 'message' => 'Categoría oculta (no se puede eliminar porque está en uso)'];
+                    } catch (Exception $e2) {
+                        $response = ['success' => false, 'message' => 'Error al eliminar la categoría: ' . $e->getMessage()];
+                    }
+                } else {
+                    $response = ['success' => false, 'message' => 'Error al eliminar la categoría: ' . $e->getMessage()];
+                }
+            }
+            break;
+
+        case 'product-batch-save':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+            $products = $input['products'] ?? [];
+            if (!is_array($products) || count($products) === 0) {
+                $response = ['success' => false, 'message' => 'No hay productos para procesar'];
+                break;
+            }
+            $processed = 0;
+            $pdo->beginTransaction();
+            try {
+                $stmt = $pdo->prepare("
+                    INSERT INTO products (sku, name, description, category, unit_price, stock_quantity, reorder_level, is_active) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+                    ON CONFLICT (sku) DO UPDATE SET 
+                        name = EXCLUDED.name,
+                        description = EXCLUDED.description,
+                        category = EXCLUDED.category,
+                        unit_price = EXCLUDED.unit_price,
+                        stock_quantity = EXCLUDED.stock_quantity,
+                        reorder_level = EXCLUDED.reorder_level
+                ");
+                // Note: SQLite uses ON CONFLICT (sku) if it's unique.
+                // But products.sku isn't guaranteed to be a unique index in this schema (id is).
+                // Let's do an UPSERT by first checking, or doing SELECT/UPDATE.
+                foreach ($products as $p) {
+                    $sku = normalize_sku_admin_supply($p['sku'] ?? '');
+                    if ($sku === '') continue;
+                    $name = trim($p['name'] ?? 'Producto CSV');
+                    $category = trim($p['category'] ?? 'General');
+                    $desc = trim($p['description'] ?? '');
+                    $price = (float)($p['unit_price'] ?? 0);
+                    $stock = (int)($p['stock_quantity'] ?? 0);
+                    $reorder = (int)($p['reorder_level'] ?? 10);
+                    
+                    $check = $pdo->prepare("SELECT id FROM products WHERE sku = ?");
+                    $check->execute([$sku]);
+                    $exists = $check->fetchColumn();
+                    if ($exists) {
+                        $upd = $pdo->prepare("UPDATE products SET name=?, category=?, description=?, unit_price=?, stock_quantity=?, reorder_level=? WHERE sku=?");
+                        $upd->execute([$name, $category, $desc, $price, $stock, $reorder, $sku]);
+                    } else {
+                        $ins = $pdo->prepare("INSERT INTO products (sku, name, category, description, unit_price, stock_quantity, reorder_level, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 1)");
+                        $ins->execute([$sku, $name, $category, $desc, $price, $stock, $reorder]);
+                    }
+                    $processed++;
+                }
+                $pdo->commit();
+                $response = ['success' => true, 'processed' => $processed];
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                $response = ['success' => false, 'message' => 'Error: ' . $e->getMessage()];
+            }
+            break;
+
+        case 'upload-marketplace-images':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+            $sku = normalize_sku_admin_supply($_POST['sku'] ?? '');
+            if ($sku === '' || empty($_FILES['images']['name'][0])) {
+                $response = ['success' => false, 'message' => 'SKU y al menos una imagen son requeridos'];
                 break;
             }
 
-            $response = ['success' => true, 'message' => 'Categoría eliminada'];
+            $uploadedFiles = [];
+            foreach ($_FILES['images']['name'] as $key => $name) {
+                if ($_FILES['images']['error'][$key] === UPLOAD_ERR_OK) {
+                    $tmpName = $_FILES['images']['tmp_name'][$key];
+                    $mimeType = mime_content_type($tmpName);
+                    if (!$mimeType) $mimeType = 'image/jpeg';
+                    $uploadedFiles[] = convert_image_to_base64_admin_supply($tmpName, $mimeType);
+                }
+            }
+
+            if (count($uploadedFiles) > 0) {
+                try {
+                    $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS variants_json TEXT");
+                } catch(Exception $e) {}
+
+                $stmt = $pdo->prepare("SELECT variants_json, image_url FROM marketplace_ce_products WHERE sku = ?");
+                $stmt->execute([$sku]);
+                $row = $stmt->fetch();
+                if ($row) {
+                    $existing = [];
+                    if (!empty($row['variants_json'])) {
+                        $existing = json_decode($row['variants_json'], true) ?: [];
+                    } elseif (!empty($row['image_url']) && strpos($row['image_url'], 'default-product.svg') === false) {
+                        $existing[] = $row['image_url'];
+                    }
+                    $allImages = array_merge($existing, $uploadedFiles);
+                    $json = json_encode($allImages);
+                    $mainImage = $allImages[0];
+                    $update = $pdo->prepare("UPDATE marketplace_ce_products SET image_url = ?, variants_json = ? WHERE sku = ?");
+                    $update->execute([$mainImage, $json, $sku]);
+                }
+                $response = ['success' => true, 'message' => count($uploadedFiles) . ' imágenes subidas', 'files' => $uploadedFiles];
+            } else {
+                $response = ['success' => false, 'message' => 'No se pudo subir ninguna imagen'];
+            }
             break;
 
         case 'marketplace-list':

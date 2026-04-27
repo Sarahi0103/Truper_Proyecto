@@ -181,9 +181,39 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'
             }).join('');
         }
 
+        async function loadTopProducts() {
+            const box = document.getElementById('topProducts');
+            if (!box) return;
+
+            try {
+                const response = await apiCall('/products.php?action=list&limit=5');
+                if (!response || !response.success || !Array.isArray(response.products)) {
+                    box.innerHTML = '<p class="text-muted">No hay datos de productos.</p>';
+                    return;
+                }
+
+                const rows = response.products.slice(0, 5);
+                if (rows.length === 0) {
+                    box.innerHTML = '<p class="text-muted">No hay productos registrados.</p>';
+                    return;
+                }
+
+                box.innerHTML = rows.map((product) => {
+                    const price = Number(product.unit_price || 0).toFixed(2);
+                    return '<div class="task-item" style="display:flex; justify-content:space-between;">'
+                        + '<div><strong>' + (product.sku || 'N/A') + '</strong> - ' + (product.name || 'Producto') + '</div>'
+                        + '<div class="text-naranja">$' + price + '</div>'
+                        + '</div>';
+                }).join('');
+            } catch(e) {
+                box.innerHTML = '<p class="text-muted">Error al cargar productos.</p>';
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             loadDashboardMetrics();
             loadRecentOrders();
+            loadTopProducts();
         });
 
         function logout() {

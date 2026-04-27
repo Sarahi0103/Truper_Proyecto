@@ -382,6 +382,15 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <div class="admin-search-row">
                     <input id="stockSearch" type="text" placeholder="Buscar por código, nombre o categoría...">
                 </div>
+                <div class="admin-section-subtitle mt-3">Carga Masiva (CSV)</div>
+                <div class="card mb-3" style="background:var(--ui-surface-soft); padding:1rem; border-radius:8px;">
+                    <p class="text-muted" style="margin-bottom:0.5rem; font-size:13px;">Sube un archivo CSV con las columnas: <code>sku, name, category, description, unit_price, stock_quantity, reorder_level</code>. Soporta +10,000 productos dividiéndolos en lotes para evitar que se congele el servidor.</p>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <input type="file" id="csvFileInput" accept=".csv">
+                        <button class="btn btn-secondary" onclick="processCsvUpload()">Cargar CSV en Lotes</button>
+                    </div>
+                    <div id="csvProgress" class="mt-2 text-muted" style="font-size:12px;"></div>
+                </div>
                 <div class="admin-section-subtitle">Gestión rápida (selección múltiple)</div>
                 <div class="admin-quick-panel">
                     <div class="admin-quick-grid">
@@ -3494,6 +3503,105 @@ async function deleteMarketplaceCeByAdmin(id) {
 
     if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Artículo CE eliminado del Marketplace CE')}</div>`;
     loadMarketplaceCeAdmin();
+}
+
+async function processCsvUpload() {
+    const fileInput = document.getElementById('csvFileInput');
+    const progressBox = document.getElementById('csvProgress');
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        showAlert('Selecciona un archivo CSV', 'warning');
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+
+    reader.onload = async function(e) {
+        const text = e.target.result;
+        const rows = text.split(/\r?\n/).filter(r => r.trim() !== '');
+        if (rows.length < 2) {
+            progressBox.innerHTML = '<span class="text-error">El archivo está vacío o no tiene encabezados.</span>';
+            return;
+        }
+
+        const headers = rows[0].split(',').map(h => h.trim().toLowerCase());
+        const data = [];
+        for (let i = 1; i < rows.length; i++) {
+            // Very basic CSV parsing
+            const cols = rows[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+            const rowData = {};
+            headers.forEach((h, idx) => { rowData[h] = cols[idx] || ''; });
+            data.push(rowData);
+        }
+
+        const batchSize = 250;
+        let successCount = 0;
+        let errorCount = 0;
+
+        progressBox.innerHTML = `Procesando ${data.length} productos en lotes de ${batchSize}...`;
+
+        for (let i = 0; i < data.length; i += batchSize) {
+            const batch = data.slice(i, i + batchSize);
+            try {
+                const res = await apiCall('/admin_supply.php?action=product-batch-save', 'POST', { products: batch });
+                if (res && res.success) {
+                    successCount += res.processed || batch.length;
+                } else {
+                    errorCount += batch.length;
+                }
+            } catch (err) {
+                errorCount += batch.length;
+            }
+            progressBox.innerHTML = `Progreso: ${Math.min(i + batchSize, data.length)} / ${data.length}...`;
+        }
+
+        progressBox.innerHTML = `<strong class="text-success">Carga completa. Exitosos: ${successCount}, Fallidos: ${errorCount}</strong>`;
+        fileInput.value = '';
+        loadStock(); // reload list
+    };
+    reader.onerror = function() {
+        progressBox.innerHTML = '<span class="text-error">Error al leer el archivo.</span>';
+    };
+    reader.readAsText(file);
+}
+
+async function uploadMarketplaceImages() {
+    const fileInput = document.getElementById('marketplaceImages');
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        showAlert('Selecciona al menos una imagen', 'warning');
+        return;
+    }
+
+    const skuInput = document.getElementById('marketplaceSku');
+    const sku = normalizeNumericSku(skuInput?.value || '');
+    if (!/^\d{5}$/.test(sku)) {
+        showAlert('Primero escribe un SKU válido de 5 números', 'warning');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('sku', sku);
+    for (let i = 0; i < fileInput.files.length; i++) {
+        formData.append('images[]', fileInput.files[i]);
+    }
+
+    try {
+        const response = await fetch('api/admin_supply.php?action=upload-marketplace-images', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRF-Token': window.csrfToken || '' }
+        });
+        const result = await response.json();
+        if (result.success) {
+            showAlert('Imágenes cargadas', 'success');
+            fileInput.value = '';
+            loadMarketplaceGalleryForCurrentSku();
+        } else {
+            showAlert('Error: ' + (result.message || 'No se pudieron subir'), 'error');
+        }
+    } catch (e) {
+        showAlert('Error de conexión', 'error');
+    }
 }
 
 function goToClientsTab() {

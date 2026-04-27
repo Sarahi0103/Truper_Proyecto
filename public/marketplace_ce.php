@@ -28,6 +28,7 @@ try {
         unit_price DECIMAL(12,2) NOT NULL DEFAULT 0,
         stock_quantity INTEGER NOT NULL DEFAULT 1,
         image_url TEXT,
+        variants_json TEXT,
         is_active BOOLEAN NOT NULL DEFAULT true,
         created_by INTEGER REFERENCES users(id),
         updated_by INTEGER REFERENCES users(id),
@@ -36,6 +37,7 @@ try {
     )");
     /* Add category column if missing (migration guard) */
     try { $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS category VARCHAR(120)"); } catch (Exception $ig) {}
+    try { $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS variants_json TEXT"); } catch (Exception $ig) {}
 
     $marketplaceVisibilityWhere = '';
     if (db_column_exists('marketplace_ce_products', 'is_active')) {
@@ -44,7 +46,7 @@ try {
         $marketplaceVisibilityWhere = " WHERE active = 1";
     }
 
-    $stmtCe = $pdo->query("SELECT id, sku, name, description, condition_label, COALESCE(category,'Marketplace CE') AS category, unit_price, stock_quantity, COALESCE(image_url,'images/products/default-product.svg') AS image_url FROM marketplace_ce_products" . $marketplaceVisibilityWhere . " ORDER BY created_at DESC LIMIT 300");
+    $stmtCe = $pdo->query("SELECT id, sku, name, description, condition_label, COALESCE(category,'Marketplace CE') AS category, unit_price, stock_quantity, COALESCE(image_url,'images/products/default-product.svg') AS image_url, variants_json FROM marketplace_ce_products" . $marketplaceVisibilityWhere . " ORDER BY created_at DESC LIMIT 300");
     $marketplaceItems = $stmtCe ? $stmtCe->fetchAll() : [];
 
     $categoriesTotals = [];
@@ -220,6 +222,14 @@ $whatsappPhone = function_exists('whatsapp_phone_digits') ? whatsapp_phone_digit
                     $itemStock = (int)($item['stock_quantity'] ?? 0);
                     $stockClass = $itemStock <= 2 ? 'stock-low' : 'stock-ok';
                     $stockLabel = $itemStock <= 2 ? 'Pocas piezas: ' : 'Disponibles: ';
+                    
+                    $images = [$itemImg];
+                    if (!empty($item['variants_json'])) {
+                        $parsed = json_decode($item['variants_json'], true);
+                        if (is_array($parsed) && count($parsed) > 0) {
+                            $images = $parsed;
+                        }
+                    }
                 ?>
                 <article class="product-card-min"
                     data-ce-item
@@ -227,11 +237,18 @@ $whatsappPhone = function_exists('whatsapp_phone_digits') ? whatsapp_phone_digit
                     data-sku="<?php echo $itemSku; ?>"
                     data-category="<?php echo $itemCat; ?>"
                     data-condition="<?php echo $itemCond; ?>">
-                    <div class="product-media">
-                        <img class="product-gallery-image active"
-                             src="<?php echo $itemImg; ?>"
-                             alt="<?php echo $itemName; ?>"
-                             loading="lazy">
+                    <div class="product-media" style="position:relative; overflow:hidden;">
+                        <div class="gallery-track" style="display:flex; transition:transform 0.3s; width:100%; height:100%;">
+                            <?php foreach ($images as $idx => $imgSrc): ?>
+                                <img src="<?php echo htmlspecialchars($imgSrc, ENT_QUOTES, 'UTF-8'); ?>"
+                                     style="min-width:100%; object-fit:contain; border-radius:12px; pointer-events:none;"
+                                     alt="<?php echo $itemName; ?>" loading="lazy">
+                            <?php endforeach; ?>
+                        </div>
+                        <?php if (count($images) > 1): ?>
+                            <button type="button" class="gallery-btn btn-prev" onclick="moveGallery(this, -1)" style="position:absolute; left:5px; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.6); color:white; border:none; border-radius:50%; width:30px; height:30px; cursor:pointer; z-index:10; font-size:1.2rem; display:flex; align-items:center; justify-content:center;">&#8249;</button>
+                            <button type="button" class="gallery-btn btn-next" onclick="moveGallery(this, 1)" style="position:absolute; right:5px; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.6); color:white; border:none; border-radius:50%; width:30px; height:30px; cursor:pointer; z-index:10; font-size:1.2rem; display:flex; align-items:center; justify-content:center;">&#8250;</button>
+                        <?php endif; ?>
                     </div>
                     <div class="product-content">
                         <div class="catalog-tag">Marketplace CE</div>
@@ -381,6 +398,22 @@ $whatsappPhone = function_exists('whatsapp_phone_digits') ? whatsapp_phone_digit
             });
         }
     })();
+        // Gallery Navigation
+        function moveGallery(btn, dir) {
+            const track = btn.parentElement.querySelector('.gallery-track');
+            if (!track) return;
+            const images = track.querySelectorAll('img');
+            const total = images.length;
+            if (total <= 1) return;
+
+            let currentIdx = parseInt(track.dataset.currentIndex || '0');
+            currentIdx += dir;
+            if (currentIdx < 0) currentIdx = total - 1;
+            if (currentIdx >= total) currentIdx = 0;
+
+            track.dataset.currentIndex = currentIdx;
+            track.style.transform = `translateX(-${currentIdx * 100}%)`;
+        }
     </script>
 </body>
 </html>
