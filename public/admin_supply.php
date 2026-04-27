@@ -921,7 +921,8 @@ function setSkuStatus(statusId, message, tone = 'muted') {
     }
 }
 
-async function validateSkuAvailability(kind) {
+async function validateSkuAvailability(kind, options = {}) {
+    const strict = Boolean(options.strict);
     const isMarketplace = kind === 'marketplace';
     const skuInput = document.getElementById(isMarketplace ? 'marketplaceSku' : 'newProductSku');
     const statusId = isMarketplace ? 'marketplaceSkuStatus' : 'newProductSkuStatus';
@@ -954,6 +955,11 @@ async function validateSkuAvailability(kind) {
     }
 
     if (!check || !check.success) {
+        if (strict) {
+            setSkuStatus(statusId, 'No fue posible verificar la disponibilidad. Intenta de nuevo.', 'warning');
+            return false;
+        }
+
         // Fallback local: use loaded caches so the admin can continue even if SKU endpoint is temporarily unavailable.
         const normalizeRowSku = (row) => normalizeNumericSku(displayProductCode(row?.sku || ''));
 
@@ -1543,7 +1549,6 @@ async function loadStock(page = 1) {
     stockCurrentPage = page;
     const res = await apiCall(`/admin_supply.php?action=stock&page=${page}&per_page=${stockPerPage}`, 'GET', null, { silent: true });
     const body = document.getElementById('stockRows');
-    const caption = document.getElementById('stockListCaption');
     
     if (!res || !res.success || !Array.isArray(res.items)) {
         if (body) body.innerHTML = '<tr><td colspan="10" class="text-center text-muted">No fue posible cargar productos.</td></tr>';
@@ -3182,7 +3187,7 @@ async function createProductByAdmin() {
         return;
     }
 
-    const skuOk = await validateSkuAvailability('product');
+    const skuOk = await validateSkuAvailability('product', { strict: true });
     if (!skuOk) {
         if (box) {
             box.innerHTML = '<div class="alert alert-error">No fue posible guardar: código inválido o duplicado.</div>';
@@ -3525,7 +3530,7 @@ async function saveMarketplaceCeByAdmin() {
         return;
     }
 
-    const skuOk = await validateSkuAvailability('marketplace');
+    const skuOk = await validateSkuAvailability('marketplace', { strict: true });
     if (!skuOk) {
         if (box) box.innerHTML = '<div class="alert alert-error">No fue posible guardar: código inválido o duplicado.</div>';
         return;
