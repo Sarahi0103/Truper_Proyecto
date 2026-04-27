@@ -23,7 +23,6 @@ $column_count = $is_admin ? 7 : 5;
         <a href="dashboard.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
         <nav class="nav-menu">
             <a href="index.php">Productos</a>
-            <a href="cart.php">Carrito</a>
             <a href="orders.php">Pedidos</a>
             <a href="wholesale.php" class="active">Mayoreo</a>
           <?php if ($is_admin): ?><a href="cashier.php">Caja</a><?php endif; ?>

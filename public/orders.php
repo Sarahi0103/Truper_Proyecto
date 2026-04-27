@@ -336,7 +336,6 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
             <nav class="nav-menu">
                 <a href="dashboard.php">Dashboard</a>
                 <a href="orders.php" class="active">Pedidos</a>
-                <a href="cart.php">Carrito</a>
                 <a href="wholesale.php">Mayoreo</a>
                 <?php if ($is_admin): ?><a href="cashier.php">Caja</a><?php endif; ?>
                 <?php if ($is_admin): ?><a href="admin_supply.php">Abastecimiento</a><?php endif; ?>
@@ -348,7 +347,6 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                 <div class="theme-toggle">
                     <button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo obscuro</span></button>
                 </div>
-                <a href="<?php echo htmlspecialchars(whatsapp_url('Hola, tengo una duda sobre pedidos y cotizaciones.'), ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener" class="btn btn-secondary btn-small">Dudas por WhatsApp</a>
                 <div class="user-menu">
                     <div class="user-info">
                         <div class="user-name"><?php echo $user_name; ?></div>

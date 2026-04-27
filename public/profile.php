@@ -185,7 +185,6 @@ if (!empty($profile['birthdate'])) {
             <nav class="nav-menu">
                 <a href="dashboard.php">Dashboard</a>
                 <a href="orders.php">Pedidos</a>
-                <a href="cart.php">Carrito</a>
                 <a href="profile.php" class="active">Perfil</a>
             </nav>
         </div>

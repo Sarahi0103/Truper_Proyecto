@@ -146,7 +146,6 @@ $whatsappPhone = function_exists('whatsapp_phone_digits') ? whatsapp_phone_digit
             <nav class="nav-menu">
                 <a href="/">Productos</a>
                 <a href="/marketplace_ce.php" class="active">Marketplace CE</a>
-                <a href="/cart.php">Carrito</a>
                 <?php if ($isAdmin): ?><a href="/admin_supply.php">Abastecimiento</a><?php endif; ?>
                 <?php if ($isLogged): ?>
                     <a href="/orders.php">Pedidos</a>

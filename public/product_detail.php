@@ -422,7 +422,6 @@ $stock = (int)($product['stock_quantity'] ?? 0);
         <a href="index.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
         <nav class="nav-menu">
             <a href="index.php">Catálogo</a>
-            <a href="cart.php">Mi Carrito</a>
         </nav>
     <div class="user-menu">
         <a href="index.php" class="btn btn-small btn-ghost">Volver al catálogo</a>
