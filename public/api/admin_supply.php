@@ -1017,36 +1017,47 @@ function list_product_gallery_images_admin_supply(string $sku): array {
     if (!is_valid_numeric_sku_admin_supply($sku)) return [];
     
     try {
-        $images = list_product_gallery_files_admin_supply($sku);
-
-        foreach (['products', 'marketplace_ce_products'] as $table) {
-            if (!db_table_exists($table)) {
-                continue;
-            }
-
+        // Try products table first
+        if (db_table_exists('products')) {
             try {
-                $stmt = $pdo->prepare("SELECT variants_json, image_url FROM {$table} WHERE sku = ?");
+                $stmt = $pdo->prepare("SELECT variants_json, image_url FROM products WHERE sku = ?");
                 $stmt->execute([$sku]);
                 $row = $stmt->fetch();
-                if (!$row) {
-                    continue;
-                }
-
-                if (!empty($row['variants_json'])) {
+                if ($row && !empty($row['variants_json'])) {
                     $decoded = json_decode($row['variants_json'], true);
-                    if (is_array($decoded)) {
-                        $images = array_merge($images, $decoded);
+                    if (is_array($decoded) && !empty($decoded)) {
+                        return array_values($decoded);
                     }
                 }
-
-                if (!empty($row['image_url']) && strpos((string)$row['image_url'], 'default-product.svg') === false) {
-                    $images[] = (string)$row['image_url'];
+                // Fallback to image_url if variants_json is empty
+                if ($row && !empty($row['image_url'])) {
+                    return [(string)$row['image_url']];
                 }
             } catch (Exception $ignored) {
             }
         }
 
-        return array_values(array_filter(array_unique($images)));
+        // Fallback to marketplace table
+        if (db_table_exists('marketplace_ce_products')) {
+            try {
+                $stmt = $pdo->prepare("SELECT variants_json, image_url FROM marketplace_ce_products WHERE sku = ?");
+                $stmt->execute([$sku]);
+                $row = $stmt->fetch();
+                if ($row && !empty($row['variants_json'])) {
+                    $decoded = json_decode($row['variants_json'], true);
+                    if (is_array($decoded) && !empty($decoded)) {
+                        return array_values($decoded);
+                    }
+                }
+                // Fallback to image_url if variants_json is empty
+                if ($row && !empty($row['image_url'])) {
+                    return [(string)$row['image_url']];
+                }
+            } catch (Exception $ignored) {
+            }
+        }
+
+        return [];
     } catch (Exception $e) {}
     
     return [];
