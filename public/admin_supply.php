@@ -327,7 +327,13 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <div class="grid grid-3">
                     <div class="form-group"><label>Precio</label><input id="newProductPrice" type="number" min="0" step="0.01" value="0"></div>
                     <div class="form-group"><label>Stock inicial</label><input id="newProductStock" type="number" min="0" step="1" value="50"></div>
-                    <input id="newProductVisible" type="hidden" value="0">
+                    <div class="form-group">
+                        <label>Estado</label>
+                        <select id="newProductVisible">
+                            <option value="1">Visible</option>
+                            <option value="0">Oculto</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="grid grid-3">
@@ -647,7 +653,13 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <div class="grid grid-3">
                     <div class="form-group"><label>Precio</label><input id="marketplacePrice" type="number" min="0" step="0.01" value="0"></div>
                     <div class="form-group"><label>Stock</label><input id="marketplaceStock" type="number" min="0" step="1" value="1"></div>
-                    <input id="marketplaceActive" type="hidden" value="0">
+                    <div class="form-group">
+                        <label>Estado</label>
+                        <select id="marketplaceActive">
+                            <option value="1">Visible</option>
+                            <option value="0">Oculto</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="form-group"><label>Descripción</label><textarea id="marketplaceDescription" rows="4" maxlength="1800"></textarea></div>
