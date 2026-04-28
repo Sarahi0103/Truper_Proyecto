@@ -53,6 +53,7 @@ function is_gallery_image_reference($value): bool {
 }
 
 function resolve_images_by_product_code($code, array $productRow = []): array {
+    global $pdo;
     static $cache = null;
     if ($cache === null) {
         $cache = [];
@@ -112,6 +113,37 @@ function resolve_images_by_product_code($code, array $productRow = []): array {
                 if (is_gallery_image_reference($itemStr)) {
                     $mergeImage($itemStr);
                 }
+            }
+        }
+    }
+
+    if (isset($pdo)) {
+        foreach (['products', 'marketplace_ce_products'] as $table) {
+            try {
+                $stmt = $pdo->prepare("SELECT image_url, variants_json FROM {$table} WHERE sku = ? LIMIT 1");
+                $stmt->execute([$code]);
+                $row = $stmt->fetch();
+                if (!$row) {
+                    continue;
+                }
+
+                $rowImage = trim((string)($row['image_url'] ?? ''));
+                if ($rowImage !== '' && $rowImage !== 'images/products/default-product.svg') {
+                    $mergeImage($rowImage);
+                }
+
+                if (!empty($row['variants_json'])) {
+                    $decodedRow = json_decode((string)$row['variants_json'], true);
+                    if (is_array($decodedRow)) {
+                        foreach ($decodedRow as $item) {
+                            $itemStr = trim((string)$item);
+                            if (is_gallery_image_reference($itemStr)) {
+                                $mergeImage($itemStr);
+                            }
+                        }
+                    }
+                }
+            } catch (Exception $ignored) {
             }
         }
     }
