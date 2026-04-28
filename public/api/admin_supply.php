@@ -1062,35 +1062,39 @@ function list_product_gallery_images_admin_supply(string $sku): array {
                 $row = $stmt->fetch();
                 if ($row) {
                     $images = [];
-                    
-                    // First: add all images from variants_json (user-uploaded)
+
+                    // Add images from variants_json (user-uploaded)
                     if (!empty($row['variants_json'])) {
                         $decoded = json_decode($row['variants_json'], true);
                         if (is_array($decoded) && !empty($decoded)) {
                             $images = array_values($decoded);
                         }
                     }
-                    
-                    // Second: add image_url if it's not default and not already in images
+
+                    // Prepare image_url and legacy disk images and merge uniquely
                     $imageUrl = (string)($row['image_url'] ?? '');
-                    if (!empty($imageUrl) && 
-                        strpos($imageUrl, 'default-product.svg') === false && 
-                        !in_array($imageUrl, $images, true)) {
-                        array_unshift($images, $imageUrl);
-                    }
-                    
-                    if (!empty($images)) {
-                        return $images;
+                    $legacyImages = [];
+
+                    // Only check disk when we don't already have many variants, or when there is a cover present
+                    if (empty($images) || !empty($imageUrl)) {
+                        $legacyImages = list_product_gallery_files_admin_supply($sku);
                     }
 
-                    $legacyImages = list_product_gallery_files_admin_supply($sku);
-                    if (!empty($legacyImages)) {
-                        return persist_product_gallery_images_admin_supply($pdo, $sku, $legacyImages);
+                    $final = [];
+                    if (!empty($imageUrl) && strpos($imageUrl, 'default-product.svg') === false) {
+                        $final[] = $imageUrl;
                     }
 
-                    // Fallback: just return image_url if nothing else
-                    if (!empty($row['image_url']) && strpos((string)$row['image_url'], 'default-product.svg') === false) {
-                        return persist_product_gallery_images_admin_supply($pdo, $sku, [(string)$row['image_url']]);
+                    foreach ($images as $i) {
+                        if (!in_array($i, $final, true)) $final[] = $i;
+                    }
+
+                    foreach ($legacyImages as $i) {
+                        if (!in_array($i, $final, true)) $final[] = $i;
+                    }
+
+                    if (!empty($final)) {
+                        return persist_product_gallery_images_admin_supply($pdo, $sku, $final);
                     }
                 }
             } catch (Exception $ignored) {
@@ -1105,35 +1109,39 @@ function list_product_gallery_images_admin_supply(string $sku): array {
                 $row = $stmt->fetch();
                 if ($row) {
                     $images = [];
-                    
-                    // First: add all images from variants_json (user-uploaded)
+
+                    // Add images from variants_json (user-uploaded)
                     if (!empty($row['variants_json'])) {
                         $decoded = json_decode($row['variants_json'], true);
                         if (is_array($decoded) && !empty($decoded)) {
                             $images = array_values($decoded);
                         }
                     }
-                    
-                    // Second: add image_url if it's not default and not already in images
+
+                    // Prepare image_url and legacy disk images and merge uniquely
                     $imageUrl = (string)($row['image_url'] ?? '');
-                    if (!empty($imageUrl) && 
-                        strpos($imageUrl, 'default-product.svg') === false && 
-                        !in_array($imageUrl, $images, true)) {
-                        array_unshift($images, $imageUrl);
-                    }
-                    
-                    if (!empty($images)) {
-                        return $images;
+                    $legacyImages = [];
+
+                    // Only check disk when we don't already have many variants, or when there is a cover present
+                    if (empty($images) || !empty($imageUrl)) {
+                        $legacyImages = list_product_gallery_files_admin_supply($sku);
                     }
 
-                    $legacyImages = list_product_gallery_files_admin_supply($sku);
-                    if (!empty($legacyImages)) {
-                        return persist_product_gallery_images_admin_supply($pdo, $sku, $legacyImages);
+                    $final = [];
+                    if (!empty($imageUrl) && strpos($imageUrl, 'default-product.svg') === false) {
+                        $final[] = $imageUrl;
                     }
 
-                    // Fallback: just return image_url if nothing else
-                    if (!empty($row['image_url']) && strpos((string)$row['image_url'], 'default-product.svg') === false) {
-                        return persist_product_gallery_images_admin_supply($pdo, $sku, [(string)$row['image_url']]);
+                    foreach ($images as $i) {
+                        if (!in_array($i, $final, true)) $final[] = $i;
+                    }
+
+                    foreach ($legacyImages as $i) {
+                        if (!in_array($i, $final, true)) $final[] = $i;
+                    }
+
+                    if (!empty($final)) {
+                        return persist_product_gallery_images_admin_supply($pdo, $sku, $final);
                     }
                 }
             } catch (Exception $ignored) {
@@ -2464,6 +2472,42 @@ try {
                 'images' => $images,
                 'cover' => $images[0] ?? null
             ];
+            break;
+
+        case 'sync-images-to-db-all':
+            // Admin-only endpoint: this file already requires admin via require_admin()
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            // Require CSRF for safety
+            require_csrf_token();
+
+            $root = __DIR__ . '/../images/products/by_code';
+            if (!is_dir($root)) {
+                $response = ['success' => false, 'message' => 'No hay directorio de imágenes legacy'];
+                break;
+            }
+
+            $dirs = glob($root . '/*', GLOB_ONLYDIR);
+            $migrated = 0;
+            $errors = [];
+
+            foreach ($dirs as $dir) {
+                $sku = basename($dir);
+                $files = list_product_gallery_files_admin_supply($sku);
+                if (empty($files)) continue;
+
+                try {
+                    $images = persist_product_gallery_images_admin_supply($pdo, $sku, $files);
+                    if (!empty($images)) $migrated++;
+                } catch (Exception $e) {
+                    $errors[] = ['sku' => $sku, 'error' => $e->getMessage()];
+                }
+            }
+
+            $response = ['success' => true, 'message' => 'Migración completa', 'migrated_dirs' => $migrated, 'errors' => $errors];
             break;
 
         case 'client-update':
