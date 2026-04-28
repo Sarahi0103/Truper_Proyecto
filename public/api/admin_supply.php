@@ -2214,6 +2214,29 @@ try {
                 'images' => $images,
                 'cover' => $images[0] ?? null
             ];
+
+            // Optional debug output: return raw DB fields for diagnosis when ?debug=1
+            if (isset($_GET['debug']) && (string)$_GET['debug'] === '1') {
+                try {
+                    $debugRows = [];
+                    if (db_table_exists('products')) {
+                        $stmt = $pdo->prepare("SELECT variants_json, image_url FROM products WHERE sku = ?");
+                        $stmt->execute([$sku]);
+                        $r = $stmt->fetch();
+                        if ($r) $debugRows['products'] = $r;
+                    }
+                    if (db_table_exists('marketplace_ce_products')) {
+                        $stmt = $pdo->prepare("SELECT variants_json, image_url FROM marketplace_ce_products WHERE sku = ?");
+                        $stmt->execute([$sku]);
+                        $r = $stmt->fetch();
+                        if ($r) $debugRows['marketplace_ce_products'] = $r;
+                    }
+                    if (!empty($debugRows)) {
+                        $response['debug'] = $debugRows;
+                    }
+                } catch (Exception $ignored) {
+                }
+            }
             break;
 
         case 'product-gallery-upload':
