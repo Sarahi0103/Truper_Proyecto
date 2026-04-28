@@ -43,39 +43,96 @@ function image_priority_score($fileName): int {
     return 90;
 }
 
+function is_gallery_image_reference($value): bool {
+    $value = trim((string)$value);
+    if ($value === '') {
+        return false;
+    }
+
+    return strpos($value, 'images/') === 0 || preg_match('/\.(jpg|jpeg|png|webp|gif)$/i', $value) === 1;
+}
+
+function resolve_images_by_product_code($code, array $productRow = []): array {
+    static $cache = null;
+    if ($cache === null) {
+        $cache = [];
+        $baseDir = __DIR__ . '/images/products/by_code';
+        if (is_dir($baseDir)) {
+            $dirs = scandir($baseDir);
+            foreach ($dirs as $dir) {
+                if ($dir === '.' || $dir === '..') {
+                    continue;
+                }
+                $fullDir = $baseDir . '/' . $dir;
+                if (!is_dir($fullDir)) {
+                    continue;
+                }
+                $matches = glob($fullDir . '/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', GLOB_BRACE);
+                if (!empty($matches)) {
+                    usort($matches, function ($a, $b) {
+                        $scoreA = image_priority_score($a);
+                        $scoreB = image_priority_score($b);
+                        if ($scoreA === $scoreB) {
+                            return strcmp((string)$a, (string)$b);
+                        }
+                        return $scoreA <=> $scoreB;
+                    });
+
+                    $cache[$dir] = array_map(function ($path) use ($dir) {
+                        return 'images/products/by_code/' . $dir . '/' . basename($path);
+                    }, $matches);
+                }
+            }
+        }
+    }
+
+    $code = trim((string)$code);
+    $images = [];
+
+    $mergeImage = function (string $value) use (&$images) {
+        $value = trim($value);
+        if ($value === '' || strpos($value, 'default-product.svg') !== false) {
+            return;
+        }
+        if (!in_array($value, $images, true)) {
+            $images[] = $value;
+        }
+    };
+
+    $imageUrl = trim((string)($productRow['image_url'] ?? ''));
+    if ($imageUrl !== '' && $imageUrl !== 'images/products/default-product.svg') {
+        $mergeImage($imageUrl);
+    }
+
+    if (!empty($productRow['variants_json'])) {
+        $decoded = json_decode((string)$productRow['variants_json'], true);
+        if (is_array($decoded)) {
+            foreach ($decoded as $item) {
+                $itemStr = trim((string)$item);
+                if (is_gallery_image_reference($itemStr)) {
+                    $mergeImage($itemStr);
+                }
+            }
+        }
+    }
+
+    foreach ($cache[$code] ?? [] as $cachedImage) {
+        $mergeImage($cachedImage);
+    }
+
+    if (empty($images)) {
+        $images[] = 'images/products/default-product.svg';
+    }
+
+    return $images;
+}
+
 $productName = decode_legacy_entities((string)($product['name'] ?? ''));
 $productDescription = decode_legacy_entities((string)($product['description'] ?? ''));
 $productTechnicalSpecs = decode_legacy_entities((string)($product['technical_specs'] ?? ''));
 $productCategory = decode_legacy_entities((string)($product['category'] ?? ''));
 $imagePath = !empty($product['image_url']) ? $product['image_url'] : 'images/products/default-product.svg';
-$galleryImages = [];
-
-// Resolver imágenes por código de producto
-$baseDir = __DIR__ . '/images/products/by_code';
-if (is_dir($baseDir)) {
-    $fullDir = $baseDir . '/' . $displaySku;
-    if (is_dir($fullDir)) {
-        $matches = glob($fullDir . '/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', GLOB_BRACE);
-        if (!empty($matches)) {
-            usort($matches, function ($a, $b) {
-                $scoreA = image_priority_score($a);
-                $scoreB = image_priority_score($b);
-                return $scoreA === $scoreB ? strcmp($a, $b) : $scoreA <=> $scoreB;
-            });
-            $galleryImages = array_map(function ($path) use ($displaySku) {
-                return 'images/products/by_code/' . $displaySku . '/' . basename($path);
-            }, $matches);
-        }
-    }
-}
-
-if (empty($galleryImages)) {
-    $galleryImages = [$imagePath];
-} else if (!empty($product['image_url']) && $product['image_url'] !== 'images/products/default-product.svg') {
-    if (!in_array($product['image_url'], $galleryImages, true)) {
-        array_unshift($galleryImages, $product['image_url']);
-    }
-}
+$galleryImages = resolve_images_by_product_code($displaySku, $product);
 
 $variants = [];
 if (!empty($product['variants_json'])) {
