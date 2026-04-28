@@ -2871,20 +2871,25 @@ async function loadProductGalleryForCurrentSku() {
     if (imagesToRender.length === 0) {
         const seed = document.getElementById('newProductImageRef')?.value || '';
         if (seed && !seed.includes('default-product.svg')) {
+            renderProductGallery([seed], sku, 'stock');
+            status.textContent = `Galería para ${sku}: 1 imagen(es)`;
+
             const bootstrap = await apiCall('/admin_supply.php?action=product-gallery-bootstrap', 'POST', {
                 sku: sku,
                 image: seed
             });
             if (bootstrap && bootstrap.success) {
-                renderProductGallery(Array.isArray(bootstrap.images) ? bootstrap.images : [seed], sku, 'stock');
+                renderProductGallery(Array.isArray(bootstrap.images) && bootstrap.images.length > 0 ? bootstrap.images : [seed], sku, 'stock');
                 if (bootstrap.cover) {
                     const select = document.getElementById('newProductImageRef');
                     if (select) select.value = bootstrap.cover;
                 }
-                status.textContent = `Galería para ${sku}: ${(bootstrap.images || []).length} imagen(es)`;
+                status.textContent = `Galería para ${sku}: ${(bootstrap.images || [seed]).length} imagen(es)`;
                 updateStockPreview();
                 return;
             }
+            updateStockPreview();
+            return;
         }
     }
 
@@ -2931,20 +2936,25 @@ async function loadMarketplaceGalleryForCurrentSku() {
     if (imagesToRender.length === 0) {
         const seed = document.getElementById('marketplaceImageRef')?.value || '';
         if (seed && !seed.includes('default-product.svg')) {
+            renderProductGallery([seed], sku, 'marketplace');
+            status.textContent = `Galería para ${sku}: 1 imagen(es)`;
+
             const bootstrap = await apiCall('/admin_supply.php?action=product-gallery-bootstrap', 'POST', {
                 sku: sku,
                 image: seed
             });
             if (bootstrap && bootstrap.success) {
-                renderProductGallery(Array.isArray(bootstrap.images) ? bootstrap.images : [seed], sku, 'marketplace');
+                renderProductGallery(Array.isArray(bootstrap.images) && bootstrap.images.length > 0 ? bootstrap.images : [seed], sku, 'marketplace');
                 if (bootstrap.cover) {
                     const select = document.getElementById('marketplaceImageRef');
                     if (select) select.value = bootstrap.cover;
                 }
-                status.textContent = `Galería para ${sku}: ${(bootstrap.images || []).length} imagen(es)`;
+                status.textContent = `Galería para ${sku}: ${(bootstrap.images || [seed]).length} imagen(es)`;
                 updateMarketplacePreview();
                 return;
             }
+            updateMarketplacePreview();
+            return;
         }
     }
 
@@ -3078,7 +3088,7 @@ async function uploadProductImages() {
     const formData = new FormData();
     formData.append('sku', sku);
     Array.from(input.files).forEach((file) => {
-        formData.append('images[]', file);
+        formData.append('images', file);
     });
 
     try {
@@ -3149,7 +3159,7 @@ async function uploadMarketplaceImages() {
     const formData = new FormData();
     formData.append('sku', sku);
     Array.from(input.files).forEach((file) => {
-        formData.append('images[]', file);
+        formData.append('images', file);
     });
 
     try {

@@ -2160,7 +2160,7 @@ try {
                 break;
             }
 
-            $fileInput = $_FILES['images'] ?? $_FILES['image'] ?? null;
+            $fileInput = $_FILES['images'] ?? $_FILES['images[]'] ?? $_FILES['image'] ?? null;
             if (!$fileInput) {
                 $response = ['success' => false, 'message' => 'Selecciona una o varias imágenes'];
                 break;
