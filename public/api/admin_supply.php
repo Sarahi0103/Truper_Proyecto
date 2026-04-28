@@ -1063,6 +1063,34 @@ function list_product_gallery_images_admin_supply(string $sku): array {
     return [];
 }
 
+function list_product_gallery_uploaded_images_admin_supply(string $sku): array {
+    global $pdo;
+    if (!is_valid_numeric_sku_admin_supply($sku)) return [];
+
+    foreach (['products', 'marketplace_ce_products'] as $table) {
+        if (!db_table_exists($table)) {
+            continue;
+        }
+
+        try {
+            $stmt = $pdo->prepare("SELECT variants_json FROM {$table} WHERE sku = ?");
+            $stmt->execute([$sku]);
+            $row = $stmt->fetch();
+            if (!$row || empty($row['variants_json'])) {
+                continue;
+            }
+
+            $decoded = json_decode($row['variants_json'], true);
+            if (is_array($decoded) && !empty($decoded)) {
+                return array_values($decoded);
+            }
+        } catch (Exception $ignored) {
+        }
+    }
+
+    return [];
+}
+
 function store_product_image_for_sku_admin_supply(array $file, string $sku): string {
     if (!is_valid_numeric_sku_admin_supply($sku)) {
         throw new Exception('SKU inválido para galería');
@@ -2160,7 +2188,7 @@ try {
                 break;
             }
 
-            $images = list_product_gallery_images_admin_supply($sku);
+            $images = list_product_gallery_uploaded_images_admin_supply($sku);
             $allImages = array_merge($images, $uploaded);
             
             $json = json_encode($allImages);
