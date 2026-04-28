@@ -751,6 +751,10 @@ let marketplaceItemsCache = [];
 let marketplacePagination = null;
 let marketplaceCurrentPage = 1;
 const marketplacePerPage = 50;
+let galleryStateCache = {
+    stock: { sku: '', images: [], cover: '' },
+    marketplace: { sku: '', images: [], cover: '' }
+};
 
 function getSafeImageSrc(imagePath) {
     // Support both base64 (old format) and file paths (new format)
@@ -2753,29 +2757,101 @@ function showGalleryResult(mode, message, tone = 'success') {
     box.innerHTML = `<div class="alert alert-${tone}">${escapeHtml(message)}</div>`;
 }
 
+function getGalleryState(mode = 'stock') {
+    return galleryStateCache[mode] || galleryStateCache.stock;
+}
+
+function setGalleryState(mode, sku, images, cover = '') {
+    const key = mode === 'marketplace' ? 'marketplace' : 'stock';
+    galleryStateCache[key] = {
+        sku: String(sku || ''),
+        images: Array.isArray(images) ? images.slice() : [],
+        cover: String(cover || '')
+    };
+}
+
+function syncGalleryModeUi(mode, cover = '') {
+    if (mode === 'marketplace') {
+        const select = document.getElementById('marketplaceImageRef');
+        if (select && cover) {
+            const exists = Array.from(select.options || []).some((opt) => opt.value === cover);
+            if (!exists) {
+                const option = document.createElement('option');
+                option.value = cover;
+                option.textContent = cover;
+                select.appendChild(option);
+            }
+            select.value = cover;
+        }
+        updateMarketplacePreview();
+        return;
+    }
+
+    const select = document.getElementById('newProductImageRef');
+    if (select && cover) {
+        const exists = Array.from(select.options || []).some((opt) => opt.value === cover);
+        if (!exists) {
+            const option = document.createElement('option');
+            option.value = cover;
+            option.textContent = cover;
+            select.appendChild(option);
+        }
+        select.value = cover;
+    }
+    updateStockPreview();
+}
+
+function getGalleryImagesForMode(mode, sku) {
+    const state = getGalleryState(mode);
+    if (state && state.sku === String(sku || '') && Array.isArray(state.images) && state.images.length > 0) {
+        return state.images.slice();
+    }
+    return [];
+}
+
 async function reorderGalleryImages(sku, orderedImages, mode = 'stock') {
+    const previousState = getGalleryState(mode);
+    const previousImages = previousState && previousState.sku === String(sku || '') && Array.isArray(previousState.images)
+        ? previousState.images.slice()
+        : [];
+    const nextImages = Array.isArray(orderedImages) ? orderedImages.slice() : [];
+    const nextCover = nextImages[0] || '';
+
+    setGalleryState(mode, sku, nextImages, nextCover);
+    renderProductGallery(nextImages, sku, mode);
+    syncGalleryModeUi(mode, nextCover);
+
     const res = await apiCall('/admin_supply.php?action=product-gallery-reorder', 'POST', {
         sku: sku,
-        images: orderedImages
+        images: nextImages
     });
 
     if (!res || !res.success) {
+        setGalleryState(mode, sku, previousImages, previousImages[0] || '');
+        renderProductGallery(previousImages, sku, mode);
+        syncGalleryModeUi(mode, previousImages[0] || '');
         showGalleryResult(mode, (res && res.message) ? res.message : 'No se pudo reordenar la galería', 'error');
         return false;
     }
 
+    const renderedImages = Array.isArray(res.images) && res.images.length > 0 ? res.images : nextImages;
+    const cover = res.cover || renderedImages[0] || '';
+    setGalleryState(mode, sku, renderedImages, cover);
+    renderProductGallery(renderedImages, sku, mode);
+    syncGalleryModeUi(mode, cover);
     showGalleryResult(mode, res.message || 'Orden de imágenes actualizado', 'success');
-    renderProductGallery(Array.isArray(res.images) && res.images.length > 0 ? res.images : orderedImages, sku, mode);
-    await loadProductImageReferences();
-    await loadStock();
-    await loadMarketplaceCeAdmin();
+    void loadProductImageReferences();
     return true;
 }
 
 async function moveGalleryImage(sku, imagePath, direction, mode = 'stock') {
-    const listAction = `/admin_supply.php?action=product-gallery-list&sku=${encodeURIComponent(sku)}`;
-    const listing = await apiCall(listAction, 'GET', null, { silent: true });
-    const images = Array.isArray(listing?.images) ? listing.images.slice() : [];
+    let images = getGalleryImagesForMode(mode, sku);
+    if (images.length === 0) {
+        const listAction = `/admin_supply.php?action=product-gallery-list&sku=${encodeURIComponent(sku)}`;
+        const listing = await apiCall(listAction, 'GET', null, { silent: true });
+        images = Array.isArray(listing?.images) ? listing.images.slice() : [];
+        setGalleryState(mode, sku, images, listing?.cover || images[0] || '');
+    }
     const index = images.indexOf(imagePath);
     if (index < 0) {
         showGalleryResult(mode, 'No se encontró la imagen a mover', 'error');
@@ -2794,9 +2870,13 @@ async function moveGalleryImage(sku, imagePath, direction, mode = 'stock') {
 }
 
 async function moveGalleryImageToPosition(sku, imagePath, targetPosition, mode = 'stock') {
-    const listAction = `/admin_supply.php?action=product-gallery-list&sku=${encodeURIComponent(sku)}`;
-    const listing = await apiCall(listAction, 'GET', null, { silent: true });
-    const images = Array.isArray(listing?.images) ? listing.images.slice() : [];
+    let images = getGalleryImagesForMode(mode, sku);
+    if (images.length === 0) {
+        const listAction = `/admin_supply.php?action=product-gallery-list&sku=${encodeURIComponent(sku)}`;
+        const listing = await apiCall(listAction, 'GET', null, { silent: true });
+        images = Array.isArray(listing?.images) ? listing.images.slice() : [];
+        setGalleryState(mode, sku, images, listing?.cover || images[0] || '');
+    }
     const index = images.indexOf(imagePath);
     if (index < 0) {
         showGalleryResult(mode, 'No se encontró la imagen a mover', 'error');
@@ -2874,9 +2954,12 @@ async function loadProductGalleryForCurrentSku() {
         ? res.images 
         : (res.cover ? [res.cover] : []);
 
+    setGalleryState('stock', sku, imagesToRender, res.cover || imagesToRender[0] || '');
+
     if (imagesToRender.length === 0) {
         const seed = document.getElementById('newProductImageRef')?.value || '';
         if (seed && !seed.includes('default-product.svg')) {
+            setGalleryState('stock', sku, [seed], seed);
             renderProductGallery([seed], sku, 'stock');
             status.textContent = `Galería para ${sku}: 1 imagen(es)`;
 
@@ -2885,7 +2968,9 @@ async function loadProductGalleryForCurrentSku() {
                 image: seed
             });
             if (bootstrap && bootstrap.success) {
-                renderProductGallery(Array.isArray(bootstrap.images) && bootstrap.images.length > 0 ? bootstrap.images : [seed], sku, 'stock');
+                const bootstrapImages = Array.isArray(bootstrap.images) && bootstrap.images.length > 0 ? bootstrap.images : [seed];
+                setGalleryState('stock', sku, bootstrapImages, bootstrap.cover || bootstrapImages[0] || seed);
+                renderProductGallery(bootstrapImages, sku, 'stock');
                 if (bootstrap.cover) {
                     const select = document.getElementById('newProductImageRef');
                     if (select) select.value = bootstrap.cover;
@@ -2900,20 +2985,7 @@ async function loadProductGalleryForCurrentSku() {
     }
 
     renderProductGallery(imagesToRender, sku, 'stock');
-    if (res.cover) {
-        const select = document.getElementById('newProductImageRef');
-        if (select) {
-            const exists = Array.from(select.options || []).some((opt) => opt.value === res.cover);
-            if (!exists) {
-                const option = document.createElement('option');
-                option.value = res.cover;
-                option.textContent = res.cover;
-                select.appendChild(option);
-            }
-            select.value = res.cover;
-        }
-    }
-    updateStockPreview();
+    syncGalleryModeUi('stock', res.cover || imagesToRender[0] || '');
 }
 
 async function loadMarketplaceGalleryForCurrentSku() {
@@ -2939,9 +3011,12 @@ async function loadMarketplaceGalleryForCurrentSku() {
         ? res.images 
         : (res.cover ? [res.cover] : []);
 
+    setGalleryState('marketplace', sku, imagesToRender, res.cover || imagesToRender[0] || '');
+
     if (imagesToRender.length === 0) {
         const seed = document.getElementById('marketplaceImageRef')?.value || '';
         if (seed && !seed.includes('default-product.svg')) {
+            setGalleryState('marketplace', sku, [seed], seed);
             renderProductGallery([seed], sku, 'marketplace');
             status.textContent = `Galería para ${sku}: 1 imagen(es)`;
 
@@ -2950,7 +3025,9 @@ async function loadMarketplaceGalleryForCurrentSku() {
                 image: seed
             });
             if (bootstrap && bootstrap.success) {
-                renderProductGallery(Array.isArray(bootstrap.images) && bootstrap.images.length > 0 ? bootstrap.images : [seed], sku, 'marketplace');
+                const bootstrapImages = Array.isArray(bootstrap.images) && bootstrap.images.length > 0 ? bootstrap.images : [seed];
+                setGalleryState('marketplace', sku, bootstrapImages, bootstrap.cover || bootstrapImages[0] || seed);
+                renderProductGallery(bootstrapImages, sku, 'marketplace');
                 if (bootstrap.cover) {
                     const select = document.getElementById('marketplaceImageRef');
                     if (select) select.value = bootstrap.cover;
@@ -2965,20 +3042,7 @@ async function loadMarketplaceGalleryForCurrentSku() {
     }
 
     renderProductGallery(imagesToRender, sku, 'marketplace');
-    if (res.cover) {
-        const select = document.getElementById('marketplaceImageRef');
-        if (select) {
-            const exists = Array.from(select.options || []).some((opt) => opt.value === res.cover);
-            if (!exists) {
-                const option = document.createElement('option');
-                option.value = res.cover;
-                option.textContent = res.cover;
-                select.appendChild(option);
-            }
-            select.value = res.cover;
-        }
-    }
-    updateMarketplacePreview();
+    syncGalleryModeUi('marketplace', res.cover || imagesToRender[0] || '');
 }
 
 async function setProductGalleryCover(sku, imagePath) {
