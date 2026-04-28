@@ -2438,6 +2438,34 @@ try {
             ];
             break;
 
+        case 'product-gallery-bootstrap':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $sku = normalize_sku_admin_supply($input['sku'] ?? '');
+            $image = trim((string)($input['image'] ?? ''));
+            if (!is_valid_numeric_sku_admin_supply($sku) || $image === '' || strpos($image, 'default-product.svg') !== false) {
+                $response = ['success' => false, 'message' => 'SKU o imagen inválidos'];
+                break;
+            }
+
+            $images = persist_product_gallery_images_admin_supply($pdo, $sku, [$image]);
+            if (empty($images)) {
+                $response = ['success' => false, 'message' => 'No fue posible inicializar la galería'];
+                break;
+            }
+
+            $response = [
+                'success' => true,
+                'message' => 'Galería inicializada correctamente',
+                'sku' => $sku,
+                'images' => $images,
+                'cover' => $images[0] ?? null
+            ];
+            break;
+
         case 'client-update':
             if ($method !== 'POST') {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];

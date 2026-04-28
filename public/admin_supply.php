@@ -2868,6 +2868,26 @@ async function loadProductGalleryForCurrentSku() {
         ? res.images 
         : (res.cover ? [res.cover] : []);
 
+    if (imagesToRender.length === 0) {
+        const seed = document.getElementById('newProductImageRef')?.value || '';
+        if (seed && !seed.includes('default-product.svg')) {
+            const bootstrap = await apiCall('/admin_supply.php?action=product-gallery-bootstrap', 'POST', {
+                sku: sku,
+                image: seed
+            });
+            if (bootstrap && bootstrap.success) {
+                renderProductGallery(Array.isArray(bootstrap.images) ? bootstrap.images : [seed], sku, 'stock');
+                if (bootstrap.cover) {
+                    const select = document.getElementById('newProductImageRef');
+                    if (select) select.value = bootstrap.cover;
+                }
+                status.textContent = `Galería para ${sku}: ${(bootstrap.images || []).length} imagen(es)`;
+                updateStockPreview();
+                return;
+            }
+        }
+    }
+
     renderProductGallery(imagesToRender, sku, 'stock');
     if (res.cover) {
         const select = document.getElementById('newProductImageRef');
@@ -2907,6 +2927,26 @@ async function loadMarketplaceGalleryForCurrentSku() {
     const imagesToRender = Array.isArray(res.images) && res.images.length > 0 
         ? res.images 
         : (res.cover ? [res.cover] : []);
+
+    if (imagesToRender.length === 0) {
+        const seed = document.getElementById('marketplaceImageRef')?.value || '';
+        if (seed && !seed.includes('default-product.svg')) {
+            const bootstrap = await apiCall('/admin_supply.php?action=product-gallery-bootstrap', 'POST', {
+                sku: sku,
+                image: seed
+            });
+            if (bootstrap && bootstrap.success) {
+                renderProductGallery(Array.isArray(bootstrap.images) ? bootstrap.images : [seed], sku, 'marketplace');
+                if (bootstrap.cover) {
+                    const select = document.getElementById('marketplaceImageRef');
+                    if (select) select.value = bootstrap.cover;
+                }
+                status.textContent = `Galería para ${sku}: ${(bootstrap.images || []).length} imagen(es)`;
+                updateMarketplacePreview();
+                return;
+            }
+        }
+    }
 
     renderProductGallery(imagesToRender, sku, 'marketplace');
     if (res.cover) {
