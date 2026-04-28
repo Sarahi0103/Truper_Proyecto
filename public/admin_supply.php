@@ -3934,15 +3934,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const productSkuInput = document.getElementById('newProductSku');
     if (productSkuInput) {
-        let productSkuDebounce = null;
         productSkuInput.addEventListener('input', function () {
             productSkuInput.value = normalizeNumericSku(productSkuInput.value);
             updateStockPreview();
-            if (productSkuDebounce) window.clearTimeout(productSkuDebounce);
-            productSkuDebounce = window.setTimeout(() => {
-                validateSkuAvailability('product');
-                loadProductGalleryForCurrentSku();
-            }, 220);
+            setSkuStatus('newProductSkuStatus', 'Debe ser único y de 5 o 6 números.', 'muted');
         });
         productSkuInput.addEventListener('blur', async function () {
             await validateSkuAvailability('product');
@@ -3952,15 +3947,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const marketplaceSkuInput = document.getElementById('marketplaceSku');
     if (marketplaceSkuInput) {
-        let marketplaceSkuDebounce = null;
         marketplaceSkuInput.addEventListener('input', function () {
             marketplaceSkuInput.value = normalizeNumericSku(marketplaceSkuInput.value);
             updateMarketplacePreview();
-            if (marketplaceSkuDebounce) window.clearTimeout(marketplaceSkuDebounce);
-            marketplaceSkuDebounce = window.setTimeout(() => {
-                validateSkuAvailability('marketplace');
-                loadMarketplaceGalleryForCurrentSku();
-            }, 220);
+            setSkuStatus('marketplaceSkuStatus', 'Debe ser único y de 5 o 6 números.', 'muted');
         });
         marketplaceSkuInput.addEventListener('blur', async function () {
             await validateSkuAvailability('marketplace');
