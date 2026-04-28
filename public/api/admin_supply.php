@@ -1008,13 +1008,35 @@ function list_product_gallery_images_admin_supply(string $sku): array {
             if (!empty($row['variants_json'])) {
                 $images = json_decode($row['variants_json'], true) ?: [];
             }
-            
-            // Fallback to image_url if images list is empty
+
+            // If products row has no gallery, try marketplace_ce_products for additional images
+            if (empty($images)) {
+                try {
+                    $stmt2 = $pdo->prepare("SELECT variants_json, image_url FROM marketplace_ce_products WHERE sku = ?");
+                    $stmt2->execute([$sku]);
+                    $mrow = $stmt2->fetch();
+                    if ($mrow) {
+                        if (!empty($mrow['variants_json'])) {
+                            $mimages = json_decode($mrow['variants_json'], true) ?: [];
+                            $images = array_merge($images, $mimages);
+                        }
+                        if (empty($images) && !empty($mrow['image_url']) && strpos($mrow['image_url'], 'default-product.svg') === false) {
+                            $images[] = $mrow['image_url'];
+                        }
+                    }
+                } catch (Exception $e) {
+                    // ignore and continue with product row fallback
+                }
+            }
+
+            // Fallback to product image_url if still empty
             if (empty($images) && !empty($row['image_url']) && strpos($row['image_url'], 'default-product.svg') === false) {
                 $images[] = $row['image_url'];
             }
-            
-            return array_values(array_filter($images));
+
+            // Ensure unique and filtered
+            $images = array_values(array_filter(array_unique($images)));
+            return $images;
         }
     } catch (Exception $e) {}
     
