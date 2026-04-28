@@ -81,7 +81,17 @@ $variants = [];
 if (!empty($product['variants_json'])) {
     $decoded = json_decode($product['variants_json'], true);
     if (is_array($decoded)) {
-        $variants = $decoded;
+        // Filter out image paths (which contain 'images/' or file extensions)
+        // Keep only real variant names (like colors, sizes, etc.)
+        foreach ($decoded as $item) {
+            $itemStr = (string)$item;
+            // Skip if it looks like an image path
+            if (strpos($itemStr, 'images/') === false && strpos($itemStr, '.jpg') === false && 
+                strpos($itemStr, '.jpeg') === false && strpos($itemStr, '.png') === false && 
+                strpos($itemStr, '.gif') === false && strpos($itemStr, '.webp') === false) {
+                $variants[] = $item;
+            }
+        }
     }
 }
 
@@ -492,16 +502,18 @@ $stock = (int)($product['stock_quantity'] ?? 0);
                         </div>
                     <?php endif; ?>
 
-                    <?php if (!empty($variants)): ?>
-                        <div class="detail-variants">
-                            <h3>Variantes disponibles</h3>
-                            <div class="variants-list">
+                    <div class="detail-variants">
+                        <h3>Variantes disponibles</h3>
+                        <div class="variants-list">
+                            <?php if (!empty($variants)): ?>
                                 <?php foreach ($variants as $variant): ?>
                                     <span class="variant-pill"><?php echo htmlspecialchars((string)$variant, ENT_QUOTES, 'UTF-8'); ?></span>
                                 <?php endforeach; ?>
-                            </div>
+                            <?php else: ?>
+                                <span class="variant-pill">Modelo Estándar</span>
+                            <?php endif; ?>
                         </div>
-                    <?php endif; ?>
+                    </div>
                 </div>
 
                 <div class="detail-actions">
