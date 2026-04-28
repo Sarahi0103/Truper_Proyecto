@@ -742,6 +742,14 @@ let marketplacePagination = null;
 let marketplaceCurrentPage = 1;
 const marketplacePerPage = 50;
 
+function getSafeImageSrc(imagePath) {
+    // Support both base64 (old format) and file paths (new format)
+    if (imagePath && typeof imagePath === 'string' && imagePath.startsWith('data:image')) {
+        return imagePath; // base64, use as-is without escaping
+    }
+    return escapeHtml(imagePath); // file path, escape for safety
+}
+
 function escapeHtml(v) {
     return String(v || '').replace(/[&<>"']/g, function(m) {
         return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m];
@@ -804,7 +812,7 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
     return `
         <article class="product-card-min ${inactive ? 'product-card-inactive' : ''}">
             <div class="product-media">
-                <img class="product-gallery-image active" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(name)}" loading="lazy">
+                <img class="product-gallery-image active" src="${getSafeImageSrc(imageUrl)}" alt="${escapeHtml(name)}" loading="lazy">
             </div>
             <div class="product-content">
                 <div class="catalog-tag">${escapeHtml(category)}</div>
@@ -2823,7 +2831,7 @@ function renderProductGallery(images, sku, mode = 'stock') {
     status.textContent = `Galería para ${sku}: ${images.length} imagen(es)`;
     host.innerHTML = images.map((img, idx) => `
         <div style="border:1px solid var(--ui-border); border-radius:10px; padding:0.5rem; background:var(--ui-surface-soft);">
-            <img src="${escapeHtml(img)}" alt="Imagen ${idx + 1}" style="width:100%; height:90px; object-fit:cover; border-radius:8px;">
+            <img src="${getSafeImageSrc(img)}" alt="Imagen ${idx + 1}" style="width:100%; height:90px; object-fit:cover; border-radius:8px;">
             <div style="display:flex; align-items:center; gap:0.35rem; margin-top:0.45rem;">
                 <label style="font-size:12px; color:var(--ui-text-muted);">Posición</label>
                 <select id="galleryPos-${mode}-${idx}" style="max-width:90px;" onchange="${moveToFn}('${escapeHtml(sku)}','${escapeHtml(img)}', this.value)">
