@@ -69,11 +69,11 @@ function normalize_bool_admin_supply($value, bool $default = false): bool {
 function normalize_sku_admin_supply($value): string {
     $sku = trim((string)$value);
     $digits = preg_replace('/\D+/', '', $sku);
-    return substr($digits, 0, 5);
+    return substr($digits, 0, 6);
 }
 
 function is_valid_numeric_sku_admin_supply(string $sku): bool {
-    return (bool)preg_match('/^\d{5}$/', $sku);
+    return (bool)preg_match('/^\d{5,6}$/', $sku);
 }
 
 function normalize_category_admin_supply($value): string {
@@ -1838,7 +1838,7 @@ try {
                 $response = [
                     'success' => true,
                     'available' => false,
-                    'message' => 'El código debe tener exactamente 5 números',
+                    'message' => 'El código debe tener 5 o 6 números',
                     'sku' => $sku
                 ];
                 break;
@@ -1883,7 +1883,7 @@ try {
                 $response = [
                     'success' => true,
                     'available' => false,
-                    'message' => 'El código debe tener exactamente 5 números',
+                    'message' => 'El código debe tener 5 o 6 números',
                     'sku' => $sku
                 ];
                 break;
@@ -1930,7 +1930,7 @@ try {
                 break;
             }
             if (!is_valid_numeric_sku_admin_supply($sku)) {
-                $response = ['success' => false, 'message' => 'El código del producto debe tener exactamente 5 números'];
+                $response = ['success' => false, 'message' => 'El código del producto debe tener 5 o 6 números'];
                 break;
             }
             if ($price < 0) {
@@ -2020,7 +2020,7 @@ try {
                 break;
             }
             if (!is_valid_numeric_sku_admin_supply($sku)) {
-                $response = ['success' => false, 'message' => 'El código del producto debe tener exactamente 5 números'];
+                $response = ['success' => false, 'message' => 'El código del producto debe tener 5 o 6 números'];
                 break;
             }
             if ($price < 0 || $stockQty < 0 || $reorder < 0) {
@@ -3091,7 +3091,7 @@ try {
                 break;
             }
             if (!is_valid_numeric_sku_admin_supply($sku)) {
-                $response = ['success' => false, 'message' => 'El código SKU CE debe tener exactamente 5 números'];
+                $response = ['success' => false, 'message' => 'El código SKU CE debe tener 5 o 6 números'];
                 break;
             }
 
