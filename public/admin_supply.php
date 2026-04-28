@@ -1727,9 +1727,65 @@ async function addCategoryFromQuickForm(selectId, inputId, resultId) {
     }
 }
 
+function updateStockQuickSelection(items = stockItemsCache) {
+    const select = document.getElementById('stockBulkSelect');
+    if (!select) return;
+
+    const previouslySelected = new Set(Array.from(select.selectedOptions || []).map((option) => Number(option.value || 0)));
+    select.innerHTML = '';
+
+    if (!Array.isArray(items) || items.length === 0) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Sin productos para mostrar';
+        option.disabled = true;
+        select.appendChild(option);
+        return;
+    }
+
+    items.forEach((item) => {
+        const id = Number(item.id || 0);
+        if (id <= 0) return;
+
+        const code = displayProductCode(item.sku || '');
+        const name = String(item.name || 'Sin nombre').trim();
+        const stock = Number(item.stock_quantity || 0);
+        const inactive = Number(item.is_active) === 0;
+
+        const option = document.createElement('option');
+        option.value = String(id);
+        option.textContent = `${code} | ${name} | Stock: ${stock}${inactive ? ' (Oculto)' : ''}`;
         option.selected = previouslySelected.has(id);
         select.appendChild(option);
     });
+}
+
+function renderStockList() {
+    const body = document.getElementById('stockRows');
+    const caption = document.getElementById('stockListCaption');
+    const query = (document.getElementById('stockSearch')?.value || '').toLowerCase().trim();
+
+    if (!body) return;
+
+    const filtered = stockItemsCache.filter((item) => {
+        const code = displayProductCode(item.sku || '').toLowerCase();
+        const name = String(item.name || '').toLowerCase();
+        const cat = String(item.category || '').toLowerCase();
+        return `${code} ${name} ${cat}`.includes(query);
+    });
+
+    if (caption) {
+        caption.textContent = `Mostrando ${filtered.length} de ${stockItemsCache.length} productos`;
+    }
+
+    updateStockQuickSelection(filtered);
+
+    if (filtered.length === 0) {
+        body.innerHTML = '<p class="text-muted">No hay productos que coincidan con la búsqueda.</p>';
+        return;
+    }
+
+    body.innerHTML = `<div class="catalog-grid-min">${filtered.map((item) => renderAdminProductCard(item, 'stock')).join('')}</div>`;
 }
 
 function getStockBulkSelectedIds() {
@@ -3762,45 +3818,6 @@ async function processMarketplaceCsvUpload() {
         progressBox.innerHTML = '<span class="text-error">Error al leer el archivo.</span>';
     };
     reader.readAsText(file);
-}
-
-async function uploadMarketplaceImages() {
-    const fileInput = document.getElementById('marketplaceImages');
-    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-        showAlert('Selecciona al menos una imagen', 'warning');
-        return;
-    }
-
-    const skuInput = document.getElementById('marketplaceSku');
-    const sku = normalizeNumericSku(skuInput?.value || '');
-    if (!/^\d{5}$/.test(sku)) {
-        showAlert('Primero escribe un SKU válido de 5 números', 'warning');
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append('sku', sku);
-    for (let i = 0; i < fileInput.files.length; i++) {
-        formData.append('images[]', fileInput.files[i]);
-    }
-
-    try {
-        const response = await fetch('api/admin_supply.php?action=upload-marketplace-images', {
-            method: 'POST',
-            body: formData,
-            headers: { 'X-CSRF-Token': window.csrfToken || '' }
-        });
-        const result = await response.json();
-        if (result.success) {
-            showAlert('Imágenes cargadas', 'success');
-            fileInput.value = '';
-            loadMarketplaceGalleryForCurrentSku();
-        } else {
-            showAlert('Error: ' + (result.message || 'No se pudieron subir'), 'error');
-        }
-    } catch (e) {
-        showAlert('Error de conexión', 'error');
-    }
 }
 
 function goToClientsTab() {
