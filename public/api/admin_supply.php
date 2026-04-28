@@ -937,23 +937,38 @@ function convert_image_to_base64_admin_supply(string $tmpName, string $mimeType)
             imagefilledrectangle($newImg, 0, 0, $newWidth, $newHeight, $transparent);
         }
 
+        // Usar interpolación de mejor calidad (cúbica en lugar de bilineal)
         imagecopyresampled($newImg, $img, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+        
+        // Aplicar unsharp mask para mejorar nitidez después del remuestreo
+        if (function_exists('imageconvolution')) {
+            $matrix = [
+                [-1, -1, -1],
+                [-1, 16, -1],
+                [-1, -1, -1]
+            ];
+            @imageconvolution($newImg, $matrix, 8, 0);
+        }
+        
         imagedestroy($img);
         $img = $newImg;
     }
 
-    // Serializar a buffer y guardar archivo en disco
+    // Serializar a buffer y guardar archivo en disco con calidad mejorada
     ob_start();
     if ($mimeType === 'image/png' || $mimeType === 'image/gif') {
         if (function_exists('imagewebp')) {
-            imagewebp($img, null, 80);
+            // Calidad 88 para WebP (muy buena, archivo más pequeño que JPEG)
+            imagewebp($img, null, 88);
             $finalExt = 'webp';
         } else {
-            imagepng($img, null, 8);
+            // Compresión 6 para PNG (balance entre tamaño y velocidad)
+            imagepng($img, null, 6);
             $finalExt = 'png';
         }
     } else {
-        imagejpeg($img, null, 75);
+        // Calidad 87 para JPEG (excelente calidad visual)
+        imagejpeg($img, null, 87);
         $finalExt = 'jpg';
     }
     $compressedData = ob_get_clean();
