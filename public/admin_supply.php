@@ -2538,6 +2538,14 @@ async function loadProductImageReferences() {
         return;
     }
 
+    const formatImageOptionLabel = function (img, index) {
+        const value = String(img || '');
+        if (value.startsWith('data:image/')) {
+            return `Imagen guardada ${index + 1}`;
+        }
+        return value;
+    };
+
     const applyImagesToSelect = function (selectEl) {
         if (!selectEl) return;
         const current = selectEl.value || 'images/products/default-product.svg';
@@ -2545,7 +2553,7 @@ async function loadProductImageReferences() {
         res.images.forEach((img) => {
             const option = document.createElement('option');
             option.value = img;
-            option.textContent = img;
+            option.textContent = formatImageOptionLabel(img, selectEl.options.length);
             selectEl.appendChild(option);
         });
 

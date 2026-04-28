@@ -1172,23 +1172,21 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
         throw new Exception('Formato de imagen no permitido');
     }
 
-    // Create directory if it doesn't exist
-    $galleryDir = product_gallery_dir_admin_supply($sku);
-    if (!is_dir($galleryDir)) {
-        mkdir($galleryDir, 0755, true);
+    $contents = file_get_contents($tmp);
+    if ($contents === false || $contents === '') {
+        throw new Exception('No se pudo leer la imagen');
     }
 
-    // Generate unique filename with timestamp
-    $filename = time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-    $filepath = $galleryDir . '/' . $filename;
+    $mimeMap = [
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+        'gif' => 'image/gif'
+    ];
+    $mime = $mimeMap[$ext] ?? 'application/octet-stream';
 
-    // Validate and move file
-    if (!move_uploaded_file($tmp, $filepath)) {
-        throw new Exception('No se pudo guardar la imagen');
-    }
-
-    // Return web-accessible path
-    return 'images/products/by_code/' . $sku . '/' . $filename;
+    return 'data:' . $mime . ';base64,' . base64_encode($contents);
 }
 
 function set_product_main_image_by_sku_admin_supply($pdo, string $sku, string $imageUrl): void {

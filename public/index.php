@@ -81,7 +81,7 @@ function is_gallery_image_reference($value) {
         return false;
     }
 
-    return strpos($value, 'images/') === 0 || preg_match('/\.(jpg|jpeg|png|webp|gif)$/i', $value) === 1;
+    return strpos($value, 'images/') === 0 || strpos($value, 'data:image/') === 0 || preg_match('/\.(jpg|jpeg|png|webp|gif)$/i', $value) === 1;
 }
 
 function resolve_images_by_product_code($code, array $productRow = []) {
