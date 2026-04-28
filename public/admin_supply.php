@@ -354,7 +354,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     <div class="form-group">
                         <label>Subir imagen o varias imágenes</label>
                         <input id="newProductImages" type="file" accept="image/*" multiple>
-                        <small class="text-muted">Puedes subir una o varias imágenes. Se guardarán en el catálogo de archivos.</small>
+                        <small class="text-muted">Al seleccionar archivos se subirán automáticamente. El botón manual queda como respaldo.</small>
                     </div>
                     <div class="form-group d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap;">
                         <button class="btn btn-secondary" type="button" onclick="uploadProductImages()">Cargar imágenes</button>
@@ -678,7 +678,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     <div class="form-group">
                         <label>Subir imagen o varias imágenes</label>
                         <input id="marketplaceImages" type="file" accept="image/*" multiple>
-                        <small class="text-muted">Puedes subir una o varias imágenes para este SKU CE.</small>
+                        <small class="text-muted">Al seleccionar archivos se subirán automáticamente. El botón manual queda como respaldo.</small>
                     </div>
                     <div class="form-group d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap;">
                         <button class="btn btn-secondary" type="button" onclick="uploadMarketplaceImages()">Cargar imágenes</button>
@@ -3906,6 +3906,15 @@ document.addEventListener('DOMContentLoaded', function () {
         newProductCategory.addEventListener('change', updateStockPreview);
     }
 
+    const newProductImages = document.getElementById('newProductImages');
+    if (newProductImages) {
+        newProductImages.addEventListener('change', function () {
+            if (this.files && this.files.length > 0) {
+                uploadProductImages();
+            }
+        });
+    }
+
     const newCategoryQuickName = document.getElementById('newCategoryQuickName');
     if (newCategoryQuickName) {
         newCategoryQuickName.addEventListener('keydown', function (event) {
@@ -3935,6 +3944,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const marketplaceCategory = document.getElementById('marketplaceCategory');
     if (marketplaceCategory) {
         marketplaceCategory.addEventListener('change', updateMarketplacePreview);
+    }
+
+    const marketplaceImages = document.getElementById('marketplaceImages');
+    if (marketplaceImages) {
+        marketplaceImages.addEventListener('change', function () {
+            if (this.files && this.files.length > 0) {
+                uploadMarketplaceImages();
+            }
+        });
     }
 
     updateStockPreview();
