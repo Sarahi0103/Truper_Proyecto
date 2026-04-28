@@ -1025,6 +1025,30 @@ function list_product_gallery_files_admin_supply(string $sku): array {
     }, $matches);
 }
 
+function persist_product_gallery_images_admin_supply($pdo, string $sku, array $images): array {
+    $images = array_values(array_unique(array_filter(array_map('trim', $images))));
+    if (empty($images)) {
+        return [];
+    }
+
+    $cover = $images[0];
+    $json = json_encode($images, JSON_UNESCAPED_UNICODE);
+
+    foreach (['products', 'marketplace_ce_products'] as $table) {
+        if (!db_table_exists($table)) {
+            continue;
+        }
+
+        try {
+            $stmt = $pdo->prepare("UPDATE {$table} SET image_url = ?, variants_json = ? WHERE sku = ?");
+            $stmt->execute([$cover, $json, $sku]);
+        } catch (Exception $ignored) {
+        }
+    }
+
+    return $images;
+}
+
 function list_product_gallery_images_admin_supply(string $sku): array {
     global $pdo;
     if (!is_valid_numeric_sku_admin_supply($sku)) return [];
@@ -1058,10 +1082,15 @@ function list_product_gallery_images_admin_supply(string $sku): array {
                     if (!empty($images)) {
                         return $images;
                     }
-                    
+
+                    $legacyImages = list_product_gallery_files_admin_supply($sku);
+                    if (!empty($legacyImages)) {
+                        return persist_product_gallery_images_admin_supply($pdo, $sku, $legacyImages);
+                    }
+
                     // Fallback: just return image_url if nothing else
-                    if (!empty($row['image_url'])) {
-                        return [(string)$row['image_url']];
+                    if (!empty($row['image_url']) && strpos((string)$row['image_url'], 'default-product.svg') === false) {
+                        return persist_product_gallery_images_admin_supply($pdo, $sku, [(string)$row['image_url']]);
                     }
                 }
             } catch (Exception $ignored) {
@@ -1096,10 +1125,15 @@ function list_product_gallery_images_admin_supply(string $sku): array {
                     if (!empty($images)) {
                         return $images;
                     }
-                    
+
+                    $legacyImages = list_product_gallery_files_admin_supply($sku);
+                    if (!empty($legacyImages)) {
+                        return persist_product_gallery_images_admin_supply($pdo, $sku, $legacyImages);
+                    }
+
                     // Fallback: just return image_url if nothing else
-                    if (!empty($row['image_url'])) {
-                        return [(string)$row['image_url']];
+                    if (!empty($row['image_url']) && strpos((string)$row['image_url'], 'default-product.svg') === false) {
+                        return persist_product_gallery_images_admin_supply($pdo, $sku, [(string)$row['image_url']]);
                     }
                 }
             } catch (Exception $ignored) {
