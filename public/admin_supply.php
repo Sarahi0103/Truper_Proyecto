@@ -352,12 +352,8 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     </div>
                     <div class="form-group d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap;">
                         <button class="btn btn-secondary" type="button" onclick="uploadProductImages()">Cargar imágenes</button>
-                        <button class="btn btn-ghost" type="button" onclick="loadProductImageReferences()">Actualizar opciones</button>
-                        <button class="btn btn-primary" type="button" onclick="syncLegacyImagesToDbAll()">Sincronizar legacy a BD</button>
                     </div>
                 </div>
-
-                <div id="legacySyncResult" class="mt-2"></div>
 
                 <div class="form-group">
                     <label>Galería del producto (por código)</label>
@@ -674,7 +670,6 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     </div>
                     <div class="form-group d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap;">
                         <button class="btn btn-secondary" type="button" onclick="uploadMarketplaceImages()">Cargar imágenes</button>
-                        <button class="btn btn-ghost" type="button" onclick="loadProductImageReferences()">Actualizar opciones</button>
                     </div>
                 </div>
 
@@ -2561,50 +2556,6 @@ async function loadProductImageReferences() {
     applyImagesToSelect(marketplaceSelect);
     updateStockPreview();
     updateMarketplacePreview();
-}
-
-async function syncLegacyImagesToDbAll() {
-    const box = document.getElementById('legacySyncResult');
-    const button = document.querySelector('button[onclick="syncLegacyImagesToDbAll()"]');
-
-    if (box) {
-        box.innerHTML = '<div class="alert alert-info">Sincronizando imágenes legacy en toda la base...</div>';
-    }
-    if (button) {
-        button.disabled = true;
-        button.textContent = 'Sincronizando...';
-    }
-
-    try {
-        const res = await apiCall('/admin_supply.php?action=sync-images-to-db-all', 'POST', {}, { silent: true });
-        if (!res || !res.success) {
-            if (box) {
-                box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible sincronizar las imágenes legacy')}</div>`;
-            }
-            return;
-        }
-
-        const migrated = Number(res.migrated_dirs || 0);
-        const errorCount = Array.isArray(res.errors) ? res.errors.length : 0;
-        if (box) {
-            box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Migración completada')}. Carpetas migradas: ${migrated}. Errores: ${errorCount}.</div>`;
-        }
-
-        await loadProductImageReferences();
-        await loadProductGalleryForCurrentSku();
-        await loadMarketplaceGalleryForCurrentSku();
-        await loadStock();
-        await loadMarketplaceCeAdmin();
-    } catch (error) {
-        if (box) {
-            box.innerHTML = '<div class="alert alert-error">Error al sincronizar imágenes legacy</div>';
-        }
-    } finally {
-        if (button) {
-            button.disabled = false;
-            button.textContent = 'Sincronizar legacy a BD';
-        }
-    }
 }
 
 async function loadProductCategories(onlyActive = true) {
