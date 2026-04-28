@@ -2274,9 +2274,10 @@ try {
             }
 
             $images = list_product_gallery_images_admin_supply($sku);
-            $allImages = array_merge($images, $uploaded);
+            $allImages = array_unique(array_merge($images, $uploaded), SORT_REGULAR);
+            $allImages = array_values($allImages); // Reindex
             
-            $json = json_encode($allImages);
+            $json = json_encode($allImages, JSON_UNESCAPED_UNICODE);
             $cover = $allImages[0];
             
             // Update stock
