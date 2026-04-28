@@ -382,6 +382,12 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <div class="admin-search-row">
                     <input id="stockSearch" type="text" placeholder="Buscar por código, nombre o categoría...">
                 </div>
+                <div class="admin-section-subtitle mt-3">Sincronización de imágenes</div>
+                <div class="card mb-3" style="background:var(--ui-surface-soft); padding:1rem; border-radius:8px; border-left:3px solid var(--ui-accent);">
+                    <p class="text-muted" style="margin-bottom:0.75rem; font-size:13px;">Migra todas las imágenes almacenadas en archivos al sistema de base de datos. Esto garantiza que las imágenes estén centralizadas y disponibles en el editor de productos.</p>
+                    <button class="btn btn-primary" onclick="syncImagesToDatabase()" id="syncImagesBtn">Sincronizar imágenes a BD</button>
+                    <div id="syncImagesStatus" style="margin-top:0.75rem;"></div>
+                </div>
                 <div class="admin-section-subtitle mt-3">Carga Masiva (CSV)</div>
                 <div class="card mb-3" style="background:var(--ui-surface-soft); padding:1rem; border-radius:8px;">
                     <p class="text-muted" style="margin-bottom:0.5rem; font-size:13px;">Sube un archivo CSV con las columnas: <code>sku, name, category, description, unit_price, stock_quantity, reorder_level</code>. Soporta +10,000 productos dividiéndolos en lotes para evitar que se congele el servidor.</p>
@@ -3637,6 +3643,61 @@ async function saveMarketplaceCeByAdmin() {
     loadMarketplaceCeAdmin();
     loadStock();
     activateAdminSupplyTab('marketplaceTab', 'marketplaceResult');
+}
+
+async function syncImagesToDatabase() {
+    const btn = document.getElementById('syncImagesBtn');
+    const status = document.getElementById('syncImagesStatus');
+    
+    if (!btn) return;
+    
+    if (!confirm('¿Sincronizar todas las imágenes de archivos a la base de datos? Esto puede tardar unos segundos...')) {
+        return;
+    }
+    
+    btn.disabled = true;
+    btn.textContent = '⏳ Sincronizando...';
+    if (status) status.innerHTML = '<span class="text-muted">Por favor espera...</span>';
+    
+    try {
+        const res = await apiCall('/admin_supply.php?action=sync-images-to-db', 'POST', {});
+        
+        if (res && res.success) {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '✓ Sincronización completada';
+                btn.style.backgroundColor = '#22c55e';
+                btn.style.color = '#fff';
+            }
+            if (status) {
+                const message = `✓ ${res.message}<br>Sincronizados: ${res.synced} productos`;
+                status.innerHTML = `<div class="alert alert-success">${escapeHtml(message)}</div>`;
+            }
+            showAlert(res.message, 'success');
+            
+            // Reload everything to show updated images
+            setTimeout(() => {
+                loadStock();
+                loadMarketplaceCeAdmin();
+            }, 1000);
+        } else {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Sincronizar imágenes a BD';
+            }
+            const errorMsg = res && res.message ? res.message : 'Error desconocido';
+            if (status) status.innerHTML = `<div class="alert alert-error">${escapeHtml(errorMsg)}</div>`;
+            showAlert(errorMsg, 'error');
+        }
+    } catch (err) {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Sincronizar imágenes a BD';
+        }
+        const errMsg = err ? err.message : 'Error de red';
+        if (status) status.innerHTML = `<div class="alert alert-error">Error: ${escapeHtml(errMsg)}</div>`;
+        showAlert('Error: ' + errMsg, 'error');
+    }
 }
 
 async function deleteMarketplaceCeByAdmin(id) {
