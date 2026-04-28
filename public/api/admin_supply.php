@@ -1096,6 +1096,16 @@ function list_product_gallery_images_admin_supply(string $sku): array {
                     if (!empty($final)) {
                         return persist_product_gallery_images_admin_supply($pdo, $sku, $final);
                     }
+                        // Always scan disk as fallback to ensure we never miss images
+                        $legacyImages = list_product_gallery_files_admin_supply($sku);
+                        if (!empty($legacyImages)) {
+                            return persist_product_gallery_images_admin_supply($pdo, $sku, $legacyImages);
+                        }
+                        // Final fallback: always scan disk unconditionally
+                        $diskOnly = list_product_gallery_files_admin_supply($sku);
+                        if (!empty($diskOnly)) {
+                            return persist_product_gallery_images_admin_supply($pdo, $sku, $diskOnly);
+                        }
                 }
             } catch (Exception $ignored) {
             }
@@ -1175,6 +1185,11 @@ function list_product_gallery_uploaded_images_admin_supply(string $sku): array {
             if (is_array($decoded) && !empty($decoded)) {
                 return array_values($decoded);
             }
+                            // Final fallback: scan disk unconditionally as last resort
+                            $diskLastresort = list_product_gallery_files_admin_supply($sku);
+                            if (!empty($diskLastresort)) {
+                                return persist_product_gallery_images_admin_supply($pdo, $sku, $diskLastresort);
+                            }
         } catch (Exception $ignored) {
         }
     }
