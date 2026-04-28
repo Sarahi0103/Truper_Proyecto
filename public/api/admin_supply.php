@@ -1052,149 +1052,69 @@ function persist_product_gallery_images_admin_supply($pdo, string $sku, array $i
 function list_product_gallery_images_admin_supply(string $sku): array {
     global $pdo;
     if (!is_valid_numeric_sku_admin_supply($sku)) return [];
-    
+
     try {
-        // Try products table first
-        if (db_table_exists('products')) {
+        $final = [];
+
+        $mergeImage = function (string $value) use (&$final) {
+            $value = trim($value);
+            if ($value === '' || strpos($value, 'default-product.svg') !== false) {
+                return;
+            }
+
+            if (!in_array($value, $final, true)) {
+                $final[] = $value;
+            }
+        };
+
+        $mergeRowImages = function (array $row) use (&$mergeImage, $sku) {
+            if (!empty($row['image_url'])) {
+                $mergeImage((string)$row['image_url']);
+            }
+
+            if (!empty($row['variants_json'])) {
+                $decoded = json_decode($row['variants_json'], true);
+                if (is_array($decoded)) {
+                    foreach ($decoded as $item) {
+                        $mergeImage((string)$item);
+                    }
+                }
+            }
+        };
+
+        foreach (['products', 'marketplace_ce_products'] as $table) {
+            if (!db_table_exists($table)) {
+                continue;
+            }
+
             try {
-                $stmt = $pdo->prepare("SELECT variants_json, image_url FROM products WHERE sku = ?");
+                $stmt = $pdo->prepare("SELECT variants_json, image_url FROM {$table} WHERE sku = ?");
                 $stmt->execute([$sku]);
                 $row = $stmt->fetch();
                 if ($row) {
-                    $images = [];
-
-                    // Add images from variants_json (user-uploaded)
-                    if (!empty($row['variants_json'])) {
-                        $decoded = json_decode($row['variants_json'], true);
-                        if (is_array($decoded) && !empty($decoded)) {
-                            $images = array_values($decoded);
-                        }
-                    }
-
-                    // Prepare image_url and legacy disk images and merge uniquely
-                    $imageUrl = (string)($row['image_url'] ?? '');
-                    $legacyImages = [];
-
-                    // Only check disk when we don't already have many variants, or when there is a cover present
-                    if (empty($images) || !empty($imageUrl)) {
-                        $legacyImages = list_product_gallery_files_admin_supply($sku);
-                    }
-
-                    $final = [];
-                    if (!empty($imageUrl) && strpos($imageUrl, 'default-product.svg') === false) {
-                        $final[] = $imageUrl;
-                    }
-
-                    foreach ($images as $i) {
-                        if (!in_array($i, $final, true)) $final[] = $i;
-                    }
-
-                    foreach ($legacyImages as $i) {
-                        if (!in_array($i, $final, true)) $final[] = $i;
-                    }
-
-                    if (!empty($final)) {
-                        return persist_product_gallery_images_admin_supply($pdo, $sku, $final);
-                    }
-                        // Always scan disk as fallback to ensure we never miss images
-                        $legacyImages = list_product_gallery_files_admin_supply($sku);
-                        if (!empty($legacyImages)) {
-                            return persist_product_gallery_images_admin_supply($pdo, $sku, $legacyImages);
-                        }
-                        // Final fallback: always scan disk unconditionally
-                        $diskOnly = list_product_gallery_files_admin_supply($sku);
-                        if (!empty($diskOnly)) {
-                            return persist_product_gallery_images_admin_supply($pdo, $sku, $diskOnly);
-                        }
+                    $mergeRowImages($row);
                 }
             } catch (Exception $ignored) {
             }
         }
 
-        // Fallback to marketplace table
-        if (db_table_exists('marketplace_ce_products')) {
-            try {
-                $stmt = $pdo->prepare("SELECT variants_json, image_url FROM marketplace_ce_products WHERE sku = ?");
-                $stmt->execute([$sku]);
-                $row = $stmt->fetch();
-                if ($row) {
-                    $images = [];
-
-                    // Add images from variants_json (user-uploaded)
-                    if (!empty($row['variants_json'])) {
-                        $decoded = json_decode($row['variants_json'], true);
-                        if (is_array($decoded) && !empty($decoded)) {
-                            $images = array_values($decoded);
-                        }
-                    }
-
-                    // Prepare image_url and legacy disk images and merge uniquely
-                    $imageUrl = (string)($row['image_url'] ?? '');
-                    $legacyImages = [];
-
-                    // Only check disk when we don't already have many variants, or when there is a cover present
-                    if (empty($images) || !empty($imageUrl)) {
-                        $legacyImages = list_product_gallery_files_admin_supply($sku);
-                    }
-
-                    $final = [];
-                    if (!empty($imageUrl) && strpos($imageUrl, 'default-product.svg') === false) {
-                        $final[] = $imageUrl;
-                    }
-
-                    foreach ($images as $i) {
-                        if (!in_array($i, $final, true)) $final[] = $i;
-                    }
-
-                    foreach ($legacyImages as $i) {
-                        if (!in_array($i, $final, true)) $final[] = $i;
-                    }
-
-                    if (!empty($final)) {
-                        return persist_product_gallery_images_admin_supply($pdo, $sku, $final);
-                    }
-                }
-            } catch (Exception $ignored) {
-            }
+        foreach (list_product_gallery_files_admin_supply($sku) as $fileImage) {
+            $mergeImage((string)$fileImage);
         }
 
-        return [];
+        if (empty($final)) {
+            return [];
+        }
+
+        return persist_product_gallery_images_admin_supply($pdo, $sku, $final);
     } catch (Exception $e) {}
     
     return [];
 }
 
 function list_product_gallery_uploaded_images_admin_supply(string $sku): array {
-    global $pdo;
     if (!is_valid_numeric_sku_admin_supply($sku)) return [];
-
-    foreach (['products', 'marketplace_ce_products'] as $table) {
-        if (!db_table_exists($table)) {
-            continue;
-        }
-
-        try {
-            $stmt = $pdo->prepare("SELECT variants_json FROM {$table} WHERE sku = ?");
-            $stmt->execute([$sku]);
-            $row = $stmt->fetch();
-            if (!$row || empty($row['variants_json'])) {
-                continue;
-            }
-
-            $decoded = json_decode($row['variants_json'], true);
-            if (is_array($decoded) && !empty($decoded)) {
-                return array_values($decoded);
-            }
-                            // Final fallback: scan disk unconditionally as last resort
-                            $diskLastresort = list_product_gallery_files_admin_supply($sku);
-                            if (!empty($diskLastresort)) {
-                                return persist_product_gallery_images_admin_supply($pdo, $sku, $diskLastresort);
-                            }
-        } catch (Exception $ignored) {
-        }
-    }
-
-    return [];
+    return list_product_gallery_images_admin_supply($sku);
 }
 
 function store_product_image_for_sku_admin_supply(array $file, string $sku): string {
