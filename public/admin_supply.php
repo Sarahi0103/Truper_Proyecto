@@ -3086,7 +3086,7 @@ async function uploadProductImages() {
     const formData = new FormData();
     formData.append('sku', sku);
     Array.from(input.files).forEach((file) => {
-        formData.append('images', file);
+        formData.append('images[]', file);
     });
 
     try {
@@ -3157,7 +3157,7 @@ async function uploadMarketplaceImages() {
     const formData = new FormData();
     formData.append('sku', sku);
     Array.from(input.files).forEach((file) => {
-        formData.append('images', file);
+        formData.append('images[]', file);
     });
 
     try {
