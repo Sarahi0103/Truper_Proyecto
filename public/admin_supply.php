@@ -628,7 +628,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     <div class="form-group">
                         <label>Condición</label>
                         <select id="marketplaceCondition">
-                            <option value="Seminuevo">Seminuevo</option>
+                            <option value="Modelo Estandar">Modelo Estandar</option>
                             <option value="Usado">Usado</option>
                             <option value="Reacondicionado">Reacondicionado</option>
                         </select>
@@ -795,7 +795,7 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
     const unitPrice = Number(item.unit_price || 0);
     const stock = Math.max(0, Number(item.stock_quantity || 0));
     const reorder = Math.max(0, Number(item.reorder_level || 10));
-    const condition = mode === 'marketplace' ? String(item.condition_label || 'Seminuevo') : 'Modelo Estandar';
+    const condition = mode === 'marketplace' ? String(item.condition_label || 'Modelo Estandar') : 'Modelo Estandar';
     const stockText = stock <= (mode === 'marketplace' ? 2 : reorder) ? 'Stock bajo: ' : 'Stock: ';
     const stockClass = stock <= (mode === 'marketplace' ? 2 : reorder) ? 'stock-low' : 'stock-ok';
     const inactive = Number(item.is_active) === 0 || item.is_active === false || item.is_active === 'f' || item.is_active === 'false' || item.is_active === 'False' || item.is_active === 'FALSE';
@@ -873,7 +873,7 @@ function updateMarketplacePreview() {
         name: document.getElementById('marketplaceName')?.value || 'Artículo CE',
         category: selectedCategories.join(', ') || 'Marketplace CE',
         description: document.getElementById('marketplaceDescription')?.value || 'Descripción pendiente',
-        condition_label: document.getElementById('marketplaceCondition')?.value || 'Seminuevo',
+        condition_label: document.getElementById('marketplaceCondition')?.value || 'Modelo Estandar',
         unit_price: document.getElementById('marketplacePrice')?.value || 0,
         stock_quantity: document.getElementById('marketplaceStock')?.value || 1,
         image_url: document.getElementById('marketplaceImageRef')?.value || 'images/products/default-product.svg',
@@ -3344,7 +3344,7 @@ function resetMarketplaceForm() {
     document.getElementById('marketplaceEditId').value = '';
     document.getElementById('marketplaceSku').value = '';
     document.getElementById('marketplaceName').value = '';
-    document.getElementById('marketplaceCondition').value = 'Seminuevo';
+    document.getElementById('marketplaceCondition').value = 'Modelo Estandar';
     document.getElementById('marketplacePrice').value = '0';
     document.getElementById('marketplaceStock').value = '1';
     document.getElementById('marketplaceActive').value = '0';
@@ -3375,7 +3375,7 @@ function fillMarketplaceForm(item) {
     document.getElementById('marketplaceEditId').value = item.id || '';
     document.getElementById('marketplaceSku').value = item.sku || '';
     document.getElementById('marketplaceName').value = item.name || '';
-    document.getElementById('marketplaceCondition').value = item.condition_label || 'Seminuevo';
+    document.getElementById('marketplaceCondition').value = item.condition_label || 'Modelo Estandar';
     document.getElementById('marketplacePrice').value = String(item.unit_price || 0);
     document.getElementById('marketplaceStock').value = String(item.stock_quantity || 0);
     document.getElementById('marketplaceActive').value = Number(item.is_active) ? '1' : '0';
@@ -3468,7 +3468,7 @@ function updateMarketplaceQuickSelection(items = marketplaceItemsCache) {
 
         const code = displayProductCode(item.sku || '');
         const name = String(item.name || 'Sin nombre').trim();
-        const condition = String(item.condition_label || 'Seminuevo').trim();
+        const condition = String(item.condition_label || 'Modelo Estandar').trim();
         const inactive = Number(item.is_active) === 0;
 
         const option = document.createElement('option');
@@ -3677,7 +3677,7 @@ async function saveMarketplaceCeByAdmin() {
         id: currentId,
         sku: normalizedSku,
         name: marketplaceName,
-        condition_label: document.getElementById('marketplaceCondition')?.value || 'Seminuevo',
+        condition_label: document.getElementById('marketplaceCondition')?.value || 'Modelo Estandar',
         category: selectedCategories.join(', '),
         unit_price: price,
         stock_quantity: stock,

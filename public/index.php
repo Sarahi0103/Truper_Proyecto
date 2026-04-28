@@ -568,7 +568,7 @@ function homepage_update_label($type) {
                                         <span class="variant-pill"><?php echo htmlspecialchars((string)$variant, ENT_QUOTES, 'UTF-8'); ?></span>
                                     <?php endforeach; ?>
                                 <?php else: ?>
-                                    <span class="variant-pill">Modelo Estándar</span>
+                                    <span class="variant-pill">Modelo Estandar</span>
                                 <?php endif; ?>
                             </div>
                             <span class="stock-badge <?php echo $stock <= 10 ? 'stock-low' : 'stock-ok'; ?>">

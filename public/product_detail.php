@@ -599,7 +599,7 @@ $stock = (int)($product['stock_quantity'] ?? 0);
                                     <span class="variant-pill"><?php echo htmlspecialchars((string)$variant, ENT_QUOTES, 'UTF-8'); ?></span>
                                 <?php endforeach; ?>
                             <?php else: ?>
-                                <span class="variant-pill">Modelo Estándar</span>
+                                <span class="variant-pill">Modelo Estandar</span>
                             <?php endif; ?>
                         </div>
                     </div>
