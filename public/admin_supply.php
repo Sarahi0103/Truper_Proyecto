@@ -760,6 +760,11 @@ function isValidNumericSku(sku) {
     return /^\d{5}$/.test(String(sku || '').trim());
 }
 
+function formatAdminMoney(value) {
+    const amount = Number(value || 0);
+    return `$${amount.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 const skuCheckVersion = { product: 0, marketplace: 0 };
 
 function renderAdminProductCard(item, mode = 'stock', withActions = true) {
@@ -809,7 +814,7 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
                 <div><span class="variant-pill">${escapeHtml(condition)}</span></div>
                 <span class="stock-badge ${stockClass}">${stockText}${stock}</span>
                 <div style="margin-top:4px;"><span class="badge ${stateBadgeClass}">Estado: ${stateLabel}</span></div>
-                <div class="catalog-price">$${Math.round(unitPrice).toLocaleString('es-MX')}</div>
+                <div class="catalog-price">${formatAdminMoney(unitPrice)}</div>
                 ${withActions ? `<div class="product-actions">${actions}</div>` : '<div class="text-muted" style="font-size:12px;margin-top:8px;">Vista previa del diseño en portada.</div>'}
                 ${inactive ? '<div class="text-muted" style="font-size:12px;margin-top:6px;">Producto oculto/desactivado.</div>' : ''}
             </div>
@@ -1181,8 +1186,8 @@ async function applyPriceAdjustment() {
                     ${preview.map(item => `
                         <tr style="border-bottom: 1px solid var(--ui-border-soft);">
                             <td style="padding: 0.5rem;">${escapeHtml(item.name)}</td>
-                            <td style="padding: 0.5rem; text-align: right;">$${item.current_price.toFixed(0)}</td>
-                            <td style="padding: 0.5rem; text-align: right; color: var(--color-naranja); font-weight: 600;">$${item.new_price.toFixed(0)}</td>
+                            <td style="padding: 0.5rem; text-align: right;">${formatAdminMoney(item.current_price)}</td>
+                            <td style="padding: 0.5rem; text-align: right; color: var(--color-naranja); font-weight: 600;">${formatAdminMoney(item.new_price)}</td>
                         </tr>
                     `).join('')}
                 </tbody>

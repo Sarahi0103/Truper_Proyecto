@@ -988,56 +988,65 @@ function product_gallery_dir_admin_supply(string $sku): string {
     return __DIR__ . '/../images/products/by_code/' . $sku;
 }
 
+function list_product_gallery_files_admin_supply(string $sku): array {
+    $sku = normalize_sku_admin_supply($sku);
+    if ($sku === '') return [];
+
+    $fullDir = product_gallery_dir_admin_supply($sku);
+    if (!is_dir($fullDir)) return [];
+
+    $matches = glob($fullDir . '/*.{jpg,jpeg,png,webp,gif,JPG,JPEG,PNG,WEBP,GIF}', GLOB_BRACE);
+    if (empty($matches) || !is_array($matches)) return [];
+
+    usort($matches, function ($a, $b) {
+        $scoreA = admin_supply_image_priority_score($a);
+        $scoreB = admin_supply_image_priority_score($b);
+        if ($scoreA === $scoreB) {
+            return strcmp((string)$a, (string)$b);
+        }
+        return $scoreA <=> $scoreB;
+    });
+
+    return array_map(function ($path) use ($sku) {
+        return 'images/products/by_code/' . $sku . '/' . basename($path);
+    }, $matches);
+}
+
 function list_product_gallery_images_admin_supply(string $sku): array {
     global $pdo;
     if (!is_valid_numeric_sku_admin_supply($sku)) return [];
     
     try {
-        $stmt = $pdo->prepare("SELECT variants_json, image_url FROM products WHERE sku = ?");
-        $stmt->execute([$sku]);
-        $row = $stmt->fetch();
-        
-        if (!$row) {
-            $stmt = $pdo->prepare("SELECT variants_json, image_url FROM marketplace_ce_products WHERE sku = ?");
-            $stmt->execute([$sku]);
-            $row = $stmt->fetch();
-        }
+        $images = list_product_gallery_files_admin_supply($sku);
 
-        if ($row) {
-            $images = [];
-            if (!empty($row['variants_json'])) {
-                $images = json_decode($row['variants_json'], true) ?: [];
+        foreach (['products', 'marketplace_ce_products'] as $table) {
+            if (!db_table_exists($table)) {
+                continue;
             }
 
-            // If products row has no gallery, try marketplace_ce_products for additional images
-            if (empty($images)) {
-                try {
-                    $stmt2 = $pdo->prepare("SELECT variants_json, image_url FROM marketplace_ce_products WHERE sku = ?");
-                    $stmt2->execute([$sku]);
-                    $mrow = $stmt2->fetch();
-                    if ($mrow) {
-                        if (!empty($mrow['variants_json'])) {
-                            $mimages = json_decode($mrow['variants_json'], true) ?: [];
-                            $images = array_merge($images, $mimages);
-                        }
-                        if (empty($images) && !empty($mrow['image_url']) && strpos($mrow['image_url'], 'default-product.svg') === false) {
-                            $images[] = $mrow['image_url'];
-                        }
-                    }
-                } catch (Exception $e) {
-                    // ignore and continue with product row fallback
+            try {
+                $stmt = $pdo->prepare("SELECT variants_json, image_url FROM {$table} WHERE sku = ?");
+                $stmt->execute([$sku]);
+                $row = $stmt->fetch();
+                if (!$row) {
+                    continue;
                 }
-            }
 
-            // Fallback to product image_url if still empty
-            if (empty($images) && !empty($row['image_url']) && strpos($row['image_url'], 'default-product.svg') === false) {
-                $images[] = $row['image_url'];
-            }
+                if (!empty($row['variants_json'])) {
+                    $decoded = json_decode($row['variants_json'], true);
+                    if (is_array($decoded)) {
+                        $images = array_merge($images, $decoded);
+                    }
+                }
 
-            // Ensure unique and filtered
-            $images = array_values(array_filter(array_unique($images)));
-            return $images;
+                if (!empty($row['image_url']) && strpos((string)$row['image_url'], 'default-product.svg') === false) {
+                    $images[] = (string)$row['image_url'];
+                }
+            } catch (Exception $ignored) {
+            }
         }
+
+        return array_values(array_filter(array_unique($images)));
     } catch (Exception $e) {}
     
     return [];
