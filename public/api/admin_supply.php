@@ -1109,6 +1109,15 @@ function list_product_gallery_images_admin_supply(string $sku): array {
         return [];
     } catch (Exception $e) {}
     
+    // As a last resort, try resolving a file-based image by SKU from images/products/by_code
+    try {
+        $resolved = resolve_admin_supply_image_by_sku($sku);
+        if (!empty($resolved)) {
+            return [$resolved];
+        }
+    } catch (Exception $ignored) {
+    }
+
     return [];
 }
 
