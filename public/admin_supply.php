@@ -3322,7 +3322,6 @@ async function createProductByAdmin() {
     resetProductForm();
     loadStock();
     loadSupplierProducts();
-    loadProductGalleryForCurrentSku();
     activateAdminSupplyTab('stockTab', 'productCreateResult');
 }
 

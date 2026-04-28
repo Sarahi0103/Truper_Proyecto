@@ -1025,8 +1025,23 @@ function list_product_gallery_files_admin_supply(string $sku): array {
     }, $matches);
 }
 
+function normalize_product_gallery_images_admin_supply(array $images): array {
+    $normalized = [];
+    foreach ($images as $image) {
+        $value = trim((string)$image);
+        if ($value === '' || strpos($value, 'default-product.svg') !== false) {
+            continue;
+        }
+        if (!in_array($value, $normalized, true)) {
+            $normalized[] = $value;
+        }
+    }
+
+    return $normalized;
+}
+
 function persist_product_gallery_images_admin_supply($pdo, string $sku, array $images): array {
-    $images = array_values(array_unique(array_filter(array_map('trim', $images))));
+    $images = normalize_product_gallery_images_admin_supply($images);
     if (empty($images)) {
         return [];
     }
@@ -1055,6 +1070,7 @@ function list_product_gallery_images_admin_supply(string $sku): array {
 
     try {
         $final = [];
+        $needsPersist = false;
 
         $mergeImage = function (string $value) use (&$final) {
             $value = trim($value);
@@ -1067,19 +1083,23 @@ function list_product_gallery_images_admin_supply(string $sku): array {
             }
         };
 
-        $mergeRowImages = function (array $row) use (&$mergeImage, $sku) {
+        $extractRowImages = function (array $row): array {
+            $images = [];
+
             if (!empty($row['image_url'])) {
-                $mergeImage((string)$row['image_url']);
+                $images[] = (string)$row['image_url'];
             }
 
             if (!empty($row['variants_json'])) {
                 $decoded = json_decode($row['variants_json'], true);
                 if (is_array($decoded)) {
                     foreach ($decoded as $item) {
-                        $mergeImage((string)$item);
+                        $images[] = (string)$item;
                     }
                 }
             }
+
+            return normalize_product_gallery_images_admin_supply($images);
         };
 
         foreach (['products', 'marketplace_ce_products'] as $table) {
@@ -1092,18 +1112,32 @@ function list_product_gallery_images_admin_supply(string $sku): array {
                 $stmt->execute([$sku]);
                 $row = $stmt->fetch();
                 if ($row) {
-                    $mergeRowImages($row);
+                    $rowImages = $extractRowImages($row);
+                    foreach ($rowImages as $rowImage) {
+                        $mergeImage($rowImage);
+                    }
+
+                    if ($rowImages !== $final) {
+                        $needsPersist = true;
+                    }
                 }
             } catch (Exception $ignored) {
             }
         }
 
-        foreach (list_product_gallery_files_admin_supply($sku) as $fileImage) {
-            $mergeImage((string)$fileImage);
+        if (count($final) < 2) {
+            foreach (list_product_gallery_files_admin_supply($sku) as $fileImage) {
+                $mergeImage((string)$fileImage);
+            }
+            $needsPersist = true;
         }
 
         if (empty($final)) {
             return [];
+        }
+
+        if (!$needsPersist) {
+            return $final;
         }
 
         return persist_product_gallery_images_admin_supply($pdo, $sku, $final);
