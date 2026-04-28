@@ -2762,17 +2762,35 @@ try {
             $selectUpdatedAt = db_column_exists('marketplace_ce_products', 'updated_at') ? 'updated_at' : 'NULL AS updated_at';
             $orderExpr = db_column_exists('marketplace_ce_products', 'created_at') ? 'created_at DESC' : 'id DESC';
 
-            $stmt = $pdo->query('SELECT id, ' . $selectSku . ', ' . $selectName . ', ' . $selectCategory . ', ' . $selectDescription . ', ' . $selectCondition . ', ' . $selectPrice . ', ' . $selectStock . ', ' . $selectImage . ', ' . $selectActive . ', ' . $selectCreatedAt . ', ' . $selectUpdatedAt . ' FROM marketplace_ce_products ORDER BY ' . $orderExpr);
-            $items = $stmt ? $stmt->fetchAll() : [];
+            $page = max(1, (int)($_GET['page'] ?? 1));
+            $perPage = max(10, min(200, (int)($_GET['per_page'] ?? 50)));
+            $offset = ($page - 1) * $perPage;
 
             $onlyActive = isset($_GET['active']) && $_GET['active'] === '1';
-            if ($onlyActive) {
-                $items = array_values(array_filter($items, function ($row) {
-                    return !in_array((string)($row['is_active'] ?? '1'), ['0', '', 'false', 'False', 'FALSE'], true);
-                }));
+            $whereActive = '';
+            if ($onlyActive && $mkActiveCol !== null) {
+                $whereActive = ' WHERE (CASE WHEN ' . $mkActiveCol . " IS NULL THEN 1 WHEN LOWER(CAST(" . $mkActiveCol . " AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
             }
 
-            $response = ['success' => true, 'items' => $items];
+            $countStmt = $pdo->query('SELECT COUNT(*) FROM marketplace_ce_products' . $whereActive);
+            $total = $countStmt ? (int)$countStmt->fetchColumn() : 0;
+
+            $stmt = $pdo->query(
+                'SELECT id, ' . $selectSku . ', ' . $selectName . ', ' . $selectCategory . ', ' . $selectDescription . ', ' . $selectCondition . ', ' . $selectPrice . ', ' . $selectStock . ', ' . $selectImage . ', ' . $selectActive . ', ' . $selectCreatedAt . ', ' . $selectUpdatedAt .
+                ' FROM marketplace_ce_products' . $whereActive . ' ORDER BY ' . $orderExpr . ' LIMIT ' . (int)$perPage . ' OFFSET ' . (int)$offset
+            );
+            $items = $stmt ? $stmt->fetchAll() : [];
+
+            $response = [
+                'success' => true,
+                'items' => $items,
+                'pagination' => [
+                    'current_page' => $page,
+                    'per_page' => $perPage,
+                    'total_items' => $total,
+                    'total_pages' => max(1, (int)ceil($total / $perPage))
+                ]
+            ];
             break;
 
         case 'marketplace-save':

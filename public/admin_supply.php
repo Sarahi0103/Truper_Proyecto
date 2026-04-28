@@ -407,6 +407,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 </div>
                 <div id="stockListCaption" class="admin-list-caption">Cargando productos...</div>
                 <div id="stockRows"><p class="text-muted">Cargando...</p></div>
+                <div id="stockPagination" class="mt-3"></div>
             </div></div>
         </section>
 
@@ -724,6 +725,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 </div>
                 <div id="marketplaceListCaption" class="admin-list-caption">Cargando artículos CE...</div>
                 <div id="marketplaceList" class="text-muted">Cargando artículos CE...</div>
+                <div id="marketplacePagination" class="mt-3"></div>
             </div></div>
         </section>
     </div>
@@ -736,6 +738,9 @@ window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8
 let supplierOrderItems = [];
 let stockItemsCache = [];
 let marketplaceItemsCache = [];
+let marketplacePagination = null;
+let marketplaceCurrentPage = 1;
+const marketplacePerPage = 50;
 
 function escapeHtml(v) {
     return String(v || '').replace(/[&<>"']/g, function(m) {
@@ -1572,7 +1577,7 @@ function renderStockPagination(pagination) {
             <div style="display:flex; gap:0.5rem; align-items:center;">
                 <button class="btn btn-small" ${current_page <= 1 ? 'disabled' : ''} onclick="loadStock(${current_page - 1})">Anterior</button>
                 <span class="text-muted">Página <strong>${current_page}</strong> de ${total_pages}</span>
-                <button class="btn btn-small" ${current_page >= total_pages ? 'disabled' : ''} onclick="loadStock(${current_page + 1})">Siguiente</button>
+                <button class="btn btn-small btn-primary" ${current_page >= total_pages ? 'disabled' : ''} onclick="loadStock(${current_page + 1})">Ver más</button>
             </div>
         </div>
     `;
@@ -3343,22 +3348,27 @@ function fillMarketplaceFormById(id) {
     fillMarketplaceForm(item);
 }
 
-async function loadMarketplaceCeAdmin() {
+async function loadMarketplaceCeAdmin(page = 1) {
     const box = document.getElementById('marketplaceList');
     const caption = document.getElementById('marketplaceListCaption');
+    const paginationBox = document.getElementById('marketplacePagination');
     const quickBox = document.getElementById('marketplaceQuickResult');
-    const res = await apiCall('/admin_supply.php?action=marketplace-list', 'GET', null, { silent: true });
+    marketplaceCurrentPage = page;
+    const res = await apiCall(`/admin_supply.php?action=marketplace-list&page=${page}&per_page=${marketplacePerPage}`, 'GET', null, { silent: true });
 
     if (!res || !res.success || !Array.isArray(res.items)) {
         if (box) box.innerHTML = '<p class="text-muted">No fue posible cargar artículos CE.</p>';
         if (caption) caption.textContent = 'No fue posible cargar artículos CE.';
+        if (paginationBox) paginationBox.innerHTML = '';
         if (quickBox) quickBox.innerHTML = '<span style="color:#f87171;">No fue posible cargar la gestión rápida.</span>';
         updateMarketplaceQuickSelection([]);
         return;
     }
 
     marketplaceItemsCache = Array.isArray(res.items) ? res.items : [];
+    marketplacePagination = res.pagination || null;
     renderMarketplaceList();
+    renderMarketplacePagination();
 }
 
 function updateMarketplaceQuickSelection(items = marketplaceItemsCache) {
@@ -3486,10 +3496,37 @@ function renderMarketplaceList() {
 
     if (filtered.length === 0) {
         if (box) box.innerHTML = '<p class="text-muted">No hay artículos CE registrados.</p>';
+        const paginationBox = document.getElementById('marketplacePagination');
+        if (paginationBox) paginationBox.innerHTML = '';
         return;
     }
 
     box.innerHTML = `<div class="catalog-grid-min">${filtered.map((item) => renderAdminProductCard(item, 'marketplace')).join('')}</div>`;
+}
+
+function renderMarketplacePagination() {
+    const container = document.getElementById('marketplacePagination');
+    if (!container) return;
+
+    if (!marketplacePagination) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const current_page = Number(marketplacePagination.current_page || marketplaceCurrentPage || 1);
+    const total_pages = Number(marketplacePagination.total_pages || 1);
+    const total_items = Number(marketplacePagination.total_items || marketplaceItemsCache.length || 0);
+
+    container.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem; padding:1rem; background:var(--ui-surface-soft); border-radius:12px; gap:0.75rem; flex-wrap:wrap;">
+            <div class="text-muted">Total: <strong>${total_items}</strong> artículos CE</div>
+            <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                <button class="btn btn-small" ${current_page <= 1 ? 'disabled' : ''} onclick="loadMarketplaceCeAdmin(${current_page - 1})">Anterior</button>
+                <span class="text-muted">Página <strong>${current_page}</strong> de ${total_pages}</span>
+                <button class="btn btn-small btn-primary" ${current_page >= total_pages ? 'disabled' : ''} onclick="loadMarketplaceCeAdmin(${current_page + 1})">Ver más</button>
+            </div>
+        </div>
+    `;
 }
 
 async function saveMarketplaceCeByAdmin() {
