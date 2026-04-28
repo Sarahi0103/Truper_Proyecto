@@ -953,10 +953,23 @@ function store_product_image(array $file): string {
         throw new Exception('Formato de imagen no permitido');
     }
 
-    $mimeType = mime_content_type($tmp);
-    if (!$mimeType) $mimeType = 'image/jpeg';
+    // Create products directory if it doesn't exist
+    $productsDir = __DIR__ . '/../images/products';
+    if (!is_dir($productsDir)) {
+        mkdir($productsDir, 0755, true);
+    }
 
-    return convert_image_to_base64_admin_supply($tmp, $mimeType);
+    // Generate unique filename with timestamp
+    $filename = time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+    $filepath = $productsDir . '/' . $filename;
+
+    // Validate and move file
+    if (!move_uploaded_file($tmp, $filepath)) {
+        throw new Exception('No se pudo guardar la imagen');
+    }
+
+    // Return web-accessible path
+    return 'images/products/' . $filename;
 }
 
 function normalize_uploaded_files(array $files): array {
@@ -1112,10 +1125,23 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
         throw new Exception('Formato de imagen no permitido');
     }
 
-    $mimeType = mime_content_type($tmp);
-    if (!$mimeType) $mimeType = 'image/jpeg';
+    // Create directory if it doesn't exist
+    $galleryDir = product_gallery_dir_admin_supply($sku);
+    if (!is_dir($galleryDir)) {
+        mkdir($galleryDir, 0755, true);
+    }
 
-    return convert_image_to_base64_admin_supply($tmp, $mimeType);
+    // Generate unique filename with timestamp
+    $filename = time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+    $filepath = $galleryDir . '/' . $filename;
+
+    // Validate and move file
+    if (!move_uploaded_file($tmp, $filepath)) {
+        throw new Exception('No se pudo guardar la imagen');
+    }
+
+    // Return web-accessible path
+    return 'images/products/by_code/' . $sku . '/' . $filename;
 }
 
 function set_product_main_image_by_sku_admin_supply($pdo, string $sku, string $imageUrl): void {
