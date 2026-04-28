@@ -445,7 +445,18 @@ function homepage_update_label($type) {
                         if (!empty($product['variants_json'])) {
                             $decoded = json_decode($product['variants_json'], true);
                             if (is_array($decoded)) {
-                                $variants = $decoded;
+                                // Filter out image paths stored in variants_json (keep only real variant labels)
+                                foreach ($decoded as $item) {
+                                    $itemStr = (string)$item;
+                                    if (strpos($itemStr, 'images/') === false &&
+                                        stripos($itemStr, '.jpg') === false &&
+                                        stripos($itemStr, '.jpeg') === false &&
+                                        stripos($itemStr, '.png') === false &&
+                                        stripos($itemStr, '.gif') === false &&
+                                        stripos($itemStr, '.webp') === false) {
+                                        $variants[] = $itemStr;
+                                    }
+                                }
                             }
                         }
                         $stock = (int)($product['stock_quantity'] ?? 0);
@@ -484,7 +495,7 @@ function homepage_update_label($type) {
                                         <span class="variant-pill"><?php echo htmlspecialchars((string)$variant, ENT_QUOTES, 'UTF-8'); ?></span>
                                     <?php endforeach; ?>
                                 <?php else: ?>
-                                    <span class="variant-pill">Modelo estándar</span>
+                                    <span class="variant-pill">Modelo Estándar</span>
                                 <?php endif; ?>
                             </div>
                             <span class="stock-badge <?php echo $stock <= 10 ? 'stock-low' : 'stock-ok'; ?>">
