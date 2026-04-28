@@ -523,11 +523,13 @@ function homepage_update_label($type) {
                                 foreach ($decoded as $item) {
                                     $itemStr = (string)$item;
                                     if (strpos($itemStr, 'images/') === false &&
+                                        strpos($itemStr, 'data:image/') === false &&
                                         stripos($itemStr, '.jpg') === false &&
                                         stripos($itemStr, '.jpeg') === false &&
                                         stripos($itemStr, '.png') === false &&
                                         stripos($itemStr, '.gif') === false &&
-                                        stripos($itemStr, '.webp') === false) {
+                                        stripos($itemStr, '.webp') === false &&
+                                        stripos($itemStr, '.svg') === false) {
                                         $variants[] = $itemStr;
                                     }
                                 }

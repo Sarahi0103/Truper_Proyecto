@@ -170,14 +170,19 @@ $variants = [];
 if (!empty($product['variants_json'])) {
     $decoded = json_decode($product['variants_json'], true);
     if (is_array($decoded)) {
-        // Filter out image paths (which contain 'images/' or file extensions)
-        // Keep only real variant names (like colors, sizes, etc.)
+        // Filter out image paths (which contain 'images/', file extensions, or base64 data URIs)
+        // Keep only real variant names (like colors, sizes, conditions, etc.)
         foreach ($decoded as $item) {
             $itemStr = (string)$item;
-            // Skip if it looks like an image path
-            if (strpos($itemStr, 'images/') === false && strpos($itemStr, '.jpg') === false && 
-                strpos($itemStr, '.jpeg') === false && strpos($itemStr, '.png') === false && 
-                strpos($itemStr, '.gif') === false && strpos($itemStr, '.webp') === false) {
+            // Skip if it looks like an image path or base64 data URI
+            if (strpos($itemStr, 'images/') === false && 
+                strpos($itemStr, 'data:image/') === false &&
+                strpos($itemStr, '.jpg') === false && 
+                strpos($itemStr, '.jpeg') === false && 
+                strpos($itemStr, '.png') === false && 
+                strpos($itemStr, '.gif') === false && 
+                strpos($itemStr, '.webp') === false &&
+                strpos($itemStr, '.svg') === false) {
                 $variants[] = $item;
             }
         }
