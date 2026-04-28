@@ -2753,12 +2753,8 @@ async function reorderGalleryImages(sku, orderedImages, mode = 'stock') {
     }
 
     showGalleryResult(mode, res.message || 'Orden de imágenes actualizado', 'success');
+    renderProductGallery(Array.isArray(res.images) && res.images.length > 0 ? res.images : orderedImages, sku, mode);
     await loadProductImageReferences();
-    if (mode === 'marketplace') {
-        await loadMarketplaceGalleryForCurrentSku();
-    } else {
-        await loadProductGalleryForCurrentSku();
-    }
     await loadStock();
     await loadMarketplaceCeAdmin();
     return true;

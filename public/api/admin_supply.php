@@ -1236,24 +1236,10 @@ function reorder_product_gallery_images_admin_supply($pdo, string $sku, array $o
         throw new Exception('SKU inválido');
     }
 
+    $orderedImages = normalize_product_gallery_images_admin_supply($orderedImages);
     if (empty($orderedImages)) return [];
 
-    $json = json_encode($orderedImages);
-    $cover = $orderedImages[0];
-
-    // Update stock
-    try {
-        $stmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ?");
-        $stmt->execute([$cover, $json, $sku]);
-    } catch (Exception $ig) {}
-
-    // Update marketplace
-    try {
-        $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET image_url = ?, variants_json = ? WHERE sku = ?");
-        $stmt->execute([$cover, $json, $sku]);
-    } catch (Exception $ig) {}
-
-    return $orderedImages;
+    return persist_product_gallery_images_admin_supply($pdo, $sku, $orderedImages);
 }
 
 
