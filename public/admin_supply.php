@@ -795,7 +795,7 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
     const unitPrice = Number(item.unit_price || 0);
     const stock = Math.max(0, Number(item.stock_quantity || 0));
     const reorder = Math.max(0, Number(item.reorder_level || 10));
-    const condition = mode === 'marketplace' ? String(item.condition_label || 'Seminuevo') : 'Modelo estándar';
+    const condition = mode === 'marketplace' ? String(item.condition_label || 'Seminuevo') : 'Modelo Estandar';
     const stockText = stock <= (mode === 'marketplace' ? 2 : reorder) ? 'Stock bajo: ' : 'Stock: ';
     const stockClass = stock <= (mode === 'marketplace' ? 2 : reorder) ? 'stock-low' : 'stock-ok';
     const inactive = Number(item.is_active) === 0 || item.is_active === false || item.is_active === 'f' || item.is_active === 'false' || item.is_active === 'False' || item.is_active === 'FALSE';
@@ -3295,6 +3295,13 @@ async function createProductByAdmin() {
         return;
     }
 
+    // If the user selected files but hasn't waited, upload them first so the product save can reference the new image
+    const newProductImagesEl = document.getElementById('newProductImages');
+    if (newProductImagesEl && newProductImagesEl.files && newProductImagesEl.files.length > 0) {
+        if (box) box.innerHTML = '<div class="alert alert-info">Subiendo imágenes, espera por favor...</div>';
+        await uploadProductImages();
+    }
+
     const payload = {
         id: editId,
         sku: normalizedSku,
@@ -3985,20 +3992,21 @@ document.addEventListener('DOMContentLoaded', function () {
     loadProductGalleryForCurrentSku();
     loadMarketplaceGalleryForCurrentSku();
 
-    // Add file input preview handler for homepage update images
+    // Add file input preview handler for homepage update images (use object URLs for faster previews)
     const imageInput = document.getElementById('updateImage');
     if (imageInput) {
         imageInput.addEventListener('change', function (e) {
             const preview = document.getElementById('updateImagePreview');
             const previewImg = document.getElementById('updateImagePreviewImg');
-            
+
             if (e.target.files && e.target.files[0] && preview && previewImg) {
-                const reader = new FileReader();
-                reader.onload = function (event) {
-                    previewImg.src = event.target.result;
-                    preview.style.display = 'block';
-                };
-                reader.readAsDataURL(e.target.files[0]);
+                const file = e.target.files[0];
+                // Use createObjectURL to avoid base64 encoding and speed up preview
+                const url = URL.createObjectURL(file);
+                previewImg.src = url;
+                preview.style.display = 'block';
+                // Revoke object URL after image loads to free memory
+                previewImg.onload = function () { URL.revokeObjectURL(url); previewImg.onload = null; };
             }
         });
     }

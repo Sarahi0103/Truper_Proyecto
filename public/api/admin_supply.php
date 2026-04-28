@@ -878,18 +878,45 @@ function ensure_marketplace_integrity_admin_supply($pdo): void {
 }
 
 function convert_image_to_base64_admin_supply(string $tmpName, string $mimeType): string {
+    // Procesa la imagen (redimensiona/comprime) y la guarda en disk en /images/products
+    // Retorna la ruta web relativa (por ejemplo: images/products/12345_abcd.webp)
     $maxWidth = 800;
     $maxHeight = 800;
-    
-    // Si no tenemos GD, regresamos el base64 sin procesar
+
+    $productsDir = __DIR__ . '/../images/products';
+    if (!is_dir($productsDir)) {
+        mkdir($productsDir, 0755, true);
+    }
+
+    // Si no tenemos GD, simplemente movemos/copiamos el archivo original y devolvemos la ruta
     if (!function_exists('imagecreatefromstring')) {
-        return 'data:' . $mimeType . ';base64,' . base64_encode(file_get_contents($tmpName));
+        $ext = 'jpg';
+        if (strpos($mimeType, 'png') !== false) $ext = 'png';
+        if (strpos($mimeType, 'webp') !== false) $ext = 'webp';
+        if (strpos($mimeType, 'gif') !== false) $ext = 'gif';
+
+        $filename = time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+        $destPath = $productsDir . '/' . $filename;
+        if (!@move_uploaded_file($tmpName, $destPath)) {
+            // try copy as fallback
+            @copy($tmpName, $destPath);
+        }
+        return 'images/products/' . $filename;
     }
 
     $imageString = file_get_contents($tmpName);
     $img = @imagecreatefromstring($imageString);
     if (!$img) {
-        return 'data:' . $mimeType . ';base64,' . base64_encode($imageString);
+        // Save original as fallback
+        $ext = 'jpg';
+        if (strpos($mimeType, 'png') !== false) $ext = 'png';
+        if (strpos($mimeType, 'webp') !== false) $ext = 'webp';
+        if (strpos($mimeType, 'gif') !== false) $ext = 'gif';
+
+        $filename = time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+        $destPath = $productsDir . '/' . $filename;
+        file_put_contents($destPath, $imageString);
+        return 'images/products/' . $filename;
     }
 
     $width = imagesx($img);
@@ -901,7 +928,7 @@ function convert_image_to_base64_admin_supply(string $tmpName, string $mimeType)
         $newHeight = (int)($height * $ratio);
 
         $newImg = imagecreatetruecolor($newWidth, $newHeight);
-        
+
         // Mantener transparencia para PNG y WEBP
         if ($mimeType === 'image/png' || $mimeType === 'image/webp' || $mimeType === 'image/gif') {
             imagealphablending($newImg, false);
@@ -915,25 +942,28 @@ function convert_image_to_base64_admin_supply(string $tmpName, string $mimeType)
         $img = $newImg;
     }
 
+    // Serializar a buffer y guardar archivo en disco
     ob_start();
-    // Siempre convertimos a WEBP (muy ligero) o JPEG para guardar espacio
     if ($mimeType === 'image/png' || $mimeType === 'image/gif') {
         if (function_exists('imagewebp')) {
             imagewebp($img, null, 80);
-            $finalMime = 'image/webp';
+            $finalExt = 'webp';
         } else {
-            imagepng($img, null, 8); // Compression 0-9
-            $finalMime = 'image/png';
+            imagepng($img, null, 8);
+            $finalExt = 'png';
         }
     } else {
         imagejpeg($img, null, 75);
-        $finalMime = 'image/jpeg';
+        $finalExt = 'jpg';
     }
-    
     $compressedData = ob_get_clean();
     imagedestroy($img);
 
-    return 'data:' . $finalMime . ';base64,' . base64_encode($compressedData);
+    $filename = time() . '_' . bin2hex(random_bytes(4)) . '.' . $finalExt;
+    $destPath = $productsDir . '/' . $filename;
+    file_put_contents($destPath, $compressedData);
+
+    return 'images/products/' . $filename;
 }
 
 function store_product_image(array $file): string {
@@ -1177,16 +1207,31 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
         throw new Exception('No se pudo leer la imagen');
     }
 
-    $mimeMap = [
-        'jpg' => 'image/jpeg',
-        'jpeg' => 'image/jpeg',
-        'png' => 'image/png',
-        'webp' => 'image/webp',
-        'gif' => 'image/gif'
-    ];
-    $mime = $mimeMap[$ext] ?? 'application/octet-stream';
+    // Determine mime type
+    $mime = mime_content_type($tmp) ?: 'image/jpeg';
 
-    return 'data:' . $mime . ';base64,' . base64_encode($contents);
+    // Use the centralized converter which now persists a processed file and returns its path
+    $savedPath = convert_image_to_base64_admin_supply($tmp, $mime);
+
+    // If SKU is numeric 5-digits, move the file into a SKU-specific folder
+    if (is_valid_numeric_sku_admin_supply($sku)) {
+        $productsDir = __DIR__ . '/../images/products';
+        $byCodeDir = $productsDir . '/by_code/' . $sku;
+        if (!is_dir($byCodeDir)) mkdir($byCodeDir, 0755, true);
+
+        $sourceFull = __DIR__ . '/../' . $savedPath;
+        if (is_file($sourceFull)) {
+            $filename = basename($sourceFull);
+            $destFull = $byCodeDir . '/' . $filename;
+            // Try rename, fallback to copy
+            if (!@rename($sourceFull, $destFull)) {
+                @copy($sourceFull, $destFull);
+            }
+            return 'images/products/by_code/' . $sku . '/' . $filename;
+        }
+    }
+
+    return $savedPath;
 }
 
 function set_product_main_image_by_sku_admin_supply($pdo, string $sku, string $imageUrl): void {
@@ -2271,17 +2316,22 @@ try {
             $images = list_product_gallery_images_admin_supply($sku);
             $allImages = array_unique(array_merge($images, $uploaded), SORT_REGULAR);
             $allImages = array_values($allImages); // Reindex
-            
-            $json = json_encode($allImages, JSON_UNESCAPED_UNICODE);
-            $cover = $allImages[0];
-            
-            // Update stock
-            $stmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ?");
-            $stmt->execute([$cover, $json, $sku]);
 
-            // Update marketplace
-            $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET image_url = ?, variants_json = ? WHERE sku = ?");
-            $stmt->execute([$cover, $json, $sku]);
+            // Verify files exist on disk for debug/helpful errors
+            $fileChecks = [];
+            foreach ($allImages as $imgPath) {
+                $full = __DIR__ . '/../' . ltrim($imgPath, '/');
+                $fileChecks[] = ['path' => $imgPath, 'exists' => is_file($full)];
+            }
+
+            // Persist gallery info into DB tables if possible
+            try {
+                persist_product_gallery_images_admin_supply($pdo, $sku, $allImages);
+            } catch (Exception $e) {
+                // ignore — we'll still return file info
+            }
+
+            $cover = $allImages[0] ?? null;
 
             $response = [
                 'success' => true,
@@ -2289,7 +2339,8 @@ try {
                 'sku' => $sku,
                 'uploaded' => $uploaded,
                 'images' => $allImages,
-                'cover' => $cover
+                'cover' => $cover,
+                'file_checks' => $fileChecks
             ];
             break;
 
