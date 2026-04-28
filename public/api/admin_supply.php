@@ -1036,15 +1036,33 @@ function list_product_gallery_images_admin_supply(string $sku): array {
                 $stmt = $pdo->prepare("SELECT variants_json, image_url FROM products WHERE sku = ?");
                 $stmt->execute([$sku]);
                 $row = $stmt->fetch();
-                if ($row && !empty($row['variants_json'])) {
-                    $decoded = json_decode($row['variants_json'], true);
-                    if (is_array($decoded) && !empty($decoded)) {
-                        return array_values($decoded);
+                if ($row) {
+                    $images = [];
+                    
+                    // First: add all images from variants_json (user-uploaded)
+                    if (!empty($row['variants_json'])) {
+                        $decoded = json_decode($row['variants_json'], true);
+                        if (is_array($decoded) && !empty($decoded)) {
+                            $images = array_values($decoded);
+                        }
                     }
-                }
-                // Fallback to image_url if variants_json is empty
-                if ($row && !empty($row['image_url'])) {
-                    return [(string)$row['image_url']];
+                    
+                    // Second: add image_url if it's not default and not already in images
+                    $imageUrl = (string)($row['image_url'] ?? '');
+                    if (!empty($imageUrl) && 
+                        strpos($imageUrl, 'default-product.svg') === false && 
+                        !in_array($imageUrl, $images, true)) {
+                        array_unshift($images, $imageUrl);
+                    }
+                    
+                    if (!empty($images)) {
+                        return $images;
+                    }
+                    
+                    // Fallback: just return image_url if nothing else
+                    if (!empty($row['image_url'])) {
+                        return [(string)$row['image_url']];
+                    }
                 }
             } catch (Exception $ignored) {
             }
@@ -1056,15 +1074,33 @@ function list_product_gallery_images_admin_supply(string $sku): array {
                 $stmt = $pdo->prepare("SELECT variants_json, image_url FROM marketplace_ce_products WHERE sku = ?");
                 $stmt->execute([$sku]);
                 $row = $stmt->fetch();
-                if ($row && !empty($row['variants_json'])) {
-                    $decoded = json_decode($row['variants_json'], true);
-                    if (is_array($decoded) && !empty($decoded)) {
-                        return array_values($decoded);
+                if ($row) {
+                    $images = [];
+                    
+                    // First: add all images from variants_json (user-uploaded)
+                    if (!empty($row['variants_json'])) {
+                        $decoded = json_decode($row['variants_json'], true);
+                        if (is_array($decoded) && !empty($decoded)) {
+                            $images = array_values($decoded);
+                        }
                     }
-                }
-                // Fallback to image_url if variants_json is empty
-                if ($row && !empty($row['image_url'])) {
-                    return [(string)$row['image_url']];
+                    
+                    // Second: add image_url if it's not default and not already in images
+                    $imageUrl = (string)($row['image_url'] ?? '');
+                    if (!empty($imageUrl) && 
+                        strpos($imageUrl, 'default-product.svg') === false && 
+                        !in_array($imageUrl, $images, true)) {
+                        array_unshift($images, $imageUrl);
+                    }
+                    
+                    if (!empty($images)) {
+                        return $images;
+                    }
+                    
+                    // Fallback: just return image_url if nothing else
+                    if (!empty($row['image_url'])) {
+                        return [(string)$row['image_url']];
+                    }
                 }
             } catch (Exception $ignored) {
             }
@@ -2214,7 +2250,7 @@ try {
                 break;
             }
 
-            $images = list_product_gallery_uploaded_images_admin_supply($sku);
+            $images = list_product_gallery_images_admin_supply($sku);
             $allImages = array_merge($images, $uploaded);
             
             $json = json_encode($allImages);
