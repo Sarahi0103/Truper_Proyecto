@@ -3951,24 +3951,37 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const productSkuInput = document.getElementById('newProductSku');
     if (productSkuInput) {
+        let productSkuDebounce = null;
         productSkuInput.addEventListener('input', function () {
             productSkuInput.value = normalizeNumericSku(productSkuInput.value);
             updateStockPreview();
             setSkuStatus('newProductSkuStatus', 'Código listo para guardar.', 'muted');
+            if (productSkuDebounce) window.clearTimeout(productSkuDebounce);
+            productSkuDebounce = window.setTimeout(() => {
+                validateSkuAvailability('product');
+            }, 250);
         });
         productSkuInput.addEventListener('blur', async function () {
+            if (productSkuDebounce) window.clearTimeout(productSkuDebounce);
+            await validateSkuAvailability('product');
             await loadProductGalleryForCurrentSku();
         });
     }
 
     const marketplaceSkuInput = document.getElementById('marketplaceSku');
     if (marketplaceSkuInput) {
+        let marketplaceSkuDebounce = null;
         marketplaceSkuInput.addEventListener('input', function () {
             marketplaceSkuInput.value = normalizeNumericSku(marketplaceSkuInput.value);
             updateMarketplacePreview();
             setSkuStatus('marketplaceSkuStatus', 'Debe ser único y de 5 o 6 números.', 'muted');
+            if (marketplaceSkuDebounce) window.clearTimeout(marketplaceSkuDebounce);
+            marketplaceSkuDebounce = window.setTimeout(() => {
+                validateSkuAvailability('marketplace');
+            }, 250);
         });
         marketplaceSkuInput.addEventListener('blur', async function () {
+            if (marketplaceSkuDebounce) window.clearTimeout(marketplaceSkuDebounce);
             await validateSkuAvailability('marketplace');
             await loadMarketplaceGalleryForCurrentSku();
         });
