@@ -1839,7 +1839,7 @@ function editStockSelectedItem() {
         return;
     }
 
-    fillProductFormById(target.id);
+    void fillProductFormById(target.id);
     if (quickBox) quickBox.innerHTML = '<span style="color:#22c55e;">Producto cargado en el formulario.</span>';
     document.getElementById('newProductSku')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
@@ -1912,7 +1912,7 @@ function resetProductForm() {
     if (galleryStatus) galleryStatus.textContent = 'Escribe un código de 5 o 6 números para cargar su galería.';
 }
 
-function fillProductFormById(id) {
+async function fillProductFormById(id) {
     const item = stockItemsCache.find((row) => Number(row.id) === Number(id));
     if (!item) return;
 
@@ -1946,6 +1946,8 @@ function fillProductFormById(id) {
 
     document.getElementById('newProductVisible').value = Number(item.is_active) ? '1' : '0';
 
+    await loadProductCategories(false);
+
     const categories = String(item.category || '')
         .split(',')
         .map((x) => x.trim())
@@ -1974,7 +1976,7 @@ function fillProductFormById(id) {
 }
 
 function prepareSeedProductForEditing(id) {
-    fillProductFormById(id);
+    void fillProductFormById(id);
     const formTop = document.getElementById('newProductSku');
     if (formTop) {
         formTop.focus();
@@ -2662,6 +2664,7 @@ async function loadProductCategories(onlyActive = true) {
 async function refreshCategoriesUi() {
     await loadProductCategories(false);
     updateStockPreview();
+    updateMarketplacePreview();
 }
 
 function resetCategoryForm() {
@@ -3477,7 +3480,7 @@ function resetMarketplaceForm() {
     loadMarketplaceGalleryForCurrentSku();
 }
 
-function fillMarketplaceForm(item) {
+async function fillMarketplaceForm(item) {
     if (!item) return;
     window.scrollTo({ top: 0, behavior: 'smooth' });
     document.getElementById('marketplaceEditId').value = item.id || '';
@@ -3497,6 +3500,9 @@ function fillMarketplaceForm(item) {
         .split(',')
         .map((x) => x.trim())
         .filter(Boolean);
+
+    await loadProductCategories(false);
+
     const marketplaceCategorySelect = document.getElementById('marketplaceCategory');
     ensureCategoryOptions(marketplaceCategorySelect, categories, true);
     setCategorySelections(marketplaceCategorySelect, categories);
@@ -3533,7 +3539,7 @@ function fillMarketplaceForm(item) {
 function fillMarketplaceFormById(id) {
     const item = marketplaceItemsCache.find((row) => Number(row.id) === Number(id));
     if (!item) return;
-    fillMarketplaceForm(item);
+    void fillMarketplaceForm(item);
 }
 
 async function loadMarketplaceCeAdmin(page = 1, customPerPage = null) {
@@ -3622,7 +3628,7 @@ function editMarketplaceSelectedItem() {
         return;
     }
 
-    fillMarketplaceForm(target);
+    void fillMarketplaceForm(target);
     if (quickBox) quickBox.innerHTML = '<span style="color:#22c55e;">Artículo cargado en el formulario.</span>';
     document.getElementById('marketplaceSku')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
