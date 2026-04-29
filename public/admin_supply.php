@@ -363,7 +363,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
 
                 <div class="d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap;">
                     <button class="btn btn-primary" id="newProductSaveButton" onclick="createProductByAdmin()">Guardar producto</button>
-                    <button class="btn btn-secondary" type="button" onclick="resetProductForm()">Limpiar formulario</button>
+                    <button class="btn btn-secondary" type="button" onclick="resetProductForm()">Cancelar</button>
                 </div>
                 <div id="productCreateResult" class="mt-3"></div>
             </div></div>
@@ -441,7 +441,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
 
                 <div class="d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap;">
                     <button class="btn btn-primary" type="button" onclick="saveHomepageUpdate()" id="updateSaveButton">Guardar publicación</button>
-                    <button class="btn btn-secondary" type="button" onclick="resetUpdateForm()">Limpiar formulario</button>
+                    <button class="btn btn-secondary" type="button" onclick="resetUpdateForm()">Cancelar</button>
                 </div>
 
                 <div id="updateResult" class="mt-3"></div>
@@ -540,7 +540,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
 
                 <div class="d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap;">
                     <button class="btn btn-primary" onclick="saveClientByAdmin()" id="clientSaveButton">Registrar cliente</button>
-                    <button class="btn btn-secondary" type="button" onclick="resetClientForm()">Limpiar formulario</button>
+                    <button class="btn btn-secondary" type="button" onclick="resetClientForm()">Cancelar</button>
                 </div>
 
                 <div id="clientCreateResult" class="mt-3"></div>
@@ -666,7 +666,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
 
                 <div class="d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap;">
                     <button class="btn btn-primary" type="button" id="marketplaceSaveButton" onclick="saveMarketplaceCeByAdmin()">Guardar artículo CE</button>
-                    <button class="btn btn-secondary" type="button" onclick="resetMarketplaceForm()">Limpiar formulario</button>
+                    <button class="btn btn-secondary" type="button" onclick="resetMarketplaceForm()">Cancelar</button>
                 </div>
 
                 <div class="admin-preview-wrap">
@@ -3161,9 +3161,32 @@ async function setProductGalleryCover(sku, imagePath) {
     }
 
     showGalleryResult('stock', res.message || 'Portada actualizada', 'success');
-    await loadProductGalleryForCurrentSku();
-    await loadStock();
-    await loadMarketplaceCeAdmin();
+
+    // Optimistic update: move selected image to first position in cache and re-render
+    try {
+        const cache = stockGalleryCache || [];
+        const idx = cache.findIndex((i) => i === imagePath);
+        if (idx > 0) {
+            cache.splice(idx, 1);
+            cache.unshift(imagePath);
+            setGalleryState('stock', sku, cache.slice(), imagePath);
+            renderProductGallery(cache, sku, 'stock');
+            syncGalleryModeUi('stock', imagePath);
+        }
+        // reflect cover into product preview and caches
+        const prod = stockItemsCache.find(p => String(p.sku || '') === String(sku));
+        if (prod) {
+            prod.image_url = imagePath;
+            upsertStockCache(prod);
+        }
+    } catch (e) {
+        console.warn('Optimistic cover update failed:', e);
+    }
+
+    // Background sync for consistency
+    void loadProductGalleryForCurrentSku();
+    void loadStock();
+    void loadMarketplaceCeAdmin();
 }
 
 async function deleteProductGalleryImage(sku, imagePath) {
@@ -3179,9 +3202,31 @@ async function deleteProductGalleryImage(sku, imagePath) {
     }
 
     showGalleryResult('stock', res.message || 'Imagen eliminada', 'success');
-    await loadProductGalleryForCurrentSku();
-    await loadStock();
-    await loadMarketplaceCeAdmin();
+
+    // Optimistic UI: remove from cache and re-render immediately
+    try {
+        const cache = stockGalleryCache || [];
+        const idx = cache.findIndex((i) => i === imagePath);
+        if (idx >= 0) {
+            cache.splice(idx, 1);
+            setGalleryState('stock', sku, cache.slice(), cache[0] || '');
+            renderProductGallery(cache, sku, 'stock');
+            syncGalleryModeUi('stock', cache[0] || '');
+        }
+        // update product cover if needed
+        const prod = stockItemsCache.find(p => String(p.sku || '') === String(sku));
+        if (prod) {
+            prod.image_url = cache[0] || prod.image_url;
+            upsertStockCache(prod);
+        }
+    } catch (e) {
+        console.warn('Optimistic image delete failed:', e);
+    }
+
+    // Background sync
+    void loadProductGalleryForCurrentSku();
+    void loadStock();
+    void loadMarketplaceCeAdmin();
 }
 
 function moveProductGalleryImage(sku, imagePath, direction) {
@@ -3212,9 +3257,31 @@ async function setMarketplaceGalleryCover(sku, imagePath) {
     }
 
     showGalleryResult('marketplace', res.message || 'Portada CE actualizada', 'success');
-    await loadMarketplaceGalleryForCurrentSku();
-    await loadMarketplaceCeAdmin();
-    await loadStock();
+
+    // Optimistic update for marketplace cache
+    try {
+        const cache = marketplaceGalleryCache || [];
+        const idx = cache.findIndex((i) => i === imagePath);
+        if (idx > 0) {
+            cache.splice(idx, 1);
+            cache.unshift(imagePath);
+            setGalleryState('marketplace', sku, cache.slice(), imagePath);
+            renderProductGallery(cache, sku, 'marketplace');
+            syncGalleryModeUi('marketplace', imagePath);
+        }
+        const item = marketplaceItemsCache.find(p => String(p.sku || '') === String(sku));
+        if (item) {
+            item.image_url = imagePath;
+            upsertMarketplaceCache(item);
+        }
+    } catch (e) {
+        console.warn('Optimistic marketplace cover failed:', e);
+    }
+
+    // Background sync
+    void loadMarketplaceGalleryForCurrentSku();
+    void loadMarketplaceCeAdmin();
+    void loadStock();
 }
 
 async function deleteMarketplaceGalleryImage(sku, imagePath) {
@@ -3231,9 +3298,30 @@ async function deleteMarketplaceGalleryImage(sku, imagePath) {
     }
 
     showGalleryResult('marketplace', res.message || 'Imagen CE eliminada', 'success');
-    await loadMarketplaceGalleryForCurrentSku();
-    await loadMarketplaceCeAdmin();
-    await loadStock();
+
+    // Optimistic UI: remove image from marketplace cache and re-render
+    try {
+        const cache = marketplaceGalleryCache || [];
+        const idx = cache.findIndex((i) => i === imagePath);
+        if (idx >= 0) {
+            cache.splice(idx, 1);
+            setGalleryState('marketplace', sku, cache.slice(), cache[0] || '');
+            renderProductGallery(cache, sku, 'marketplace');
+            syncGalleryModeUi('marketplace', cache[0] || '');
+        }
+        const item = marketplaceItemsCache.find(p => String(p.sku || '') === String(sku));
+        if (item) {
+            item.image_url = cache[0] || item.image_url;
+            upsertMarketplaceCache(item);
+        }
+    } catch (e) {
+        console.warn('Optimistic marketplace delete failed:', e);
+    }
+
+    // Background sync
+    void loadMarketplaceGalleryForCurrentSku();
+    void loadMarketplaceCeAdmin();
+    void loadStock();
 }
 
 async function uploadProductImages() {
@@ -3287,22 +3375,36 @@ async function uploadProductImages() {
         const renderedImages = Array.isArray(data.images) && data.images.length > 0
             ? data.images
             : (data.cover ? [data.cover] : []);
-
         if (/^\d{5,6}$/.test(currentSku) && renderedImages.length > 0) {
+            // Optimistic update: set cache and render immediately
             setGalleryState('stock', currentSku, renderedImages, data.cover || renderedImages[0] || '');
             renderProductGallery(renderedImages, currentSku, 'stock');
             syncGalleryModeUi('stock', data.cover || renderedImages[0] || '');
+
+            // update select and preview
+            const select = document.getElementById('newProductImageRef');
+            if (select && data.cover) select.value = data.cover;
+            updateStockPreview();
+
+            // update caches if product exists in cache
+            try {
+                const prod = stockItemsCache.find(p => String(p.sku || '') === String(currentSku));
+                if (prod) {
+                    prod.image_url = data.cover || renderedImages[0] || prod.image_url;
+                    upsertStockCache(prod);
+                }
+                const mp = marketplaceItemsCache.find(p => String(p.sku || '') === String(currentSku));
+                if (mp) {
+                    mp.image_url = data.cover || renderedImages[0] || mp.image_url;
+                    upsertMarketplaceCache(mp);
+                }
+            } catch (e) {
+                console.warn('Optimistic upload cache update failed:', e);
+            }
         }
-        
-        // Load gallery FIRST while SKU is still available
-        await loadProductGalleryForCurrentSku();
-        
-        const select = document.getElementById('newProductImageRef');
-        if (select && data.cover) select.value = data.cover;
-        
-        // Update preview after setting cover
-        updateStockPreview();
-        
+
+        // Background sync for consistency
+        void loadProductGalleryForCurrentSku();
         return true;
     } catch (error) {
         console.error('Error al subir imágenes:', error);
@@ -3360,22 +3462,39 @@ async function uploadMarketplaceImages() {
         const renderedImages = Array.isArray(data.images) && data.images.length > 0
             ? data.images
             : (data.cover ? [data.cover] : []);
-
         if (/^\d{5,6}$/.test(currentSku) && renderedImages.length > 0) {
+            // Optimistic: update cache and render immediately
             setGalleryState('marketplace', currentSku, renderedImages, data.cover || renderedImages[0] || '');
             renderProductGallery(renderedImages, currentSku, 'marketplace');
             syncGalleryModeUi('marketplace', data.cover || renderedImages[0] || '');
+
+            // update select and preview
+            const select = document.getElementById('marketplaceImageRef');
+            if (select && data.cover) select.value = data.cover;
+            updateMarketplacePreview();
+
+            // reflect in caches if possible
+            try {
+                const item = marketplaceItemsCache.find(p => String(p.sku || '') === String(currentSku));
+                if (item) {
+                    item.image_url = data.cover || renderedImages[0] || item.image_url;
+                    upsertMarketplaceCache(item);
+                }
+                const prod = stockItemsCache.find(p => String(p.sku || '') === String(currentSku));
+                if (prod) {
+                    prod.image_url = data.cover || renderedImages[0] || prod.image_url;
+                    upsertStockCache(prod);
+                }
+            } catch (e) {
+                console.warn('Optimistic marketplace upload cache update failed:', e);
+            }
         }
-        
-        // Load gallery FIRST while SKU is still available
-        await loadMarketplaceGalleryForCurrentSku();
-        
-        const select = document.getElementById('marketplaceImageRef');
-        if (select && data.cover) select.value = data.cover;
-        
-        // Update preview after setting cover
-        updateMarketplacePreview();
-        
+
+        // background sync for consistency
+        void loadMarketplaceGalleryForCurrentSku();
+        void loadMarketplaceCeAdmin();
+        void loadStock();
+
         return true;
     } catch (error) {
         console.error('Error al subir imágenes CE:', error);
