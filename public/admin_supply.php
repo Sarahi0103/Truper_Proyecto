@@ -1666,6 +1666,15 @@ async function deleteCategoryQuickFromSelect(selectId, resultId) {
     }
 
     await refreshCategoriesUi();
+    
+    // Force reload of product lists to show updated categories
+    if (removed > 0) {
+        console.log('Reloading product lists after category deletion...');
+        await Promise.all([
+            loadStock(1, 25),
+            loadMarketplaceCeAdmin(1, 25)
+        ]);
+    }
 }
 
 async function deleteCategoryQuick() {
@@ -1732,7 +1741,16 @@ async function addCategoryFromQuickForm(selectId, inputId, resultId, context = '
     if (input) input.value = '';
     if (quickBox) quickBox.innerHTML = '<span style="color:#22c55e;">✓ Categoría guardada correctamente.</span>';
     showAlert(res.message || 'Categoría guardada', 'success');
+    
+    // Immediately refresh all category displays and reload product lists
     await refreshCategoriesUi();
+    
+    // Force reload of product lists to show updated categories
+    console.log('Reloading product lists after category creation...');
+    await Promise.all([
+        loadStock(1, 25),
+        loadMarketplaceCeAdmin(1, 25)
+    ]);
 
     if (categorySelect) {
         const target = findCategoryOption(categorySelect, raw);
