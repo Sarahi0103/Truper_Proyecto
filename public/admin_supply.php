@@ -334,15 +334,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     <div class="form-group"><label>Nivel reorden</label><input id="newProductReorder" type="number" min="0" step="1" value="10"></div>
                 </div>
 
-                <div class="grid grid-2">
-                    <div class="form-group">
-                        <label>Imagen de referencia</label>
-                        <select id="newProductImageRef">
-                            <option value="images/products/default-product.svg">Imagen por defecto</option>
-                        </select>
-                        <small class="text-muted">Selecciona una imagen ya existente del sitio.</small>
-                    </div>
-                </div>
+                <input id="newProductImageRef" type="hidden" value="images/products/default-product.svg">
 
                 <div class="grid grid-2 mt-2">
                     <div class="form-group">
@@ -652,15 +644,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
 
                 <div class="form-group"><label>Descripción</label><textarea id="marketplaceDescription" rows="4" maxlength="1800"></textarea></div>
 
-                <div class="grid grid-2">
-                    <div class="form-group">
-                        <label>Imagen de referencia</label>
-                        <select id="marketplaceImageRef">
-                            <option value="images/products/default-product.svg">Imagen por defecto</option>
-                        </select>
-                        <small class="text-muted">Selecciona una imagen ya existente del sitio.</small>
-                    </div>
-                </div>
+                <input id="marketplaceImageRef" type="hidden" value="images/products/default-product.svg">
 
                 <div class="grid grid-2 mt-2">
                     <div class="form-group">
@@ -828,6 +812,37 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
             </div>
         </article>
     `;
+}
+
+function extractGalleryImagesFromItem(item) {
+    if (!item || typeof item !== 'object') return [];
+
+    const parsed = [];
+    const rawVariants = item.variants_json;
+    if (Array.isArray(rawVariants)) {
+        rawVariants.forEach((img) => {
+            const value = String(img || '').trim();
+            if (value && !value.includes('default-product.svg')) parsed.push(value);
+        });
+    } else if (typeof rawVariants === 'string' && rawVariants.trim() !== '') {
+        try {
+            const decoded = JSON.parse(rawVariants);
+            if (Array.isArray(decoded)) {
+                decoded.forEach((img) => {
+                    const value = String(img || '').trim();
+                    if (value && !value.includes('default-product.svg')) parsed.push(value);
+                });
+            }
+        } catch (error) {
+            // Ignore invalid legacy JSON and fallback to image_url.
+        }
+    }
+
+    const unique = [];
+    parsed.forEach((img) => {
+        if (!unique.includes(img)) unique.push(img);
+    });
+    return unique;
 }
 
 function updateStockPreview() {
@@ -1904,16 +1919,21 @@ function fillProductFormById(id) {
     document.getElementById('newProductDescription').value = item.description || '';
     const imageRefSelect = document.getElementById('newProductImageRef');
     const itemImage = item.image_url || 'images/products/default-product.svg';
-    if (imageRefSelect) {
-        const exists = Array.from(imageRefSelect.options || []).some((opt) => opt.value === itemImage);
-        if (!exists) {
-            const option = document.createElement('option');
-            option.value = itemImage;
-            option.textContent = itemImage;
-            imageRefSelect.appendChild(option);
-        }
-        imageRefSelect.value = itemImage;
+    if (imageRefSelect) imageRefSelect.value = itemImage;
+
+    const skuForGallery = normalizeNumericSku(item.sku || '');
+    const fastImages = extractGalleryImagesFromItem(item);
+    if (fastImages.length === 0 && itemImage && !itemImage.includes('default-product.svg')) {
+        fastImages.push(itemImage);
     }
+    if (/^\d{5,6}$/.test(skuForGallery) && fastImages.length > 0) {
+        setGalleryState('stock', skuForGallery, fastImages, fastImages[0] || '');
+        renderProductGallery(fastImages, skuForGallery, 'stock');
+        const galleryStatus = document.getElementById('productGalleryStatus');
+        if (galleryStatus) galleryStatus.textContent = `Galería para ${skuForGallery}: ${fastImages.length} imagen(es)`;
+        syncGalleryModeUi('stock', fastImages[0] || '');
+    }
+
     document.getElementById('newProductVisible').value = Number(item.is_active) ? '1' : '0';
 
     const categories = String(item.category || '')
@@ -2533,45 +2553,17 @@ async function loadProductImageReferences() {
     const marketplaceSelect = document.getElementById('marketplaceImageRef');
     if (!stockSelect && !marketplaceSelect) return;
 
-    const res = await apiCall('/admin_supply.php?action=product-images', 'GET', null, { silent: true });
-    if (!res || !res.success || !Array.isArray(res.images)) {
-        return;
+    const stockState = getGalleryState('stock');
+    const marketplaceState = getGalleryState('marketplace');
+
+    if (stockSelect && stockState && stockState.cover) {
+        stockSelect.value = stockState.cover;
     }
 
-    const formatImageOptionLabel = function (img, index) {
-        const value = String(img || '');
-        if (value.startsWith('data:image/')) {
-            return `Imagen guardada ${index + 1}`;
-        }
-        return value;
-    };
+    if (marketplaceSelect && marketplaceState && marketplaceState.cover) {
+        marketplaceSelect.value = marketplaceState.cover;
+    }
 
-    const applyImagesToSelect = function (selectEl) {
-        if (!selectEl) return;
-        const current = selectEl.value || 'images/products/default-product.svg';
-        selectEl.innerHTML = '';
-        let base64Count = 0;
-        res.images.forEach((img, idx) => {
-            const option = document.createElement('option');
-            option.value = img;
-            if (img.startsWith('data:')) {
-                base64Count++;
-                option.textContent = `Imagen subida [${base64Count}]`;
-            } else {
-                option.textContent = img;
-            }
-            selectEl.appendChild(option);
-        });
-
-        if (Array.from(selectEl.options).some((o) => o.value === current)) {
-            selectEl.value = current;
-        } else if (Array.from(selectEl.options).some((o) => o.value === 'images/products/default-product.svg')) {
-            selectEl.value = 'images/products/default-product.svg';
-        }
-    };
-
-    applyImagesToSelect(stockSelect);
-    applyImagesToSelect(marketplaceSelect);
     updateStockPreview();
     updateMarketplacePreview();
 }
@@ -2775,31 +2767,13 @@ function setGalleryState(mode, sku, images, cover = '') {
 function syncGalleryModeUi(mode, cover = '') {
     if (mode === 'marketplace') {
         const select = document.getElementById('marketplaceImageRef');
-        if (select && cover) {
-            const exists = Array.from(select.options || []).some((opt) => opt.value === cover);
-            if (!exists) {
-                const option = document.createElement('option');
-                option.value = cover;
-                option.textContent = cover;
-                select.appendChild(option);
-            }
-            select.value = cover;
-        }
+        if (select && cover) select.value = cover;
         updateMarketplacePreview();
         return;
     }
 
     const select = document.getElementById('newProductImageRef');
-    if (select && cover) {
-        const exists = Array.from(select.options || []).some((opt) => opt.value === cover);
-        if (!exists) {
-            const option = document.createElement('option');
-            option.value = cover;
-            option.textContent = cover;
-            select.appendChild(option);
-        }
-        select.value = cover;
-    }
+    if (select && cover) select.value = cover;
     updateStockPreview();
 }
 
@@ -3117,7 +3091,6 @@ async function setProductGalleryCover(sku, imagePath) {
     }
 
     showGalleryResult('stock', res.message || 'Portada actualizada', 'success');
-    await loadProductImageReferences();
     await loadProductGalleryForCurrentSku();
     await loadStock();
     await loadMarketplaceCeAdmin();
@@ -3136,7 +3109,6 @@ async function deleteProductGalleryImage(sku, imagePath) {
     }
 
     showGalleryResult('stock', res.message || 'Imagen eliminada', 'success');
-    await loadProductImageReferences();
     await loadProductGalleryForCurrentSku();
     await loadStock();
     await loadMarketplaceCeAdmin();
@@ -3170,7 +3142,6 @@ async function setMarketplaceGalleryCover(sku, imagePath) {
     }
 
     showGalleryResult('marketplace', res.message || 'Portada CE actualizada', 'success');
-    await loadProductImageReferences();
     await loadMarketplaceGalleryForCurrentSku();
     await loadMarketplaceCeAdmin();
     await loadStock();
@@ -3190,7 +3161,6 @@ async function deleteMarketplaceGalleryImage(sku, imagePath) {
     }
 
     showGalleryResult('marketplace', res.message || 'Imagen CE eliminada', 'success');
-    await loadProductImageReferences();
     await loadMarketplaceGalleryForCurrentSku();
     await loadMarketplaceCeAdmin();
     await loadStock();
@@ -3259,20 +3229,8 @@ async function uploadProductImages() {
         // Load gallery FIRST while SKU is still available
         await loadProductGalleryForCurrentSku();
         
-        // Update image references for cover selection
-        await loadProductImageReferences();
-        
         const select = document.getElementById('newProductImageRef');
-        if (select && data.cover) {
-            const exists = Array.from(select.options || []).some((o) => o.value === data.cover);
-            if (!exists) {
-                const option = document.createElement('option');
-                option.value = data.cover;
-                option.textContent = data.cover;
-                select.appendChild(option);
-            }
-            select.value = data.cover;
-        }
+        if (select && data.cover) select.value = data.cover;
         
         // Update preview after setting cover
         updateStockPreview();
@@ -3341,20 +3299,8 @@ async function uploadMarketplaceImages() {
         // Load gallery FIRST while SKU is still available
         await loadMarketplaceGalleryForCurrentSku();
         
-        // Update image references for cover selection
-        await loadProductImageReferences();
-        
         const select = document.getElementById('marketplaceImageRef');
-        if (select && data.cover) {
-            const exists = Array.from(select.options || []).some((o) => o.value === data.cover);
-            if (!exists) {
-                const option = document.createElement('option');
-                option.value = data.cover;
-                option.textContent = data.cover;
-                select.appendChild(option);
-            }
-            select.value = data.cover;
-        }
+        if (select && data.cover) select.value = data.cover;
         
         // Update preview after setting cover
         updateMarketplacePreview();
@@ -3538,15 +3484,19 @@ function fillMarketplaceForm(item) {
     setCategorySelections(marketplaceCategorySelect, categories);
 
     const marketplaceImageRef = document.getElementById('marketplaceImageRef');
-    if (marketplaceImageRef && item.image_url) {
-        const exists = Array.from(marketplaceImageRef.options || []).some((opt) => opt.value === item.image_url);
-        if (!exists) {
-            const option = document.createElement('option');
-            option.value = item.image_url;
-            option.textContent = item.image_url;
-            marketplaceImageRef.appendChild(option);
-        }
-        marketplaceImageRef.value = item.image_url;
+    if (marketplaceImageRef && item.image_url) marketplaceImageRef.value = item.image_url;
+
+    const skuForGallery = normalizeNumericSku(item.sku || '');
+    const fastImages = extractGalleryImagesFromItem(item);
+    if (fastImages.length === 0 && item.image_url && !String(item.image_url).includes('default-product.svg')) {
+        fastImages.push(String(item.image_url));
+    }
+    if (/^\d{5,6}$/.test(skuForGallery) && fastImages.length > 0) {
+        setGalleryState('marketplace', skuForGallery, fastImages, fastImages[0] || '');
+        renderProductGallery(fastImages, skuForGallery, 'marketplace');
+        const galleryStatus = document.getElementById('marketplaceGalleryStatus');
+        if (galleryStatus) galleryStatus.textContent = `Galería para ${skuForGallery}: ${fastImages.length} imagen(es)`;
+        syncGalleryModeUi('marketplace', fastImages[0] || '');
     }
 
     const saveBtn = document.getElementById('marketplaceSaveButton');
