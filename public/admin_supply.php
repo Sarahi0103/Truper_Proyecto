@@ -3244,6 +3244,17 @@ async function uploadProductImages() {
         }
 
         input.value = '';
+
+        const currentSku = getCurrentStockSkuForGallery();
+        const renderedImages = Array.isArray(data.images) && data.images.length > 0
+            ? data.images
+            : (data.cover ? [data.cover] : []);
+
+        if (/^\d{5,6}$/.test(currentSku) && renderedImages.length > 0) {
+            setGalleryState('stock', currentSku, renderedImages, data.cover || renderedImages[0] || '');
+            renderProductGallery(renderedImages, currentSku, 'stock');
+            syncGalleryModeUi('stock', data.cover || renderedImages[0] || '');
+        }
         
         // Load gallery FIRST while SKU is still available
         await loadProductGalleryForCurrentSku();
@@ -3310,6 +3321,17 @@ async function uploadMarketplaceImages() {
 
         showGalleryResult('marketplace', data.message || 'Imágenes CE cargadas correctamente', 'success');
         input.value = '';
+
+        const currentSku = getCurrentMarketplaceSkuForGallery();
+        const renderedImages = Array.isArray(data.images) && data.images.length > 0
+            ? data.images
+            : (data.cover ? [data.cover] : []);
+
+        if (/^\d{5,6}$/.test(currentSku) && renderedImages.length > 0) {
+            setGalleryState('marketplace', currentSku, renderedImages, data.cover || renderedImages[0] || '');
+            renderProductGallery(renderedImages, currentSku, 'marketplace');
+            syncGalleryModeUi('marketplace', data.cover || renderedImages[0] || '');
+        }
         
         // Load gallery FIRST while SKU is still available
         await loadMarketplaceGalleryForCurrentSku();
