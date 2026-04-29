@@ -1044,6 +1044,10 @@ function normalize_gallery_base_name_admin_supply(string $base): string {
 }
 
 function product_gallery_dir_admin_supply(string $sku): string {
+    return __DIR__ . '/../images/products/gallery/' . $sku;
+}
+
+function product_gallery_dir_legacy_admin_supply(string $sku): string {
     return __DIR__ . '/../images/products/by_code/' . $sku;
 }
 
@@ -1051,24 +1055,43 @@ function list_product_gallery_files_admin_supply(string $sku): array {
     $sku = normalize_sku_admin_supply($sku);
     if ($sku === '') return [];
 
-    $fullDir = product_gallery_dir_admin_supply($sku);
-    if (!is_dir($fullDir)) return [];
+    $result = [];
 
-    $matches = glob($fullDir . '/*.{jpg,jpeg,png,webp,gif,JPG,JPEG,PNG,WEBP,GIF}', GLOB_BRACE);
-    if (empty($matches) || !is_array($matches)) return [];
-
-    usort($matches, function ($a, $b) {
-        $scoreA = admin_supply_image_priority_score($a);
-        $scoreB = admin_supply_image_priority_score($b);
-        if ($scoreA === $scoreB) {
-            return strcmp((string)$a, (string)$b);
+    // Primary: new gallery/ directory (admin-uploaded images)
+    $galleryDir = __DIR__ . '/../images/products/gallery/' . $sku;
+    if (is_dir($galleryDir)) {
+        $matches = glob($galleryDir . '/*.{jpg,jpeg,png,webp,gif,JPG,JPEG,PNG,WEBP,GIF}', GLOB_BRACE);
+        if (!empty($matches) && is_array($matches)) {
+            usort($matches, function ($a, $b) {
+                return strcmp((string)$a, (string)$b);
+            });
+            foreach ($matches as $path) {
+                $result[] = 'images/products/gallery/' . $sku . '/' . basename($path);
+            }
         }
-        return $scoreA <=> $scoreB;
-    });
+    }
 
-    return array_map(function ($path) use ($sku) {
-        return 'images/products/by_code/' . $sku . '/' . basename($path);
-    }, $matches);
+    // Fallback: legacy by_code/ directory (catalog seed images)
+    $legacyDir = __DIR__ . '/../images/products/by_code/' . $sku;
+    if (is_dir($legacyDir)) {
+        $matches = glob($legacyDir . '/*.{jpg,jpeg,png,webp,gif,JPG,JPEG,PNG,WEBP,GIF}', GLOB_BRACE);
+        if (!empty($matches) && is_array($matches)) {
+            usort($matches, function ($a, $b) {
+                $scoreA = admin_supply_image_priority_score($a);
+                $scoreB = admin_supply_image_priority_score($b);
+                if ($scoreA === $scoreB) return strcmp((string)$a, (string)$b);
+                return $scoreA <=> $scoreB;
+            });
+            foreach ($matches as $path) {
+                $legacyPath = 'images/products/by_code/' . $sku . '/' . basename($path);
+                if (!in_array($legacyPath, $result, true)) {
+                    $result[] = $legacyPath;
+                }
+            }
+        }
+    }
+
+    return $result;
 }
 
 function normalize_product_gallery_images_admin_supply(array $images): array {
