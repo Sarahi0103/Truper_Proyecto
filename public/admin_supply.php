@@ -300,7 +300,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <input type="hidden" id="newProductSeedMode" value="0">
 
                 <div class="grid grid-2">
-                    <div class="form-group"><label>Código del producto (5 o 6 números)</label><input id="newProductSku" type="text" maxlength="6" inputmode="numeric" pattern="\d{5,6}" placeholder="Ej. 23032"><small id="newProductSkuStatus" class="text-muted">Debe ser único y de 5 o 6 números.</small></div>
+                    <div class="form-group"><label>Código del producto (5 o 6 números)</label><input id="newProductSku" type="text" maxlength="6" inputmode="numeric" pattern="\d{5,6}" placeholder="Ej. 23032"><small id="newProductSkuStatus" class="text-muted">Código listo para guardar.</small></div>
                     <div class="form-group"><label>Nombre</label><input id="newProductName" type="text" maxlength="255"></div>
                 </div>
 
@@ -962,7 +962,7 @@ async function validateSkuAvailability(kind, options = {}) {
     if (skuInput) skuInput.value = sku;
 
     if (!sku) {
-        setSkuStatus(statusId, 'Debe ser único y de 5 o 6 números.', 'muted');
+        setSkuStatus(statusId, 'Código listo para guardar.', 'muted');
         return false;
     }
 
@@ -1882,7 +1882,7 @@ function resetProductForm() {
     if (saveBtn) saveBtn.textContent = 'Guardar producto';
     const box = document.getElementById('productCreateResult');
     if (box) box.innerHTML = '';
-    setSkuStatus('newProductSkuStatus', 'Debe ser único y de 5 o 6 números.', 'muted');
+    setSkuStatus('newProductSkuStatus', 'Código listo para guardar.', 'muted');
     updateStockPreview();
     
     // Clear gallery display since form is being reset
@@ -3364,14 +3364,6 @@ async function createProductByAdmin() {
         return;
     }
 
-    const skuOk = await validateSkuAvailability('product', { strict: true });
-    if (!skuOk) {
-        if (box) {
-            box.innerHTML = '<div class="alert alert-error">No fue posible guardar: código inválido o duplicado.</div>';
-        }
-        return;
-    }
-
     const selectedCategoryOptions = Array.from(document.getElementById('newProductCategory').selectedOptions || []);
     const selectedCategories = selectedCategoryOptions.map((option) => option.value).filter(Boolean);
 
@@ -3962,10 +3954,9 @@ document.addEventListener('DOMContentLoaded', function () {
         productSkuInput.addEventListener('input', function () {
             productSkuInput.value = normalizeNumericSku(productSkuInput.value);
             updateStockPreview();
-            setSkuStatus('newProductSkuStatus', 'Debe ser único y de 5 o 6 números.', 'muted');
+            setSkuStatus('newProductSkuStatus', 'Código listo para guardar.', 'muted');
         });
         productSkuInput.addEventListener('blur', async function () {
-            await validateSkuAvailability('product');
             await loadProductGalleryForCurrentSku();
         });
     }
@@ -3983,7 +3974,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    setSkuStatus('newProductSkuStatus', 'Debe ser único y de 5 o 6 números.', 'muted');
+    setSkuStatus('newProductSkuStatus', 'Código listo para guardar.', 'muted');
     setSkuStatus('marketplaceSkuStatus', 'Debe ser único y de 5 o 6 números.', 'muted');
 
     const stockSearch = document.getElementById('stockSearch');
