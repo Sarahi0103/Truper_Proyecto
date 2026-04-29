@@ -1943,6 +1943,7 @@ function fillProductFormById(id) {
             box.innerHTML = `<div class="alert alert-info">Editando producto: estado actual <strong>${visibility}</strong>.</div>`;
         }
     }
+    primeGalleryFromCurrentForm('stock');
     updateStockPreview();
     loadProductGalleryForCurrentSku();
 }
@@ -2809,6 +2810,29 @@ function getGalleryImagesForMode(mode, sku) {
     return [];
 }
 
+function primeGalleryFromCurrentForm(mode) {
+    const isMarketplace = mode === 'marketplace';
+    const sku = normalizeNumericSku(document.getElementById(isMarketplace ? 'marketplaceSku' : 'newProductSku')?.value || '');
+    if (!/^\d{5,6}$/.test(sku)) {
+        return;
+    }
+
+    const imageRef = String(document.getElementById(isMarketplace ? 'marketplaceImageRef' : 'newProductImageRef')?.value || '').trim();
+    const cachedImages = getGalleryImagesForMode(mode, sku);
+    const images = cachedImages.length > 0
+        ? cachedImages
+        : (imageRef && !imageRef.includes('default-product.svg') ? [imageRef] : []);
+
+    if (images.length === 0) {
+        return;
+    }
+
+    const cover = images[0] || imageRef || '';
+    setGalleryState(mode, sku, images, cover);
+    renderProductGallery(images, sku, mode);
+    syncGalleryModeUi(mode, cover);
+}
+
 async function reorderGalleryImages(sku, orderedImages, mode = 'stock') {
     const previousState = getGalleryState(mode);
     const previousImages = previousState && previousState.sku === String(sku || '') && Array.isArray(previousState.images)
@@ -3477,6 +3501,7 @@ function fillMarketplaceForm(item) {
         const visibility = Number(item.is_active) ? 'Visible' : 'Oculto';
         box.innerHTML = `<div class="alert alert-info">Editando artículo CE: estado actual <strong>${visibility}</strong>.</div>`;
     }
+    primeGalleryFromCurrentForm('marketplace');
     updateMarketplacePreview();
     loadMarketplaceGalleryForCurrentSku();
 }
