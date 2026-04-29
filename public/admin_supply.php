@@ -722,6 +722,10 @@ let stockItemsCache = [];
 let marketplaceItemsCache = [];
 let stockGalleryCache = [];
 let marketplaceGalleryCache = [];
+const galleryStateCache = {
+    stock: { sku: '', images: [], cover: '' },
+    marketplace: { sku: '', images: [], cover: '' }
+};
 
 function escapeHtml(v) {
     return String(v || '').replace(/[&<>"']/g, function(m) {
