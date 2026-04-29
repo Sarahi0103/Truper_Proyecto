@@ -3772,6 +3772,13 @@ async function saveMarketplaceCeByAdmin() {
         return;
     }
 
+    // If the user selected files but hasn't waited, upload them first so the product save can reference the new images
+    const marketplaceImagesEl = document.getElementById('marketplaceImages');
+    if (marketplaceImagesEl && marketplaceImagesEl.files && marketplaceImagesEl.files.length > 0) {
+        if (box) box.innerHTML = '<div class="alert alert-info">Subiendo imágenes CE, espera por favor...</div>';
+        await uploadMarketplaceImages();
+    }
+
     const payload = {
         id: currentId,
         sku: normalizedSku,

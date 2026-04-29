@@ -3184,6 +3184,9 @@ try {
             $stockQuantity = (int)($_POST['stock_quantity'] ?? ($input['stock_quantity'] ?? 1));
             $isActive = isset($_POST['is_active']) ? !empty($_POST['is_active']) : (isset($input['is_active']) ? !empty($input['is_active']) : true);
 
+            // Get all gallery images from disk BEFORE save to include them in variants_json
+            $galleryImages = list_product_gallery_files_admin_supply($sku);
+
             $mkSkuCol = sku_column_for_table_admin_supply('marketplace_ce_products');
             $mkNameCol = name_column_for_table_admin_supply('marketplace_ce_products');
             $mkCategoryCol = first_existing_column_admin_supply('marketplace_ce_products', ['category', 'categoria']);
@@ -3252,6 +3255,15 @@ try {
                 if ($mkConditionCol !== null) { $sets[] = $mkConditionCol . ' = ?'; $values[] = $conditionLabel; }
                 if ($mkPriceCol !== null) { $sets[] = $mkPriceCol . ' = ?'; $values[] = $unitPrice; }
                 if ($mkStockCol !== null) { $sets[] = $mkStockCol . ' = ?'; $values[] = max(0, $stockQuantity); }
+                
+                // Preserve existing gallery images if any, or use newly uploaded ones
+                $existingGallery = list_product_gallery_images_admin_supply($sku);
+                $finalGallery = !empty($existingGallery) ? $existingGallery : $galleryImages;
+                if (!empty($finalGallery) && db_column_exists('marketplace_ce_products', 'variants_json')) {
+                    $sets[] = 'variants_json = ?';
+                    $values[] = json_encode($finalGallery, JSON_UNESCAPED_UNICODE);
+                }
+                
                 if ($mkUpdatedByCol !== null) { $sets[] = $mkUpdatedByCol . ' = ?'; $values[] = (int)($_SESSION['user_id'] ?? 0); }
                 if ($mkUpdatedAtCol !== null) { $sets[] = $mkUpdatedAtCol . ' = CURRENT_TIMESTAMP'; }
                 if ($mkCategoryCol !== null) { $sets[] = $mkCategoryCol . ' = ?'; $values[] = $category; }
@@ -3273,6 +3285,15 @@ try {
                 if ($mkConditionCol !== null) { $columns[] = $mkConditionCol; $placeholders[] = '?'; $values[] = $conditionLabel; }
                 if ($mkPriceCol !== null) { $columns[] = $mkPriceCol; $placeholders[] = '?'; $values[] = $unitPrice; }
                 if ($mkStockCol !== null) { $columns[] = $mkStockCol; $placeholders[] = '?'; $values[] = max(0, $stockQuantity); }
+                
+                // Add gallery images to variants_json for new items too
+                $finalGallery = !empty($galleryImages) ? $galleryImages : [$imageUrl];
+                if (db_column_exists('marketplace_ce_products', 'variants_json')) {
+                    $columns[] = 'variants_json';
+                    $placeholders[] = '?';
+                    $values[] = json_encode($finalGallery, JSON_UNESCAPED_UNICODE);
+                }
+                
                 if ($mkImageCol !== null) { $columns[] = $mkImageCol; $placeholders[] = '?'; $values[] = $imageUrl; }
                 if ($mkCreatedByCol !== null) { $columns[] = $mkCreatedByCol; $placeholders[] = '?'; $values[] = (int)($_SESSION['user_id'] ?? 0); }
                 if ($mkUpdatedByCol !== null) { $columns[] = $mkUpdatedByCol; $placeholders[] = '?'; $values[] = (int)($_SESSION['user_id'] ?? 0); }
