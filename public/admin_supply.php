@@ -3179,14 +3179,12 @@ async function uploadProductImages() {
         if (resultBox) {
             resultBox.innerHTML = '<div class="alert alert-error">Primero captura un código de producto válido (5 o 6 números)</div>';
         }
-        return;
+        return false;
     }
 
     if (!input || !input.files || input.files.length === 0) {
-        if (resultBox) {
-            resultBox.innerHTML = '<div class="alert alert-error">Selecciona una o varias imágenes para cargar</div>';
-        }
-        return;
+        // No hay imágenes seleccionadas - permitir continuar
+        return true;
     }
 
     const formData = new FormData();
@@ -3210,7 +3208,7 @@ async function uploadProductImages() {
             if (resultBox) {
                 resultBox.innerHTML = `<div class="alert alert-error">${escapeHtml((data && data.message) ? data.message : 'No fue posible cargar las imágenes')}</div>`;
             }
-            return;
+            return false;
         }
 
         if (resultBox) {
@@ -3238,6 +3236,8 @@ async function uploadProductImages() {
         
         // Update preview after setting cover
         updateStockPreview();
+        
+        return true;
     } catch (error) {
         console.error('Error al subir imágenes:', error);
         if (resultBox) {
@@ -3247,7 +3247,9 @@ async function uploadProductImages() {
             }
             resultBox.innerHTML = '<div class="alert alert-error">' + escapeHtml(errorMsg) + '</div>';
         }
+        return false;
     }
+}
 }
 
 async function uploadMarketplaceImages() {
@@ -3256,12 +3258,12 @@ async function uploadMarketplaceImages() {
 
     if (!/^\d{5,6}$/.test(sku)) {
         showGalleryResult('marketplace', 'Primero captura un código SKU CE válido (5 o 6 números)', 'error');
-        return;
+        return false;
     }
 
     if (!input || !input.files || input.files.length === 0) {
-        showGalleryResult('marketplace', 'Selecciona una o varias imágenes para cargar', 'error');
-        return;
+        // No hay imágenes seleccionadas - permitir continuar
+        return true;
     }
 
     const formData = new FormData();
@@ -3283,7 +3285,7 @@ async function uploadMarketplaceImages() {
         const data = await response.json();
         if (!data || !data.success) {
             showGalleryResult('marketplace', (data && data.message) ? data.message : 'No fue posible cargar las imágenes CE', 'error');
-            return;
+            return false;
         }
 
         showGalleryResult('marketplace', data.message || 'Imágenes CE cargadas correctamente', 'success');
@@ -3308,9 +3310,12 @@ async function uploadMarketplaceImages() {
         
         // Update preview after setting cover
         updateMarketplacePreview();
+        
+        return true;
     } catch (error) {
         console.error('Error al subir imágenes CE:', error);
         showGalleryResult('marketplace', 'Error al cargar imágenes CE: ' + (error.message || 'error desconocido'), 'error');
+        return false;
     }
 }
 
@@ -3393,7 +3398,10 @@ async function createProductByAdmin() {
     const newProductImagesEl = document.getElementById('newProductImages');
     if (newProductImagesEl && newProductImagesEl.files && newProductImagesEl.files.length > 0) {
         if (box) box.innerHTML = '<div class="alert alert-info">Subiendo imágenes, espera por favor...</div>';
-        await uploadProductImages();
+        const uploadSuccess = await uploadProductImages();
+        if (!uploadSuccess) {
+            return; // Stop if image upload failed
+        }
     }
 
     const payload = {
@@ -3776,7 +3784,10 @@ async function saveMarketplaceCeByAdmin() {
     const marketplaceImagesEl = document.getElementById('marketplaceImages');
     if (marketplaceImagesEl && marketplaceImagesEl.files && marketplaceImagesEl.files.length > 0) {
         if (box) box.innerHTML = '<div class="alert alert-info">Subiendo imágenes CE, espera por favor...</div>';
-        await uploadMarketplaceImages();
+        const uploadSuccess = await uploadMarketplaceImages();
+        if (!uploadSuccess) {
+            return; // Stop if image upload failed
+        }
     }
 
     const payload = {
