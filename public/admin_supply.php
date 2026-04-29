@@ -2585,9 +2585,14 @@ async function loadProductCategories(onlyActive = true) {
     const marketplaceCategorySelect = document.getElementById('marketplaceCategory');
     const categoriesListBox = document.getElementById('categoriesList');
     const action = `/admin_supply.php?action=categories-list${onlyActive ? '&active=1' : ''}`;
-    const res = await apiCall(action, 'GET', null, { silent: true });
+    const res = await apiCall(action, 'GET', null, { silent: false });
 
     if (!res || !res.success || !Array.isArray(res.items)) {
+        // If API fails and we're asking for all categories, at least preserve existing select options
+        if (onlyActive === false && (categorySelect || marketplaceCategorySelect)) {
+            // Fallback: try to use existing options or continue with what's there
+            console.warn('Failed to load categories from API, using existing options');
+        }
         if (categoriesListBox && !onlyActive) {
             categoriesListBox.innerHTML = '<p class="text-muted">No fue posible cargar categorías.</p>';
         }
@@ -2621,6 +2626,7 @@ async function loadProductCategories(onlyActive = true) {
 
     fillSelect(categorySelect);
     fillSelect(marketplaceCategorySelect);
+    console.log('Categories loaded:', res.items.length, 'items');
 
     if (!onlyActive && categoriesListBox) {
         if (res.items.length === 0) {
