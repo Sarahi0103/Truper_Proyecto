@@ -722,6 +722,9 @@ let stockItemsCache = [];
 let marketplaceItemsCache = [];
 let stockGalleryCache = [];
 let marketplaceGalleryCache = [];
+let marketplaceCurrentPage = 1;
+let marketplacePagination = null;
+const marketplacePerPage = 50;
 const galleryStateCache = {
     stock: { sku: '', images: [], cover: '' },
     marketplace: { sku: '', images: [], cover: '' }
@@ -1597,6 +1600,7 @@ async function loadStock(page = 1, customPerPage = null) {
     stockItemsCache = res.items;
     renderStockList();
     renderStockPagination(res.pagination);
+    updateStockPreview();
 }
 
 function renderStockPagination(pagination) {
@@ -2588,35 +2592,33 @@ async function loadProductCategories(onlyActive = true) {
         return;
     }
 
-    if (onlyActive) {
-        const fillSelect = function (selectEl) {
-            if (!selectEl) return;
-            const selectedValues = new Set(
-                Array.from(selectEl.selectedOptions || []).map((option) => normalizeCategoryValue(option.value))
-            );
-            const seenCategories = new Set();
-            selectEl.innerHTML = '';
-            res.items.forEach((cat) => {
-                const categoryName = String(cat.name || '').trim();
-                const categoryNameNormalized = normalizeCategoryValue(categoryName);
-                
-                if (seenCategories.has(categoryNameNormalized)) {
-                    return;
-                }
-                seenCategories.add(categoryNameNormalized);
-                
-                const option = document.createElement('option');
-                option.value = categoryName;
-                option.textContent = categoryName;
-                option.dataset.id = String(Number(cat.id || 0));
-                option.selected = selectedValues.has(categoryNameNormalized);
-                selectEl.appendChild(option);
-            });
-        };
+    const fillSelect = function (selectEl) {
+        if (!selectEl) return;
+        const selectedValues = new Set(
+            Array.from(selectEl.selectedOptions || []).map((option) => normalizeCategoryValue(option.value))
+        );
+        const seenCategories = new Set();
+        selectEl.innerHTML = '';
+        res.items.forEach((cat) => {
+            const categoryName = String(cat.name || '').trim();
+            const categoryNameNormalized = normalizeCategoryValue(categoryName);
 
-        fillSelect(categorySelect);
-        fillSelect(marketplaceCategorySelect);
-    }
+            if (seenCategories.has(categoryNameNormalized)) {
+                return;
+            }
+            seenCategories.add(categoryNameNormalized);
+
+            const option = document.createElement('option');
+            option.value = categoryName;
+            option.textContent = categoryName;
+            option.dataset.id = String(Number(cat.id || 0));
+            option.selected = selectedValues.has(categoryNameNormalized);
+            selectEl.appendChild(option);
+        });
+    };
+
+    fillSelect(categorySelect);
+    fillSelect(marketplaceCategorySelect);
 
     if (!onlyActive && categoriesListBox) {
         if (res.items.length === 0) {
@@ -2658,7 +2660,6 @@ async function loadProductCategories(onlyActive = true) {
 }
 
 async function refreshCategoriesUi() {
-    await loadProductCategories(true);
     await loadProductCategories(false);
     updateStockPreview();
 }
@@ -3558,6 +3559,7 @@ async function loadMarketplaceCeAdmin(page = 1, customPerPage = null) {
     marketplacePagination = res.pagination || null;
     renderMarketplaceList();
     renderMarketplacePagination();
+    updateMarketplacePreview();
 }
 
 function updateMarketplaceQuickSelection(items = marketplaceItemsCache) {
