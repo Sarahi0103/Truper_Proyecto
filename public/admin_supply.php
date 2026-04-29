@@ -348,11 +348,10 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     <div class="form-group">
                         <label>Subir imagen o varias imágenes</label>
                         <input id="newProductImages" type="file" accept="image/*" multiple>
-                        <small class="text-muted">Puedes subir una o varias imágenes. Se guardarán en el catálogo de archivos.</small>
+                        <small class="text-muted">Al seleccionar archivos se subirán automáticamente. El botón manual queda como respaldo.</small>
                     </div>
                     <div class="form-group d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap;">
                         <button class="btn btn-secondary" type="button" onclick="uploadProductImages()">Cargar imágenes</button>
-                        <button class="btn btn-ghost" type="button" onclick="loadProductImageReferences()">Actualizar opciones</button>
                     </div>
                 </div>
 
@@ -407,6 +406,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 </div>
                 <div id="stockListCaption" class="admin-list-caption">Cargando productos...</div>
                 <div id="stockRows"><p class="text-muted">Cargando...</p></div>
+                <div id="stockPagination" class="mt-3"></div>
             </div></div>
         </section>
 
@@ -666,11 +666,10 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     <div class="form-group">
                         <label>Subir imagen o varias imágenes</label>
                         <input id="marketplaceImages" type="file" accept="image/*" multiple>
-                        <small class="text-muted">Puedes subir una o varias imágenes para este SKU CE.</small>
+                        <small class="text-muted">Al seleccionar archivos se subirán automáticamente. El botón manual queda como respaldo.</small>
                     </div>
                     <div class="form-group d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap;">
                         <button class="btn btn-secondary" type="button" onclick="uploadMarketplaceImages()">Cargar imágenes</button>
-                        <button class="btn btn-ghost" type="button" onclick="loadProductImageReferences()">Actualizar opciones</button>
                     </div>
                 </div>
 
@@ -724,6 +723,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 </div>
                 <div id="marketplaceListCaption" class="admin-list-caption">Cargando artículos CE...</div>
                 <div id="marketplaceList" class="text-muted">Cargando artículos CE...</div>
+                <div id="marketplacePagination" class="mt-3"></div>
             </div></div>
         </section>
     </div>
@@ -754,7 +754,12 @@ function normalizeNumericSku(rawValue) {
 }
 
 function isValidNumericSku(sku) {
-    return /^\d{5}$/.test(String(sku || '').trim());
+    return /^\d{5,6}$/.test(String(sku || '').trim());
+}
+
+function formatAdminMoney(value) {
+    const amount = Number(value || 0);
+    return `$${amount.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 const skuCheckVersion = { product: 0, marketplace: 0 };
@@ -769,7 +774,7 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
     const unitPrice = Number(item.unit_price || 0);
     const stock = Math.max(0, Number(item.stock_quantity || 0));
     const reorder = Math.max(0, Number(item.reorder_level || 10));
-    const condition = mode === 'marketplace' ? String(item.condition_label || 'Seminuevo') : 'Modelo estándar';
+    const condition = mode === 'marketplace' ? String(item.condition_label || 'Seminuevo') : 'Modelo Estandar';
     const stockText = stock <= (mode === 'marketplace' ? 2 : reorder) ? 'Stock bajo: ' : 'Stock: ';
     const stockClass = stock <= (mode === 'marketplace' ? 2 : reorder) ? 'stock-low' : 'stock-ok';
     const inactive = Number(item.is_active) === 0 || item.is_active === false || item.is_active === 'f' || item.is_active === 'false' || item.is_active === 'False' || item.is_active === 'FALSE';
@@ -796,7 +801,7 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
     return `
         <article class="product-card-min ${inactive ? 'product-card-inactive' : ''}">
             <div class="product-media">
-                <img class="product-gallery-image active" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(name)}" loading="lazy">
+                <img class="product-gallery-image active" src="${getSafeImageSrc(imageUrl)}" alt="${escapeHtml(name)}" loading="lazy">
             </div>
             <div class="product-content">
                 <div class="catalog-tag">${escapeHtml(category)}</div>
@@ -806,7 +811,7 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
                 <div><span class="variant-pill">${escapeHtml(condition)}</span></div>
                 <span class="stock-badge ${stockClass}">${stockText}${stock}</span>
                 <div style="margin-top:4px;"><span class="badge ${stateBadgeClass}">Estado: ${stateLabel}</span></div>
-                <div class="catalog-price">$${Math.round(unitPrice).toLocaleString('es-MX')}</div>
+                <div class="catalog-price">${formatAdminMoney(unitPrice)}</div>
                 ${withActions ? `<div class="product-actions">${actions}</div>` : '<div class="text-muted" style="font-size:12px;margin-top:8px;">Vista previa del diseño en portada.</div>'}
                 ${inactive ? '<div class="text-muted" style="font-size:12px;margin-top:6px;">Producto oculto/desactivado.</div>' : ''}
             </div>
@@ -923,7 +928,8 @@ function setSkuStatus(statusId, message, tone = 'muted') {
     }
 }
 
-async function validateSkuAvailability(kind) {
+async function validateSkuAvailability(kind, options = {}) {
+    const strict = Boolean(options.strict);
     const isMarketplace = kind === 'marketplace';
     const skuInput = document.getElementById(isMarketplace ? 'marketplaceSku' : 'newProductSku');
     const statusId = isMarketplace ? 'marketplaceSkuStatus' : 'newProductSkuStatus';
@@ -931,7 +937,7 @@ async function validateSkuAvailability(kind) {
     if (skuInput) skuInput.value = sku;
 
     if (!sku) {
-        setSkuStatus(statusId, 'Debe ser único y de 5 números.', 'muted');
+        setSkuStatus(statusId, 'Código listo para guardar.', 'muted');
         return false;
     }
 
@@ -956,6 +962,11 @@ async function validateSkuAvailability(kind) {
     }
 
     if (!check || !check.success) {
+        if (strict) {
+            setSkuStatus(statusId, 'No fue posible verificar la disponibilidad. Intenta de nuevo.', 'warning');
+            return false;
+        }
+
         // Fallback local: use loaded caches so the admin can continue even if SKU endpoint is temporarily unavailable.
         const normalizeRowSku = (row) => normalizeNumericSku(displayProductCode(row?.sku || ''));
 
@@ -1172,8 +1183,8 @@ async function applyPriceAdjustment() {
                     ${preview.map(item => `
                         <tr style="border-bottom: 1px solid var(--ui-border-soft);">
                             <td style="padding: 0.5rem;">${escapeHtml(item.name)}</td>
-                            <td style="padding: 0.5rem; text-align: right;">$${item.current_price.toFixed(0)}</td>
-                            <td style="padding: 0.5rem; text-align: right; color: var(--color-naranja); font-weight: 600;">$${item.new_price.toFixed(0)}</td>
+                            <td style="padding: 0.5rem; text-align: right;">${formatAdminMoney(item.current_price)}</td>
+                            <td style="padding: 0.5rem; text-align: right; color: var(--color-naranja); font-weight: 600;">${formatAdminMoney(item.new_price)}</td>
                         </tr>
                     `).join('')}
                 </tbody>
@@ -1545,7 +1556,6 @@ async function loadStock(page = 1) {
     stockCurrentPage = page;
     const res = await apiCall(`/admin_supply.php?action=stock&page=${page}&per_page=${stockPerPage}`, 'GET', null, { silent: true });
     const body = document.getElementById('stockRows');
-    const caption = document.getElementById('stockListCaption');
     
     if (!res || !res.success || !Array.isArray(res.items)) {
         if (body) body.innerHTML = '<tr><td colspan="10" class="text-center text-muted">No fue posible cargar productos.</td></tr>';
@@ -1569,7 +1579,7 @@ function renderStockPagination(pagination) {
             <div style="display:flex; gap:0.5rem; align-items:center;">
                 <button class="btn btn-small" ${current_page <= 1 ? 'disabled' : ''} onclick="loadStock(${current_page - 1})">Anterior</button>
                 <span class="text-muted">Página <strong>${current_page}</strong> de ${total_pages}</span>
-                <button class="btn btn-small" ${current_page >= total_pages ? 'disabled' : ''} onclick="loadStock(${current_page + 1})">Siguiente</button>
+                <button class="btn btn-small btn-primary" ${current_page >= total_pages ? 'disabled' : ''} onclick="loadStock(${current_page + 1})">Ver más</button>
             </div>
         </div>
     `;
@@ -1696,42 +1706,6 @@ async function addCategoryFromQuickForm(selectId, inputId, resultId) {
     }
 }
 
-async function addCategoryFromStockForm() {
-    return addCategoryFromQuickForm('newProductCategory', 'newCategoryQuickName', 'quickCategoryResult');
-}
-
-async function addCategoryFromMarketplaceForm() {
-    return addCategoryFromQuickForm('marketplaceCategory', 'marketplaceCategoryQuickName', 'marketplaceQuickCategoryResult');
-}
-
-function renderStockList() {
-    const body = document.getElementById('stockRows');
-    const caption = document.getElementById('stockListCaption');
-    const search = (document.getElementById('stockSearch')?.value || '').toLowerCase().trim();
-
-    if (!body) return;
-
-    const filtered = stockItemsCache.filter((item) => {
-        const code = displayProductCode(item.sku || '').toLowerCase();
-        const name = String(item.name || '').toLowerCase();
-        const cat = String(item.category || '').toLowerCase();
-        return `${code} ${name} ${cat}`.includes(search);
-    });
-
-    if (caption) {
-        caption.textContent = `Mostrando ${filtered.length} de ${stockItemsCache.length} productos`;
-    }
-
-    updateStockQuickSelection(filtered);
-
-    if (filtered.length === 0) {
-        body.innerHTML = '<p class="text-muted">No hay productos que coincidan con la búsqueda.</p>';
-        return;
-    }
-
-    body.innerHTML = `<div class="catalog-grid-min">${filtered.map((item) => renderAdminProductCard(item, 'stock')).join('')}</div>`;
-}
-
 function updateStockQuickSelection(items = stockItemsCache) {
     const select = document.getElementById('stockBulkSelect');
     if (!select) return;
@@ -1763,6 +1737,34 @@ function updateStockQuickSelection(items = stockItemsCache) {
         option.selected = previouslySelected.has(id);
         select.appendChild(option);
     });
+}
+
+function renderStockList() {
+    const body = document.getElementById('stockRows');
+    const caption = document.getElementById('stockListCaption');
+    const query = (document.getElementById('stockSearch')?.value || '').toLowerCase().trim();
+
+    if (!body) return;
+
+    const filtered = stockItemsCache.filter((item) => {
+        const code = displayProductCode(item.sku || '').toLowerCase();
+        const name = String(item.name || '').toLowerCase();
+        const cat = String(item.category || '').toLowerCase();
+        return `${code} ${name} ${cat}`.includes(query);
+    });
+
+    if (caption) {
+        caption.textContent = `Mostrando ${filtered.length} de ${stockItemsCache.length} productos`;
+    }
+
+    updateStockQuickSelection(filtered);
+
+    if (filtered.length === 0) {
+        body.innerHTML = '<p class="text-muted">No hay productos que coincidan con la búsqueda.</p>';
+        return;
+    }
+
+    body.innerHTML = `<div class="catalog-grid-min">${filtered.map((item) => renderAdminProductCard(item, 'stock')).join('')}</div>`;
 }
 
 function getStockBulkSelectedIds() {
@@ -1855,9 +1857,14 @@ function resetProductForm() {
     if (saveBtn) saveBtn.textContent = 'Guardar producto';
     const box = document.getElementById('productCreateResult');
     if (box) box.innerHTML = '';
-    setSkuStatus('newProductSkuStatus', 'Debe ser único y de 5 números.', 'muted');
+    setSkuStatus('newProductSkuStatus', 'Código listo para guardar.', 'muted');
     updateStockPreview();
-    loadProductGalleryForCurrentSku();
+    
+    // Clear gallery display since form is being reset
+    const galleryHost = document.getElementById('productGalleryList');
+    const galleryStatus = document.getElementById('productGalleryStatus');
+    if (galleryHost) galleryHost.innerHTML = '';
+    if (galleryStatus) galleryStatus.textContent = 'Escribe un código de 5 o 6 números para cargar su galería.';
 }
 
 function fillProductFormById(id) {
@@ -1911,6 +1918,7 @@ function fillProductFormById(id) {
             box.innerHTML = `<div class="alert alert-info">Editando producto: estado actual <strong>${visibility}</strong>.</div>`;
         }
     }
+    primeGalleryFromCurrentForm('stock');
     updateStockPreview();
     loadProductGalleryForCurrentSku();
 }
@@ -2510,6 +2518,14 @@ async function loadProductImageReferences() {
         return;
     }
 
+    const formatImageOptionLabel = function (img, index) {
+        const value = String(img || '');
+        if (value.startsWith('data:image/')) {
+            return `Imagen guardada ${index + 1}`;
+        }
+        return value;
+    };
+
     const applyImagesToSelect = function (selectEl) {
         if (!selectEl) return;
         const current = selectEl.value || 'images/products/default-product.svg';
@@ -2723,33 +2739,124 @@ function showGalleryResult(mode, message, tone = 'success') {
     box.innerHTML = `<div class="alert alert-${tone}">${escapeHtml(message)}</div>`;
 }
 
+function getGalleryState(mode = 'stock') {
+    return galleryStateCache[mode] || galleryStateCache.stock;
+}
+
+function setGalleryState(mode, sku, images, cover = '') {
+    const key = mode === 'marketplace' ? 'marketplace' : 'stock';
+    galleryStateCache[key] = {
+        sku: String(sku || ''),
+        images: Array.isArray(images) ? images.slice() : [],
+        cover: String(cover || '')
+    };
+}
+
+function syncGalleryModeUi(mode, cover = '') {
+    if (mode === 'marketplace') {
+        const select = document.getElementById('marketplaceImageRef');
+        if (select && cover) {
+            const exists = Array.from(select.options || []).some((opt) => opt.value === cover);
+            if (!exists) {
+                const option = document.createElement('option');
+                option.value = cover;
+                option.textContent = cover;
+                select.appendChild(option);
+            }
+            select.value = cover;
+        }
+        updateMarketplacePreview();
+        return;
+    }
+
+    const select = document.getElementById('newProductImageRef');
+    if (select && cover) {
+        const exists = Array.from(select.options || []).some((opt) => opt.value === cover);
+        if (!exists) {
+            const option = document.createElement('option');
+            option.value = cover;
+            option.textContent = cover;
+            select.appendChild(option);
+        }
+        select.value = cover;
+    }
+    updateStockPreview();
+}
+
+function getGalleryImagesForMode(mode, sku) {
+    const state = getGalleryState(mode);
+    if (state && state.sku === String(sku || '') && Array.isArray(state.images) && state.images.length > 0) {
+        return state.images.slice();
+    }
+    return [];
+}
+
+function primeGalleryFromCurrentForm(mode) {
+    const isMarketplace = mode === 'marketplace';
+    const sku = normalizeNumericSku(document.getElementById(isMarketplace ? 'marketplaceSku' : 'newProductSku')?.value || '');
+    if (!/^\d{5,6}$/.test(sku)) {
+        return;
+    }
+
+    const imageRef = String(document.getElementById(isMarketplace ? 'marketplaceImageRef' : 'newProductImageRef')?.value || '').trim();
+    const cachedImages = getGalleryImagesForMode(mode, sku);
+    const images = cachedImages.length > 0
+        ? cachedImages
+        : (imageRef && !imageRef.includes('default-product.svg') ? [imageRef] : []);
+
+    if (images.length === 0) {
+        return;
+    }
+
+    const cover = images[0] || imageRef || '';
+    setGalleryState(mode, sku, images, cover);
+    renderProductGallery(images, sku, mode);
+    syncGalleryModeUi(mode, cover);
+}
+
 async function reorderGalleryImages(sku, orderedImages, mode = 'stock') {
+    const previousState = getGalleryState(mode);
+    const previousImages = previousState && previousState.sku === String(sku || '') && Array.isArray(previousState.images)
+        ? previousState.images.slice()
+        : [];
+    const nextImages = Array.isArray(orderedImages) ? orderedImages.slice() : [];
+    const nextCover = nextImages[0] || '';
+
+    setGalleryState(mode, sku, nextImages, nextCover);
+    renderProductGallery(nextImages, sku, mode);
+    syncGalleryModeUi(mode, nextCover);
+
     const res = await apiCall('/admin_supply.php?action=product-gallery-reorder', 'POST', {
         sku: sku,
-        images: orderedImages
+        images: nextImages
     });
 
     if (!res || !res.success) {
+        setGalleryState(mode, sku, previousImages, previousImages[0] || '');
+        renderProductGallery(previousImages, sku, mode);
+        syncGalleryModeUi(mode, previousImages[0] || '');
         showGalleryResult(mode, (res && res.message) ? res.message : 'No se pudo reordenar la galería', 'error');
         return false;
     }
 
+    const renderedImages = Array.isArray(res.images) && res.images.length > 0 ? res.images : nextImages;
+    const cover = res.cover || renderedImages[0] || '';
+    setGalleryState(mode, sku, renderedImages, cover);
+    renderProductGallery(renderedImages, sku, mode);
+    syncGalleryModeUi(mode, cover);
     showGalleryResult(mode, res.message || 'Orden de imágenes actualizado', 'success');
-    await loadProductImageReferences();
-    if (mode === 'marketplace') {
-        await loadMarketplaceGalleryForCurrentSku();
-    } else {
-        await loadProductGalleryForCurrentSku();
-    }
-    await loadStock();
-    await loadMarketplaceCeAdmin();
+    void loadProductImageReferences();
     return true;
 }
 
 async function moveGalleryImage(sku, imagePath, direction, mode = 'stock') {
-    const listAction = `/admin_supply.php?action=product-gallery-list&sku=${encodeURIComponent(sku)}`;
-    const listing = await apiCall(listAction, 'GET', null, { silent: true });
-    const images = Array.isArray(listing?.images) ? listing.images.slice() : [];
+    let images = getGalleryImagesForMode(mode, sku);
+    if (images.length === 0) {
+        const listAction = `/admin_supply.php?action=product-gallery-list&sku=${encodeURIComponent(sku)}`;
+        const listing = await apiCall(listAction, 'GET', null, { silent: true });
+        images = Array.isArray(listing?.images) ? listing.images.slice() : [];
+        setGalleryState(mode, sku, images, listing?.cover || images[0] || '');
+    }
     const index = images.indexOf(imagePath);
     if (index < 0) {
         showGalleryResult(mode, 'No se encontró la imagen a mover', 'error');
@@ -2768,9 +2875,13 @@ async function moveGalleryImage(sku, imagePath, direction, mode = 'stock') {
 }
 
 async function moveGalleryImageToPosition(sku, imagePath, targetPosition, mode = 'stock') {
-    const listAction = `/admin_supply.php?action=product-gallery-list&sku=${encodeURIComponent(sku)}`;
-    const listing = await apiCall(listAction, 'GET', null, { silent: true });
-    const images = Array.isArray(listing?.images) ? listing.images.slice() : [];
+    let images = getGalleryImagesForMode(mode, sku);
+    if (images.length === 0) {
+        const listAction = `/admin_supply.php?action=product-gallery-list&sku=${encodeURIComponent(sku)}`;
+        const listing = await apiCall(listAction, 'GET', null, { silent: true });
+        images = Array.isArray(listing?.images) ? listing.images.slice() : [];
+        setGalleryState(mode, sku, images, listing?.cover || images[0] || '');
+    }
     const index = images.indexOf(imagePath);
     if (index < 0) {
         showGalleryResult(mode, 'No se encontró la imagen a mover', 'error');
@@ -2883,21 +2994,38 @@ async function loadProductGalleryForCurrentSku() {
         ? res.images 
         : (res.cover ? [res.cover] : []);
 
-    renderProductGallery(imagesToRender, sku, 'stock');
-    if (res.cover) {
-        const select = document.getElementById('newProductImageRef');
-        if (select) {
-            const exists = Array.from(select.options || []).some((opt) => opt.value === res.cover);
-            if (!exists) {
-                const option = document.createElement('option');
-                option.value = res.cover;
-                option.textContent = res.cover;
-                select.appendChild(option);
+    setGalleryState('stock', sku, imagesToRender, res.cover || imagesToRender[0] || '');
+
+    if (imagesToRender.length === 0) {
+        const seed = document.getElementById('newProductImageRef')?.value || '';
+        if (seed && !seed.includes('default-product.svg')) {
+            setGalleryState('stock', sku, [seed], seed);
+            renderProductGallery([seed], sku, 'stock');
+            status.textContent = `Galería para ${sku}: 1 imagen(es)`;
+
+            const bootstrap = await apiCall('/admin_supply.php?action=product-gallery-bootstrap', 'POST', {
+                sku: sku,
+                image: seed
+            });
+            if (bootstrap && bootstrap.success) {
+                const bootstrapImages = Array.isArray(bootstrap.images) && bootstrap.images.length > 0 ? bootstrap.images : [seed];
+                setGalleryState('stock', sku, bootstrapImages, bootstrap.cover || bootstrapImages[0] || seed);
+                renderProductGallery(bootstrapImages, sku, 'stock');
+                if (bootstrap.cover) {
+                    const select = document.getElementById('newProductImageRef');
+                    if (select) select.value = bootstrap.cover;
+                }
+                status.textContent = `Galería para ${sku}: ${(bootstrap.images || [seed]).length} imagen(es)`;
+                updateStockPreview();
+                return;
             }
-            select.value = res.cover;
+            updateStockPreview();
+            return;
         }
     }
-    updateStockPreview();
+
+    renderProductGallery(imagesToRender, sku, 'stock');
+    syncGalleryModeUi('stock', res.cover || imagesToRender[0] || '');
 }
 
 async function loadMarketplaceGalleryForCurrentSku() {
@@ -2923,21 +3051,38 @@ async function loadMarketplaceGalleryForCurrentSku() {
         ? res.images 
         : (res.cover ? [res.cover] : []);
 
-    renderProductGallery(imagesToRender, sku, 'marketplace');
-    if (res.cover) {
-        const select = document.getElementById('marketplaceImageRef');
-        if (select) {
-            const exists = Array.from(select.options || []).some((opt) => opt.value === res.cover);
-            if (!exists) {
-                const option = document.createElement('option');
-                option.value = res.cover;
-                option.textContent = res.cover;
-                select.appendChild(option);
+    setGalleryState('marketplace', sku, imagesToRender, res.cover || imagesToRender[0] || '');
+
+    if (imagesToRender.length === 0) {
+        const seed = document.getElementById('marketplaceImageRef')?.value || '';
+        if (seed && !seed.includes('default-product.svg')) {
+            setGalleryState('marketplace', sku, [seed], seed);
+            renderProductGallery([seed], sku, 'marketplace');
+            status.textContent = `Galería para ${sku}: 1 imagen(es)`;
+
+            const bootstrap = await apiCall('/admin_supply.php?action=product-gallery-bootstrap', 'POST', {
+                sku: sku,
+                image: seed
+            });
+            if (bootstrap && bootstrap.success) {
+                const bootstrapImages = Array.isArray(bootstrap.images) && bootstrap.images.length > 0 ? bootstrap.images : [seed];
+                setGalleryState('marketplace', sku, bootstrapImages, bootstrap.cover || bootstrapImages[0] || seed);
+                renderProductGallery(bootstrapImages, sku, 'marketplace');
+                if (bootstrap.cover) {
+                    const select = document.getElementById('marketplaceImageRef');
+                    if (select) select.value = bootstrap.cover;
+                }
+                status.textContent = `Galería para ${sku}: ${(bootstrap.images || [seed]).length} imagen(es)`;
+                updateMarketplacePreview();
+                return;
             }
-            select.value = res.cover;
+            updateMarketplacePreview();
+            return;
         }
     }
-    updateMarketplacePreview();
+
+    renderProductGallery(imagesToRender, sku, 'marketplace');
+    syncGalleryModeUi('marketplace', res.cover || imagesToRender[0] || '');
 }
 
 async function setProductGalleryCover(sku, imagePath) {
@@ -3079,10 +3224,13 @@ async function uploadProductImages() {
         }
 
         input.value = '';
-        await loadProductImageReferences();
+        
+        // Load gallery FIRST while SKU is still available
         await loadProductGalleryForCurrentSku();
-        await loadMarketplaceCeAdmin();
-
+        
+        // Update image references for cover selection
+        await loadProductImageReferences();
+        
         const select = document.getElementById('newProductImageRef');
         if (select && data.cover) {
             const exists = Array.from(select.options || []).some((o) => o.value === data.cover);
@@ -3094,6 +3242,9 @@ async function uploadProductImages() {
             }
             select.value = data.cover;
         }
+        
+        // Update preview after setting cover
+        updateStockPreview();
     } catch (error) {
         if (resultBox) {
             resultBox.innerHTML = '<div class="alert alert-error">Error al cargar imágenes</div>';
@@ -3122,7 +3273,7 @@ async function uploadMarketplaceImages() {
     });
 
     try {
-        const response = await fetch('/api/admin_supply.php?action=marketplace-image-upload', {
+        const response = await fetch('/api/admin_supply.php?action=product-gallery-upload', {
             method: 'POST',
             body: formData,
             credentials: 'same-origin',
@@ -3139,11 +3290,13 @@ async function uploadMarketplaceImages() {
 
         showGalleryResult('marketplace', data.message || 'Imágenes CE cargadas correctamente', 'success');
         input.value = '';
-        await loadProductImageReferences();
+        
+        // Load gallery FIRST while SKU is still available
         await loadMarketplaceGalleryForCurrentSku();
-        await loadMarketplaceCeAdmin();
-        await loadStock();
-
+        
+        // Update image references for cover selection
+        await loadProductImageReferences();
+        
         const select = document.getElementById('marketplaceImageRef');
         if (select && data.cover) {
             const exists = Array.from(select.options || []).some((o) => o.value === data.cover);
@@ -3155,6 +3308,8 @@ async function uploadMarketplaceImages() {
             }
             select.value = data.cover;
         }
+        
+        // Update preview after setting cover
         updateMarketplacePreview();
     } catch (error) {
         showGalleryResult('marketplace', 'Error al cargar imágenes CE', 'error');
@@ -3179,7 +3334,7 @@ async function createProductByAdmin() {
     // Validation
     if (!/^\d{5,6}$/.test(normalizedSku)) {
         if (box) {
-            box.innerHTML = '<div class="alert alert-error">El código del producto debe tener exactamente 5 números.</div>';
+            box.innerHTML = '<div class="alert alert-error">El código del producto debe tener 5 o 6 números.</div>';
         }
         setSkuStatus('newProductSkuStatus', 'El código debe tener 5 o 6 números.', 'warning');
         showAlert('SKU inválido', 'warning');
@@ -3225,14 +3380,6 @@ async function createProductByAdmin() {
         return;
     }
 
-    const skuOk = await validateSkuAvailability('product');
-    if (!skuOk) {
-        if (box) {
-            box.innerHTML = '<div class="alert alert-error">No fue posible guardar: código inválido o duplicado.</div>';
-        }
-        return;
-    }
-
     const selectedCategoryOptions = Array.from(document.getElementById('newProductCategory').selectedOptions || []);
     const selectedCategories = selectedCategoryOptions.map((option) => option.value).filter(Boolean);
 
@@ -3242,6 +3389,13 @@ async function createProductByAdmin() {
         }
         showAlert('Selecciona una categoría', 'warning');
         return;
+    }
+
+    // If the user selected files but hasn't waited, upload them first so the product save can reference the new image
+    const newProductImagesEl = document.getElementById('newProductImages');
+    if (newProductImagesEl && newProductImagesEl.files && newProductImagesEl.files.length > 0) {
+        if (box) box.innerHTML = '<div class="alert alert-info">Subiendo imágenes, espera por favor...</div>';
+        await uploadProductImages();
     }
 
     const payload = {
@@ -3279,7 +3433,6 @@ async function createProductByAdmin() {
     resetProductForm();
     loadStock();
     loadSupplierProducts();
-    loadProductGalleryForCurrentSku();
     activateAdminSupplyTab('stockTab', 'productCreateResult');
 }
 
@@ -3307,7 +3460,7 @@ function resetMarketplaceForm() {
     if (saveBtn) saveBtn.textContent = 'Guardar artículo CE';
     const box = document.getElementById('marketplaceResult');
     if (box) box.innerHTML = '';
-    setSkuStatus('marketplaceSkuStatus', 'Debe ser único y de 5 números.', 'muted');
+    setSkuStatus('marketplaceSkuStatus', 'Debe ser único y de 5 o 6 números.', 'muted');
     updateMarketplacePreview();
     loadMarketplaceGalleryForCurrentSku();
 }
@@ -3356,6 +3509,7 @@ function fillMarketplaceForm(item) {
         const visibility = Number(item.is_active) ? 'Visible' : 'Oculto';
         box.innerHTML = `<div class="alert alert-info">Editando artículo CE: estado actual <strong>${visibility}</strong>.</div>`;
     }
+    primeGalleryFromCurrentForm('marketplace');
     updateMarketplacePreview();
     loadMarketplaceGalleryForCurrentSku();
 }
@@ -3366,22 +3520,27 @@ function fillMarketplaceFormById(id) {
     fillMarketplaceForm(item);
 }
 
-async function loadMarketplaceCeAdmin() {
+async function loadMarketplaceCeAdmin(page = 1) {
     const box = document.getElementById('marketplaceList');
     const caption = document.getElementById('marketplaceListCaption');
+    const paginationBox = document.getElementById('marketplacePagination');
     const quickBox = document.getElementById('marketplaceQuickResult');
-    const res = await apiCall('/admin_supply.php?action=marketplace-list', 'GET', null, { silent: true });
+    marketplaceCurrentPage = page;
+    const res = await apiCall(`/admin_supply.php?action=marketplace-list&page=${page}&per_page=${marketplacePerPage}`, 'GET', null, { silent: true });
 
     if (!res || !res.success || !Array.isArray(res.items)) {
         if (box) box.innerHTML = '<p class="text-muted">No fue posible cargar artículos CE.</p>';
         if (caption) caption.textContent = 'No fue posible cargar artículos CE.';
+        if (paginationBox) paginationBox.innerHTML = '';
         if (quickBox) quickBox.innerHTML = '<span style="color:#f87171;">No fue posible cargar la gestión rápida.</span>';
         updateMarketplaceQuickSelection([]);
         return;
     }
 
     marketplaceItemsCache = Array.isArray(res.items) ? res.items : [];
+    marketplacePagination = res.pagination || null;
     renderMarketplaceList();
+    renderMarketplacePagination();
 }
 
 function updateMarketplaceQuickSelection(items = marketplaceItemsCache) {
@@ -3509,10 +3668,37 @@ function renderMarketplaceList() {
 
     if (filtered.length === 0) {
         if (box) box.innerHTML = '<p class="text-muted">No hay artículos CE registrados.</p>';
+        const paginationBox = document.getElementById('marketplacePagination');
+        if (paginationBox) paginationBox.innerHTML = '';
         return;
     }
 
     box.innerHTML = `<div class="catalog-grid-min">${filtered.map((item) => renderAdminProductCard(item, 'marketplace')).join('')}</div>`;
+}
+
+function renderMarketplacePagination() {
+    const container = document.getElementById('marketplacePagination');
+    if (!container) return;
+
+    if (!marketplacePagination) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const current_page = Number(marketplacePagination.current_page || marketplaceCurrentPage || 1);
+    const total_pages = Number(marketplacePagination.total_pages || 1);
+    const total_items = Number(marketplacePagination.total_items || marketplaceItemsCache.length || 0);
+
+    container.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem; padding:1rem; background:var(--ui-surface-soft); border-radius:12px; gap:0.75rem; flex-wrap:wrap;">
+            <div class="text-muted">Total: <strong>${total_items}</strong> artículos CE</div>
+            <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                <button class="btn btn-small" ${current_page <= 1 ? 'disabled' : ''} onclick="loadMarketplaceCeAdmin(${current_page - 1})">Anterior</button>
+                <span class="text-muted">Página <strong>${current_page}</strong> de ${total_pages}</span>
+                <button class="btn btn-small btn-primary" ${current_page >= total_pages ? 'disabled' : ''} onclick="loadMarketplaceCeAdmin(${current_page + 1})">Ver más</button>
+            </div>
+        </div>
+    `;
 }
 
 async function saveMarketplaceCeByAdmin() {
@@ -3568,7 +3754,7 @@ async function saveMarketplaceCeByAdmin() {
         return;
     }
 
-    const skuOk = await validateSkuAvailability('marketplace');
+    const skuOk = await validateSkuAvailability('marketplace', { strict: true });
     if (!skuOk) {
         if (box) box.innerHTML = '<div class="alert alert-error">No fue posible guardar: código inválido o duplicado.</div>';
         return;
@@ -3798,13 +3984,14 @@ document.addEventListener('DOMContentLoaded', function () {
         productSkuInput.addEventListener('input', function () {
             productSkuInput.value = normalizeNumericSku(productSkuInput.value);
             updateStockPreview();
+            setSkuStatus('newProductSkuStatus', 'Código listo para guardar.', 'muted');
             if (productSkuDebounce) window.clearTimeout(productSkuDebounce);
             productSkuDebounce = window.setTimeout(() => {
                 validateSkuAvailability('product');
-                loadProductGalleryForCurrentSku();
-            }, 220);
+            }, 250);
         });
         productSkuInput.addEventListener('blur', async function () {
+            if (productSkuDebounce) window.clearTimeout(productSkuDebounce);
             await validateSkuAvailability('product');
             await loadProductGalleryForCurrentSku();
         });
@@ -3816,20 +4003,21 @@ document.addEventListener('DOMContentLoaded', function () {
         marketplaceSkuInput.addEventListener('input', function () {
             marketplaceSkuInput.value = normalizeNumericSku(marketplaceSkuInput.value);
             updateMarketplacePreview();
+            setSkuStatus('marketplaceSkuStatus', 'Debe ser único y de 5 o 6 números.', 'muted');
             if (marketplaceSkuDebounce) window.clearTimeout(marketplaceSkuDebounce);
             marketplaceSkuDebounce = window.setTimeout(() => {
                 validateSkuAvailability('marketplace');
-                loadMarketplaceGalleryForCurrentSku();
-            }, 220);
+            }, 250);
         });
         marketplaceSkuInput.addEventListener('blur', async function () {
+            if (marketplaceSkuDebounce) window.clearTimeout(marketplaceSkuDebounce);
             await validateSkuAvailability('marketplace');
             await loadMarketplaceGalleryForCurrentSku();
         });
     }
 
-    setSkuStatus('newProductSkuStatus', 'Debe ser único y de 5 números.', 'muted');
-    setSkuStatus('marketplaceSkuStatus', 'Debe ser único y de 5 números.', 'muted');
+    setSkuStatus('newProductSkuStatus', 'Código listo para guardar.', 'muted');
+    setSkuStatus('marketplaceSkuStatus', 'Debe ser único y de 5 o 6 números.', 'muted');
 
     const stockSearch = document.getElementById('stockSearch');
     if (stockSearch) {
@@ -3860,6 +4048,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const newProductCategory = document.getElementById('newProductCategory');
     if (newProductCategory) {
         newProductCategory.addEventListener('change', updateStockPreview);
+    }
+
+    const newProductImages = document.getElementById('newProductImages');
+    if (newProductImages) {
+        newProductImages.addEventListener('change', function () {
+            if (this.files && this.files.length > 0) {
+                uploadProductImages();
+            }
+        });
     }
 
     const newCategoryQuickName = document.getElementById('newCategoryQuickName');
@@ -3893,25 +4090,35 @@ document.addEventListener('DOMContentLoaded', function () {
         marketplaceCategory.addEventListener('change', updateMarketplacePreview);
     }
 
+    const marketplaceImages = document.getElementById('marketplaceImages');
+    if (marketplaceImages) {
+        marketplaceImages.addEventListener('change', function () {
+            if (this.files && this.files.length > 0) {
+                uploadMarketplaceImages();
+            }
+        });
+    }
+
     updateStockPreview();
     updateMarketplacePreview();
     loadProductGalleryForCurrentSku();
     loadMarketplaceGalleryForCurrentSku();
 
-    // Add file input preview handler for homepage update images
+    // Add file input preview handler for homepage update images (use object URLs for faster previews)
     const imageInput = document.getElementById('updateImage');
     if (imageInput) {
         imageInput.addEventListener('change', function (e) {
             const preview = document.getElementById('updateImagePreview');
             const previewImg = document.getElementById('updateImagePreviewImg');
-            
+
             if (e.target.files && e.target.files[0] && preview && previewImg) {
-                const reader = new FileReader();
-                reader.onload = function (event) {
-                    previewImg.src = event.target.result;
-                    preview.style.display = 'block';
-                };
-                reader.readAsDataURL(e.target.files[0]);
+                const file = e.target.files[0];
+                // Use createObjectURL to avoid base64 encoding and speed up preview
+                const url = URL.createObjectURL(file);
+                previewImg.src = url;
+                preview.style.display = 'block';
+                // Revoke object URL after image loads to free memory
+                previewImg.onload = function () { URL.revokeObjectURL(url); previewImg.onload = null; };
             }
         });
     }

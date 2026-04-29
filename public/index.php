@@ -75,7 +75,17 @@ function image_priority_score($fileName) {
     return 90;
 }
 
-function resolve_images_by_product_code($code) {
+function is_gallery_image_reference($value) {
+    $value = trim((string)$value);
+    if ($value === '') {
+        return false;
+    }
+
+    return strpos($value, 'images/') === 0 || strpos($value, 'data:image/') === 0 || preg_match('/\.(jpg|jpeg|png|webp|gif)$/i', $value) === 1;
+}
+
+function resolve_images_by_product_code($code, array $productRow = []) {
+    global $pdo;
     static $cache = null;
     if ($cache === null) {
         $cache = [];
@@ -127,7 +137,75 @@ function resolve_images_by_product_code($code) {
     }
 
     $code = trim((string)$code);
-    return $cache[$code] ?? [];
+    $images = [];
+
+    $mergeImage = function (string $value) use (&$images) {
+        $value = trim($value);
+        if ($value === '' || strpos($value, 'default-product.svg') !== false) {
+            return;
+        }
+        if (!in_array($value, $images, true)) {
+            $images[] = $value;
+        }
+    };
+
+    $imageUrl = trim((string)($productRow['image_url'] ?? ''));
+    if ($imageUrl !== '' && $imageUrl !== 'images/products/default-product.svg') {
+        $mergeImage($imageUrl);
+    }
+
+    if (!empty($productRow['variants_json'])) {
+        $decoded = json_decode((string)$productRow['variants_json'], true);
+        if (is_array($decoded)) {
+            foreach ($decoded as $item) {
+                $itemStr = trim((string)$item);
+                if (is_gallery_image_reference($itemStr)) {
+                    $mergeImage($itemStr);
+                }
+            }
+        }
+    }
+
+    if (isset($pdo)) {
+        foreach (['products', 'marketplace_ce_products'] as $table) {
+            try {
+                $stmt = $pdo->prepare("SELECT image_url, variants_json FROM {$table} WHERE sku = ? LIMIT 1");
+                $stmt->execute([$code]);
+                $row = $stmt->fetch();
+                if (!$row) {
+                    continue;
+                }
+
+                $rowImage = trim((string)($row['image_url'] ?? ''));
+                if ($rowImage !== '' && $rowImage !== 'images/products/default-product.svg') {
+                    $mergeImage($rowImage);
+                }
+
+                if (!empty($row['variants_json'])) {
+                    $decodedRow = json_decode((string)$row['variants_json'], true);
+                    if (is_array($decodedRow)) {
+                        foreach ($decodedRow as $item) {
+                            $itemStr = trim((string)$item);
+                            if (is_gallery_image_reference($itemStr)) {
+                                $mergeImage($itemStr);
+                            }
+                        }
+                    }
+                }
+            } catch (Exception $ignored) {
+            }
+        }
+    }
+
+    foreach ($cache[$code] ?? [] as $cachedImage) {
+        $mergeImage($cachedImage);
+    }
+
+    if (empty($images)) {
+        $images[] = 'images/products/default-product.svg';
+    }
+
+    return $images;
 }
 
 if (count($products) < 10) {
@@ -450,19 +528,28 @@ function homepage_update_label($type) {
                         $productDescription = decode_legacy_entities((string)($product['description'] ?? ''));
                         $productCategory = decode_legacy_entities((string)($product['category'] ?? ''));
                         $imagePath = !empty($product['image_url']) ? $product['image_url'] : 'images/products/default-product.svg';
-                        $galleryImages = resolve_images_by_product_code($displaySku);
+                        $galleryImages = resolve_images_by_product_code($displaySku, $product);
                         if (empty($galleryImages)) {
                             $galleryImages = [$imagePath];
-                        } elseif (!empty($product['image_url']) && $product['image_url'] !== 'images/products/default-product.svg') {
-                            if (!in_array($product['image_url'], $galleryImages, true)) {
-                                array_unshift($galleryImages, $product['image_url']);
-                            }
                         }
                         $variants = [];
                         if (!empty($product['variants_json'])) {
                             $decoded = json_decode($product['variants_json'], true);
                             if (is_array($decoded)) {
-                                $variants = $decoded;
+                                // Filter out image paths stored in variants_json (keep only real variant labels)
+                                foreach ($decoded as $item) {
+                                    $itemStr = (string)$item;
+                                    if (strpos($itemStr, 'images/') === false &&
+                                        strpos($itemStr, 'data:image/') === false &&
+                                        stripos($itemStr, '.jpg') === false &&
+                                        stripos($itemStr, '.jpeg') === false &&
+                                        stripos($itemStr, '.png') === false &&
+                                        stripos($itemStr, '.gif') === false &&
+                                        stripos($itemStr, '.webp') === false &&
+                                        stripos($itemStr, '.svg') === false) {
+                                        $variants[] = $itemStr;
+                                    }
+                                }
                             }
                         }
                         $stock = (int)($product['stock_quantity'] ?? 0);
@@ -474,8 +561,8 @@ function homepage_update_label($type) {
                         data-category="<?php echo htmlspecialchars($productCategory, ENT_QUOTES, 'UTF-8'); ?>"
                         data-price="<?php echo (float)$product['unit_price']; ?>"
                         data-stock="<?php echo $stock; ?>">
-                        <a href="product_detail.php?id=<?php echo (int)$product['id']; ?>" class="product-media-link" data-product-gallery>
-                            <div class="product-media" data-product-gallery>
+                        <div class="product-media" data-product-gallery>
+                            <a href="product_detail.php?id=<?php echo (int)$product['id']; ?>" class="product-media-link" aria-label="Ver detalle de <?php echo htmlspecialchars($productName, ENT_QUOTES, 'UTF-8'); ?>"></a>
                             <?php foreach ($galleryImages as $idx => $galleryImage): ?>
                                 <img
                                     class="product-gallery-image <?php echo $idx === 0 ? 'active' : ''; ?>"
@@ -488,8 +575,7 @@ function homepage_update_label($type) {
                                 <button type="button" class="gallery-nav gallery-next" data-gallery-next aria-label="Imagen siguiente">&#10095;</button>
                                 <div class="gallery-counter"><span data-gallery-current>1</span>/<?php echo count($galleryImages); ?></div>
                             <?php endif; ?>
-                            </div>
-                        </a>
+                        </div>
                         <div class="product-content">
                             <div class="catalog-tag"><?php echo htmlspecialchars($productCategory !== '' ? $productCategory : 'General', ENT_QUOTES, 'UTF-8'); ?></div>
                             <div class="product-code-label"><strong>Código:</strong> <strong><?php echo htmlspecialchars($displaySku, ENT_QUOTES, 'UTF-8'); ?></strong></div>
@@ -501,7 +587,7 @@ function homepage_update_label($type) {
                                         <span class="variant-pill"><?php echo htmlspecialchars((string)$variant, ENT_QUOTES, 'UTF-8'); ?></span>
                                     <?php endforeach; ?>
                                 <?php else: ?>
-                                    <span class="variant-pill">Modelo estándar</span>
+                                    <span class="variant-pill">Modelo Estandar</span>
                                 <?php endif; ?>
                             </div>
                             <span class="stock-badge <?php echo $stock <= 10 ? 'stock-low' : 'stock-ok'; ?>">

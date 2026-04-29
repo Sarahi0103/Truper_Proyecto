@@ -43,45 +43,149 @@ function image_priority_score($fileName): int {
     return 90;
 }
 
+function is_gallery_image_reference($value): bool {
+    $value = trim((string)$value);
+    if ($value === '') {
+        return false;
+    }
+
+    return strpos($value, 'images/') === 0 || strpos($value, 'data:image/') === 0 || preg_match('/\.(jpg|jpeg|png|webp|gif)$/i', $value) === 1;
+}
+
+function resolve_images_by_product_code($code, array $productRow = []): array {
+    global $pdo;
+    static $cache = null;
+    if ($cache === null) {
+        $cache = [];
+        $baseDir = __DIR__ . '/images/products/by_code';
+        if (is_dir($baseDir)) {
+            $dirs = scandir($baseDir);
+            foreach ($dirs as $dir) {
+                if ($dir === '.' || $dir === '..') {
+                    continue;
+                }
+                $fullDir = $baseDir . '/' . $dir;
+                if (!is_dir($fullDir)) {
+                    continue;
+                }
+                $matches = glob($fullDir . '/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', GLOB_BRACE);
+                if (!empty($matches)) {
+                    usort($matches, function ($a, $b) {
+                        $scoreA = image_priority_score($a);
+                        $scoreB = image_priority_score($b);
+                        if ($scoreA === $scoreB) {
+                            return strcmp((string)$a, (string)$b);
+                        }
+                        return $scoreA <=> $scoreB;
+                    });
+
+                    $cache[$dir] = array_map(function ($path) use ($dir) {
+                        return 'images/products/by_code/' . $dir . '/' . basename($path);
+                    }, $matches);
+                }
+            }
+        }
+    }
+
+    $code = trim((string)$code);
+    $images = [];
+
+    $mergeImage = function (string $value) use (&$images) {
+        $value = trim($value);
+        if ($value === '' || strpos($value, 'default-product.svg') !== false) {
+            return;
+        }
+        if (!in_array($value, $images, true)) {
+            $images[] = $value;
+        }
+    };
+
+    $imageUrl = trim((string)($productRow['image_url'] ?? ''));
+    if ($imageUrl !== '' && $imageUrl !== 'images/products/default-product.svg') {
+        $mergeImage($imageUrl);
+    }
+
+    if (!empty($productRow['variants_json'])) {
+        $decoded = json_decode((string)$productRow['variants_json'], true);
+        if (is_array($decoded)) {
+            foreach ($decoded as $item) {
+                $itemStr = trim((string)$item);
+                if (is_gallery_image_reference($itemStr)) {
+                    $mergeImage($itemStr);
+                }
+            }
+        }
+    }
+
+    if (isset($pdo)) {
+        foreach (['products', 'marketplace_ce_products'] as $table) {
+            try {
+                $stmt = $pdo->prepare("SELECT image_url, variants_json FROM {$table} WHERE sku = ? LIMIT 1");
+                $stmt->execute([$code]);
+                $row = $stmt->fetch();
+                if (!$row) {
+                    continue;
+                }
+
+                $rowImage = trim((string)($row['image_url'] ?? ''));
+                if ($rowImage !== '' && $rowImage !== 'images/products/default-product.svg') {
+                    $mergeImage($rowImage);
+                }
+
+                if (!empty($row['variants_json'])) {
+                    $decodedRow = json_decode((string)$row['variants_json'], true);
+                    if (is_array($decodedRow)) {
+                        foreach ($decodedRow as $item) {
+                            $itemStr = trim((string)$item);
+                            if (is_gallery_image_reference($itemStr)) {
+                                $mergeImage($itemStr);
+                            }
+                        }
+                    }
+                }
+            } catch (Exception $ignored) {
+            }
+        }
+    }
+
+    foreach ($cache[$code] ?? [] as $cachedImage) {
+        $mergeImage($cachedImage);
+    }
+
+    if (empty($images)) {
+        $images[] = 'images/products/default-product.svg';
+    }
+
+    return $images;
+}
+
 $productName = decode_legacy_entities((string)($product['name'] ?? ''));
 $productDescription = decode_legacy_entities((string)($product['description'] ?? ''));
 $productTechnicalSpecs = decode_legacy_entities((string)($product['technical_specs'] ?? ''));
 $productCategory = decode_legacy_entities((string)($product['category'] ?? ''));
 $imagePath = !empty($product['image_url']) ? $product['image_url'] : 'images/products/default-product.svg';
-$galleryImages = [];
-
-// Resolver imágenes por código de producto
-$baseDir = __DIR__ . '/images/products/by_code';
-if (is_dir($baseDir)) {
-    $fullDir = $baseDir . '/' . $displaySku;
-    if (is_dir($fullDir)) {
-        $matches = glob($fullDir . '/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', GLOB_BRACE);
-        if (!empty($matches)) {
-            usort($matches, function ($a, $b) {
-                $scoreA = image_priority_score($a);
-                $scoreB = image_priority_score($b);
-                return $scoreA === $scoreB ? strcmp($a, $b) : $scoreA <=> $scoreB;
-            });
-            $galleryImages = array_map(function ($path) use ($displaySku) {
-                return 'images/products/by_code/' . $displaySku . '/' . basename($path);
-            }, $matches);
-        }
-    }
-}
-
-if (empty($galleryImages)) {
-    $galleryImages = [$imagePath];
-} else if (!empty($product['image_url']) && $product['image_url'] !== 'images/products/default-product.svg') {
-    if (!in_array($product['image_url'], $galleryImages, true)) {
-        array_unshift($galleryImages, $product['image_url']);
-    }
-}
+$galleryImages = resolve_images_by_product_code($displaySku, $product);
 
 $variants = [];
 if (!empty($product['variants_json'])) {
     $decoded = json_decode($product['variants_json'], true);
     if (is_array($decoded)) {
-        $variants = $decoded;
+        // Filter out image paths (which contain 'images/', file extensions, or base64 data URIs)
+        // Keep only real variant names (like colors, sizes, conditions, etc.)
+        foreach ($decoded as $item) {
+            $itemStr = (string)$item;
+            // Skip if it looks like an image path or base64 data URI
+            if (strpos($itemStr, 'images/') === false && 
+                strpos($itemStr, 'data:image/') === false &&
+                strpos($itemStr, '.jpg') === false && 
+                strpos($itemStr, '.jpeg') === false && 
+                strpos($itemStr, '.png') === false && 
+                strpos($itemStr, '.gif') === false && 
+                strpos($itemStr, '.webp') === false &&
+                strpos($itemStr, '.svg') === false) {
+                $variants[] = $item;
+            }
+        }
     }
 }
 
@@ -492,16 +596,18 @@ $stock = (int)($product['stock_quantity'] ?? 0);
                         </div>
                     <?php endif; ?>
 
-                    <?php if (!empty($variants)): ?>
-                        <div class="detail-variants">
-                            <h3>Variantes disponibles</h3>
-                            <div class="variants-list">
+                    <div class="detail-variants">
+                        <h3>Variantes disponibles</h3>
+                        <div class="variants-list">
+                            <?php if (!empty($variants)): ?>
                                 <?php foreach ($variants as $variant): ?>
                                     <span class="variant-pill"><?php echo htmlspecialchars((string)$variant, ENT_QUOTES, 'UTF-8'); ?></span>
                                 <?php endforeach; ?>
-                            </div>
+                            <?php else: ?>
+                                <span class="variant-pill">Modelo Estandar</span>
+                            <?php endif; ?>
                         </div>
-                    <?php endif; ?>
+                    </div>
                 </div>
 
                 <div class="detail-actions">

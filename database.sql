@@ -361,7 +361,7 @@ CREATE TABLE IF NOT EXISTS marketplace_ce_products (
     sku VARCHAR(100) UNIQUE NOT NULL,
     name VARCHAR(220) NOT NULL,
     description TEXT NOT NULL,
-    condition_label VARCHAR(80) NOT NULL DEFAULT 'Seminuevo',
+    condition_label VARCHAR(80) NOT NULL DEFAULT 'Modelo Estandar',
     category VARCHAR(120),
     unit_price DECIMAL(12,2) NOT NULL DEFAULT 0,
     stock_quantity INTEGER NOT NULL DEFAULT 1,

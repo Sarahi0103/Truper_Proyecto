@@ -43,3 +43,11 @@ services:
         fromDatabase:
           name: truper-db
           property: connectionString
+    # Persistent disk for uploaded images so files survive redeploys
+    disks:
+      - name: images-disk
+        mountPath: /var/www/html/images
+
+disks:
+  - name: images-disk
+    sizeGb: 1

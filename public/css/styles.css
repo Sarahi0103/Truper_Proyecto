@@ -1735,6 +1735,16 @@ footer {
     overflow: hidden;
 }
 
+.product-media-link {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    cursor: pointer;
+}
+
 .product-media img {
     width: 100%;
     height: 100%;
@@ -1753,11 +1763,13 @@ footer {
     opacity: 0;
     transition: opacity 0.2s ease;
     pointer-events: none;
+    z-index: 0;
 }
 
 .product-gallery-image.active {
     opacity: 1;
     pointer-events: auto;
+    z-index: 0;
 }
 
 .gallery-nav {
@@ -1773,7 +1785,7 @@ footer {
     font-size: 16px;
     line-height: 1;
     cursor: pointer;
-    z-index: 2;
+    z-index: 3;
 }
 
 .gallery-prev {
@@ -1793,7 +1805,7 @@ footer {
     border-radius: 999px;
     padding: 2px 8px;
     font-size: 12px;
-    z-index: 2;
+    z-index: 3;
 }
 
 .product-content {

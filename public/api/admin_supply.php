@@ -879,18 +879,45 @@ function ensure_marketplace_integrity_admin_supply($pdo): void {
 }
 
 function convert_image_to_base64_admin_supply(string $tmpName, string $mimeType): string {
+    // Procesa la imagen (redimensiona/comprime) y la guarda en disk en /images/products
+    // Retorna la ruta web relativa (por ejemplo: images/products/12345_abcd.webp)
     $maxWidth = 800;
     $maxHeight = 800;
-    
-    // Si no tenemos GD, regresamos el base64 sin procesar
+
+    $productsDir = __DIR__ . '/../images/products';
+    if (!is_dir($productsDir)) {
+        mkdir($productsDir, 0755, true);
+    }
+
+    // Si no tenemos GD, simplemente movemos/copiamos el archivo original y devolvemos la ruta
     if (!function_exists('imagecreatefromstring')) {
-        return 'data:' . $mimeType . ';base64,' . base64_encode(file_get_contents($tmpName));
+        $ext = 'jpg';
+        if (strpos($mimeType, 'png') !== false) $ext = 'png';
+        if (strpos($mimeType, 'webp') !== false) $ext = 'webp';
+        if (strpos($mimeType, 'gif') !== false) $ext = 'gif';
+
+        $filename = time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+        $destPath = $productsDir . '/' . $filename;
+        if (!@move_uploaded_file($tmpName, $destPath)) {
+            // try copy as fallback
+            @copy($tmpName, $destPath);
+        }
+        return 'images/products/' . $filename;
     }
 
     $imageString = file_get_contents($tmpName);
     $img = @imagecreatefromstring($imageString);
     if (!$img) {
-        return 'data:' . $mimeType . ';base64,' . base64_encode($imageString);
+        // Save original as fallback
+        $ext = 'jpg';
+        if (strpos($mimeType, 'png') !== false) $ext = 'png';
+        if (strpos($mimeType, 'webp') !== false) $ext = 'webp';
+        if (strpos($mimeType, 'gif') !== false) $ext = 'gif';
+
+        $filename = time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+        $destPath = $productsDir . '/' . $filename;
+        file_put_contents($destPath, $imageString);
+        return 'images/products/' . $filename;
     }
 
     $width = imagesx($img);
@@ -902,7 +929,7 @@ function convert_image_to_base64_admin_supply(string $tmpName, string $mimeType)
         $newHeight = (int)($height * $ratio);
 
         $newImg = imagecreatetruecolor($newWidth, $newHeight);
-        
+
         // Mantener transparencia para PNG y WEBP
         if ($mimeType === 'image/png' || $mimeType === 'image/webp' || $mimeType === 'image/gif') {
             imagealphablending($newImg, false);
@@ -911,30 +938,48 @@ function convert_image_to_base64_admin_supply(string $tmpName, string $mimeType)
             imagefilledrectangle($newImg, 0, 0, $newWidth, $newHeight, $transparent);
         }
 
+        // Usar interpolación de mejor calidad (cúbica en lugar de bilineal)
         imagecopyresampled($newImg, $img, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+        
+        // Aplicar unsharp mask para mejorar nitidez después del remuestreo
+        if (function_exists('imageconvolution')) {
+            $matrix = [
+                [-1, -1, -1],
+                [-1, 16, -1],
+                [-1, -1, -1]
+            ];
+            @imageconvolution($newImg, $matrix, 8, 0);
+        }
+        
         imagedestroy($img);
         $img = $newImg;
     }
 
+    // Serializar a buffer y guardar archivo en disco con calidad mejorada
     ob_start();
-    // Siempre convertimos a WEBP (muy ligero) o JPEG para guardar espacio
     if ($mimeType === 'image/png' || $mimeType === 'image/gif') {
         if (function_exists('imagewebp')) {
-            imagewebp($img, null, 80);
-            $finalMime = 'image/webp';
+            // Calidad 88 para WebP (muy buena, archivo más pequeño que JPEG)
+            imagewebp($img, null, 88);
+            $finalExt = 'webp';
         } else {
-            imagepng($img, null, 8); // Compression 0-9
-            $finalMime = 'image/png';
+            // Compresión 6 para PNG (balance entre tamaño y velocidad)
+            imagepng($img, null, 6);
+            $finalExt = 'png';
         }
     } else {
-        imagejpeg($img, null, 75);
-        $finalMime = 'image/jpeg';
+        // Calidad 87 para JPEG (excelente calidad visual)
+        imagejpeg($img, null, 87);
+        $finalExt = 'jpg';
     }
-    
     $compressedData = ob_get_clean();
     imagedestroy($img);
 
-    return 'data:' . $finalMime . ';base64,' . base64_encode($compressedData);
+    $filename = time() . '_' . bin2hex(random_bytes(4)) . '.' . $finalExt;
+    $destPath = $productsDir . '/' . $filename;
+    file_put_contents($destPath, $compressedData);
+
+    return 'images/products/' . $filename;
 }
 
 function store_product_image(array $file): string {
@@ -954,10 +999,23 @@ function store_product_image(array $file): string {
         throw new Exception('Formato de imagen no permitido');
     }
 
-    $mimeType = mime_content_type($tmp);
-    if (!$mimeType) $mimeType = 'image/jpeg';
+    // Create products directory if it doesn't exist
+    $productsDir = __DIR__ . '/../images/products';
+    if (!is_dir($productsDir)) {
+        mkdir($productsDir, 0755, true);
+    }
 
-    return convert_image_to_base64_admin_supply($tmp, $mimeType);
+    // Generate unique filename with timestamp
+    $filename = time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+    $filepath = $productsDir . '/' . $filename;
+
+    // Validate and move file
+    if (!move_uploaded_file($tmp, $filepath)) {
+        throw new Exception('No se pudo guardar la imagen');
+    }
+
+    // Return web-accessible path
+    return 'images/products/' . $filename;
 }
 
 function normalize_uploaded_files(array $files): array {
@@ -989,37 +1047,154 @@ function product_gallery_dir_admin_supply(string $sku): string {
     return __DIR__ . '/../images/products/by_code/' . $sku;
 }
 
+function list_product_gallery_files_admin_supply(string $sku): array {
+    $sku = normalize_sku_admin_supply($sku);
+    if ($sku === '') return [];
+
+    $fullDir = product_gallery_dir_admin_supply($sku);
+    if (!is_dir($fullDir)) return [];
+
+    $matches = glob($fullDir . '/*.{jpg,jpeg,png,webp,gif,JPG,JPEG,PNG,WEBP,GIF}', GLOB_BRACE);
+    if (empty($matches) || !is_array($matches)) return [];
+
+    usort($matches, function ($a, $b) {
+        $scoreA = admin_supply_image_priority_score($a);
+        $scoreB = admin_supply_image_priority_score($b);
+        if ($scoreA === $scoreB) {
+            return strcmp((string)$a, (string)$b);
+        }
+        return $scoreA <=> $scoreB;
+    });
+
+    return array_map(function ($path) use ($sku) {
+        return 'images/products/by_code/' . $sku . '/' . basename($path);
+    }, $matches);
+}
+
+function normalize_product_gallery_images_admin_supply(array $images): array {
+    $normalized = [];
+    foreach ($images as $image) {
+        $value = trim((string)$image);
+        if ($value === '' || strpos($value, 'default-product.svg') !== false) {
+            continue;
+        }
+        if (!in_array($value, $normalized, true)) {
+            $normalized[] = $value;
+        }
+    }
+
+    return $normalized;
+}
+
+function persist_product_gallery_images_admin_supply($pdo, string $sku, array $images): array {
+    $images = normalize_product_gallery_images_admin_supply($images);
+    if (empty($images)) {
+        return [];
+    }
+
+    $cover = $images[0];
+    $json = json_encode($images, JSON_UNESCAPED_UNICODE);
+
+    foreach (['products', 'marketplace_ce_products'] as $table) {
+        if (!db_table_exists($table)) {
+            continue;
+        }
+
+        try {
+            $stmt = $pdo->prepare("UPDATE {$table} SET image_url = ?, variants_json = ? WHERE sku = ?");
+            $stmt->execute([$cover, $json, $sku]);
+        } catch (Exception $ignored) {
+        }
+    }
+
+    return $images;
+}
+
 function list_product_gallery_images_admin_supply(string $sku): array {
     global $pdo;
     if (!is_valid_numeric_sku_admin_supply($sku)) return [];
-    
+
     try {
-        $stmt = $pdo->prepare("SELECT variants_json, image_url FROM products WHERE sku = ?");
-        $stmt->execute([$sku]);
-        $row = $stmt->fetch();
-        
-        if (!$row) {
-            $stmt = $pdo->prepare("SELECT variants_json, image_url FROM marketplace_ce_products WHERE sku = ?");
-            $stmt->execute([$sku]);
-            $row = $stmt->fetch();
+        $final = [];
+        $needsPersist = false;
+
+        $mergeImage = function (string $value) use (&$final) {
+            $value = trim($value);
+            if ($value === '' || strpos($value, 'default-product.svg') !== false) {
+                return;
+            }
+
+            if (!in_array($value, $final, true)) {
+                $final[] = $value;
+            }
+        };
+
+        $extractRowImages = function (array $row): array {
+            $images = [];
+
+            if (!empty($row['image_url'])) {
+                $images[] = (string)$row['image_url'];
+            }
+
+            if (!empty($row['variants_json'])) {
+                $decoded = json_decode($row['variants_json'], true);
+                if (is_array($decoded)) {
+                    foreach ($decoded as $item) {
+                        $images[] = (string)$item;
+                    }
+                }
+            }
+
+            return normalize_product_gallery_images_admin_supply($images);
+        };
+
+        foreach (['products', 'marketplace_ce_products'] as $table) {
+            if (!db_table_exists($table)) {
+                continue;
+            }
+
+            try {
+                $stmt = $pdo->prepare("SELECT variants_json, image_url FROM {$table} WHERE sku = ?");
+                $stmt->execute([$sku]);
+                $row = $stmt->fetch();
+                if ($row) {
+                    $rowImages = $extractRowImages($row);
+                    foreach ($rowImages as $rowImage) {
+                        $mergeImage($rowImage);
+                    }
+
+                    if ($rowImages !== $final) {
+                        $needsPersist = true;
+                    }
+                }
+            } catch (Exception $ignored) {
+            }
         }
 
-        if ($row) {
-            $images = [];
-            if (!empty($row['variants_json'])) {
-                $images = json_decode($row['variants_json'], true) ?: [];
+        if (count($final) < 2) {
+            foreach (list_product_gallery_files_admin_supply($sku) as $fileImage) {
+                $mergeImage((string)$fileImage);
             }
-            
-            // Fallback to image_url if images list is empty
-            if (empty($images) && !empty($row['image_url']) && strpos($row['image_url'], 'default-product.svg') === false) {
-                $images[] = $row['image_url'];
-            }
-            
-            return array_values(array_filter($images));
+            $needsPersist = true;
         }
+
+        if (empty($final)) {
+            return [];
+        }
+
+        if (!$needsPersist) {
+            return $final;
+        }
+
+        return persist_product_gallery_images_admin_supply($pdo, $sku, $final);
     } catch (Exception $e) {}
     
     return [];
+}
+
+function list_product_gallery_uploaded_images_admin_supply(string $sku): array {
+    if (!is_valid_numeric_sku_admin_supply($sku)) return [];
+    return list_product_gallery_images_admin_supply($sku);
 }
 
 function store_product_image_for_sku_admin_supply(array $file, string $sku): string {
@@ -1138,24 +1313,10 @@ function reorder_product_gallery_images_admin_supply($pdo, string $sku, array $o
         throw new Exception('SKU inválido');
     }
 
+    $orderedImages = normalize_product_gallery_images_admin_supply($orderedImages);
     if (empty($orderedImages)) return [];
 
-    $json = json_encode($orderedImages);
-    $cover = $orderedImages[0];
-
-    // Update stock
-    try {
-        $stmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ?");
-        $stmt->execute([$cover, $json, $sku]);
-    } catch (Exception $ig) {}
-
-    // Update marketplace
-    try {
-        $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET image_url = ?, variants_json = ? WHERE sku = ?");
-        $stmt->execute([$cover, $json, $sku]);
-    } catch (Exception $ig) {}
-
-    return $orderedImages;
+    return persist_product_gallery_images_admin_supply($pdo, $sku, $orderedImages);
 }
 
 
@@ -1701,7 +1862,7 @@ try {
                 $response = [
                     'success' => true,
                     'available' => false,
-                    'message' => 'El código debe tener exactamente 5 números',
+                    'message' => 'El código debe tener 5 o 6 números',
                     'sku' => $sku
                 ];
                 break;
@@ -1746,7 +1907,7 @@ try {
                 $response = [
                     'success' => true,
                     'available' => false,
-                    'message' => 'El código debe tener exactamente 5 números',
+                    'message' => 'El código debe tener 5 o 6 números',
                     'sku' => $sku
                 ];
                 break;
@@ -2044,7 +2205,7 @@ try {
                 break;
             }
 
-            $fileInput = $_FILES['images'] ?? $_FILES['image'] ?? null;
+            $fileInput = $_FILES['images'] ?? $_FILES['images[]'] ?? $_FILES['image'] ?? null;
             if (!$fileInput) {
                 $response = ['success' => false, 'message' => 'Selecciona una o varias imágenes'];
                 break;
@@ -2086,7 +2247,7 @@ try {
             }
 
             $uploaded = [];
-            $fileInput = $_FILES['images'] ?? $_FILES['image'] ?? null;
+            $fileInput = $_FILES['images'] ?? $_FILES['images[]'] ?? $_FILES['image'] ?? null;
             if (!$fileInput) {
                 $response = ['success' => false, 'message' => 'Selecciona una o varias imágenes'];
                 break;
@@ -2132,9 +2293,34 @@ try {
                 'images' => $images,
                 'cover' => $images[0] ?? null
             ];
+
+            // Optional debug output: return raw DB fields for diagnosis when ?debug=1
+            if (isset($_GET['debug']) && (string)$_GET['debug'] === '1') {
+                try {
+                    $debugRows = [];
+                    if (db_table_exists('products')) {
+                        $stmt = $pdo->prepare("SELECT variants_json, image_url FROM products WHERE sku = ?");
+                        $stmt->execute([$sku]);
+                        $r = $stmt->fetch();
+                        if ($r) $debugRows['products'] = $r;
+                    }
+                    if (db_table_exists('marketplace_ce_products')) {
+                        $stmt = $pdo->prepare("SELECT variants_json, image_url FROM marketplace_ce_products WHERE sku = ?");
+                        $stmt->execute([$sku]);
+                        $r = $stmt->fetch();
+                        if ($r) $debugRows['marketplace_ce_products'] = $r;
+                    }
+                    if (!empty($debugRows)) {
+                        $response['debug'] = $debugRows;
+                    }
+                } catch (Exception $ignored) {
+                }
+            }
             break;
 
         case 'product-gallery-upload':
+        case 'marketplace-image-upload':
+        case 'upload-marketplace-images':
             if ($method !== 'POST') {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];
                 break;
@@ -2181,9 +2367,21 @@ try {
             $stmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ?");
             $stmt->execute([$cover, $json, $sku]);
 
-            // Update marketplace
-            $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET image_url = ?, variants_json = ? WHERE sku = ?");
-            $stmt->execute([$cover, $json, $sku]);
+            // Verify files exist on disk for debug/helpful errors
+            $fileChecks = [];
+            foreach ($allImages as $imgPath) {
+                $full = __DIR__ . '/../' . ltrim($imgPath, '/');
+                $fileChecks[] = ['path' => $imgPath, 'exists' => is_file($full)];
+            }
+
+            // Persist gallery info into DB tables if possible
+            try {
+                persist_product_gallery_images_admin_supply($pdo, $sku, $allImages);
+            } catch (Exception $e) {
+                // ignore — we'll still return file info
+            }
+
+            $cover = $allImages[0] ?? null;
 
             $response = [
                 'success' => true,
@@ -2299,6 +2497,70 @@ try {
                 'images' => $ordered,
                 'cover' => $ordered[0] ?? null
             ];
+            break;
+
+        case 'product-gallery-bootstrap':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $sku = normalize_sku_admin_supply($input['sku'] ?? '');
+            $image = trim((string)($input['image'] ?? ''));
+            if (!is_valid_numeric_sku_admin_supply($sku) || $image === '' || strpos($image, 'default-product.svg') !== false) {
+                $response = ['success' => false, 'message' => 'SKU o imagen inválidos'];
+                break;
+            }
+
+            $images = persist_product_gallery_images_admin_supply($pdo, $sku, [$image]);
+            if (empty($images)) {
+                $response = ['success' => false, 'message' => 'No fue posible inicializar la galería'];
+                break;
+            }
+
+            $response = [
+                'success' => true,
+                'message' => 'Galería inicializada correctamente',
+                'sku' => $sku,
+                'images' => $images,
+                'cover' => $images[0] ?? null
+            ];
+            break;
+
+        case 'sync-images-to-db-all':
+            // Admin-only endpoint: this file already requires admin via require_admin()
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            // Require CSRF for safety
+            require_csrf_token();
+
+            $root = __DIR__ . '/../images/products/by_code';
+            if (!is_dir($root)) {
+                $response = ['success' => false, 'message' => 'No hay directorio de imágenes legacy'];
+                break;
+            }
+
+            $dirs = glob($root . '/*', GLOB_ONLYDIR);
+            $migrated = 0;
+            $errors = [];
+
+            foreach ($dirs as $dir) {
+                $sku = basename($dir);
+                $files = list_product_gallery_files_admin_supply($sku);
+                if (empty($files)) continue;
+
+                try {
+                    $images = persist_product_gallery_images_admin_supply($pdo, $sku, $files);
+                    if (!empty($images)) $migrated++;
+                } catch (Exception $e) {
+                    $errors[] = ['sku' => $sku, 'error' => $e->getMessage()];
+                }
+            }
+
+            $response = ['success' => true, 'message' => 'Migración completa', 'migrated_dirs' => $migrated, 'errors' => $errors];
             break;
 
         case 'client-update':
@@ -2796,17 +3058,35 @@ try {
             $selectUpdatedAt = db_column_exists('marketplace_ce_products', 'updated_at') ? 'updated_at' : 'NULL AS updated_at';
             $orderExpr = db_column_exists('marketplace_ce_products', 'created_at') ? 'created_at DESC' : 'id DESC';
 
-            $stmt = $pdo->query('SELECT id, ' . $selectSku . ', ' . $selectName . ', ' . $selectCategory . ', ' . $selectDescription . ', ' . $selectCondition . ', ' . $selectPrice . ', ' . $selectStock . ', ' . $selectImage . ', ' . $selectActive . ', ' . $selectCreatedAt . ', ' . $selectUpdatedAt . ' FROM marketplace_ce_products ORDER BY ' . $orderExpr);
-            $items = $stmt ? $stmt->fetchAll() : [];
+            $page = max(1, (int)($_GET['page'] ?? 1));
+            $perPage = max(10, min(200, (int)($_GET['per_page'] ?? 50)));
+            $offset = ($page - 1) * $perPage;
 
             $onlyActive = isset($_GET['active']) && $_GET['active'] === '1';
-            if ($onlyActive) {
-                $items = array_values(array_filter($items, function ($row) {
-                    return !in_array((string)($row['is_active'] ?? '1'), ['0', '', 'false', 'False', 'FALSE'], true);
-                }));
+            $whereActive = '';
+            if ($onlyActive && $mkActiveCol !== null) {
+                $whereActive = ' WHERE (CASE WHEN ' . $mkActiveCol . " IS NULL THEN 1 WHEN LOWER(CAST(" . $mkActiveCol . " AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
             }
 
-            $response = ['success' => true, 'items' => $items];
+            $countStmt = $pdo->query('SELECT COUNT(*) FROM marketplace_ce_products' . $whereActive);
+            $total = $countStmt ? (int)$countStmt->fetchColumn() : 0;
+
+            $stmt = $pdo->query(
+                'SELECT id, ' . $selectSku . ', ' . $selectName . ', ' . $selectCategory . ', ' . $selectDescription . ', ' . $selectCondition . ', ' . $selectPrice . ', ' . $selectStock . ', ' . $selectImage . ', ' . $selectActive . ', ' . $selectCreatedAt . ', ' . $selectUpdatedAt .
+                ' FROM marketplace_ce_products' . $whereActive . ' ORDER BY ' . $orderExpr . ' LIMIT ' . (int)$perPage . ' OFFSET ' . (int)$offset
+            );
+            $items = $stmt ? $stmt->fetchAll() : [];
+
+            $response = [
+                'success' => true,
+                'items' => $items,
+                'pagination' => [
+                    'current_page' => $page,
+                    'per_page' => $perPage,
+                    'total_items' => $total,
+                    'total_pages' => max(1, (int)ceil($total / $perPage))
+                ]
+            ];
             break;
 
         case 'marketplace-save':
@@ -2848,7 +3128,7 @@ try {
                 break;
             }
             if (!is_valid_numeric_sku_admin_supply($sku)) {
-                $response = ['success' => false, 'message' => 'El código SKU CE debe tener exactamente 5 números'];
+                $response = ['success' => false, 'message' => 'El código SKU CE debe tener 5 o 6 números'];
                 break;
             }
 
@@ -3314,6 +3594,129 @@ try {
             }
             $stmt = $pdo->query("SELECT id, transaction_type, reference_folio, data_json, created_at FROM transaction_history ORDER BY created_at DESC LIMIT 300");
             $response = ['success' => true, 'items' => $stmt->fetchAll()];
+            break;
+
+        case 'sync-images-to-db':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $baseDir = __DIR__ . '/../images/products/by_code';
+            if (!is_dir($baseDir)) {
+                $response = ['success' => false, 'message' => 'Directorio de imágenes no encontrado'];
+                break;
+            }
+
+            $synced = 0;
+            $errors = [];
+            $dirs = scandir($baseDir);
+
+            if (!is_array($dirs)) {
+                $response = ['success' => false, 'message' => 'No se pudo escanear el directorio'];
+                break;
+            }
+
+            foreach ($dirs as $dir) {
+                if ($dir === '.' || $dir === '..') {
+                    continue;
+                }
+
+                $fullDir = $baseDir . '/' . $dir;
+                if (!is_dir($fullDir)) {
+                    continue;
+                }
+
+                // Extract SKU (5 digits)
+                $sku = preg_replace('/\D+/', '', $dir);
+                if (strlen($sku) !== 5) {
+                    continue;
+                }
+
+                // Find all images
+                $matches = glob($fullDir . '/*.{jpg,jpeg,png,webp,gif,JPG,JPEG,PNG,WEBP,GIF}', GLOB_BRACE);
+                if (empty($matches) || !is_array($matches)) {
+                    continue;
+                }
+
+                // Sort by priority
+                usort($matches, function ($a, $b) {
+                    $nameA = strtoupper(pathinfo($a, PATHINFO_FILENAME));
+                    $nameB = strtoupper(pathinfo($b, PATHINFO_FILENAME));
+                    
+                    $scoreA = 90;
+                    $scoreB = 90;
+                    
+                    if (preg_match('/\+FC1$/', $nameA)) $scoreA = 0;
+                    elseif (preg_match('/\+E1$/', $nameA)) $scoreA = 1;
+                    elseif (preg_match('/\+D1$/', $nameA)) $scoreA = 2;
+                    elseif (preg_match('/\+O\d+$/', $nameA)) $scoreA = 3;
+                    elseif (strpos($nameA, '+') === false) $scoreA = 50;
+                    
+                    if (preg_match('/\+FC1$/', $nameB)) $scoreB = 0;
+                    elseif (preg_match('/\+E1$/', $nameB)) $scoreB = 1;
+                    elseif (preg_match('/\+D1$/', $nameB)) $scoreB = 2;
+                    elseif (preg_match('/\+O\d+$/', $nameB)) $scoreB = 3;
+                    elseif (strpos($nameB, '+') === false) $scoreB = 50;
+                    
+                    if ($scoreA === $scoreB) {
+                        return strcmp($nameA, $nameB);
+                    }
+                    return $scoreA <=> $scoreB;
+                });
+
+                // Convert to web paths
+                $imagePaths = array_map(function ($path) use ($sku) {
+                    return 'images/products/by_code/' . $sku . '/' . basename($path);
+                }, $matches);
+
+                // Update products table
+                if (db_table_exists('products')) {
+                    try {
+                        $stmt = $pdo->prepare("SELECT id FROM products WHERE sku = ?");
+                        $stmt->execute([$sku]);
+                        $row = $stmt->fetch();
+                        
+                        if ($row) {
+                            $coverImage = $imagePaths[0] ?? 'images/products/default-product.svg';
+                            $variantsJson = json_encode($imagePaths, JSON_UNESCAPED_UNICODE);
+                            
+                            $updateStmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ?");
+                            $updateStmt->execute([$coverImage, $variantsJson, $sku]);
+                            $synced++;
+                        }
+                    } catch (Exception $e) {
+                        $errors[] = "products SKU {$sku}: " . $e->getMessage();
+                    }
+                }
+
+                // Update marketplace_ce_products table
+                if (db_table_exists('marketplace_ce_products')) {
+                    try {
+                        $stmt = $pdo->prepare("SELECT id FROM marketplace_ce_products WHERE sku = ?");
+                        $stmt->execute([$sku]);
+                        $row = $stmt->fetch();
+                        
+                        if ($row) {
+                            $coverImage = $imagePaths[0] ?? 'images/products/default-product.svg';
+                            $variantsJson = json_encode($imagePaths, JSON_UNESCAPED_UNICODE);
+                            
+                            $updateStmt = $pdo->prepare("UPDATE marketplace_ce_products SET image_url = ?, variants_json = ? WHERE sku = ?");
+                            $updateStmt->execute([$coverImage, $variantsJson, $sku]);
+                            $synced++;
+                        }
+                    } catch (Exception $e) {
+                        $errors[] = "marketplace_ce_products SKU {$sku}: " . $e->getMessage();
+                    }
+                }
+            }
+
+            $response = [
+                'success' => true,
+                'message' => "Sincronización completada: {$synced} productos actualizados",
+                'synced' => $synced,
+                'errors' => $errors
+            ];
             break;
 
         default:
