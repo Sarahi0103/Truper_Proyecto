@@ -1425,7 +1425,7 @@ function create_product_compatible($pdo, array $payload): void {
     }
     if (db_column_exists('products', 'variants_json')) {
         $columns[] = 'variants_json';
-        $values[] = '[]';
+            $values[] = $payload['variants_json'] ?? '[]';
     }
     if (db_column_exists('products', 'stock_quantity')) {
         $columns[] = 'stock_quantity';
@@ -1492,6 +1492,7 @@ function update_product_compatible($pdo, int $id, array $payload): void {
     if (db_column_exists('products', 'category')) { $sets[] = 'category = ?'; $values[] = $payload['category']; }
     if (db_column_exists('products', 'barcode')) { $sets[] = 'barcode = ?'; $values[] = $payload['barcode'] ?? null; }
     if (db_column_exists('products', 'image_url')) { $sets[] = 'image_url = ?'; $values[] = $payload['image_url']; }
+        if (db_column_exists('products', 'variants_json')) { $sets[] = 'variants_json = ?'; $values[] = $payload['variants_json'] ?? '[]'; }
     if (db_column_exists('products', 'stock_quantity')) { $sets[] = 'stock_quantity = ?'; $values[] = (int)$payload['stock_quantity']; }
     if (db_column_exists('products', 'reorder_level')) { $sets[] = 'reorder_level = ?'; $values[] = (int)$payload['reorder_level']; }
     if (db_column_exists('products', 'unit_price')) { $sets[] = 'unit_price = ?'; $values[] = (float)$payload['price']; }
@@ -2097,7 +2098,10 @@ try {
                 $response = ['success' => false, 'message' => 'SKU y nombre son obligatorios'];
                 break;
             }
-            if (!is_valid_numeric_sku_admin_supply($sku)) {
+                // Get all gallery images from disk BEFORE save to include them in variants_json
+                $galleryImages = list_product_gallery_files_admin_supply($sku);
+            
+                if (!is_valid_numeric_sku_admin_supply($sku)) {
                 $response = ['success' => false, 'message' => 'El código del producto debe tener exactamente 5 o 6 números'];
                 break;
             }
@@ -2129,13 +2133,19 @@ try {
                     break;
                 }
 
+                    // Preserve existing gallery images if any, or use newly uploaded ones
+                    $existingGallery = list_product_gallery_images_admin_supply($sku);
+                    $finalGallery = !empty($existingGallery) ? $existingGallery : $galleryImages;
+                    $variantsJson = json_encode($finalGallery, JSON_UNESCAPED_UNICODE);
+                
                 update_product_compatible($pdo, $id, [
                     'sku' => $sku,
                     'name' => $name,
                     'category' => $category,
                     'description' => $description,
                     'barcode' => $barcode,
-                    'price' => $price,
+                        'price' => $price,
+                        'variants_json' => $variantsJson,
                     'stock_quantity' => max(0, $stockQty),
                     'reorder_level' => max(0, $reorder),
                     'image_url' => $imageUrl,
@@ -2154,7 +2164,11 @@ try {
                 break;
             }
 
-            create_product_compatible($pdo, [
+                // Use gallery images from disk, or fallback to just image_url
+                $finalGallery = !empty($galleryImages) ? $galleryImages : [$imageUrl];
+                $variantsJson = json_encode($finalGallery, JSON_UNESCAPED_UNICODE);
+            
+                create_product_compatible($pdo, [
                 'sku' => $sku,
                 'name' => $name,
                 'category' => $category,
@@ -2164,8 +2178,9 @@ try {
                 'stock_quantity' => max(0, $stockQty),
                 'reorder_level' => max(0, $reorder),
                 'image_url' => $imageUrl,
-                'is_active' => $isVisible
-            ]);
+                    'is_active' => $isVisible,
+                    'variants_json' => $variantsJson
+                ]);
 
             $response = [
                 'success' => true,
