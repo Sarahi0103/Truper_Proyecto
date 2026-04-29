@@ -3262,7 +3262,6 @@ async function uploadProductImages() {
         return false;
     }
 }
-}
 
 async function uploadMarketplaceImages() {
     const input = document.getElementById('marketplaceImages');
