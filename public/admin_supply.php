@@ -1651,7 +1651,7 @@ async function deleteMarketplaceCategoryQuick() {
     return deleteCategoryQuickFromSelect('marketplaceCategory', 'marketplaceQuickCategoryResult');
 }
 
-async function addCategoryFromQuickForm(selectId, inputId, resultId) {
+async function addCategoryFromQuickForm(selectId, inputId, resultId, context = 'both') {
     const input = document.getElementById(inputId);
     const quickBox = document.getElementById(resultId);
     const raw = (input?.value || '').trim().replace(/\s+/g, ' ');
@@ -1677,7 +1677,8 @@ async function addCategoryFromQuickForm(selectId, inputId, resultId) {
         id: 0,
         name: raw,
         sort_order: 0,
-        is_active: true
+        is_active: true,
+        context: context
     };
 
     const res = await apiCall('/admin_supply.php?action=categories-save', 'POST', payload);
@@ -1715,6 +1716,14 @@ async function addCategoryFromQuickForm(selectId, inputId, resultId) {
             target.scrollIntoView({ block: 'nearest' });
         }
     }
+}
+
+async function addCategoryFromStockForm() {
+    return addCategoryFromQuickForm('newProductCategory', 'newCategoryQuickName', 'quickCategoryResult', 'both');
+}
+
+async function addCategoryFromMarketplaceForm() {
+    return addCategoryFromQuickForm('marketplaceCategory', 'marketplaceCategoryQuickName', 'marketplaceQuickCategoryResult', 'both');
 }
 
 function updateStockQuickSelection(items = stockItemsCache) {
