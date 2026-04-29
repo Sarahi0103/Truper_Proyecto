@@ -358,7 +358,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <div class="form-group">
                     <label>Galería del producto (por código)</label>
                     <small class="text-muted">Sube varias imágenes para este SKU, define portada y elimina las que no necesites.</small>
-                    <div id="productGalleryStatus" class="text-muted" style="margin-top:6px;">Escribe un código de 5 números para cargar su galería.</div>
+                    <div id="productGalleryStatus" class="text-muted" style="margin-top:6px;">Escribe un código de 5 o 6 números para cargar su galería.</div>
                     <div id="productGalleryList" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:0.6rem; margin-top:0.6rem;"></div>
                 </div>
 
@@ -763,6 +763,17 @@ function formatAdminMoney(value) {
 }
 
 const skuCheckVersion = { product: 0, marketplace: 0 };
+
+function getSafeImageSrc(src) {
+    if (!src || typeof src !== 'string') return 'images/products/default-product.svg';
+    const s = src.trim();
+    if (s === '') return 'images/products/default-product.svg';
+    // Accept data URIs (base64), http(s) URLs, and relative paths
+    if (s.startsWith('data:') || s.startsWith('http://') || s.startsWith('https://') || s.startsWith('/') || s.startsWith('images/')) {
+        return s;
+    }
+    return 'images/products/default-product.svg';
+}
 
 function renderAdminProductCard(item, mode = 'stock', withActions = true) {
     const id = Number(item.id || 0);
