@@ -2004,7 +2004,7 @@ try {
                 $_SESSION['user_id'],
                 'ADMIN_CREATE_PRODUCT',
                 'Producto creado por admin: ' . $sku,
-                getTrusSIDBug()
+                null
             );
 
             $response = [
