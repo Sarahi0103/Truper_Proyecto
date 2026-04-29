@@ -79,31 +79,48 @@ function resolve_images_by_product_code($code) {
     static $cache = null;
     if ($cache === null) {
         $cache = [];
+        // 1) Directorio by_code (catálogo XLSX original)
         $baseDir = __DIR__ . '/images/products/by_code';
         if (is_dir($baseDir)) {
             $dirs = scandir($baseDir);
             foreach ($dirs as $dir) {
-                if ($dir === '.' || $dir === '..') {
-                    continue;
-                }
+                if ($dir === '.' || $dir === '..') continue;
                 $fullDir = $baseDir . '/' . $dir;
-                if (!is_dir($fullDir)) {
-                    continue;
-                }
+                if (!is_dir($fullDir)) continue;
                 $matches = glob($fullDir . '/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', GLOB_BRACE);
                 if (!empty($matches)) {
                     usort($matches, function ($a, $b) {
                         $scoreA = image_priority_score($a);
                         $scoreB = image_priority_score($b);
-                        if ($scoreA === $scoreB) {
-                            return strcmp((string)$a, (string)$b);
-                        }
+                        if ($scoreA === $scoreB) return strcmp((string)$a, (string)$b);
                         return $scoreA <=> $scoreB;
                     });
-
                     $cache[$dir] = array_map(function ($path) use ($dir) {
                         return 'images/products/by_code/' . $dir . '/' . basename($path);
                     }, $matches);
+                }
+            }
+        }
+
+        // 2) Directorio gallery (subidas desde el admin)
+        $galleryBase = __DIR__ . '/images/products/gallery';
+        if (is_dir($galleryBase)) {
+            $skuDirs = scandir($galleryBase);
+            foreach ($skuDirs as $skuDir) {
+                if ($skuDir === '.' || $skuDir === '..') continue;
+                $fullDir = $galleryBase . '/' . $skuDir;
+                if (!is_dir($fullDir)) continue;
+                $matches = glob($fullDir . '/*.{jpg,jpeg,png,webp,gif,JPG,JPEG,PNG,WEBP}', GLOB_BRACE);
+                if (!empty($matches)) {
+                    $galleryImages = array_map(function ($path) use ($skuDir) {
+                        return 'images/products/gallery/' . $skuDir . '/' . basename($path);
+                    }, $matches);
+                    // Prepend gallery images (admin-uploaded take priority)
+                    if (isset($cache[$skuDir])) {
+                        $cache[$skuDir] = array_merge($galleryImages, $cache[$skuDir]);
+                    } else {
+                        $cache[$skuDir] = $galleryImages;
+                    }
                 }
             }
         }

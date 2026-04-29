@@ -242,12 +242,28 @@ $whatsappPhone = function_exists('whatsapp_phone_digits') ? whatsapp_phone_digit
                     $stockClass = $itemStock <= 2 ? 'stock-low' : 'stock-ok';
                     $stockLabel = $itemStock <= 2 ? 'Pocas piezas: ' : 'Disponibles: ';
                     
-                    $images = [$itemImg];
-                    if (!empty($item['variants_json'])) {
+                    $images = [];
+                    // 1) Primero intentar galería en disco (más eficiente)
+                    $galleryDir = __DIR__ . '/images/products/gallery/' . preg_replace('/[^a-zA-Z0-9_\-]/', '', $item['sku']);
+                    if (is_dir($galleryDir)) {
+                        $diskImages = glob($galleryDir . '/*.{jpg,jpeg,png,webp,gif,JPG,JPEG,PNG,WEBP}', GLOB_BRACE);
+                        foreach ($diskImages as $di) {
+                            $images[] = 'images/products/gallery/' . basename($galleryDir) . '/' . basename($di);
+                        }
+                    }
+                    // 2) Fallback: variants_json (puede ser base64 o rutas)
+                    if (empty($images) && !empty($item['variants_json'])) {
                         $parsed = json_decode($item['variants_json'], true);
                         if (is_array($parsed) && count($parsed) > 0) {
-                            $images = $parsed;
+                            // Filtrar base64 para no mandarlos al HTML si hay alternativa de disco
+                            $nonBase64 = array_filter($parsed, fn($v) => strpos((string)$v, 'data:') !== 0);
+                            $images = !empty($nonBase64) ? array_values($nonBase64) : $parsed;
                         }
+                    }
+                    // 3) Fallback final: image_url del producto
+                    if (empty($images)) {
+                        $fallbackImg = (string)($item['image_url'] ?? 'images/products/default-product.svg');
+                        $images = [$fallbackImg];
                     }
                 ?>
                 <article class="product-card-min"

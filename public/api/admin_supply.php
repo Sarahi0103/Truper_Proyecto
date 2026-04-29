@@ -69,11 +69,11 @@ function normalize_bool_admin_supply($value, bool $default = false): bool {
 function normalize_sku_admin_supply($value): string {
     $sku = trim((string)$value);
     $digits = preg_replace('/\D+/', '', $sku);
-    return substr($digits, 0, 5);
+    return substr($digits, 0, 6);
 }
 
 function is_valid_numeric_sku_admin_supply(string $sku): bool {
-    return (bool)preg_match('/^\d{5}$/', $sku);
+    return (bool)preg_match('/^\d{5,6}$/', $sku);
 }
 
 function normalize_category_admin_supply($value): string {
@@ -348,7 +348,7 @@ function record_matches_normalized_sku_admin_supply($pdo, string $table, int $id
     }
 }
 
-function insert_category_and_get_id_admin_supply($pdo, string $name, int $sortOrder, bool $isActive): int {
+function insert_category_and_get_id_admin_supply($pdo, string $name, int $sortOrder, bool $isActive, string $context = 'stock'): int {
     $name = trim((string)$name);
     if ($name === '') {
         return 0;
@@ -371,28 +371,25 @@ function insert_category_and_get_id_admin_supply($pdo, string $name, int $sortOr
     
     // PostgreSQL supports RETURNING; MySQL/MariaDB may not.
     try {
-        $stmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order, is_active) VALUES (?, ?, ?) RETURNING id");
-        $stmt->execute([$name, $sortOrder, $isActive]);
+        $stmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order, is_active, context) VALUES (?, ?, ?, ?) RETURNING id");
+        $stmt->execute([$name, $sortOrder, $isActive, $context]);
         $createdId = (int)$stmt->fetchColumn();
         if ($createdId > 0) {
             return $createdId;
         }
     } catch (Exception $ignored) {
-        // Fallback path below.
-    }
-
-    $stmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order, is_active) VALUES (?, ?, ?)");
-    $stmt->execute([$name, $sortOrder, $isActive]);
-
+        // Generic insert
     try {
-        $lastId = (int)$pdo->lastInsertId();
-        if ($lastId > 0) {
-            return $lastId;
-        }
-    } catch (Exception $ignored) {
+        $stmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order, is_active, context) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$name, $sortOrder, $isActive, $context]);
+        return (int)$pdo->lastInsertId();
+    } catch (Exception $e) {
+        // Final attempt: lookup just in case it was created concurrently
+        $findStmt = $pdo->prepare("SELECT id FROM product_categories WHERE LOWER(name) = LOWER(?) ORDER BY id DESC LIMIT 1");
+        $findStmt->execute([$name]);
+        return (int)$findStmt->fetchColumn();
     }
-
-    $findStmt = $pdo->prepare("SELECT id FROM product_categories WHERE LOWER(name) = LOWER(?) ORDER BY id DESC LIMIT 1");
+}
     $findStmt->execute([$name]);
     return (int)$findStmt->fetchColumn();
 }
@@ -407,9 +404,11 @@ function ensure_product_categories_runtime_admin_supply($pdo): void {
             name VARCHAR(120) NOT NULL UNIQUE,
             sort_order INTEGER NOT NULL DEFAULT 0,
             is_active BOOLEAN NOT NULL DEFAULT true,
+            context VARCHAR(20) NOT NULL DEFAULT 'stock',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )");
+        $pdo->exec("ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS context VARCHAR(20) DEFAULT 'stock'");
         $created = true;
     } catch (Exception $ignored) {
     }
@@ -422,9 +421,11 @@ function ensure_product_categories_runtime_admin_supply($pdo): void {
                 name VARCHAR(120) NOT NULL UNIQUE,
                 sort_order INTEGER NOT NULL DEFAULT 0,
                 is_active BOOLEAN NOT NULL DEFAULT 1,
+                context VARCHAR(20) NOT NULL DEFAULT 'stock',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )");
+            $pdo->exec("ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS context VARCHAR(20) DEFAULT 'stock'");
             $created = true;
         } catch (Exception $ignored) {
         }
@@ -1042,10 +1043,54 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
         throw new Exception('Formato de imagen no permitido');
     }
 
-    $mimeType = mime_content_type($tmp);
-    if (!$mimeType) $mimeType = 'image/jpeg';
+    // Guardar en disco: images/products/gallery/{sku}/
+    $galleryDir = __DIR__ . '/../images/products/gallery/' . $sku;
+    if (!is_dir($galleryDir)) {
+        mkdir($galleryDir, 0775, true);
+    }
 
-    return convert_image_to_base64_admin_supply($tmp, $mimeType);
+    // Nombre de archivo: timestamp + random para evitar colisiones
+    $filename = time() . '_' . bin2hex(random_bytes(4)) . '.' . ($ext === 'jpeg' ? 'jpg' : $ext);
+    $destPath = $galleryDir . '/' . $filename;
+
+    // Intentar redimensionar con GD si está disponible
+    if (function_exists('imagecreatefromstring')) {
+        $imageString = file_get_contents($tmp);
+        $img = @imagecreatefromstring($imageString);
+        if ($img) {
+            $maxW = 900; $maxH = 900;
+            $w = imagesx($img); $h = imagesy($img);
+            if ($w > $maxW || $h > $maxH) {
+                $ratio = min($maxW / $w, $maxH / $h);
+                $nw = (int)($w * $ratio); $nh = (int)($h * $ratio);
+                $newImg = imagecreatetruecolor($nw, $nh);
+                if (in_array($ext, ['png', 'gif', 'webp'])) {
+                    imagealphablending($newImg, false);
+                    imagesavealpha($newImg, true);
+                }
+                imagecopyresampled($newImg, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
+                imagedestroy($img);
+                $img = $newImg;
+            }
+            if ($ext === 'png') {
+                imagepng($img, $destPath, 8);
+            } elseif (in_array($ext, ['webp']) && function_exists('imagewebp')) {
+                imagewebp($img, $destPath, 82);
+            } else {
+                imagejpeg($img, $destPath, 82);
+                // normalize extension to jpg
+                $filename = pathinfo($filename, PATHINFO_FILENAME) . '.jpg';
+                $destPath = $galleryDir . '/' . $filename;
+            }
+            imagedestroy($img);
+        } else {
+            move_uploaded_file($tmp, $destPath);
+        }
+    } else {
+        move_uploaded_file($tmp, $destPath);
+    }
+
+    return 'images/products/gallery/' . $sku . '/' . $filename;
 }
 
 function set_product_main_image_by_sku_admin_supply($pdo, string $sku, string $imageUrl): void {
@@ -1350,6 +1395,11 @@ function list_available_product_images($pdo): array {
     $appendImage = function ($value) use (&$images) {
         $path = trim((string)$value);
         if ($path === '') {
+            return;
+        }
+
+        // Skip base64 data URIs — too large for the reference dropdown and break onclick attrs
+        if (strpos($path, 'data:') === 0) {
             return;
         }
 
@@ -1743,7 +1793,7 @@ try {
                 break;
             }
             if (!is_valid_numeric_sku_admin_supply($sku)) {
-                $response = ['success' => false, 'message' => 'El código del producto debe tener exactamente 5 números'];
+                $response = ['success' => false, 'message' => 'El código del producto debe tener exactamente 5 o 6 números'];
                 break;
             }
             if ($price < 0) {
@@ -1833,7 +1883,7 @@ try {
                 break;
             }
             if (!is_valid_numeric_sku_admin_supply($sku)) {
-                $response = ['success' => false, 'message' => 'El código del producto debe tener exactamente 5 números'];
+                $response = ['success' => false, 'message' => 'El código del producto debe tener exactamente 5 o 6 números'];
                 break;
             }
             if ($price < 0 || $stockQty < 0 || $reorder < 0) {
@@ -2117,11 +2167,16 @@ try {
             }
 
             $images = list_product_gallery_images_admin_supply($sku);
-            $allImages = array_merge($images, $uploaded);
-            
-            $json = json_encode($allImages);
-            $cover = $allImages[0];
-            
+            // Agregar solo las nuevas (evitar duplicados)
+            foreach ($uploaded as $newImg) {
+                if (!in_array($newImg, $images, true)) {
+                    $images[] = $newImg;
+                }
+            }
+
+            $json = json_encode(array_values($images));
+            $cover = $images[0];
+
             // Update stock
             $stmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ?");
             $stmt->execute([$cover, $json, $sku]);
@@ -2135,7 +2190,7 @@ try {
                 'message' => 'Galería actualizada correctamente',
                 'sku' => $sku,
                 'uploaded' => $uploaded,
-                'images' => $allImages,
+                'images' => $images,
                 'cover' => $cover
             ];
             break;
@@ -2372,15 +2427,17 @@ try {
                 : "true AS is_active";
 
             $onlyActive = isset($_GET['active']) && $_GET['active'] === '1';
-            if ($onlyActive) {
-                if (db_column_exists('product_categories', 'is_active')) {
-                    $stmt = $pdo->query("SELECT id, {$nameSelect}, {$orderSelect}, {$activeSelect} FROM product_categories WHERE is_active = true ORDER BY " . (db_column_exists('product_categories', 'sort_order') ? 'sort_order ASC, ' : '') . "name ASC");
-                } else {
-                    $stmt = $pdo->query("SELECT id, {$nameSelect}, {$orderSelect}, {$activeSelect} FROM product_categories ORDER BY " . (db_column_exists('product_categories', 'sort_order') ? 'sort_order ASC, ' : '') . "name ASC");
-                }
-            } else {
-                $stmt = $pdo->query("SELECT id, {$nameSelect}, {$orderSelect}, {$activeSelect} FROM product_categories ORDER BY " . (db_column_exists('product_categories', 'sort_order') ? 'sort_order ASC, ' : '') . "name ASC");
+            $context = $_GET['context'] ?? '';
+            $where = [];
+            if ($onlyActive) $where[] = "is_active = true";
+            if ($context === 'stock') {
+                $where[] = "(context = 'stock' OR context = 'both')";
+            } elseif ($context === 'marketplace') {
+                $where[] = "(context = 'marketplace' OR context = 'both')";
             }
+            $whereStr = !empty($where) ? " WHERE " . implode(" AND ", $where) : "";
+
+            $stmt = $pdo->query("SELECT id, {$nameSelect}, {$orderSelect}, {$activeSelect}, " . (db_column_exists('product_categories', 'context') ? "context" : "'stock' AS context") . " FROM product_categories" . $whereStr . " ORDER BY " . (db_column_exists('product_categories', 'sort_order') ? 'sort_order ASC, ' : '') . "name ASC");
             $response = ['success' => true, 'items' => $stmt->fetchAll()];
             break;
 
@@ -2396,6 +2453,7 @@ try {
             $name = trim((string)($_POST['name'] ?? ($input['name'] ?? '')));
             $sortOrder = (int)($_POST['sort_order'] ?? ($input['sort_order'] ?? 0));
             $isActive = normalize_bool_admin_supply($_POST['is_active'] ?? ($input['is_active'] ?? null), true);
+            $context = sanitize($input['context'] ?? ($_POST['context'] ?? 'stock'));
 
             if ($name === '') {
                 $response = ['success' => false, 'message' => 'El nombre de la categoría es obligatorio'];
@@ -2422,8 +2480,8 @@ try {
 
                 // Full update path (newest schema)
                 try {
-                    $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, sort_order = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-                    $stmt->execute([$name, $sortOrder, $isActive, $id]);
+                    $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, sort_order = ?, is_active = ?, context = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+                    $stmt->execute([$name, $sortOrder, $isActive, $context, $id]);
                     $updated = true;
                 } catch (Exception $ignored) {
                 }
@@ -2431,8 +2489,8 @@ try {
                 // Legacy fallback: without updated_at
                 if (!$updated) {
                     try {
-                        $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, sort_order = ?, is_active = ? WHERE id = ?");
-                        $stmt->execute([$name, $sortOrder, $isActive, $id]);
+                        $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, sort_order = ?, is_active = ?, context = ? WHERE id = ?");
+                        $stmt->execute([$name, $sortOrder, $isActive, $context, $id]);
                         $updated = true;
                     } catch (Exception $ignored) {
                     }
@@ -2441,8 +2499,8 @@ try {
                 // Minimal fallback: name + sort_order only
                 if (!$updated) {
                     try {
-                        $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, sort_order = ? WHERE id = ?");
-                        $stmt->execute([$name, $sortOrder, $id]);
+                        $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, sort_order = ?, context = ? WHERE id = ?");
+                        $stmt->execute([$name, $sortOrder, $context, $id]);
                         $updated = true;
                     } catch (Exception $ignored) {
                     }
@@ -2469,7 +2527,7 @@ try {
 
                 // Full insert path (newest schema)
                 try {
-                    $createdId = insert_category_and_get_id_admin_supply($pdo, $name, $sortOrder, $isActive);
+                    $createdId = insert_category_and_get_id_admin_supply($pdo, $name, $sortOrder, $isActive, $context);
                 } catch (Exception $ignored) {
                 }
 

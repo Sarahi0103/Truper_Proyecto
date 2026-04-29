@@ -300,7 +300,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <input type="hidden" id="newProductSeedMode" value="0">
 
                 <div class="grid grid-2">
-                    <div class="form-group"><label>Código del producto (5 números)</label><input id="newProductSku" type="text" maxlength="5" inputmode="numeric" pattern="\d{5}" placeholder="Ej. 23032"><small id="newProductSkuStatus" class="text-muted">Debe ser único y de 5 números.</small></div>
+                    <div class="form-group"><label>Código del producto (5 o 6 números)</label><input id="newProductSku" type="text" maxlength="6" inputmode="numeric" pattern="\d{5,6}" placeholder="Ej. 23032"><small id="newProductSkuStatus" class="text-muted">Debe ser único y de 5 o 6 números.</small></div>
                     <div class="form-group"><label>Nombre</label><input id="newProductName" type="text" maxlength="255"></div>
                 </div>
 
@@ -327,7 +327,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <div class="grid grid-3">
                     <div class="form-group"><label>Precio</label><input id="newProductPrice" type="number" min="0" step="0.01" value="0"></div>
                     <div class="form-group"><label>Stock inicial</label><input id="newProductStock" type="number" min="0" step="1" value="50"></div>
-                    <input id="newProductVisible" type="hidden" value="0">
+                    <div class="form-group"><label>Visibilidad en tienda</label><select id="newProductVisible"><option value="1">✅ Visible en tienda</option><option value="0">🔒 Oculto</option></select></div>
                 </div>
 
                 <div class="grid grid-3">
@@ -617,7 +617,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <input type="hidden" id="marketplaceEditId" value="">
 
                 <div class="grid grid-3">
-                    <div class="form-group"><label>SKU CE (5 números)</label><input id="marketplaceSku" type="text" maxlength="5" inputmode="numeric" pattern="\d{5}" placeholder="Ej. 24061"><small id="marketplaceSkuStatus" class="text-muted">Debe ser único y de 5 números.</small></div>
+                    <div class="form-group"><label>SKU CE (5 o 6 números)</label><input id="marketplaceSku" type="text" maxlength="6" inputmode="numeric" pattern="\d{5,6}" placeholder="Ej. 24061"><small id="marketplaceSkuStatus" class="text-muted">Debe ser único y de 5 o 6 números.</small></div>
                     <div class="form-group"><label>Nombre</label><input id="marketplaceName" type="text" maxlength="220"></div>
                     <div class="form-group">
                         <label>Condición</label>
@@ -647,7 +647,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <div class="grid grid-3">
                     <div class="form-group"><label>Precio</label><input id="marketplacePrice" type="number" min="0" step="0.01" value="0"></div>
                     <div class="form-group"><label>Stock</label><input id="marketplaceStock" type="number" min="0" step="1" value="1"></div>
-                    <input id="marketplaceActive" type="hidden" value="0">
+                    <div class="form-group"><label>Visibilidad CE</label><select id="marketplaceActive"><option value="1">✅ Visible en Marketplace</option><option value="0">🔒 Oculto (revisar antes de publicar)</option></select></div>
                 </div>
 
                 <div class="form-group"><label>Descripción</label><textarea id="marketplaceDescription" rows="4" maxlength="1800"></textarea></div>
@@ -736,6 +736,8 @@ window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8
 let supplierOrderItems = [];
 let stockItemsCache = [];
 let marketplaceItemsCache = [];
+let stockGalleryCache = [];
+let marketplaceGalleryCache = [];
 
 function escapeHtml(v) {
     return String(v || '').replace(/[&<>"']/g, function(m) {
@@ -748,7 +750,7 @@ function displayProductCode(rawSku) {
 }
 
 function normalizeNumericSku(rawValue) {
-    return String(rawValue || '').replace(/\D+/g, '').slice(0, 5);
+    return String(rawValue || '').replace(/\D+/g, '').slice(0, 6);
 }
 
 function isValidNumericSku(sku) {
@@ -933,8 +935,8 @@ async function validateSkuAvailability(kind) {
         return false;
     }
 
-    if (!/^\d{5}$/.test(sku)) {
-        setSkuStatus(statusId, 'El código debe tener exactamente 5 números.', 'warning');
+    if (!/^\d{5,6}$/.test(sku)) {
+        setSkuStatus(statusId, 'El código debe tener 5 o 6 números.', 'warning');
         return false;
     }
 
@@ -2512,10 +2514,16 @@ async function loadProductImageReferences() {
         if (!selectEl) return;
         const current = selectEl.value || 'images/products/default-product.svg';
         selectEl.innerHTML = '';
-        res.images.forEach((img) => {
+        let base64Count = 0;
+        res.images.forEach((img, idx) => {
             const option = document.createElement('option');
             option.value = img;
-            option.textContent = img;
+            if (img.startsWith('data:')) {
+                base64Count++;
+                option.textContent = `Imagen subida [${base64Count}]`;
+            } else {
+                option.textContent = img;
+            }
             selectEl.appendChild(option);
         });
 
@@ -2786,6 +2794,13 @@ async function moveGalleryImageToPosition(sku, imagePath, targetPosition, mode =
 }
 
 function renderProductGallery(images, sku, mode = 'stock') {
+    // Store in global cache to avoid passing large base64 strings in onclick attrs
+    if (mode === 'marketplace') {
+        marketplaceGalleryCache = images.slice();
+    } else {
+        stockGalleryCache = images.slice();
+    }
+
     const host = document.getElementById(mode === 'marketplace' ? 'marketplaceGalleryList' : 'productGalleryList');
     const status = document.getElementById(mode === 'marketplace' ? 'marketplaceGalleryStatus' : 'productGalleryStatus');
     if (!host || !status) return;
@@ -2796,26 +2811,54 @@ function renderProductGallery(images, sku, mode = 'stock') {
         return;
     }
 
-    const setCoverFn = mode === 'marketplace' ? 'setMarketplaceGalleryCover' : 'setProductGalleryCover';
-    const deleteFn = mode === 'marketplace' ? 'deleteMarketplaceGalleryImage' : 'deleteProductGalleryImage';
-    const moveToFn = mode === 'marketplace' ? 'moveMarketplaceGalleryImageTo' : 'moveProductGalleryImageTo';
-
-    status.textContent = `Galería para ${sku}: ${images.length} imagen(es)`;
+    status.textContent = `Galería para ${sku}: ${images.length} imagen(es). La primera imagen es la portada.`;
     host.innerHTML = images.map((img, idx) => `
-        <div style="border:1px solid var(--ui-border); border-radius:10px; padding:0.5rem; background:var(--ui-surface-soft);">
-            <img src="${escapeHtml(img)}" alt="Imagen ${idx + 1}" style="width:100%; height:90px; object-fit:cover; border-radius:8px;">
-            <div style="display:flex; align-items:center; gap:0.35rem; margin-top:0.45rem;">
-                <label style="font-size:12px; color:var(--ui-text-muted);">Posición</label>
-                <select id="galleryPos-${mode}-${idx}" style="max-width:90px;" onchange="${moveToFn}('${escapeHtml(sku)}','${escapeHtml(img)}', this.value)">
+        <div style="border:2px solid ${idx === 0 ? 'var(--theme-accent)' : 'var(--ui-border)'}; border-radius:10px; padding:0.5rem; background:var(--ui-surface-soft); position:relative;">
+            ${idx === 0 ? '<div style="position:absolute;top:4px;left:4px;background:var(--theme-accent);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;z-index:1">★ PORTADA</div>' : ''}
+            <img src="${escapeHtml(img)}" alt="Imagen ${idx + 1}" style="width:100%; height:90px; object-fit:cover; border-radius:8px;" loading="lazy">
+            <div style="display:flex; align-items:center; gap:0.35rem; margin-top:0.45rem; flex-wrap:wrap;">
+                <label style="font-size:11px; color:var(--ui-text-muted);">Pos:</label>
+                <select id="galleryPos-${mode}-${idx}" style="max-width:65px; font-size:12px;" onchange="galleryMoveByIndex('${escapeHtml(sku)}', ${idx}, this.value, '${mode}')">
                     ${images.map((_, pos) => `<option value="${pos + 1}" ${pos === idx ? 'selected' : ''}>${pos + 1}</option>`).join('')}
                 </select>
-            </div>
-            <div style="display:flex; gap:0.35rem; margin-top:0.45rem; flex-wrap:wrap;">
-                <button class="btn btn-small btn-danger" type="button" onclick="${deleteFn}('${escapeHtml(sku)}','${escapeHtml(img)}')">Eliminar</button>
+                ${idx !== 0 ? `<button class="btn btn-small btn-secondary" type="button" style="font-size:11px;padding:2px 6px;" onclick="galleryCoverByIndex('${escapeHtml(sku)}', ${idx}, '${mode}')">&#9733; Portada</button>` : ''}
+                <button class="btn btn-small btn-danger" type="button" style="font-size:11px;padding:2px 6px;" onclick="galleryDeleteByIndex('${escapeHtml(sku)}', ${idx}, '${mode}')">&#x2715; Quitar</button>
             </div>
         </div>
     `).join('');
 }
+
+// --- Index-based gallery helpers (avoid passing base64 in HTML onclick attrs) ---
+function galleryGetByIndex(index, mode) {
+    const cache = mode === 'marketplace' ? marketplaceGalleryCache : stockGalleryCache;
+    return (cache && cache[index] !== undefined) ? cache[index] : null;
+}
+
+async function galleryDeleteByIndex(sku, index, mode) {
+    const img = galleryGetByIndex(index, mode);
+    if (!img) { showGalleryResult(mode, 'Imagen no encontrada en caché', 'error'); return; }
+    if (mode === 'marketplace') return deleteMarketplaceGalleryImage(sku, img);
+    return deleteProductGalleryImage(sku, img);
+}
+
+async function galleryCoverByIndex(sku, index, mode) {
+    const img = galleryGetByIndex(index, mode);
+    if (!img) { showGalleryResult(mode, 'Imagen no encontrada en caché', 'error'); return; }
+    if (mode === 'marketplace') return setMarketplaceGalleryCover(sku, img);
+    return setProductGalleryCover(sku, img);
+}
+
+async function galleryMoveByIndex(sku, currentIndex, targetPosition, mode) {
+    const cache = mode === 'marketplace' ? marketplaceGalleryCache : stockGalleryCache;
+    if (!cache || cache.length === 0) { showGalleryResult(mode, 'Galería no cargada', 'error'); return; }
+    const images = cache.slice();
+    const targetIndex = Number(targetPosition) - 1;
+    if (targetIndex === currentIndex || targetIndex < 0 || targetIndex >= images.length) return;
+    const [moved] = images.splice(currentIndex, 1);
+    images.splice(targetIndex, 0, moved);
+    await reorderGalleryImages(sku, images, mode);
+}
+
 
 async function loadProductGalleryForCurrentSku() {
     const sku = getCurrentStockSkuForGallery();
@@ -2823,9 +2866,9 @@ async function loadProductGalleryForCurrentSku() {
     const status = document.getElementById('productGalleryStatus');
     if (!host || !status) return;
 
-    if (!/^\d{5}$/.test(sku)) {
+    if (!/^\d{5,6}$/.test(sku)) {
         host.innerHTML = '';
-        status.textContent = 'Escribe un código de 5 números para cargar su galería.';
+        status.textContent = 'Escribe un código de 5 o 6 números para cargar su galería.';
         return;
     }
 
@@ -2863,9 +2906,9 @@ async function loadMarketplaceGalleryForCurrentSku() {
     const status = document.getElementById('marketplaceGalleryStatus');
     if (!host || !status) return;
 
-    if (!/^\d{5}$/.test(sku)) {
+    if (!/^\d{5,6}$/.test(sku)) {
         host.innerHTML = '';
-        status.textContent = 'Escribe un código de 5 números para cargar su galería CE.';
+        status.textContent = 'Escribe un código de 5 o 6 números para cargar su galería CE.';
         return;
     }
 
@@ -2993,9 +3036,9 @@ async function uploadProductImages() {
     const resultBox = document.getElementById('productCreateResult');
     const sku = getCurrentStockSkuForGallery();
 
-    if (!/^\d{5}$/.test(sku)) {
+    if (!/^\d{5,6}$/.test(sku)) {
         if (resultBox) {
-            resultBox.innerHTML = '<div class="alert alert-error">Primero captura un código de producto válido (5 números)</div>';
+            resultBox.innerHTML = '<div class="alert alert-error">Primero captura un código de producto válido (5 o 6 números)</div>';
         }
         return;
     }
@@ -3062,8 +3105,8 @@ async function uploadMarketplaceImages() {
     const input = document.getElementById('marketplaceImages');
     const sku = getCurrentMarketplaceSkuForGallery();
 
-    if (!/^\d{5}$/.test(sku)) {
-        showGalleryResult('marketplace', 'Primero captura un código SKU CE válido (5 números)', 'error');
+    if (!/^\d{5,6}$/.test(sku)) {
+        showGalleryResult('marketplace', 'Primero captura un código SKU CE válido (5 o 6 números)', 'error');
         return;
     }
 
@@ -3134,11 +3177,11 @@ async function createProductByAdmin() {
     }
 
     // Validation
-    if (!/^\d{5}$/.test(normalizedSku)) {
+    if (!/^\d{5,6}$/.test(normalizedSku)) {
         if (box) {
             box.innerHTML = '<div class="alert alert-error">El código del producto debe tener exactamente 5 números.</div>';
         }
-        setSkuStatus('newProductSkuStatus', 'El código debe tener exactamente 5 números.', 'warning');
+        setSkuStatus('newProductSkuStatus', 'El código debe tener 5 o 6 números.', 'warning');
         showAlert('SKU inválido', 'warning');
         return;
     }
@@ -3485,9 +3528,9 @@ async function saveMarketplaceCeByAdmin() {
     }
 
     // Validation
-    if (!/^\d{5}$/.test(normalizedSku)) {
+    if (!/^\d{5,6}$/.test(normalizedSku)) {
         if (box) box.innerHTML = '<div class="alert alert-error">El código SKU CE debe tener exactamente 5 números.</div>';
-        setSkuStatus('marketplaceSkuStatus', 'El código debe tener exactamente 5 números.', 'warning');
+        setSkuStatus('marketplaceSkuStatus', 'El código debe tener 5 o 6 números.', 'warning');
         showAlert('SKU inválido', 'warning');
         return;
     }
@@ -3703,44 +3746,8 @@ async function processMarketplaceCsvUpload() {
     reader.readAsText(file);
 }
 
-async function uploadMarketplaceImages() {
-    const fileInput = document.getElementById('marketplaceImages');
-    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-        showAlert('Selecciona al menos una imagen', 'warning');
-        return;
-    }
+// (uploadMarketplaceImages is defined above — duplicate removed)
 
-    const skuInput = document.getElementById('marketplaceSku');
-    const sku = normalizeNumericSku(skuInput?.value || '');
-    if (!/^\d{5}$/.test(sku)) {
-        showAlert('Primero escribe un SKU válido de 5 números', 'warning');
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append('sku', sku);
-    for (let i = 0; i < fileInput.files.length; i++) {
-        formData.append('images[]', fileInput.files[i]);
-    }
-
-    try {
-        const response = await fetch('api/admin_supply.php?action=upload-marketplace-images', {
-            method: 'POST',
-            body: formData,
-            headers: { 'X-CSRF-Token': window.csrfToken || '' }
-        });
-        const result = await response.json();
-        if (result.success) {
-            showAlert('Imágenes cargadas', 'success');
-            fileInput.value = '';
-            loadMarketplaceGalleryForCurrentSku();
-        } else {
-            showAlert('Error: ' + (result.message || 'No se pudieron subir'), 'error');
-        }
-    } catch (e) {
-        showAlert('Error de conexión', 'error');
-    }
-}
 
 function goToClientsTab() {
     const tabButton = document.querySelector('[data-tab="clientsTab"]');
@@ -3756,17 +3763,27 @@ function goToClientsTab() {
 document.addEventListener('DOMContentLoaded', function () {
     setupTabs();
     renderPoItems();
+    // Carga inmediata: solo la pestaña activa (Stock)
     loadStock();
-    loadCalendar();
-    loadSupplierProducts();
-    loadMappedProductsBySupplier();
-    loadSupplierOrders();
-    loadHistory();
     loadProductImageReferences();
     refreshCategoriesUi();
-    loadMarketplaceCeAdmin();
-    loadClients();
-    loadHomepageUpdatesAdmin();
+
+    // Carga diferida: resto de secciones no visibles inicialmente
+    setTimeout(function () {
+        loadMarketplaceCeAdmin();
+        loadClients();
+        loadHomepageUpdatesAdmin();
+    }, 400);
+
+    // Carga bajo demanda al abrir cada pestaña
+    var calendarBtn = document.querySelector('[data-tab="calendarTab"]');
+    if (calendarBtn) { var _calLoaded = false; calendarBtn.addEventListener('click', function () { if (!_calLoaded) { _calLoaded = true; loadCalendar(); } }); }
+
+    var supplierBtn = document.querySelector('[data-tab="supplierOrderTab"]');
+    if (supplierBtn) { var _supLoaded = false; supplierBtn.addEventListener('click', function () { if (!_supLoaded) { _supLoaded = true; loadSupplierProducts(); loadMappedProductsBySupplier(); loadSupplierOrders(); } }); }
+
+    var historyBtn = document.querySelector('[data-tab="historyTab"]');
+    if (historyBtn) { var _hisLoaded = false; historyBtn.addEventListener('click', function () { if (!_hisLoaded) { _hisLoaded = true; loadHistory(); } }); }
 
     const supplierInput = document.getElementById('poSupplier');
     if (supplierInput) {
