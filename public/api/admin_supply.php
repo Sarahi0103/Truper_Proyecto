@@ -2392,19 +2392,19 @@ try {
 
             // Verify files exist on disk for debug/helpful errors
             $fileChecks = [];
-            foreach ($allImages as $imgPath) {
+            foreach ($images as $imgPath) {
                 $full = __DIR__ . '/../' . ltrim($imgPath, '/');
                 $fileChecks[] = ['path' => $imgPath, 'exists' => is_file($full)];
             }
 
             // Persist gallery info into DB tables if possible
             try {
-                persist_product_gallery_images_admin_supply($pdo, $sku, $allImages);
+                $images = persist_product_gallery_images_admin_supply($pdo, $sku, $images);
             } catch (Exception $e) {
                 // ignore — we'll still return file info
             }
 
-            $cover = $allImages[0] ?? null;
+            $cover = $images[0] ?? null;
 
             $response = [
                 'success' => true,
