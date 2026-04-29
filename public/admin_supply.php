@@ -766,6 +766,42 @@ function getSafeImageSrc(src) {
     return 'images/products/default-product.svg';
 }
 
+// Helper: upsert a product into the stock cache and re-render quickly
+function upsertStockCache(product) {
+    if (!product || !product.id) return;
+    const idx = stockItemsCache.findIndex((p) => Number(p.id) === Number(product.id));
+    if (idx >= 0) {
+        stockItemsCache[idx] = Object.assign({}, stockItemsCache[idx], product);
+    } else {
+        // insert at the top for immediate visibility
+        stockItemsCache.unshift(product);
+    }
+    try {
+        renderStockList();
+        // don't always re-fetch pagination server-side; keep user on current page
+        renderStockPagination({ current_page: stockCurrentPage, total_pages: Math.max(1, Math.ceil(stockItemsCache.length / (stockPerPage || 25))), total_items: stockItemsCache.length });
+    } catch (e) {
+        console.warn('Failed to render stock after upsert:', e);
+    }
+}
+
+// Helper: upsert a CE item into the marketplace cache and re-render quickly
+function upsertMarketplaceCache(item) {
+    if (!item || !item.id) return;
+    const idx = marketplaceItemsCache.findIndex((p) => Number(p.id) === Number(item.id));
+    if (idx >= 0) {
+        marketplaceItemsCache[idx] = Object.assign({}, marketplaceItemsCache[idx], item);
+    } else {
+        marketplaceItemsCache.unshift(item);
+    }
+    try {
+        renderMarketplaceList();
+        renderMarketplacePagination();
+    } catch (e) {
+        console.warn('Failed to render marketplace after upsert:', e);
+    }
+}
+
 function renderAdminProductCard(item, mode = 'stock', withActions = true) {
     const id = Number(item.id || 0);
     const sku = displayProductCode(item.sku || '');
@@ -3466,11 +3502,17 @@ async function createProductByAdmin() {
 
     showAlert(res.message || 'Producto guardado correctamente', 'success');
     resetProductForm();
-    // Load stock and supplier products in parallel for faster display (use smaller page size for faster initial load)
-    await Promise.all([
-        loadStock(1, 25),  // Load page 1 with 25 items for faster response
-        loadSupplierProducts()
-    ]);
+
+    // Optimistically update local cache and UI to avoid waiting for full reload
+    if (res.product) {
+        upsertStockCache(res.product);
+    } else {
+        // Fallback: reload reduced page if server did not return product payload
+        await loadStock(1, 25);
+    }
+
+    // Refresh supplier products in background
+    void loadSupplierProducts();
     activateAdminSupplyTab('stockTab', 'productCreateResult');
 }
 
@@ -3851,11 +3893,21 @@ async function saveMarketplaceCeByAdmin() {
     if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Artículo CE guardado')}</div>`;
     showAlert(res.message || 'Artículo CE guardado correctamente', 'success');
     resetMarketplaceForm();
-    // Load marketplace and stock in parallel for faster display (use smaller page size for faster response)
-    await Promise.all([
-        loadMarketplaceCeAdmin(1, 25),  // Load page 1 with 25 items for faster response
-        loadStock(1, 25)  // Also refresh stock with 25 items
-    ]);
+
+    // Optimistically update local cache/UI when server returns the item
+    if (res.item) {
+        upsertMarketplaceCache(res.item);
+        // Also reflect in stock cache if the marketplaces and stock share the same id/sku
+        try {
+            upsertStockCache(res.item);
+        } catch (e) {}
+    } else {
+        await Promise.all([
+            loadMarketplaceCeAdmin(1, 25),
+            loadStock(1, 25)
+        ]);
+    }
+
     activateAdminSupplyTab('marketplaceTab', 'marketplaceResult');
 }
 
