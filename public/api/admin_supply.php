@@ -1244,7 +1244,13 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
     // Guardar en disco: images/products/gallery/{sku}/
     $galleryDir = __DIR__ . '/../images/products/gallery/' . $sku;
     if (!is_dir($galleryDir)) {
-        mkdir($galleryDir, 0775, true);
+        if (!@mkdir($galleryDir, 0775, true)) {
+            throw new Exception("No se pudo crear directorio de galería: $galleryDir");
+        }
+    }
+    
+    if (!is_writable($galleryDir)) {
+        throw new Exception("Directorio de galería no tiene permisos de escritura: $galleryDir");
     }
 
     // Nombre de archivo: timestamp + random para evitar colisiones
@@ -1254,6 +1260,10 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
     // Intentar redimensionar con GD si está disponible
     if (function_exists('imagecreatefromstring')) {
         $imageString = file_get_contents($tmp);
+        if ($imageString === false) {
+            throw new Exception("No se pudo leer archivo de imagen temporal");
+        }
+        
         $img = @imagecreatefromstring($imageString);
         if ($img) {
             $maxW = 900; $maxH = 900;
@@ -1270,22 +1280,43 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
                 imagedestroy($img);
                 $img = $newImg;
             }
+            
+            $saved = false;
             if ($ext === 'png') {
-                imagepng($img, $destPath, 8);
+                $saved = imagepng($img, $destPath, 8);
             } elseif (in_array($ext, ['webp']) && function_exists('imagewebp')) {
-                imagewebp($img, $destPath, 82);
+                $saved = imagewebp($img, $destPath, 82);
             } else {
-                imagejpeg($img, $destPath, 82);
-                // normalize extension to jpg
-                $filename = pathinfo($filename, PATHINFO_FILENAME) . '.jpg';
-                $destPath = $galleryDir . '/' . $filename;
+                $saved = imagejpeg($img, $destPath, 82);
+                if ($saved) {
+                    // normalize extension to jpg
+                    $filename = pathinfo($filename, PATHINFO_FILENAME) . '.jpg';
+                    $newDestPath = $galleryDir . '/' . $filename;
+                    if (is_file($destPath) && $destPath !== $newDestPath) {
+                        rename($destPath, $newDestPath);
+                    }
+                    $destPath = $newDestPath;
+                }
             }
             imagedestroy($img);
+            
+            if (!$saved) {
+                throw new Exception("No se pudo guardar imagen procesada");
+            }
         } else {
-            move_uploaded_file($tmp, $destPath);
+            // GD no pudo procesar, mover archivo directo
+            if (!move_uploaded_file($tmp, $destPath)) {
+                throw new Exception("No se pudo mover archivo de imagen: " . error_get_last()['message'] ?? 'error desconocido');
+            }
         }
     } else {
-        move_uploaded_file($tmp, $destPath);
+        if (!move_uploaded_file($tmp, $destPath)) {
+            throw new Exception("No se pudo mover archivo de imagen (GD no disponible): " . error_get_last()['message'] ?? 'error desconocido');
+        }
+    }
+    
+    if (!is_file($destPath)) {
+        throw new Exception("Archivo de imagen no se guardó correctamente");
     }
 
     return 'images/products/gallery/' . $sku . '/' . $filename;
@@ -2363,15 +2394,25 @@ try {
 
             $files = isset($fileInput['name']) && is_array($fileInput['name']) ? normalize_uploaded_files($fileInput) : [$fileInput];
             $uploaded = [];
+            $uploadErrors = [];
             foreach ($files as $file) {
                 if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                    $uploadErrors[] = "Error de carga: " . ($file['error'] ?? 'desconocido');
                     continue;
                 }
-                $uploaded[] = store_product_image_for_sku_admin_supply($file, $sku);
+                try {
+                    $uploaded[] = store_product_image_for_sku_admin_supply($file, $sku);
+                } catch (Exception $e) {
+                    $uploadErrors[] = "Error al procesar imagen: " . $e->getMessage();
+                }
             }
 
             if (empty($uploaded)) {
-                $response = ['success' => false, 'message' => 'No se pudieron subir las imágenes'];
+                $message = 'No se pudieron subir las imágenes';
+                if (!empty($uploadErrors)) {
+                    $message .= ' - ' . implode('; ', array_slice($uploadErrors, 0, 2));
+                }
+                $response = ['success' => false, 'message' => $message];
                 break;
             }
 

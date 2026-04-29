@@ -3277,8 +3277,13 @@ async function uploadProductImages() {
         // Update preview after setting cover
         updateStockPreview();
     } catch (error) {
+        console.error('Error al subir imágenes:', error);
         if (resultBox) {
-            resultBox.innerHTML = '<div class="alert alert-error">Error al cargar imágenes</div>';
+            let errorMsg = 'Error al cargar imágenes';
+            if (error.message) {
+                errorMsg += ': ' + error.message;
+            }
+            resultBox.innerHTML = '<div class="alert alert-error">' + escapeHtml(errorMsg) + '</div>';
         }
     }
 }
@@ -3354,7 +3359,8 @@ async function uploadMarketplaceImages() {
         // Update preview after setting cover
         updateMarketplacePreview();
     } catch (error) {
-        showGalleryResult('marketplace', 'Error al cargar imágenes CE', 'error');
+        console.error('Error al subir imágenes CE:', error);
+        showGalleryResult('marketplace', 'Error al cargar imágenes CE: ' + (error.message || 'error desconocido'), 'error');
     }
 }
 
