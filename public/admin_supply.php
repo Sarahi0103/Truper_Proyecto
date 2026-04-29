@@ -1578,13 +1578,15 @@ async function loadClients() {
 let stockCurrentPage = 1;
 const stockPerPage = 50;
 
-async function loadStock(page = 1) {
+async function loadStock(page = 1, customPerPage = null) {
     const box = document.getElementById('stockRows');
     const caption = document.getElementById('stockListCaption');
     if (box) box.innerHTML = '<div style="padding:2rem; text-align:center;"><span class="spinner"></span><p class="text-muted">Cargando catálogo...</p></div>';
     
     stockCurrentPage = page;
-    const res = await apiCall(`/admin_supply.php?action=stock&page=${page}&per_page=${stockPerPage}`, 'GET', null, { silent: true });
+    // Use custom per_page if provided (for faster loading after save), otherwise use default
+    const perPageToUse = customPerPage !== null ? customPerPage : stockPerPage;
+    const res = await apiCall(`/admin_supply.php?action=stock&page=${page}&per_page=${perPageToUse}`, 'GET', null, { silent: true });
     const body = document.getElementById('stockRows');
     
     if (!res || !res.success || !Array.isArray(res.items)) {
@@ -3437,8 +3439,11 @@ async function createProductByAdmin() {
 
     showAlert(res.message || 'Producto guardado correctamente', 'success');
     resetProductForm();
-    loadStock();
-    loadSupplierProducts();
+    // Load stock and supplier products in parallel for faster display (use smaller page size for faster initial load)
+    await Promise.all([
+        loadStock(1, 25),  // Load page 1 with 25 items for faster response
+        loadSupplierProducts()
+    ]);
     activateAdminSupplyTab('stockTab', 'productCreateResult');
 }
 
@@ -3530,13 +3535,15 @@ function fillMarketplaceFormById(id) {
     fillMarketplaceForm(item);
 }
 
-async function loadMarketplaceCeAdmin(page = 1) {
+async function loadMarketplaceCeAdmin(page = 1, customPerPage = null) {
     const box = document.getElementById('marketplaceList');
     const caption = document.getElementById('marketplaceListCaption');
     const paginationBox = document.getElementById('marketplacePagination');
     const quickBox = document.getElementById('marketplaceQuickResult');
     marketplaceCurrentPage = page;
-    const res = await apiCall(`/admin_supply.php?action=marketplace-list&page=${page}&per_page=${marketplacePerPage}`, 'GET', null, { silent: true });
+    // Use custom per_page if provided (for faster loading after save), otherwise use default
+    const perPageToUse = customPerPage !== null ? customPerPage : marketplacePerPage;
+    const res = await apiCall(`/admin_supply.php?action=marketplace-list&page=${page}&per_page=${perPageToUse}`, 'GET', null, { silent: true });
 
     if (!res || !res.success || !Array.isArray(res.items)) {
         if (box) box.innerHTML = '<p class="text-muted">No fue posible cargar artículos CE.</p>';
@@ -3813,8 +3820,11 @@ async function saveMarketplaceCeByAdmin() {
     if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Artículo CE guardado')}</div>`;
     showAlert(res.message || 'Artículo CE guardado correctamente', 'success');
     resetMarketplaceForm();
-    loadMarketplaceCeAdmin();
-    loadStock();
+    // Load marketplace and stock in parallel for faster display (use smaller page size for faster response)
+    await Promise.all([
+        loadMarketplaceCeAdmin(1, 25),  // Load page 1 with 25 items for faster response
+        loadStock(1, 25)  // Also refresh stock with 25 items
+    ]);
     activateAdminSupplyTab('marketplaceTab', 'marketplaceResult');
 }
 
