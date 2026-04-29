@@ -5,8 +5,11 @@
 
 // ===== SEGURIDAD PRIMERA =====
 require_once __DIR__ . '/security.php';
+// ===== INICIALIZACIÓN DE DIRECTORIOS =====
+require_once __DIR__ . '/init_dirs.php';
 
-$is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+// ===== SEGURIDAD PRIMERA =====
+require_once __DIR__ . '/security.php';
     || (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443);
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
