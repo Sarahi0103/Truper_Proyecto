@@ -36,6 +36,6 @@ jobs:
           file: Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/proyecto_truper:latest
-            ghcr.io/${{ github.repository_owner }}/proyecto_truper:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner | lower }}/proyecto_truper:latest
+            ghcr.io/${{ github.repository_owner | lower }}/proyecto_truper:${{ github.sha }}
 
