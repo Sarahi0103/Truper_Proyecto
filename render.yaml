@@ -43,6 +43,8 @@ services:
         fromDatabase:
           name: truper-db
           property: connectionString
+      - key: DEBUG_TOKEN
+        value: "RENDER_DEBUG_TOKEN_PLACEHOLDER"
     # Persistent disk for uploaded images so files survive redeploys
     disks:
       - name: images-disk
