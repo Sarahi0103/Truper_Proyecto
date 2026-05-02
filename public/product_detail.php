@@ -526,8 +526,14 @@ $stock = (int)($product['stock_quantity'] ?? 0);
         <a href="index.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
         <nav class="nav-menu">
             <a href="index.php">Catálogo</a>
+            <a href="marketplace_ce.php">Marketplace CE</a>
+            <a href="cart.php">Carrito</a>
         </nav>
+    </div>
     <div class="user-menu">
+        <div class="theme-toggle">
+            <button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo obscuro</span></button>
+        </div>
         <a href="index.php" class="btn btn-small btn-ghost">Volver al catálogo</a>
     </div>
 </header>
@@ -623,7 +629,7 @@ $stock = (int)($product['stock_quantity'] ?? 0);
                         <?php echo $stock <= 0 ? 'disabled' : ''; ?>>
                         <?php echo $stock <= 0 ? 'Producto Agotado' : 'Agregar al Carrito'; ?>
                     </button>
-                    <a href="orders.php" class="btn btn-secondary">Ver carrito</a>
+                    <a href="cart.php" class="btn btn-secondary">Ver carrito</a>
                 </div>
             </div>
         </div>

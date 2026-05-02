@@ -238,6 +238,9 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
     <div class="header-content">
         <a href="dashboard.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
         <nav class="nav-menu">
+            <a href="index.php">Catálogo</a>
+            <a href="marketplace_ce.php">Marketplace CE</a>
+            <a href="cart.php">Carrito</a>
             <a href="dashboard.php">Dashboard</a>
             <a href="orders.php">Pedidos</a>
             <a href="wholesale.php">Mayoreo</a>

@@ -2216,53 +2216,6 @@ try {
             ];
             break;
 
-        case 'marketplace-image-upload':
-            if ($method !== 'POST') {
-                $response = ['success' => false, 'message' => 'Metodo no permitido'];
-                break;
-            }
-
-            $sku = normalize_sku_admin_supply($_POST['sku'] ?? ($input['sku'] ?? ''));
-            if (!is_valid_numeric_sku_admin_supply($sku)) {
-                $response = ['success' => false, 'message' => 'SKU inválido'];
-                break;
-            }
-
-            $fileInput = $_FILES['images'] ?? $_FILES['images[]'] ?? $_FILES['image'] ?? null;
-            if (!$fileInput) {
-                $response = ['success' => false, 'message' => 'Selecciona una o varias imágenes'];
-                break;
-            }
-
-            $files = isset($fileInput['name']) && is_array($fileInput['name']) ? normalize_uploaded_files($fileInput) : [$fileInput];
-            $uploaded = [];
-            foreach ($files as $file) {
-                if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-                    continue;
-                }
-                $uploaded[] = store_product_image_for_sku_admin_supply($file, $sku);
-            }
-
-            if (empty($uploaded)) {
-                $response = ['success' => false, 'message' => 'No se pudieron subir las imágenes CE'];
-                break;
-            }
-
-            $images = list_product_gallery_images_admin_supply($sku);
-            if (!empty($images)) {
-                set_product_main_image_by_sku_admin_supply($pdo, $sku, $images[0]);
-            }
-
-            $response = [
-                'success' => true,
-                'message' => 'Galería CE actualizada correctamente',
-                'sku' => $sku,
-                'uploaded' => $uploaded,
-                'images' => $images,
-                'cover' => $images[0] ?? null
-            ];
-            break;
-
         case 'product-image-upload':
             if ($method !== 'POST') {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];
@@ -2390,21 +2343,29 @@ try {
             $stmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ?");
             $stmt->execute([$cover, $json, $sku]);
 
+            // Update marketplace
+            try {
+                $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET image_url = ?, variants_json = ? WHERE sku = ?");
+                $stmt->execute([$cover, $json, $sku]);
+            } catch (Exception $e) {}
+
             // Verify files exist on disk for debug/helpful errors
             $fileChecks = [];
-            foreach ($allImages as $imgPath) {
+            foreach ($images as $imgPath) {
                 $full = __DIR__ . '/../' . ltrim($imgPath, '/');
                 $fileChecks[] = ['path' => $imgPath, 'exists' => is_file($full)];
             }
 
             // Persist gallery info into DB tables if possible
             try {
-                persist_product_gallery_images_admin_supply($pdo, $sku, $allImages);
+                if (function_exists('persist_product_gallery_images_admin_supply')) {
+                    persist_product_gallery_images_admin_supply($pdo, $sku, $images);
+                }
             } catch (Exception $e) {
                 // ignore — we'll still return file info
             }
 
-            $cover = $allImages[0] ?? null;
+            $cover = $images[0] ?? null;
 
             $response = [
                 'success' => true,
