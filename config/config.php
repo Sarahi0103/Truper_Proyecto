@@ -3,6 +3,9 @@
  * Configuración General de la Aplicación
  */
 
+// ===== INICIALIZACIÓN DE DIRECTORIOS =====
+require_once __DIR__ . '/init_dirs.php';
+
 // ===== SEGURIDAD PRIMERA =====
 require_once __DIR__ . '/security.php';
 

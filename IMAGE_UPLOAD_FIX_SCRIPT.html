@@ -1,0 +1,73 @@
+<!-- 
+Script de JavaScript a agregar en admin_supply.php antes de uploadProductImages
+para verificar que el sistema está listo para subir imágenes
+-->
+
+<script>
+/**
+ * Verifica si el sistema está listo para subir imágenes
+ */
+async function checkImageUploadReady() {
+    try {
+        const response = await fetch('/api/check_image_upload.php', {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error checking image upload status:', error);
+        return {
+            ready: false,
+            issues: [error.message]
+        };
+    }
+}
+
+/**
+ * Versión mejorada de uploadProductImages con verificación previa
+ */
+async function uploadProductImagesWithCheck() {
+    const input = document.getElementById('newProductImages');
+    const resultBox = document.getElementById('productCreateResult');
+    const sku = getCurrentStockSkuForGallery();
+
+    if (!/^\d{5,6}$/.test(sku)) {
+        if (resultBox) {
+            resultBox.innerHTML = '<div class="alert alert-error">Primero captura un código de producto válido (5 o 6 números)</div>';
+        }
+        return;
+    }
+
+    if (!input || !input.files || input.files.length === 0) {
+        if (resultBox) {
+            resultBox.innerHTML = '<div class="alert alert-error">Selecciona una o varias imágenes para cargar</div>';
+        }
+        return;
+    }
+
+    // Verificar que el sistema está listo
+    if (resultBox) {
+        resultBox.innerHTML = '<div class="alert alert-info">Verificando sistema...</div>';
+    }
+    
+    const check = await checkImageUploadReady();
+    if (!check.ready) {
+        if (resultBox) {
+            const issuesHTML = check.issues && check.issues.length > 0 
+                ? '<br>Detalles: ' + check.issues.slice(0, 2).join('<br>') 
+                : '';
+            resultBox.innerHTML = `<div class="alert alert-error">Sistema no listo para cargar imágenes.${issuesHTML}</div>`;
+        }
+        console.error('Image upload check failed:', check);
+        return;
+    }
+
+    // Proceder con la carga
+    await uploadProductImages();
+}
+</script>

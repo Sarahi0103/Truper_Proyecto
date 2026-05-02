@@ -87,6 +87,42 @@ function is_gallery_image_reference($value) {
 function resolve_images_by_product_code($code, array $productRow = []) {
     global $pdo;
     static $cache = null;
+
+    $code = trim((string)$code);
+    $images = [];
+
+    $mergeImage = function (string $value) use (&$images) {
+        $value = trim($value);
+        if ($value === '' || strpos($value, 'default-product.svg') !== false) {
+            return;
+        }
+        if (!in_array($value, $images, true)) {
+            $images[] = $value;
+        }
+    };
+
+    $imageUrl = trim((string)($productRow['image_url'] ?? ''));
+    if ($imageUrl !== '' && $imageUrl !== 'images/products/default-product.svg') {
+        $mergeImage($imageUrl);
+    }
+
+    if (!empty($productRow['variants_json'])) {
+        $decoded = json_decode((string)$productRow['variants_json'], true);
+        if (is_array($decoded)) {
+            foreach ($decoded as $item) {
+                $itemStr = trim((string)$item);
+                if (is_gallery_image_reference($itemStr)) {
+                    $mergeImage($itemStr);
+                }
+            }
+        }
+    }
+
+    // If the row already has a defined cover/gallery order, use it first.
+    if (!empty($images)) {
+        return $images;
+    }
+
     if ($cache === null) {
         $cache = [];
         // 1) Directorio by_code (catálogo XLSX original)
@@ -132,67 +168,6 @@ function resolve_images_by_product_code($code, array $productRow = []) {
                         $cache[$skuDir] = $galleryImages;
                     }
                 }
-            }
-        }
-    }
-
-    $code = trim((string)$code);
-    $images = [];
-
-    $mergeImage = function (string $value) use (&$images) {
-        $value = trim($value);
-        if ($value === '' || strpos($value, 'default-product.svg') !== false) {
-            return;
-        }
-        if (!in_array($value, $images, true)) {
-            $images[] = $value;
-        }
-    };
-
-    $imageUrl = trim((string)($productRow['image_url'] ?? ''));
-    if ($imageUrl !== '' && $imageUrl !== 'images/products/default-product.svg') {
-        $mergeImage($imageUrl);
-    }
-
-    if (!empty($productRow['variants_json'])) {
-        $decoded = json_decode((string)$productRow['variants_json'], true);
-        if (is_array($decoded)) {
-            foreach ($decoded as $item) {
-                $itemStr = trim((string)$item);
-                if (is_gallery_image_reference($itemStr)) {
-                    $mergeImage($itemStr);
-                }
-            }
-        }
-    }
-
-    if (isset($pdo)) {
-        foreach (['products', 'marketplace_ce_products'] as $table) {
-            try {
-                $stmt = $pdo->prepare("SELECT image_url, variants_json FROM {$table} WHERE sku = ? LIMIT 1");
-                $stmt->execute([$code]);
-                $row = $stmt->fetch();
-                if (!$row) {
-                    continue;
-                }
-
-                $rowImage = trim((string)($row['image_url'] ?? ''));
-                if ($rowImage !== '' && $rowImage !== 'images/products/default-product.svg') {
-                    $mergeImage($rowImage);
-                }
-
-                if (!empty($row['variants_json'])) {
-                    $decodedRow = json_decode((string)$row['variants_json'], true);
-                    if (is_array($decodedRow)) {
-                        foreach ($decodedRow as $item) {
-                            $itemStr = trim((string)$item);
-                            if (is_gallery_image_reference($itemStr)) {
-                                $mergeImage($itemStr);
-                            }
-                        }
-                    }
-                }
-            } catch (Exception $ignored) {
             }
         }
     }
