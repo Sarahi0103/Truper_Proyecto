@@ -1882,7 +1882,7 @@ function list_stock_products_compatible($pdo, int $limit = 50, int $offset = 0):
     // Optimized SQL query with LIMIT and OFFSET (Explicitly cast for PostgreSQL)
     $sql = "SELECT id, {$skuSelect}, {$nameSelect}, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} 
             FROM products 
-            ORDER BY stock_quantity ASC, {$nameOrderExpr} 
+            ORDER BY id DESC 
             LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
 
     try {
