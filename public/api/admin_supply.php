@@ -1124,8 +1124,8 @@ function persist_product_gallery_images_admin_supply($pdo, string $sku, array $i
         }
 
         try {
-            $stmt = $pdo->prepare("UPDATE {$table} SET image_url = ?, variants_json = ? WHERE sku = ?");
-            $stmt->execute([$cover, $json, $sku]);
+            $stmt = $pdo->prepare("UPDATE {$table} SET image_url = ?, variants_json = ? WHERE sku = ? OR sku LIKE ?");
+            $stmt->execute([$cover, $json, $sku, "%{$sku}%"]);
         } catch (Exception $ignored) {
         }
     }
@@ -1171,16 +1171,18 @@ function list_product_gallery_images_admin_supply(string $sku): array {
             return normalize_product_gallery_images_admin_supply($images);
         };
 
+        $productExists = false;
         foreach (['products', 'marketplace_ce_products'] as $table) {
             if (!db_table_exists($table)) {
                 continue;
             }
 
             try {
-                $stmt = $pdo->prepare("SELECT variants_json, image_url FROM {$table} WHERE sku = ?");
-                $stmt->execute([$sku]);
+                $stmt = $pdo->prepare("SELECT variants_json, image_url FROM {$table} WHERE sku = ? OR sku LIKE ?");
+                $stmt->execute([$sku, "%{$sku}%"]);
                 $row = $stmt->fetch();
                 if ($row) {
+                    $productExists = true;
                     $rowImages = $extractRowImages($row);
                     foreach ($rowImages as $rowImage) {
                         $mergeImage($rowImage);
@@ -1194,7 +1196,10 @@ function list_product_gallery_images_admin_supply(string $sku): array {
             }
         }
 
-        if (count($final) < 2) {
+        // NEVER bootstrap from disk if product exists in DB, even if gallery is empty.
+        // This ensures deleted images stay deleted and don't reappear from old files.
+        // Only bootstrap if product doesn't exist at all (first time).
+        if (empty($final) && !$productExists) {
             foreach (list_product_gallery_files_admin_supply($sku) as $fileImage) {
                 $mergeImage((string)$fileImage);
             }
@@ -1218,6 +1223,34 @@ function list_product_gallery_images_admin_supply(string $sku): array {
 function list_product_gallery_uploaded_images_admin_supply(string $sku): array {
     if (!is_valid_numeric_sku_admin_supply($sku)) return [];
     return list_product_gallery_images_admin_supply($sku);
+}
+
+function delete_product_gallery_file_admin_supply(string $sku, string $imagePath): void {
+    if (!is_valid_numeric_sku_admin_supply($sku)) {
+        return;
+    }
+
+    $raw = trim($imagePath);
+    if ($raw === '') {
+        return;
+    }
+
+    // Only allow deleting files under known gallery roots.
+    $relative = ltrim($raw, '/');
+    $allowedPrefix = 'images/products/gallery/' . $sku . '/';
+    if (strpos($relative, $allowedPrefix) !== 0) {
+        return;
+    }
+
+    $filename = basename($relative);
+    if ($filename === '' || $filename === '.' || $filename === '..') {
+        return;
+    }
+
+    $target = __DIR__ . '/../images/products/gallery/' . $sku . '/' . $filename;
+    if (is_file($target)) {
+        @unlink($target);
+    }
 }
 
 function store_product_image_for_sku_admin_supply(array $file, string $sku): string {
@@ -1413,7 +1446,8 @@ function create_product_compatible($pdo, array $payload): void {
     }
     if (db_column_exists('products', 'barcode')) {
         $columns[] = 'barcode';
-        $values[] = $payload['barcode'];
+        $barcodeValue = trim((string)($payload['barcode'] ?? ''));
+        $values[] = $barcodeValue === '' ? null : $barcodeValue;
     }
     if (db_column_exists('products', 'image_url')) {
         $columns[] = 'image_url';
@@ -1490,7 +1524,18 @@ function update_product_compatible($pdo, int $id, array $payload): void {
     if ($nameColumn !== null) { $sets[] = $nameColumn . ' = ?'; $values[] = $payload['name']; }
     if (db_column_exists('products', 'description') && $nameColumn !== 'description') { $sets[] = 'description = ?'; $values[] = $payload['description']; }
     if (db_column_exists('products', 'category')) { $sets[] = 'category = ?'; $values[] = $payload['category']; }
-    if (db_column_exists('products', 'barcode')) { $sets[] = 'barcode = ?'; $values[] = $payload['barcode'] ?? null; }
+    // Handle barcode carefully: avoid inserting empty string which may violate unique constraint.
+    if (db_column_exists('products', 'barcode')) {
+        if (array_key_exists('barcode', $payload)) {
+            $barcodeVal = trim((string)($payload['barcode'] ?? ''));
+            if ($barcodeVal === '') {
+                $sets[] = 'barcode = NULL';
+            } else {
+                $sets[] = 'barcode = ?';
+                $values[] = $barcodeVal;
+            }
+        }
+    }
     if (db_column_exists('products', 'image_url')) { $sets[] = 'image_url = ?'; $values[] = $payload['image_url']; }
         if (db_column_exists('products', 'variants_json')) { $sets[] = 'variants_json = ?'; $values[] = $payload['variants_json'] ?? '[]'; }
     if (db_column_exists('products', 'stock_quantity')) { $sets[] = 'stock_quantity = ?'; $values[] = (int)$payload['stock_quantity']; }
@@ -1928,6 +1973,21 @@ try {
             $usage = sku_usage_admin_supply($pdo, $sku, 0, $id);
             $sameRecord = record_matches_normalized_sku_admin_supply($pdo, 'products', $id, $sku);
             $seedConflict = $usage['in_seed'] && !$sameRecord && !$allowSeedSku;
+            // Debug helper: return diagnostic info when ?debug=1 is present
+            if (isset($_GET['debug']) && (string)$_GET['debug'] === '1') {
+                $response = [
+                    'success' => false,
+                    'message' => 'diagnostic',
+                    'diagnostic' => [
+                        'usage' => $usage,
+                        'sameRecord' => $sameRecord,
+                        'seedConflict' => $seedConflict,
+                        'id' => $id,
+                        'sku' => $sku
+                    ]
+                ];
+                break;
+            }
             $exists = $usage['in_products'] || $usage['in_marketplace'] || $seedConflict;
             $message = 'Código disponible';
             if ($exists) {
@@ -2385,6 +2445,18 @@ try {
                 } catch (Exception $ignored) {
                 }
             }
+
+            // Add caching headers for faster gallery list retrieval
+            $etag = '"gallery-' . hash('xxh64', json_encode($images)) . '"';
+            header('ETag: ' . $etag);
+            header('Cache-Control: private, max-age=300'); // 5-minute cache
+            header('Vary: Accept');
+            
+            // Check If-None-Match header to return 304 Not Modified if unchanged
+            if (isset($_SERVER['HTTP_IF_NONE_MATCH']) && $_SERVER['HTTP_IF_NONE_MATCH'] === $etag) {
+                http_response_code(304);
+                exit;
+            }
             break;
 
         case 'product-gallery-upload':
@@ -2443,8 +2515,8 @@ try {
             $cover = $images[0];
 
             // Update stock
-            $stmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ?");
-            $stmt->execute([$cover, $json, $sku]);
+            $stmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ? OR sku LIKE ?");
+            $stmt->execute([$cover, $json, $sku, "%{$sku}%"]);
 
             // Verify files exist on disk for debug/helpful errors
             $fileChecks = [];
@@ -2496,12 +2568,12 @@ try {
                 $json = json_encode(array_values($images));
                 
                 // Update stock
-                $stmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ?");
-                $stmt->execute([$cover, $json, $sku]);
+                $stmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ? OR sku LIKE ?");
+                $stmt->execute([$cover, $json, $sku, "%{$sku}%"]);
 
                 // Update marketplace
-                $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET image_url = ?, variants_json = ? WHERE sku = ?");
-                $stmt->execute([$cover, $json, $sku]);
+                $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET image_url = ?, variants_json = ? WHERE sku = ? OR sku LIKE ?");
+                $stmt->execute([$cover, $json, $sku, "%{$sku}%"]);
             } else {
                 $cover = $images[0] ?? null;
             }
@@ -2530,28 +2602,33 @@ try {
 
             $images = list_product_gallery_images_admin_supply($sku);
             $imageIndex = array_search($image, $images);
+            
             if ($imageIndex !== false) {
                 unset($images[$imageIndex]);
                 $images = array_values($images);
                 $json = json_encode($images);
                 $cover = $images[0] ?? 'images/products/default-product.svg';
+
+                // Remove the physical file so it does not reappear from disk scans.
+                delete_product_gallery_file_admin_supply($sku, $image);
                 
                 // Update stock
-                $stmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ?");
-                $stmt->execute([$cover, $json, $sku]);
+                $stmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ? OR sku LIKE ?");
+                $stmt->execute([$cover, $json, $sku, "%{$sku}%"]);
 
                 // Update marketplace
-                $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET image_url = ?, variants_json = ? WHERE sku = ?");
-                $stmt->execute([$cover, $json, $sku]);
+                $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET image_url = ?, variants_json = ? WHERE sku = ? OR sku LIKE ?");
+                $stmt->execute([$cover, $json, $sku, "%{$sku}%"]);
             }
 
-            $images = list_product_gallery_images_admin_supply($sku);
+            $images_final = list_product_gallery_images_admin_supply($sku);
+            
             $response = [
                 'success' => true,
                 'message' => 'Imagen eliminada correctamente',
                 'sku' => $sku,
-                'images' => $images,
-                'cover' => $images[0] ?? null
+                'images' => $images_final,
+                'cover' => $images_final[0] ?? null
             ];
             break;
 
@@ -2995,12 +3072,12 @@ try {
                     $stock = (int)($p['stock_quantity'] ?? 0);
                     $reorder = (int)($p['reorder_level'] ?? 10);
                     
-                    $check = $pdo->prepare("SELECT id FROM products WHERE sku = ?");
-                    $check->execute([$sku]);
+                    $check = $pdo->prepare("SELECT id FROM products WHERE sku = ? OR sku LIKE ?");
+                    $check->execute([$sku, "%{$sku}%"]);
                     $exists = $check->fetchColumn();
                     if ($exists) {
-                        $upd = $pdo->prepare("UPDATE products SET name=?, category=?, description=?, unit_price=?, stock_quantity=?, reorder_level=? WHERE sku=?");
-                        $upd->execute([$name, $category, $desc, $price, $stock, $reorder, $sku]);
+                        $upd = $pdo->prepare("UPDATE products SET name=?, category=?, description=?, unit_price=?, stock_quantity=?, reorder_level=? WHERE sku = ? OR sku LIKE ?");
+                        $upd->execute([$name, $category, $desc, $price, $stock, $reorder, $sku, "%{$sku}%"]);
                     } else {
                         $ins = $pdo->prepare("INSERT INTO products (sku, name, category, description, unit_price, stock_quantity, reorder_level, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 1)");
                         $ins->execute([$sku, $name, $category, $desc, $price, $stock, $reorder]);
@@ -3038,12 +3115,12 @@ try {
                     $price = (float)($p['unit_price'] ?? 0);
                     $stock = (int)($p['stock_quantity'] ?? 1);
                     
-                    $check = $pdo->prepare("SELECT id FROM marketplace_ce_products WHERE sku = ?");
-                    $check->execute([$sku]);
+                    $check = $pdo->prepare("SELECT id FROM marketplace_ce_products WHERE sku = ? OR sku LIKE ?");
+                    $check->execute([$sku, "%{$sku}%"]);
                     $exists = $check->fetchColumn();
                     if ($exists) {
-                        $upd = $pdo->prepare("UPDATE marketplace_ce_products SET name=?, category=?, description=?, condition_label=?, unit_price=?, stock_quantity=? WHERE sku=?");
-                        $upd->execute([$name, $category, $desc, $condition, $price, $stock, $sku]);
+                        $upd = $pdo->prepare("UPDATE marketplace_ce_products SET name=?, category=?, description=?, condition_label=?, unit_price=?, stock_quantity=? WHERE sku = ? OR sku LIKE ?");
+                        $upd->execute([$name, $category, $desc, $condition, $price, $stock, $sku, "%{$sku}%"]);
                     } else {
                         $ins = $pdo->prepare("INSERT INTO marketplace_ce_products (sku, name, category, description, condition_label, unit_price, stock_quantity, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 1)");
                         $ins->execute([$sku, $name, $category, $desc, $condition, $price, $stock]);
@@ -3084,8 +3161,8 @@ try {
                     $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS variants_json TEXT");
                 } catch(Exception $e) {}
 
-                $stmt = $pdo->prepare("SELECT variants_json, image_url FROM marketplace_ce_products WHERE sku = ?");
-                $stmt->execute([$sku]);
+                $stmt = $pdo->prepare("SELECT variants_json, image_url FROM marketplace_ce_products WHERE sku = ? OR sku LIKE ?");
+                $stmt->execute([$sku, "%{$sku}%"]);
                 $row = $stmt->fetch();
                 if ($row) {
                     $existing = [];
@@ -3097,8 +3174,8 @@ try {
                     $allImages = array_merge($existing, $uploadedFiles);
                     $json = json_encode($allImages);
                     $mainImage = $allImages[0];
-                    $update = $pdo->prepare("UPDATE marketplace_ce_products SET image_url = ?, variants_json = ? WHERE sku = ?");
-                    $update->execute([$mainImage, $json, $sku]);
+                    $update = $pdo->prepare("UPDATE marketplace_ce_products SET image_url = ?, variants_json = ? WHERE sku = ? OR sku LIKE ?");
+                    $update->execute([$mainImage, $json, $sku, "%{$sku}%"]);
                 }
                 $response = ['success' => true, 'message' => count($uploadedFiles) . ' imágenes subidas', 'files' => $uploadedFiles];
             } else {
@@ -3773,16 +3850,16 @@ try {
                 // Update products table
                 if (db_table_exists('products')) {
                     try {
-                        $stmt = $pdo->prepare("SELECT id FROM products WHERE sku = ?");
-                        $stmt->execute([$sku]);
+                        $stmt = $pdo->prepare("SELECT id FROM products WHERE sku = ? OR sku LIKE ?");
+                        $stmt->execute([$sku, "%{$sku}%"]);
                         $row = $stmt->fetch();
                         
                         if ($row) {
                             $coverImage = $imagePaths[0] ?? 'images/products/default-product.svg';
                             $variantsJson = json_encode($imagePaths, JSON_UNESCAPED_UNICODE);
                             
-                            $updateStmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ?");
-                            $updateStmt->execute([$coverImage, $variantsJson, $sku]);
+                            $updateStmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ? OR sku LIKE ?");
+                            $updateStmt->execute([$coverImage, $variantsJson, $sku, "%{$sku}%"]);
                             $synced++;
                         }
                     } catch (Exception $e) {
@@ -3793,16 +3870,16 @@ try {
                 // Update marketplace_ce_products table
                 if (db_table_exists('marketplace_ce_products')) {
                     try {
-                        $stmt = $pdo->prepare("SELECT id FROM marketplace_ce_products WHERE sku = ?");
-                        $stmt->execute([$sku]);
+                        $stmt = $pdo->prepare("SELECT id FROM marketplace_ce_products WHERE sku = ? OR sku LIKE ?");
+                        $stmt->execute([$sku, "%{$sku}%"]);
                         $row = $stmt->fetch();
                         
                         if ($row) {
                             $coverImage = $imagePaths[0] ?? 'images/products/default-product.svg';
                             $variantsJson = json_encode($imagePaths, JSON_UNESCAPED_UNICODE);
                             
-                            $updateStmt = $pdo->prepare("UPDATE marketplace_ce_products SET image_url = ?, variants_json = ? WHERE sku = ?");
-                            $updateStmt->execute([$coverImage, $variantsJson, $sku]);
+                            $updateStmt = $pdo->prepare("UPDATE marketplace_ce_products SET image_url = ?, variants_json = ? WHERE sku = ? OR sku LIKE ?");
+                            $updateStmt->execute([$coverImage, $variantsJson, $sku, "%{$sku}%"]);
                             $synced++;
                         }
                     } catch (Exception $e) {

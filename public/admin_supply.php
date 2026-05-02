@@ -819,22 +819,18 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
     const seedOnly = Boolean(item.seed_only || item.__seed_only);
     const stateLabel = inactive ? 'Oculto' : 'Visible';
     const stateBadgeClass = inactive ? 'badge-danger' : 'badge-success';
-    const actions = mode === 'marketplace'
-        ? `
+        const actions = mode === 'marketplace' ? `
             <button class="btn btn-small btn-secondary" type="button" onclick="fillMarketplaceFormById(${id})">Editar</button>
             <button class="btn btn-small btn-ghost" type="button" onclick="toggleMarketplaceVisibility(${id}, ${inactive ? 1 : 0})">${inactive ? 'Mostrar' : 'Ocultar'}</button>
             <button class="btn btn-small btn-danger" type="button" onclick="deleteMarketplaceCeByAdmin(${id})">Eliminar</button>
-        `
-        : (seedOnly
-            ? `
-                <button class="btn btn-small btn-secondary" type="button" onclick="prepareSeedProductForEditing(${id})">Editar</button>
-                <span class="text-muted" style="font-size:12px;">Guárdalo para convertirlo en editable</span>
-            `
-            : `
-                <button class="btn btn-small btn-secondary" type="button" onclick="fillProductFormById(${id})">Editar</button>
-                <button class="btn btn-small btn-ghost" type="button" onclick="toggleStockVisibility(${id}, ${inactive ? 1 : 0})">${inactive ? 'Mostrar' : 'Ocultar'}</button>
-                <button class="btn btn-small btn-danger" type="button" onclick="deleteProductByAdmin(${id})">Eliminar</button>
-            `);
+        ` : (seedOnly ? `
+            <button class="btn btn-small btn-secondary" type="button" onclick="prepareSeedProductForEditing(${id})">Editar</button>
+            <span class="text-muted" style="font-size:12px;">Guárdalo para convertirlo en editable</span>
+        ` : `
+            <button class="btn btn-small btn-secondary" type="button" onclick="fillProductFormById(${id})">Editar</button>
+            <button class="btn btn-small btn-ghost" type="button" onclick="toggleStockVisibility(${id}, ${inactive ? 1 : 0})">${inactive ? 'Mostrar' : 'Ocultar'}</button>
+            <button class="btn btn-small btn-danger" type="button" onclick="deleteProductByAdmin(${id})">Eliminar</button>
+        `);
 
     return `
         <article class="product-card-min ${inactive ? 'product-card-inactive' : ''}">
@@ -1707,8 +1703,8 @@ async function deleteCategoryQuickFromSelect(selectId, resultId) {
     if (removed > 0) {
         console.log('Reloading product lists after category deletion...');
         await Promise.all([
-            loadStock(1, 25),
-            loadMarketplaceCeAdmin(1, 25)
+            loadStock(stockCurrentPage || 1, 25),
+            loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 25)
         ]);
     }
 }
@@ -1784,8 +1780,8 @@ async function addCategoryFromQuickForm(selectId, inputId, resultId, context = '
     // Force reload of product lists to show updated categories
     console.log('Reloading product lists after category creation...');
     await Promise.all([
-        loadStock(1, 25),
-        loadMarketplaceCeAdmin(1, 25)
+        loadStock(stockCurrentPage || 1, 25),
+        loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 25)
     ]);
 
     if (categorySelect) {
@@ -1933,7 +1929,18 @@ async function deleteStockSelectedItems() {
         showAlert(firstError, 'error');
     }
 
-    await loadStock();
+    // Optimistic update: remove deleted products from cache and re-render
+    try {
+        const idsSet = new Set(selectedIds.map((i) => Number(i)));
+        stockItemsCache = (stockItemsCache || []).filter((p) => !idsSet.has(Number(p.id)));
+        renderStockList();
+        renderStockPagination({ current_page: stockCurrentPage, total_pages: Math.max(1, Math.ceil((stockItemsCache || []).length / (stockPerPage || 50))), total_items: (stockItemsCache || []).length });
+    } catch (e) {
+        console.warn('Optimistic bulk removal failed:', e);
+    }
+
+    // Background sync
+    await loadStock(stockCurrentPage);
 }
 
 function resetProductForm() {
@@ -2053,8 +2060,19 @@ async function deleteProductByAdmin(id) {
     if (Number(document.getElementById('newProductEditId').value || 0) === Number(id)) {
         resetProductForm();
     }
-    loadStock();
-    loadSupplierProducts();
+    // Optimistic update: remove product from local cache and re-render immediately
+    try {
+        stockItemsCache = (stockItemsCache || []).filter((p) => Number(p.id) !== Number(id));
+        renderStockList();
+        // update pagination based on current cache
+        renderStockPagination({ current_page: stockCurrentPage, total_pages: Math.max(1, Math.ceil((stockItemsCache || []).length / (stockPerPage || 50))), total_items: (stockItemsCache || []).length });
+    } catch (e) {
+        console.warn('Optimistic product removal failed:', e);
+    }
+
+    // Background sync to keep server state in sync (non-blocking)
+    void loadStock(stockCurrentPage);
+    void loadSupplierProducts();
 }
 
 function syncStockVisibilityState(id, nextVisible) {
@@ -2103,7 +2121,8 @@ async function toggleStockVisibility(id, nextVisible) {
     renderStockList();
 
     showAlert(res.message || 'Visibilidad actualizada', 'success');
-    await loadStock();
+    // Background sync to refresh current page
+    void loadStock(stockCurrentPage);
 }
 
 async function toggleMarketplaceVisibility(id, nextVisible) {
@@ -2128,7 +2147,8 @@ async function toggleMarketplaceVisibility(id, nextVisible) {
 
     syncMarketplaceVisibilityState(id, nextVisible);
     showAlert(res.message || 'Visibilidad actualizada', 'success');
-    await loadMarketplaceCeAdmin();
+    // Background sync to refresh current marketplace page
+    void loadMarketplaceCeAdmin(marketplaceCurrentPage);
     activateAdminSupplyTab('marketplaceTab', 'marketplaceList');
 }
 
@@ -2986,21 +3006,82 @@ function renderProductGallery(images, sku, mode = 'stock') {
         return;
     }
 
-    status.textContent = `Galería para ${sku}: ${images.length} imagen(es). La primera imagen es la portada.`;
+    status.textContent = `Galería para ${sku}: ${images.length} imagen(es). Usa Drag & Drop para reordenar.`;
     host.innerHTML = images.map((img, idx) => `
-        <div style="border:2px solid ${idx === 0 ? 'var(--theme-accent)' : 'var(--ui-border)'}; border-radius:10px; padding:0.5rem; background:var(--ui-surface-soft); position:relative;">
+        <div class="gallery-item" data-index="${idx}" data-sku="${sku}" data-mode="${mode}" draggable="true" style="border:2px solid ${idx === 0 ? 'var(--theme-accent)' : 'var(--ui-border)'}; border-radius:10px; padding:0.5rem; background:var(--ui-surface-soft); position:relative; cursor:grab; transition:all 0.2s;">
             ${idx === 0 ? '<div style="position:absolute;top:4px;left:4px;background:var(--theme-accent);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;z-index:1">★ PORTADA</div>' : ''}
-            <img src="${escapeHtml(img)}" alt="Imagen ${idx + 1}" style="width:100%; height:90px; object-fit:cover; border-radius:8px;" loading="lazy">
+            <img src="${escapeHtml(img)}" alt="Imagen ${idx + 1}" style="width:100%; height:90px; object-fit:cover; border-radius:8px; pointer-events:none;" loading="lazy">
             <div style="display:flex; align-items:center; gap:0.35rem; margin-top:0.45rem; flex-wrap:wrap;">
                 <label style="font-size:11px; color:var(--ui-text-muted);">Pos:</label>
                 <select id="galleryPos-${mode}-${idx}" style="max-width:65px; font-size:12px;" onchange="galleryMoveByIndex('${escapeHtml(sku)}', ${idx}, this.value, '${mode}')">
                     ${images.map((_, pos) => `<option value="${pos + 1}" ${pos === idx ? 'selected' : ''}>${pos + 1}</option>`).join('')}
                 </select>
-                ${idx !== 0 ? `<button class="btn btn-small btn-secondary" type="button" style="font-size:11px;padding:2px 6px;" onclick="galleryCoverByIndex('${escapeHtml(sku)}', ${idx}, '${mode}')">&#9733; Portada</button>` : ''}
-                <button class="btn btn-small btn-danger" type="button" style="font-size:11px;padding:2px 6px;" onclick="galleryDeleteByIndex('${escapeHtml(sku)}', ${idx}, '${mode}')">&#x2715; Quitar</button>
+                ${idx !== 0 ? `<button class="btn btn-small btn-secondary" type="button" style="font-size:11px;padding:2px 6px;" onclick="galleryCoverByIndex('${escapeHtml(sku)}', ${idx}, '${mode}')">★ Portada</button>` : ''}
+                <button class="btn btn-small btn-danger" type="button" style="font-size:11px;padding:2px 6px;" onclick="galleryDeleteByIndex('${escapeHtml(sku)}', ${idx}, '${mode}')">✕ Quitar</button>
             </div>
         </div>
     `).join('');
+
+    // Add drag-drop listeners after rendering
+    setupGalleryDragDrop(mode, sku);
+}
+
+// Setup drag-and-drop for gallery items
+function setupGalleryDragDrop(mode, sku) {
+    const host = document.getElementById(mode === 'marketplace' ? 'marketplaceGalleryList' : 'productGalleryList');
+    if (!host) return;
+
+    const items = host.querySelectorAll('[data-index][draggable="true"]');
+    let draggedItem = null;
+
+    items.forEach(item => {
+        item.addEventListener('dragstart', (e) => {
+            draggedItem = item;
+            item.style.opacity = '0.5';
+            e.dataTransfer.effectAllowed = 'move';
+        });
+
+        item.addEventListener('dragend', (e) => {
+            item.style.opacity = '1';
+            draggedItem = null;
+            // Clear all drop indicators
+            items.forEach(i => i.style.borderStyle = 'solid');
+        });
+
+        item.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if (draggedItem && draggedItem !== item) {
+                item.style.borderStyle = 'dashed';
+                item.style.opacity = '0.7';
+            }
+        });
+
+        item.addEventListener('dragleave', (e) => {
+            if (e.target === item) {
+                item.style.borderStyle = 'solid';
+                item.style.opacity = '1';
+            }
+        });
+
+        item.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            if (draggedItem && draggedItem !== item) {
+                const fromIdx = parseInt(draggedItem.dataset.index);
+                const toIdx = parseInt(item.dataset.index);
+                const cache = mode === 'marketplace' ? marketplaceGalleryCache : stockGalleryCache;
+                
+                if (cache && cache.length > 0) {
+                    const images = cache.slice();
+                    const [moved] = images.splice(fromIdx, 1);
+                    images.splice(toIdx, 0, moved);
+                    await reorderGalleryImages(sku, images, mode);
+                }
+            }
+            item.style.borderStyle = 'solid';
+            item.style.opacity = '1';
+        });
+    });
 }
 
 // --- Index-based gallery helpers (avoid passing base64 in HTML onclick attrs) ---
@@ -3155,6 +3236,8 @@ async function setProductGalleryCover(sku, imagePath) {
         image: imagePath
     });
 
+
+
     if (!res || !res.success) {
         showGalleryResult('stock', (res && res.message) ? res.message : 'No se pudo cambiar la portada', 'error');
         return;
@@ -3184,9 +3267,23 @@ async function setProductGalleryCover(sku, imagePath) {
     }
 
     // Background sync for consistency
-    void loadProductGalleryForCurrentSku();
-    void loadStock();
-    void loadMarketplaceCeAdmin();
+    // Immediate forced refresh (cache-bust) to avoid stale ETag/304 cases
+    try {
+        const forced = await apiCall(`/admin_supply.php?action=product-gallery-list&sku=${encodeURIComponent(sku)}&_=${Date.now()}`, 'GET', null, { silent: true });
+        if (forced && forced.success) {
+            const images = Array.isArray(forced.images) && forced.images.length > 0 ? forced.images : (forced.cover ? [forced.cover] : []);
+            setGalleryState('stock', sku, images, forced.cover || images[0] || '');
+            renderProductGallery(images, sku, 'stock');
+            syncGalleryModeUi('stock', forced.cover || images[0] || '');
+        } else {
+            void loadProductGalleryForCurrentSku();
+        }
+    } catch (e) {
+        console.warn('Forced gallery refresh failed:', e);
+        void loadProductGalleryForCurrentSku();
+    }
+
+    void loadStock(stockCurrentPage);
 }
 
 async function deleteProductGalleryImage(sku, imagePath) {
@@ -3195,6 +3292,8 @@ async function deleteProductGalleryImage(sku, imagePath) {
         sku: sku,
         image: imagePath
     });
+
+    console.log('product-gallery-delete response:', res);
 
     if (!res || !res.success) {
         showGalleryResult('stock', (res && res.message) ? res.message : 'No se pudo eliminar la imagen', 'error');
@@ -3224,9 +3323,23 @@ async function deleteProductGalleryImage(sku, imagePath) {
     }
 
     // Background sync
-    void loadProductGalleryForCurrentSku();
-    void loadStock();
-    void loadMarketplaceCeAdmin();
+    // Forced refresh to ensure server state reflected in UI
+    try {
+        const forced = await apiCall(`/admin_supply.php?action=product-gallery-list&sku=${encodeURIComponent(sku)}&_=${Date.now()}`, 'GET', null, { silent: true });
+        if (forced && forced.success) {
+            const images = Array.isArray(forced.images) && forced.images.length > 0 ? forced.images : (forced.cover ? [forced.cover] : []);
+            setGalleryState('stock', sku, images, forced.cover || images[0] || '');
+            renderProductGallery(images, sku, 'stock');
+            syncGalleryModeUi('stock', forced.cover || images[0] || '');
+        } else {
+            void loadProductGalleryForCurrentSku();
+        }
+    } catch (e) {
+        console.warn('Forced gallery refresh failed:', e);
+        void loadProductGalleryForCurrentSku();
+    }
+
+    void loadStock(stockCurrentPage);
 }
 
 function moveProductGalleryImage(sku, imagePath, direction) {
@@ -3279,9 +3392,23 @@ async function setMarketplaceGalleryCover(sku, imagePath) {
     }
 
     // Background sync
-    void loadMarketplaceGalleryForCurrentSku();
-    void loadMarketplaceCeAdmin();
-    void loadStock();
+    // Forced refresh to ensure server state reflected in UI
+    try {
+        const forced = await apiCall(`/admin_supply.php?action=product-gallery-list&sku=${encodeURIComponent(sku)}&_=${Date.now()}`, 'GET', null, { silent: true });
+        if (forced && forced.success) {
+            const images = Array.isArray(forced.images) && forced.images.length > 0 ? forced.images : (forced.cover ? [forced.cover] : []);
+            setGalleryState('marketplace', sku, images, forced.cover || images[0] || '');
+            renderProductGallery(images, sku, 'marketplace');
+            syncGalleryModeUi('marketplace', forced.cover || images[0] || '');
+        } else {
+            void loadMarketplaceGalleryForCurrentSku();
+        }
+    } catch (e) {
+        console.warn('Forced marketplace gallery refresh failed:', e);
+        void loadMarketplaceGalleryForCurrentSku();
+    }
+
+    void loadMarketplaceCeAdmin(marketplaceCurrentPage);
 }
 
 async function deleteMarketplaceGalleryImage(sku, imagePath) {
@@ -3320,8 +3447,40 @@ async function deleteMarketplaceGalleryImage(sku, imagePath) {
 
     // Background sync
     void loadMarketplaceGalleryForCurrentSku();
-    void loadMarketplaceCeAdmin();
-    void loadStock();
+    void loadMarketplaceCeAdmin(marketplaceCurrentPage);
+    void loadStock(stockCurrentPage);
+}
+
+// Image compression helper (client-side optimization)
+async function compressImage(file, maxWidth = 1920, maxHeight = 1440, quality = 0.85) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                let { width, height } = img;
+                
+                // Calculate new dimensions
+                const ratio = Math.min(maxWidth / width, maxHeight / height);
+                if (ratio < 1) {
+                    width = Math.floor(width * ratio);
+                    height = Math.floor(height * ratio);
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                canvas.toBlob((blob) => {
+                    resolve(new File([blob], file.name, { type: file.type || 'image/jpeg' }));
+                }, file.type || 'image/jpeg', quality);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
 }
 
 async function uploadProductImages() {
@@ -3341,13 +3500,39 @@ async function uploadProductImages() {
         return true;
     }
 
-    const formData = new FormData();
-    formData.append('sku', sku);
-    Array.from(input.files).forEach((file) => {
-        formData.append('images[]', file);
-    });
+    // Show progress indicator
+    if (resultBox) {
+        resultBox.innerHTML = '<div class="alert alert-info" style="display:flex; align-items:center; gap:10px;"><span>⏳ Procesando imágenes...</span><div style="flex:1; height:4px; background:#ddd; border-radius:2px;"><div style="width:0%; height:100%; background:#0066cc; border-radius:2px; transition:width 0.3s;" id="uploadProgress"></div></div></div>';
+    }
 
     try {
+        // Compress all images client-side in parallel (faster)
+        const files = Array.from(input.files);
+        const uploadProgress = document.getElementById('uploadProgress');
+        const compressedFiles = await Promise.all(
+            files.map(async (file, idx) => {
+                try {
+                    const compressed = await compressImage(file);
+                    const progress = Math.floor((idx + 1) / files.length * 80); // 0-80% for compression
+                    if (uploadProgress) uploadProgress.style.width = progress + '%';
+                    return compressed;
+                } catch (e) {
+                    console.warn('Compression failed for', file.name, '- using original');
+                    return file;
+                }
+            })
+        );
+
+        // Build form data with compressed images
+        const formData = new FormData();
+        formData.append('sku', sku);
+        compressedFiles.forEach((file) => {
+            formData.append('images[]', file);
+        });
+
+        // Show upload in progress
+        if (uploadProgress) uploadProgress.style.width = '80%';
+
         const response = await fetch('/api/admin_supply.php?action=product-gallery-upload', {
             method: 'POST',
             body: formData,
@@ -3356,6 +3541,8 @@ async function uploadProductImages() {
                 'X-Requested-With': 'XMLHttpRequest'
             }
         });
+
+        if (uploadProgress) uploadProgress.style.width = '95%';
 
         const data = await response.json();
         if (!data || !data.success) {
@@ -3366,8 +3553,10 @@ async function uploadProductImages() {
         }
 
         if (resultBox) {
-            resultBox.innerHTML = `<div class="alert alert-success">${escapeHtml(data.message || 'Imágenes cargadas correctamente')}</div>`;
+            resultBox.innerHTML = `<div class="alert alert-success">✅ ${escapeHtml(data.message || 'Imágenes cargadas correctamente')} (${compressedFiles.length} imagen${compressedFiles.length !== 1 ? 'es' : ''})</div>`;
         }
+
+        if (uploadProgress) uploadProgress.style.width = '100%';
 
         input.value = '';
 
@@ -3433,13 +3622,40 @@ async function uploadMarketplaceImages() {
         return true;
     }
 
-    const formData = new FormData();
-    formData.append('sku', sku);
-    Array.from(input.files).forEach((file) => {
-        formData.append('images[]', file);
-    });
+    // Show progress indicator
+    const resultBox = document.getElementById('marketplaceResult');
+    if (resultBox) {
+        resultBox.innerHTML = '<div class="alert alert-info" style="display:flex; align-items:center; gap:10px;"><span>⏳ Procesando imágenes...</span><div style="flex:1; min-width:200px; height:4px; background:#ddd; border-radius:2px;"><div style="width:0%; height:100%; background:#0066cc; border-radius:2px; transition:width 0.3s;" id="marketplaceUploadProgress"></div></div></div>';
+    }
 
     try {
+        // Compress all images client-side in parallel (faster)
+        const files = Array.from(input.files);
+        const uploadProgress = document.getElementById('marketplaceUploadProgress');
+        const compressedFiles = await Promise.all(
+            files.map(async (file, idx) => {
+                try {
+                    const compressed = await compressImage(file);
+                    const progress = Math.floor((idx + 1) / files.length * 80); // 0-80% for compression
+                    if (uploadProgress) uploadProgress.style.width = progress + '%';
+                    return compressed;
+                } catch (e) {
+                    console.warn('Compression failed for', file.name, '- using original');
+                    return file;
+                }
+            })
+        );
+
+        // Build form data with compressed images
+        const formData = new FormData();
+        formData.append('sku', sku);
+        compressedFiles.forEach((file) => {
+            formData.append('images[]', file);
+        });
+
+        // Show upload in progress
+        if (uploadProgress) uploadProgress.style.width = '80%';
+
         const response = await fetch('/api/admin_supply.php?action=product-gallery-upload', {
             method: 'POST',
             body: formData,
@@ -3449,13 +3665,16 @@ async function uploadMarketplaceImages() {
             }
         });
 
+        if (uploadProgress) uploadProgress.style.width = '95%';
+
         const data = await response.json();
         if (!data || !data.success) {
             showGalleryResult('marketplace', (data && data.message) ? data.message : 'No fue posible cargar las imágenes CE', 'error');
             return false;
         }
 
-        showGalleryResult('marketplace', data.message || 'Imágenes CE cargadas correctamente', 'success');
+        showGalleryResult('marketplace', `✅ ${data.message || 'Imágenes CE cargadas correctamente'} (${compressedFiles.length} imagen${compressedFiles.length !== 1 ? 'es' : ''})`, 'success');
+        if (uploadProgress) uploadProgress.style.width = '100%';
         input.value = '';
 
         const currentSku = getCurrentMarketplaceSkuForGallery();
@@ -3492,18 +3711,18 @@ async function uploadMarketplaceImages() {
 
         // background sync for consistency
         void loadMarketplaceGalleryForCurrentSku();
-        void loadMarketplaceCeAdmin();
-        void loadStock();
+        void loadMarketplaceCeAdmin(marketplaceCurrentPage);
 
         return true;
     } catch (error) {
         console.error('Error al subir imágenes CE:', error);
-        showGalleryResult('marketplace', 'Error al cargar imágenes CE: ' + (error.message || 'error desconocido'), 'error');
+        showGalleryResult('marketplace', 'Error al cargar imágenes: ' + (error.message || 'desconocido'), 'error');
         return false;
     }
 }
 
 async function createProductByAdmin() {
+    const stockPageBeforeSave = Math.max(1, Number(stockCurrentPage || 1));
     const editId = Number(document.getElementById('newProductEditId')?.value || 0);
     const seedMode = Number(document.getElementById('newProductSeedMode')?.value || 0) === 1;
     const skuInput = document.getElementById('newProductSku');
@@ -3622,13 +3841,24 @@ async function createProductByAdmin() {
     showAlert(res.message || 'Producto guardado correctamente', 'success');
     resetProductForm();
 
-    // Optimistically update local cache and UI to avoid waiting for full reload
-    if (res.product) {
-        upsertStockCache(res.product);
-    } else {
-        // Fallback: reload reduced page if server did not return product payload
-        await loadStock(1, 25);
-    }
+    // Optimistic update using the submitted payload so edit flow reflects latest values immediately.
+    const optimisticProduct = {
+        id: Number((res.product && res.product.id) || editId || 0),
+        sku: (res.product && res.product.sku) ? res.product.sku : normalizedSku,
+        name: (res.product && res.product.name) ? res.product.name : productName,
+        category: payload.category,
+        description: payload.description,
+        unit_price: price,
+        stock_quantity: stock,
+        reorder_level: reorder,
+        image_url: payload.image_url,
+        is_active: payload.is_visible,
+        variants_json: getGalleryState('stock')?.images || []
+    };
+    upsertStockCache(optimisticProduct);
+
+    // Always refresh from server to avoid stale cache (form/category/image mismatches after edit).
+    await loadStock(stockPageBeforeSave);
 
     // Refresh supplier products in background
     void loadSupplierProducts();
@@ -3852,7 +4082,8 @@ async function deleteMarketplaceSelectedItems() {
         showAlert(firstError, 'error');
     }
 
-    await loadMarketplaceCeAdmin();
+    // Optimistic UI update already performed; background sync to current page
+    await loadMarketplaceCeAdmin(marketplaceCurrentPage);
 }
 
 function renderMarketplaceList() {
@@ -4022,8 +4253,8 @@ async function saveMarketplaceCeByAdmin() {
         } catch (e) {}
     } else {
         await Promise.all([
-            loadMarketplaceCeAdmin(1, 25),
-            loadStock(1, 25)
+            loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 25),
+            loadStock(stockCurrentPage || 1, 25)
         ]);
     }
 
@@ -4042,7 +4273,17 @@ async function deleteMarketplaceCeByAdmin(id) {
     }
 
     if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Artículo CE eliminado del Marketplace CE')}</div>`;
-    loadMarketplaceCeAdmin();
+    // Optimistic removal from marketplace cache
+    try {
+        marketplaceItemsCache = (marketplaceItemsCache || []).filter((p) => Number(p.id) !== Number(id));
+        renderMarketplaceList();
+        renderMarketplacePagination();
+    } catch (e) {
+        console.warn('Optimistic marketplace removal failed:', e);
+    }
+
+    // Background sync
+    void loadMarketplaceCeAdmin(marketplaceCurrentPage);
 }
 
 async function processCsvUpload() {
@@ -4097,7 +4338,7 @@ async function processCsvUpload() {
 
         progressBox.innerHTML = `<strong class="text-success">Carga completa. Exitosos: ${successCount}, Fallidos: ${errorCount}</strong>`;
         fileInput.value = '';
-        loadStock(); // reload list
+        loadStock(stockCurrentPage); // reload list
     };
     reader.onerror = function() {
         progressBox.innerHTML = '<span class="text-error">Error al leer el archivo.</span>';
@@ -4156,7 +4397,7 @@ async function processMarketplaceCsvUpload() {
 
         progressBox.innerHTML = `<strong class="text-success">Carga CE completa. Exitosos: ${successCount}, Fallidos: ${errorCount}</strong>`;
         fileInput.value = '';
-        loadMarketplaceCeAdmin(); // reload list
+        loadMarketplaceCeAdmin(marketplaceCurrentPage); // reload list
     };
     reader.onerror = function() {
         progressBox.innerHTML = '<span class="text-error">Error al leer el archivo.</span>';
@@ -4182,13 +4423,13 @@ document.addEventListener('DOMContentLoaded', function () {
     setupTabs();
     renderPoItems();
     // Carga inmediata: solo la pestaña activa (Stock)
-    loadStock();
+    loadStock(stockCurrentPage);
     loadProductImageReferences();
     refreshCategoriesUi();
 
     // Carga diferida: resto de secciones no visibles inicialmente
     setTimeout(function () {
-        loadMarketplaceCeAdmin();
+        loadMarketplaceCeAdmin(marketplaceCurrentPage);
         loadClients();
         loadHomepageUpdatesAdmin();
     }, 400);

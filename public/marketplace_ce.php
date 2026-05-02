@@ -87,6 +87,68 @@ try {
 }
 
 $whatsappPhone = function_exists('whatsapp_phone_digits') ? whatsapp_phone_digits() : '';
+
+function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []): array {
+    static $cache = null;
+
+    $normalizedSku = preg_replace('/[^a-zA-Z0-9_\-]/', '', $sku);
+    $images = [];
+    $mergeImage = static function (string $value) use (&$images): void {
+        $value = trim($value);
+        if ($value === '' || stripos($value, 'default-product.svg') !== false) {
+            return;
+        }
+        if (!in_array($value, $images, true)) {
+            $images[] = $value;
+        }
+    };
+
+    $itemImage = trim((string)($itemRow['image_url'] ?? ''));
+    if ($itemImage !== '') {
+        $mergeImage($itemImage);
+    }
+
+    if (!empty($itemRow['variants_json'])) {
+        $parsed = json_decode((string)$itemRow['variants_json'], true);
+        if (is_array($parsed)) {
+            foreach ($parsed as $value) {
+                $value = trim((string)$value);
+                if (strpos($value, 'images/') === 0 || strpos($value, 'data:image/') === 0 || preg_match('/\.(jpg|jpeg|png|webp|gif)$/i', $value) === 1) {
+                    $mergeImage($value);
+                }
+            }
+        }
+    }
+
+    if (!empty($images)) {
+        return $images;
+    }
+
+    if ($cache === null) {
+        $cache = [];
+        $galleryBase = __DIR__ . '/images/products/gallery';
+        if (is_dir($galleryBase)) {
+            foreach (scandir($galleryBase) ?: [] as $skuDir) {
+                if ($skuDir === '.' || $skuDir === '..') {
+                    continue;
+                }
+                $fullDir = $galleryBase . '/' . $skuDir;
+                if (!is_dir($fullDir)) {
+                    continue;
+                }
+                $diskImages = glob($fullDir . '/*.{jpg,jpeg,png,webp,gif,JPG,JPEG,PNG,WEBP}', GLOB_BRACE);
+                if (empty($diskImages)) {
+                    continue;
+                }
+                $cache[$skuDir] = array_map(static function ($di) use ($skuDir) {
+                    return 'images/products/gallery/' . $skuDir . '/' . basename($di);
+                }, $diskImages);
+            }
+        }
+    }
+
+    return $normalizedSku !== '' && !empty($cache[$normalizedSku]) ? array_values($cache[$normalizedSku]) : [];
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -242,15 +304,7 @@ $whatsappPhone = function_exists('whatsapp_phone_digits') ? whatsapp_phone_digit
                     $stockClass = $itemStock <= 2 ? 'stock-low' : 'stock-ok';
                     $stockLabel = $itemStock <= 2 ? 'Pocas piezas: ' : 'Disponibles: ';
                     
-                    $images = [];
-                    // 1) Primero intentar galería en disco (más eficiente)
-                    $galleryDir = __DIR__ . '/images/products/gallery/' . preg_replace('/[^a-zA-Z0-9_\-]/', '', $item['sku']);
-                    if (is_dir($galleryDir)) {
-                        $diskImages = glob($galleryDir . '/*.{jpg,jpeg,png,webp,gif,JPG,JPEG,PNG,WEBP}', GLOB_BRACE);
-                        foreach ($diskImages as $di) {
-                            $images[] = 'images/products/gallery/' . basename($galleryDir) . '/' . basename($di);
-                        }
-                    }
+                    $images = marketplace_ce_gallery_images_by_sku((string)($item['sku'] ?? ''), $item);
                     // 2) Fallback: variants_json (puede ser base64 o rutas)
                     if (empty($images) && !empty($item['variants_json'])) {
                         $parsed = json_decode($item['variants_json'], true);
