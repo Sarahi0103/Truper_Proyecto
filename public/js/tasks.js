@@ -5,6 +5,26 @@
 const TASKS_ROLE = (window.TRUPER_TASKS_ROLE || 'client').toLowerCase();
 const TASKS_IS_ADMIN = TASKS_ROLE === 'admin';
 
+// Estado global de filtros
+let CURRENT_PRIORITY_FILTER = 'all';
+let SHOW_COMPLETED_TASKS = false;
+let ALL_TASKS = [];
+
+// Mapeo de prioridades
+const PRIORITY_ORDER = {
+    'urgent': 0,
+    'high': 1,
+    'medium': 2,
+    'low': 3
+};
+
+const PRIORITY_LABELS = {
+    'urgent': '🔴 Urgente',
+    'high': '🟠 Alta',
+    'medium': '🟡 Media',
+    'low': '🟢 Baja'
+};
+
 /**
  * Crear nueva tarea
  */
@@ -15,13 +35,40 @@ async function createTask() {
         return;
     }
     
+    // Parsear horas estimadas
+    let estimatedHours = null;
+    const hoursInput = document.getElementById('estimatedHours')?.value || '';
+    const minsInput = document.getElementById('estimatedMins')?.value || '0';
+    
+    if (hoursInput) {
+        const hours = parseInt(hoursInput, 10);
+        const mins = parseInt(minsInput, 10);
+        
+        if (isNaN(hours) || hours < 1 || hours > 12) {
+            showAlert('Hora estimada: ingresa valor 1-12', 'warning');
+            return;
+        }
+        
+        if (isNaN(mins) || mins < 0 || mins > 59) {
+            showAlert('Minutos estimados: ingresa valor 0-59', 'warning');
+            return;
+        }
+        
+        estimatedHours = hours + (mins / 60);
+        estimatedHours = Math.round(estimatedHours * 100) / 100;
+    }
+    
+    const estimatedAmpmBtn = document.getElementById('estimatedAmpm');
+    const estimatedAmpm = (estimatedAmpmBtn?.textContent || 'AM').trim();
+    
     const taskData = {
         title: document.getElementById('taskTitle').value,
         description: document.getElementById('taskDescription').value,
         assigned_to: document.getElementById('assignTo').value,
         due_date: document.getElementById('dueDate').value,
         priority: document.getElementById('priority').value,
-        estimated_hours: document.getElementById('estimatedHours')?.value || null
+        estimated_hours: estimatedHours,
+        estimated_ampm: estimatedAmpm
     };
     
     const response = await apiCall('/tasks.php?action=create', 'POST', taskData);
@@ -57,40 +104,273 @@ async function updateTaskStatus(taskId, newStatus) {
     if (response && response.success) {
         handleSuccessResponse(response, {
             scrollTarget: '#tasksList',
-            successMessage: response.message || 'Tarea actualizada exitosamente',
+            successMessage: newStatus === 'completed' 
+                ? '¡Tarea completada! 🎉' 
+                : 'Tarea actualizada exitosamente',
             onSuccess: loadTasks
         });
+        return;
     }
+
+    showAlert((response && response.message) ? response.message : 'No fue posible actualizar la tarea', 'error');
+}
+
+/**
+ * Registrar horas de trabajo
+ */
+function parseAmPmToMinutes(value) {
+    const normalized = String(value || '').trim().toUpperCase();
+    const match = normalized.match(/^(0?[1-9]|1[0-2]):([0-5][0-9])\s*(AM|PM)$/);
+    if (!match) {
+        return null;
+    }
+
+    let hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+    const period = match[3];
+
+    if (period === 'AM' && hours === 12) {
+        hours = 0;
+    }
+    if (period === 'PM' && hours !== 12) {
+        hours += 12;
+    }
+
+    return (hours * 60) + minutes;
+}
+
+/**
+ * Alternar AM/PM en el botón del formulario
+ */
+function toggleEstimatedAmPm() {
+    const btn = document.getElementById('estimatedAmpm');
+    if (btn) {
+        btn.textContent = btn.textContent === 'AM' ? 'PM' : 'AM';
+    }
+}
+
+/**
+ * Alternar AM/PM en el botón
+ */
+function toggleAmPm(taskId) {
+    const btn = document.getElementById(`ampm_${taskId}`);
+    if (btn) {
+        btn.textContent = btn.textContent === 'AM' ? 'PM' : 'AM';
+    }
+}
+
+/**
+ * Formatear horas decimales a formato visual con AM/PM (4.67 → 4h 40 AM)
+ */
+function formatHoursDisplay(decimalHours, ampm = 'AM') {
+    if (!decimalHours || decimalHours === '-' || isNaN(decimalHours)) {
+        return '-';
+    }
+    
+    const totalHours = parseFloat(decimalHours);
+    const wholeHours = Math.floor(totalHours);
+    const minutes = Math.round((totalHours - wholeHours) * 60);
+    
+    if (wholeHours === 0 && minutes === 0) return '-';
+    if (wholeHours === 0) return `${minutes} ${ampm}`;
+    if (minutes === 0) return `${wholeHours}h ${ampm}`;
+    
+    return `${wholeHours}h ${String(minutes).padStart(2, '0')} ${ampm}`;
 }
 
 /**
  * Registrar horas de trabajo
  */
 async function logTaskHours(taskId) {
-    const hours = parseFloat(document.getElementById(`hours_${taskId}`)?.value || 0);
-    
-    if (hours <= 0) {
-        showAlert('Ingresa horas válidas', 'warning');
+    const hoursInput = document.getElementById(`hours_${taskId}`)?.value || '';
+    const minsInput = document.getElementById(`mins_${taskId}`)?.value || '0';
+    const ampmBtn = document.getElementById(`ampm_${taskId}`);
+    const ampm = (ampmBtn?.textContent || 'AM').trim();
+
+    // Validar horas
+    const hours = parseInt(hoursInput, 10);
+    const mins = parseInt(minsInput, 10);
+
+    if (isNaN(hours) || hours < 1 || hours > 12) {
+        showAlert('Ingresa hora válida (1-12)', 'warning');
         return;
     }
+
+    if (isNaN(mins) || mins < 0 || mins > 59) {
+        showAlert('Ingresa minutos válidos (0-59)', 'warning');
+        return;
+    }
+
+    // Convertir a horas decimales (sin considerar AM/PM en cálculo, solo duración)
+    let totalHours = hours + (mins / 60);
+    totalHours = Math.round(totalHours * 100) / 100;
     
     const response = await apiCall('/tasks.php?action=log-hours', 'POST', {
         task_id: taskId,
-        hours: hours
+        hours: totalHours,
+        actual_ampm: ampm
     });
     
     if (response && response.success) {
         handleSuccessResponse(response, {
             scrollTarget: '#tasksList',
-            successMessage: response.message || 'Horas registradas correctamente',
+            successMessage: response.message || `Horas registradas: ${hours}h ${String(mins).padStart(2, '0')} ${ampm}`,
             onSuccess: loadTasks
         });
-        document.getElementById(`hours_${taskId}`).value = '';
+        const hoursEl = document.getElementById(`hours_${taskId}`);
+        const minsEl = document.getElementById(`mins_${taskId}`);
+        if (hoursEl) hoursEl.value = '';
+        if (minsEl) minsEl.value = '';
+        return;
     }
+
+    showAlert((response && response.message) ? response.message : 'No fue posible registrar horas', 'error');
 }
 
 /**
- * Filtrar tareas por estado
+ * Filtrar tareas por prioridad
+ */
+function filterByPriority(priority) {
+    CURRENT_PRIORITY_FILTER = priority;
+    
+    // Actualizar botones activos
+    document.querySelectorAll('.btn-priority').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    if (priority === 'all') {
+        document.querySelector('.btn-priority-all').classList.add('active');
+    } else {
+        document.querySelector(`.btn-priority-${priority}`).classList.add('active');
+    }
+    
+    renderFilteredTasks();
+}
+
+/**
+ * Alternar visibilidad de tareas completadas
+ */
+function toggleCompletedTasks() {
+    SHOW_COMPLETED_TASKS = document.getElementById('showCompleted')?.checked ?? false;
+    renderFilteredTasks();
+}
+
+/**
+ * Renderizar tareas filtradas
+ */
+function renderFilteredTasks() {
+    const container = document.getElementById('tasksList');
+    if (!container) return;
+
+    // Filtrar tareas según prioridad
+    let filteredTasks = ALL_TASKS;
+
+    if (CURRENT_PRIORITY_FILTER !== 'all') {
+        filteredTasks = filteredTasks.filter(task => task.priority === CURRENT_PRIORITY_FILTER);
+    }
+
+    // Filtrar tareas completadas
+    if (!SHOW_COMPLETED_TASKS) {
+        filteredTasks = filteredTasks.filter(task => task.status !== 'completed');
+    }
+
+    // Agrupar por prioridad
+    const groupedByPriority = {
+        'urgent': [],
+        'high': [],
+        'medium': [],
+        'low': []
+    };
+
+    filteredTasks.forEach(task => {
+        if (groupedByPriority.hasOwnProperty(task.priority)) {
+            groupedByPriority[task.priority].push(task);
+        }
+    });
+
+    // Ordenar dentro de cada grupo por fecha vencimiento
+    Object.keys(groupedByPriority).forEach(priority => {
+        groupedByPriority[priority].sort((a, b) => {
+            if (!a.due_date) return 1;
+            if (!b.due_date) return -1;
+            return new Date(a.due_date) - new Date(b.due_date);
+        });
+    });
+
+    // Renderizar tareas agrupadas
+    let html = '';
+    
+    // Solo mostrar grupos que tengan tareas
+    const priorityOrder = ['urgent', 'high', 'medium', 'low'];
+    for (const priority of priorityOrder) {
+        const tasks = groupedByPriority[priority];
+        if (tasks.length === 0) continue;
+
+        html += `
+            <div style="margin-bottom: 2rem;">
+                <h3 style="color: #333; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>${PRIORITY_LABELS[priority]}</span>
+                    <span style="background-color: #f0f0f0; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.85rem; font-weight: normal;">${tasks.length}</span>
+                </h3>
+                <div>
+                    ${tasks.map(task => renderTaskItem(task)).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    if (html === '') {
+        if (SHOW_COMPLETED_TASKS) {
+            container.innerHTML = TASKS_IS_ADMIN
+                ? '<p class="text-muted">No hay tareas en esta categoría.</p>'
+                : '<p class="text-muted">No tienes tareas en esta categoría por ahora.</p>';
+        } else {
+            container.innerHTML = TASKS_IS_ADMIN
+                ? '<p class="text-muted">Todas las tareas han sido completadas. ¡Excelente trabajo! 🎉</p>'
+                : '<p class="text-muted">No tienes tareas pendientes. ¡Buen trabajo! 🎉</p>';
+        }
+        return;
+    }
+
+    container.innerHTML = html;
+}
+
+/**
+ * Renderizar un item de tarea
+ */
+function renderTaskItem(task) {
+    const statusLabel = {
+        'pending': '⏳ Pendiente',
+        'in_progress': '⚙️ En Progreso',
+        'completed': '✅ Completada'
+    }[task.status] || task.status;
+
+    const taskClasses = `task-item task-priority-${task.priority}${task.status === 'completed' ? ' task-completed' : ''}`;
+
+    return `
+        <div class="${taskClasses}" data-status="${task.status}" data-priority="${task.priority}" data-task-id="${task.id}">
+            <div class="task-header">
+                <div>
+                    <div class="task-title">${task.title}</div>
+                    <div class="task-details" style="margin-top: 0.5rem;">${task.description}</div>
+                </div>
+                <span class="priority-badge ${getPriorityClass(task.priority)}">${PRIORITY_LABELS[task.priority]}</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1rem 0; font-size: 0.9rem;">
+                <div class="task-details">📅 Vence: <strong>${task.due_date || 'Sin fecha'}</strong></div>
+                <div class="task-details">⏱️ Estado: <strong>${statusLabel}</strong></div>
+                <div class="task-details">🕐 Estimadas: <strong>${formatHoursDisplay(task.estimated_hours, task.estimated_ampm || 'AM')}</strong></div>
+                <div class="task-details">✓ Reales: <strong>${formatHoursDisplay(task.actual_hours, task.actual_ampm || 'AM')}</strong></div>
+            </div>
+            <div class="task-actions">
+                ${taskActionButtons(task)}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Filtrar tareas por estado (función antigua - mantener por compatibilidad)
  */
 function filterTasks() {
     const filterValue = document.getElementById('taskFilter')?.value || '';
@@ -157,8 +437,14 @@ function taskActionButtons(task) {
         return `
             <button class="btn btn-small btn-secondary" onclick="updateTaskStatus(${task.id}, 'in_progress')">En progreso</button>
             <button class="btn btn-small btn-success" onclick="updateTaskStatus(${task.id}, 'completed')">Completar</button>
-            <input id="hours_${task.id}" type="number" min="0" step="0.5" placeholder="Horas" style="width: 90px;">
-            <button class="btn btn-small btn-primary" onclick="logTaskHours(${task.id})">Registrar horas</button>
+            <div style="display: inline-flex; gap: 0.3rem; align-items: center;">
+                <input id="hours_${task.id}" type="number" min="1" max="12" placeholder="HH" style="width: 45px; padding: 0.4rem; text-align: center;" title="Hora (1-12)">
+                <span style="font-weight: bold;">:</span>
+                <input id="mins_${task.id}" type="number" min="0" max="59" placeholder="MM" style="width: 45px; padding: 0.4rem; text-align: center;" title="Minutos (0-59)">
+                <button id="ampm_${task.id}" class="btn btn-small" style="width: 50px; padding: 0.4rem 0.6rem;" onclick="toggleAmPm(${task.id})">AM</button>
+            </div>
+            <button class="btn btn-small btn-primary" onclick="logTaskHours(${task.id})">Registrar</button>
+            <button class="btn btn-small btn-danger" onclick="deleteTask(${task.id})">Eliminar</button>
         `;
     }
 
@@ -184,7 +470,7 @@ async function deleteTask(taskId) {
         return;
     }
     
-    const response = await apiCall('/tasks.php?action=delete', 'DELETE', { task_id: taskId });
+    const response = await apiCall('/tasks.php?action=delete', 'POST', { task_id: taskId });
     
     if (response && response.success) {
         handleSuccessResponse(response, {
@@ -192,13 +478,14 @@ async function deleteTask(taskId) {
             successMessage: response.message || 'Tarea eliminada',
             onSuccess: loadTasks
         });
+        return;
     }
+
+    showAlert((response && response.message) ? response.message : 'No fue posible eliminar la tarea', 'error');
 }
 
 function getPriorityClass(priority) {
-    if (priority === 'high' || priority === 'urgent') return 'priority-high';
-    if (priority === 'low') return 'priority-low';
-    return 'priority-medium';
+    return `priority-${priority}`;
 }
 
 async function loadTasks() {
@@ -221,29 +508,14 @@ async function loadTasks() {
         return;
     }
 
+    // Guardar todas las tareas en variable global
+    ALL_TASKS = response.tasks;
+
+    // Renderizar resumen
     renderTaskSummary(response.tasks);
 
-    if (response.tasks.length === 0) {
-        container.innerHTML = TASKS_IS_ADMIN
-            ? '<p class="text-muted">No hay tareas registradas.</p>'
-            : '<p class="text-muted">No tienes tareas asignadas por ahora. Cuando un administrador te asigne una, aparecerá aquí.</p>';
-        return;
-    }
-
-    container.innerHTML = response.tasks.map(task => `
-        <div class="task-item task-priority-${task.priority}" data-status="${task.status}" data-priority="${task.priority}">
-            <div class="task-header">
-                <div class="task-title">${task.title}</div>
-                <span class="priority-badge ${getPriorityClass(task.priority)}">${task.priority}</span>
-            </div>
-            <div>${task.description}</div>
-            <div class="task-details">Vence: ${task.due_date || 'Sin fecha'} | Estado: ${task.status}</div>
-            <div class="task-details">Horas estimadas: ${task.estimated_hours ?? '-'} | Horas reales: ${task.actual_hours ?? '-'}</div>
-            <div class="task-actions">
-                ${taskActionButtons(task)}
-            </div>
-        </div>
-    `).join('');
+    // Renderizar tareas filtradas
+    renderFilteredTasks();
 }
 
 async function loadAssignees() {

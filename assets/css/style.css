@@ -422,6 +422,204 @@ input[type="checkbox"] {
    RESPONSIVE
    ============================================ */
 
+/* ============================================
+   TAREAS - BOTONES DE PRIORIDAD
+   ============================================ */
+
+.tasks-filter-card {
+    background: linear-gradient(135deg, rgba(255, 140, 0, 0.05) 0%, rgba(0, 0, 0, 0.02) 100%);
+    border: 1px solid rgba(255, 140, 0, 0.2);
+}
+
+.btn-priority {
+    padding: 0.6rem 1.2rem;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    background-color: var(--color-gray);
+    color: var(--color-dark-gray);
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.btn-priority:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-priority.active {
+    background-color: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+}
+
+.btn-priority-urgent.active {
+    background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+    border-color: #cc0000;
+}
+
+.btn-priority-high.active {
+    background: linear-gradient(135deg, #ff8c00 0%, #ff6600 100%);
+    border-color: #ff6600;
+}
+
+.btn-priority-medium.active {
+    background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+    border-color: #ff9800;
+}
+
+.btn-priority-low.active {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    border-color: #20c997;
+}
+
+/* Estilos de tareas */
+.task-item {
+    background-color: var(--color-light);
+    border-left: 5px solid var(--color-primary);
+    border-radius: 6px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    transition: var(--transition);
+}
+
+.task-item:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
+.task-item.task-priority-urgent {
+    border-left-color: #ff4444;
+    background: linear-gradient(to right, rgba(255, 68, 68, 0.08), transparent);
+}
+
+.task-item.task-priority-high {
+    border-left-color: #ff8c00;
+    background: linear-gradient(to right, rgba(255, 140, 0, 0.08), transparent);
+}
+
+.task-item.task-priority-medium {
+    border-left-color: #ffc107;
+    background: linear-gradient(to right, rgba(255, 193, 7, 0.08), transparent);
+}
+
+.task-item.task-priority-low {
+    border-left-color: #28a745;
+    background: linear-gradient(to right, rgba(40, 167, 69, 0.08), transparent);
+}
+
+.task-item.task-completed {
+    opacity: 0.6;
+    text-decoration: line-through;
+}
+
+.task-item.hidden {
+    display: none !important;
+}
+
+.task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.8rem;
+    gap: 1rem;
+}
+
+.task-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--color-dark-gray);
+}
+
+.priority-badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.priority-badge.priority-urgent {
+    background-color: #ff4444;
+    color: white;
+}
+
+.priority-badge.priority-high {
+    background-color: #ff8c00;
+    color: white;
+}
+
+.priority-badge.priority-medium {
+    background-color: #ffc107;
+    color: var(--color-dark-gray);
+}
+
+.priority-badge.priority-low {
+    background-color: #28a745;
+    color: white;
+}
+
+.task-details {
+    color: var(--color-dark-gray);
+    font-size: 0.95rem;
+    margin: 0.5rem 0;
+    opacity: 0.8;
+}
+
+.task-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+}
+
+.btn-small {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.85rem;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-small.btn-secondary {
+    background-color: var(--color-dark-gray);
+    color: white;
+}
+
+.btn-small.btn-secondary:hover {
+    background-color: var(--color-primary);
+}
+
+.btn-small.btn-success {
+    background-color: var(--color-success);
+    color: white;
+}
+
+.btn-small.btn-success:hover {
+    background-color: #21a03d;
+}
+
+.btn-small.btn-ghost {
+    background-color: transparent;
+    color: var(--color-dark-gray);
+    border: 1px solid var(--color-border);
+}
+
+.btn-small.btn-ghost:hover {
+    background-color: var(--color-gray);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
 @media (max-width: 768px) {
     .nav-container {
         flex-direction: column;
@@ -446,6 +644,24 @@ input[type="checkbox"] {
     
     .auth-footer {
         font-size: 0.9rem;
+    }
+    
+    .btn-priority {
+        padding: 0.5rem 1rem;
+        font-size: 0.85rem;
+    }
+    
+    .task-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .task-actions {
+        flex-direction: column;
+    }
+    
+    .btn-small {
+        width: 100%;
     }
 }
 

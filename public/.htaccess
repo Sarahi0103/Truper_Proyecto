@@ -4,6 +4,12 @@
     DirectoryIndex index.php
     Options -Indexes
     
+    # Si la solicitud es a /images/* y no existe, devolver 404 en lugar de redirigir a index.php
+    RewriteCond %{REQUEST_URI} ^/images/ [NC]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ - [L,R=404]
+
     # Si la solicitud no es un archivo o carpeta, redirigir a index.php
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d

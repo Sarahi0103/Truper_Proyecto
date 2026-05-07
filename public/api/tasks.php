@@ -36,7 +36,8 @@ try {
                 $_SESSION['user_id'],
                 $input['due_date'] ?? null,
                     $input['priority'] ?? 'medium',
-                    $input['estimated_hours'] ?? null
+                    $input['estimated_hours'] ?? null,
+                    $input['estimated_ampm'] ?? 'AM'
             );
 
             log_action(
@@ -84,6 +85,7 @@ try {
 
             $task_id = $input['task_id'] ?? null;
             $hours = $input['hours'] ?? 0;
+            $actual_ampm = $input['actual_ampm'] ?? 'AM';
 
             if (!$isAdmin) {
                 $check = $pdo->prepare("SELECT assigned_to FROM tasks WHERE id = ? LIMIT 1");
@@ -95,7 +97,7 @@ try {
                 }
             }
 
-            $response = $taskController->logTaskHours($task_id, $hours);
+            $response = $taskController->logTaskHours($task_id, $hours, $actual_ampm);
             break;
 
         case 'list':

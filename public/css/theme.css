@@ -586,7 +586,7 @@ textarea:focus,
 }
 
 .promo-controls .btn-ghost {
-    background: #ffffff;
+    background: var(--theme-surface);
     border-color: var(--theme-border);
     color: var(--theme-text);
 }
@@ -599,7 +599,7 @@ textarea:focus,
 
 .promo-viewport {
     border-color: var(--theme-border);
-    background: #ffffff;
+    background: var(--theme-surface);
 }
 
 .promo-kicker {
@@ -679,8 +679,8 @@ textarea:focus,
 }
 
 :root[data-theme="dark"] .catalog-shell {
-    background: #101010;
-    border-color: #2d2d2d;
+    background: var(--theme-surface);
+    border-color: var(--theme-border);
 }
 
 :root[data-theme="dark"] .auth-side p,
@@ -908,15 +908,15 @@ tbody td,
 }
 
 :root[data-theme="dark"] .theme-toggle button {
-    background: #ffffff;
-    color: #111111;
-    border-color: #ffffff;
+    background: #111111 !important;
+    color: #ffffff !important;
+    border-color: #111111 !important;
 }
 
 :root[data-theme="dark"] .theme-toggle button:hover {
-    background: var(--theme-accent);
-    color: #ffffff;
-    border-color: var(--theme-accent);
+    background: #111111 !important;
+    color: #ffffff !important;
+    border-color: #111111 !important;
 }
 
 @media (max-width: 768px) {
@@ -924,6 +924,11 @@ tbody td,
         margin-left: 0;
         width: 100%;
         justify-content: flex-start;
+    }
+
+    footer .theme-toggle,
+    .footer-content .theme-toggle {
+        justify-content: center;
     }
 
     .theme-toggle button {

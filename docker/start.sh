@@ -16,8 +16,8 @@ fi
 
 sed -ri "s/^Listen 80$/Listen ${PORT_VALUE}/" /etc/apache2/ports.conf
 sed -ri "s#<VirtualHost \*:80>#<VirtualHost *:${PORT_VALUE}>#" /etc/apache2/sites-available/000-default.conf
-sed -ri "s#DocumentRoot /var/www/html#DocumentRoot ${APP_ROOT}#" /etc/apache2/sites-available/000-default.conf
-sed -ri "s#<Directory /var/www/>#<Directory ${APP_ROOT}/>#" /etc/apache2/apache2.conf
+sed -ri "s#^[[:space:]]*DocumentRoot .*#    DocumentRoot ${APP_ROOT}#" /etc/apache2/sites-available/000-default.conf
+sed -ri "s#^[[:space:]]*<Directory .*#    <Directory ${APP_ROOT}/>#" /etc/apache2/apache2.conf
 
 # Initialize image directories
 echo "Initializing image directories..."

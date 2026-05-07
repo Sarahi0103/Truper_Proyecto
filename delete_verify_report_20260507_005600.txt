@@ -1,0 +1,153 @@
+Generated at: Thu May  7 00:56:00 UTC 2026
+Running delete-and-verify for 10 SKUs...
+\n== SKU: 21525 ==
+Selected file: BRP-1-1-2+FC1.jpg
+Invoking delete CLI for 21525 images/products/gallery/21525/BRP-1-1-2+FC1.jpg
+time="2026-05-07T00:56:00Z" level=warning msg="/workspaces/proyecto_Truper/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container truper-db  Running
+Deleted file: /var/www/html/scripts/../public/images/products/gallery/21525/BRP-1-1-2+FC1.jpg
+Not found: /var/www/html/scripts/../public/images/products/by_code/21525/BRP-1-1-2+FC1.jpg
+Deleted file: /var/www/html/scripts/../images/products/gallery/21525/BRP-1-1-2+FC1.jpg
+Not found: /var/www/html/scripts/../images/products/by_code/21525/BRP-1-1-2+FC1.jpg
+Done
+DISK: removed: public/images/products/gallery/21525/BRP-1-1-2+FC1.jpg
+DISK LEGACY: removed: public/images/products/by_code/21525/BRP-1-1-2+FC1.jpg
+DB: products with custom image: 0
+DB: marketplace with custom image: 0
+HTTP status for /images/products/gallery/21525/BRP-1-1-2+FC1.jpg : 404
+\n== SKU: 21529 ==
+Selected file: BRP-4+FC1.jpg
+Invoking delete CLI for 21529 images/products/gallery/21529/BRP-4+FC1.jpg
+time="2026-05-07T00:56:02Z" level=warning msg="/workspaces/proyecto_Truper/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container truper-db  Running
+Deleted file: /var/www/html/scripts/../public/images/products/gallery/21529/BRP-4+FC1.jpg
+Not found: /var/www/html/scripts/../public/images/products/by_code/21529/BRP-4+FC1.jpg
+Deleted file: /var/www/html/scripts/../images/products/gallery/21529/BRP-4+FC1.jpg
+Not found: /var/www/html/scripts/../images/products/by_code/21529/BRP-4+FC1.jpg
+Done
+DISK: removed: public/images/products/gallery/21529/BRP-4+FC1.jpg
+DISK LEGACY: removed: public/images/products/by_code/21529/BRP-4+FC1.jpg
+DB: products with custom image: 0
+DB: marketplace with custom image: 0
+HTTP status for /images/products/gallery/21529/BRP-4+FC1.jpg : 404
+\n== SKU: 23031 ==
+Selected file: PAEL-1CP+E1.jpg
+Invoking delete CLI for 23031 images/products/gallery/23031/PAEL-1CP+E1.jpg
+time="2026-05-07T00:56:03Z" level=warning msg="/workspaces/proyecto_Truper/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container truper-db  Running
+Deleted file: /var/www/html/scripts/../public/images/products/gallery/23031/PAEL-1CP+E1.jpg
+Not found: /var/www/html/scripts/../public/images/products/by_code/23031/PAEL-1CP+E1.jpg
+Deleted file: /var/www/html/scripts/../images/products/gallery/23031/PAEL-1CP+E1.jpg
+Not found: /var/www/html/scripts/../images/products/by_code/23031/PAEL-1CP+E1.jpg
+Done
+DISK: removed: public/images/products/gallery/23031/PAEL-1CP+E1.jpg
+DISK LEGACY: removed: public/images/products/by_code/23031/PAEL-1CP+E1.jpg
+DB: products with custom image: 0
+DB: marketplace with custom image: 0
+HTTP status for /images/products/gallery/23031/PAEL-1CP+E1.jpg : 404
+\n== SKU: 24064 ==
+Selected file: FGA-30P+E1.jpg
+Invoking delete CLI for 24064 images/products/gallery/24064/FGA-30P+E1.jpg
+time="2026-05-07T00:56:05Z" level=warning msg="/workspaces/proyecto_Truper/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container truper-db  Running
+Deleted file: /var/www/html/scripts/../public/images/products/gallery/24064/FGA-30P+E1.jpg
+Not found: /var/www/html/scripts/../public/images/products/by_code/24064/FGA-30P+E1.jpg
+Deleted file: /var/www/html/scripts/../images/products/gallery/24064/FGA-30P+E1.jpg
+Not found: /var/www/html/scripts/../images/products/by_code/24064/FGA-30P+E1.jpg
+Done
+DISK: removed: public/images/products/gallery/24064/FGA-30P+E1.jpg
+DISK LEGACY: removed: public/images/products/by_code/24064/FGA-30P+E1.jpg
+DB: products with custom image: 0
+DB: marketplace with custom image: 0
+HTTP status for /images/products/gallery/24064/FGA-30P+E1.jpg : 404
+\n== SKU: 19457 ==
+Selected file: ROTO-1-2N6+E1.jpg
+Invoking delete CLI for 19457 images/products/gallery/19457/ROTO-1-2N6+E1.jpg
+time="2026-05-07T00:56:06Z" level=warning msg="/workspaces/proyecto_Truper/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container truper-db  Running
+Deleted file: /var/www/html/scripts/../public/images/products/gallery/19457/ROTO-1-2N6+E1.jpg
+Not found: /var/www/html/scripts/../public/images/products/by_code/19457/ROTO-1-2N6+E1.jpg
+Deleted file: /var/www/html/scripts/../images/products/gallery/19457/ROTO-1-2N6+E1.jpg
+Not found: /var/www/html/scripts/../images/products/by_code/19457/ROTO-1-2N6+E1.jpg
+Done
+DISK: removed: public/images/products/gallery/19457/ROTO-1-2N6+E1.jpg
+DISK LEGACY: removed: public/images/products/by_code/19457/ROTO-1-2N6+E1.jpg
+DB: products with custom image: 0
+DB: marketplace with custom image: 0
+HTTP status for /images/products/gallery/19457/ROTO-1-2N6+E1.jpg : 404
+\n== SKU: 27027 ==
+Selected file: COPLE-P+FC1.jpg
+Invoking delete CLI for 27027 images/products/gallery/27027/COPLE-P+FC1.jpg
+time="2026-05-07T00:56:07Z" level=warning msg="/workspaces/proyecto_Truper/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container truper-db  Running
+Deleted file: /var/www/html/scripts/../public/images/products/gallery/27027/COPLE-P+FC1.jpg
+Not found: /var/www/html/scripts/../public/images/products/by_code/27027/COPLE-P+FC1.jpg
+Deleted file: /var/www/html/scripts/../images/products/gallery/27027/COPLE-P+FC1.jpg
+Not found: /var/www/html/scripts/../images/products/by_code/27027/COPLE-P+FC1.jpg
+Updated DB row products.id=47
+Done
+DISK: removed: public/images/products/gallery/27027/COPLE-P+FC1.jpg
+DISK LEGACY: removed: public/images/products/by_code/27027/COPLE-P+FC1.jpg
+DB: products with custom image: 0
+DB: marketplace with custom image: 0
+HTTP status for /images/products/gallery/27027/COPLE-P+FC1.jpg : 404
+\n== SKU: 43030 ==
+Selected file: GUPO-100A+EIND1.jpg
+Invoking delete CLI for 43030 images/products/gallery/43030/GUPO-100A+EIND1.jpg
+time="2026-05-07T00:56:09Z" level=warning msg="/workspaces/proyecto_Truper/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container truper-db  Running
+Deleted file: /var/www/html/scripts/../public/images/products/gallery/43030/GUPO-100A+EIND1.jpg
+Not found: /var/www/html/scripts/../public/images/products/by_code/43030/GUPO-100A+EIND1.jpg
+Deleted file: /var/www/html/scripts/../images/products/gallery/43030/GUPO-100A+EIND1.jpg
+Not found: /var/www/html/scripts/../images/products/by_code/43030/GUPO-100A+EIND1.jpg
+Done
+DISK: removed: public/images/products/gallery/43030/GUPO-100A+EIND1.jpg
+DISK LEGACY: removed: public/images/products/by_code/43030/GUPO-100A+EIND1.jpg
+DB: products with custom image: 0
+DB: marketplace with custom image: 0
+HTTP status for /images/products/gallery/43030/GUPO-100A+EIND1.jpg : 404
+\n== SKU: 20017 ==
+Selected file: APS-12+FC1.jpg
+Invoking delete CLI for 20017 images/products/gallery/20017/APS-12+FC1.jpg
+time="2026-05-07T00:56:10Z" level=warning msg="/workspaces/proyecto_Truper/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container truper-db  Running
+Deleted file: /var/www/html/scripts/../public/images/products/gallery/20017/APS-12+FC1.jpg
+Not found: /var/www/html/scripts/../public/images/products/by_code/20017/APS-12+FC1.jpg
+Deleted file: /var/www/html/scripts/../images/products/gallery/20017/APS-12+FC1.jpg
+Not found: /var/www/html/scripts/../images/products/by_code/20017/APS-12+FC1.jpg
+Done
+DISK: removed: public/images/products/gallery/20017/APS-12+FC1.jpg
+DISK LEGACY: removed: public/images/products/by_code/20017/APS-12+FC1.jpg
+DB: products with custom image: 0
+DB: marketplace with custom image: 0
+HTTP status for /images/products/gallery/20017/APS-12+FC1.jpg : 404
+\n== SKU: 19033 ==
+Selected file: PA-NM+FC1.jpg
+Invoking delete CLI for 19033 images/products/gallery/19033/PA-NM+FC1.jpg
+time="2026-05-07T00:56:12Z" level=warning msg="/workspaces/proyecto_Truper/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container truper-db  Running
+Deleted file: /var/www/html/scripts/../public/images/products/gallery/19033/PA-NM+FC1.jpg
+Not found: /var/www/html/scripts/../public/images/products/by_code/19033/PA-NM+FC1.jpg
+Deleted file: /var/www/html/scripts/../images/products/gallery/19033/PA-NM+FC1.jpg
+Not found: /var/www/html/scripts/../images/products/by_code/19033/PA-NM+FC1.jpg
+Done
+DISK: removed: public/images/products/gallery/19033/PA-NM+FC1.jpg
+DISK LEGACY: removed: public/images/products/by_code/19033/PA-NM+FC1.jpg
+DB: products with custom image: 0
+DB: marketplace with custom image: 0
+HTTP status for /images/products/gallery/19033/PA-NM+FC1.jpg : 404
+\n== SKU: 11701 ==
+Selected file: BVI-3-16+FC1.jpg
+Invoking delete CLI for 11701 images/products/gallery/11701/BVI-3-16+FC1.jpg
+time="2026-05-07T00:56:13Z" level=warning msg="/workspaces/proyecto_Truper/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container truper-db  Running
+Deleted file: /var/www/html/scripts/../public/images/products/gallery/11701/BVI-3-16+FC1.jpg
+Not found: /var/www/html/scripts/../public/images/products/by_code/11701/BVI-3-16+FC1.jpg
+Deleted file: /var/www/html/scripts/../images/products/gallery/11701/BVI-3-16+FC1.jpg
+Not found: /var/www/html/scripts/../images/products/by_code/11701/BVI-3-16+FC1.jpg
+Done
+DISK: removed: public/images/products/gallery/11701/BVI-3-16+FC1.jpg
+DISK LEGACY: removed: public/images/products/by_code/11701/BVI-3-16+FC1.jpg
+DB: products with custom image: 0
+DB: marketplace with custom image: 0
+HTTP status for /images/products/gallery/11701/BVI-3-16+FC1.jpg : 404

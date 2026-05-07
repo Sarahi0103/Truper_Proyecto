@@ -2,13 +2,29 @@
 require_once '../config/config.php';
 
 $product_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$source = strtolower(trim((string)($_GET['source'] ?? '')));
 $product = null;
 
 if ($product_id > 0) {
     try {
-        $stmt = $pdo->prepare("SELECT id, sku, name, description, unit_price, category, stock_quantity, technical_specs, image_url, variants_json FROM products WHERE id = ? AND is_active = true LIMIT 1");
-        $stmt->execute([$product_id]);
-        $product = $stmt->fetch();
+        $queries = [];
+        if ($source === 'ce') {
+            $queries[] = "SELECT id, sku, name, description, unit_price, category, stock_quantity, NULL::text AS technical_specs, image_url, variants_json FROM marketplace_ce_products WHERE id = ? AND is_active = true LIMIT 1";
+        } elseif ($source === 'product') {
+            $queries[] = "SELECT id, sku, name, description, unit_price, category, stock_quantity, technical_specs, image_url, variants_json FROM products WHERE id = ? AND is_active = true LIMIT 1";
+        } else {
+            $queries[] = "SELECT id, sku, name, description, unit_price, category, stock_quantity, technical_specs, image_url, variants_json FROM products WHERE id = ? AND is_active = true LIMIT 1";
+            $queries[] = "SELECT id, sku, name, description, unit_price, category, stock_quantity, NULL::text AS technical_specs, image_url, variants_json FROM marketplace_ce_products WHERE id = ? AND is_active = true LIMIT 1";
+        }
+
+        foreach ($queries as $sql) {
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$product_id]);
+            $product = $stmt->fetch();
+            if ($product) {
+                break;
+            }
+        }
     } catch (Exception $e) {
         $product = null;
     }
@@ -16,7 +32,7 @@ if ($product_id > 0) {
 
 if (!$product) {
     http_response_code(404);
-    header('Location: index.php');
+    header('Location: ' . ($source === 'ce' ? 'marketplace_ce.php' : 'index.php'));
     exit;
 }
 
@@ -198,8 +214,8 @@ $stock = (int)($product['stock_quantity'] ?? 0);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?> - Truper Platform</title>
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/styles.css?v=2.1">
+    <link rel="stylesheet" href="css/theme.css?v=2.1">
     <style>
         .product-detail-hero {
             display: grid;

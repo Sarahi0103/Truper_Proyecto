@@ -10,7 +10,7 @@ class TaskController {
         $this->pdo = $pdo;
     }
     
-    public function createTask($title, $description, $assigned_to, $assigned_by, $due_date, $priority = 'medium', $estimated_hours = null) {
+    public function createTask($title, $description, $assigned_to, $assigned_by, $due_date, $priority = 'medium', $estimated_hours = null, $estimated_ampm = 'AM') {
         try {
             $this->ensureTaskSchemaCompatibility();
 
@@ -19,6 +19,7 @@ class TaskController {
             $assigned_to = (int)$assigned_to;
             $assigned_by = (int)$assigned_by;
             $due_date = trim((string)$due_date);
+            $estimated_ampm = in_array((string)$estimated_ampm, ['AM', 'PM'], true) ? (string)$estimated_ampm : 'AM';
 
             if ($title === '' || $description === '' || $assigned_to <= 0 || $assigned_by <= 0 || $due_date === '') {
                 return ['success' => false, 'message' => 'Completa los campos obligatorios de la tarea'];
@@ -70,6 +71,12 @@ class TaskController {
                 $columns[] = 'estimated_hours';
                 $values[] = '?';
                 $params[] = ($estimated_hours !== null && $estimated_hours !== '') ? (float)$estimated_hours : null;
+            }
+
+            if (db_column_exists('tasks', 'estimated_ampm')) {
+                $columns[] = 'estimated_ampm';
+                $values[] = '?';
+                $params[] = $estimated_ampm;
             }
 
             if (db_column_exists('tasks', 'status')) {
@@ -196,22 +203,24 @@ class TaskController {
         }
     }
     
-    public function logTaskHours($task_id, $hours) {
+    public function logTaskHours($task_id, $hours, $actual_ampm = 'AM') {
         try {
+            $actual_ampm = in_array((string)$actual_ampm, ['AM', 'PM'], true) ? (string)$actual_ampm : 'AM';
+            
             $stmt = $this->pdo->prepare("
                 UPDATE tasks 
-                SET actual_hours = COALESCE(actual_hours, 0) + ? 
+                SET actual_hours = ?, actual_ampm = ? 
                 WHERE id = ?
             ");
             
-            $stmt->execute([$hours, $task_id]);
+            $stmt->execute([$hours, $actual_ampm, $task_id]);
             
             return [
                 'success' => true,
-                'message' => 'Horas registradas exitosamente'
+                'message' => 'Horas actualizadas exitosamente'
             ];
         } catch (PDOException $e) {
-            return ['success' => false, 'message' => 'Error al registrar horas'];
+            return ['success' => false, 'message' => 'Error al actualizar horas'];
         }
     }
 }

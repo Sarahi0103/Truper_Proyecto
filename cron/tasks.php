@@ -36,13 +36,24 @@ try {
     $predictions = $analytics->generatePredictions();
     log_cron("Predicciones generadas: " . count($predictions));
     
-    // 3. Limpiar sesiones antiguas
+    // 3. Archivar tickets del mes anterior (ejecutar al inicio de cada mes)
+    if ((int)date('d') === 1 || (int)date('d') === 2) {  // Ejecutar los primeros 2 días del mes
+        log_cron("Archivando tickets del mes anterior...");
+        $archive_result = $analytics->archiveTicketsOfMonth();
+        if ($archive_result['success']) {
+            log_cron("Tickets archivados: " . $archive_result['archived_count'] . " de " . $archive_result['year'] . '-' . str_pad($archive_result['month'], 2, '0', STR_PAD_LEFT));
+        } else {
+            log_cron("Error archivando tickets: " . $archive_result['message']);
+        }
+    }
+    
+    // 4. Limpiar sesiones antiguas
     log_cron("Limpiando sesiones antiguas...");
     $stmt = $pdo->prepare("DELETE FROM action_logs WHERE timestamp < NOW() - INTERVAL '90 days'");
     $stmt->execute();
     log_cron("Logs antiguos eliminados");
     
-    // 4. Alertas de inventario bajo
+    // 5. Alertas de inventario bajo
     log_cron("Verificando niveles de reorden...");
     $stmt = $pdo->prepare("
         SELECT id, name, stock_quantity, reorder_level 

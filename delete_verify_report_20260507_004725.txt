@@ -1,0 +1,133 @@
+Generated at: Thu May  7 00:47:25 UTC 2026
+Running delete-and-verify for 10 SKUs...
+\n== SKU: 21525 ==
+Selected file: BRP-1-1-2+E1.jpg
+Invoking delete CLI for 21525 images/products/gallery/21525/BRP-1-1-2+E1.jpg
+time="2026-05-07T00:47:25Z" level=warning msg="/workspaces/proyecto_Truper/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container truper-db  Running
+Deleted file: /var/www/html/scripts/../images/products/gallery/21525/BRP-1-1-2+E1.jpg
+Not found: /var/www/html/scripts/../images/products/by_code/21525/BRP-1-1-2+E1.jpg
+Done
+DISK: still exists: public/images/products/gallery/21525/BRP-1-1-2+E1.jpg
+DISK LEGACY: removed: public/images/products/by_code/21525/BRP-1-1-2+E1.jpg
+DB: products with custom image: 0
+DB: marketplace with custom image: 0
+HTTP status for /images/products/gallery/21525/BRP-1-1-2+E1.jpg : 200
+\n== SKU: 21529 ==
+Selected file: BRP-4+E1.jpg
+Invoking delete CLI for 21529 images/products/gallery/21529/BRP-4+E1.jpg
+time="2026-05-07T00:47:27Z" level=warning msg="/workspaces/proyecto_Truper/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container truper-db  Running
+Deleted file: /var/www/html/scripts/../images/products/gallery/21529/BRP-4+E1.jpg
+Not found: /var/www/html/scripts/../images/products/by_code/21529/BRP-4+E1.jpg
+Done
+DISK: still exists: public/images/products/gallery/21529/BRP-4+E1.jpg
+DISK LEGACY: removed: public/images/products/by_code/21529/BRP-4+E1.jpg
+DB: products with custom image: 0
+DB: marketplace with custom image: 0
+HTTP status for /images/products/gallery/21529/BRP-4+E1.jpg : 200
+\n== SKU: 23031 ==
+Selected file: PAEL-1CP+D1.jpg
+Invoking delete CLI for 23031 images/products/gallery/23031/PAEL-1CP+D1.jpg
+time="2026-05-07T00:47:28Z" level=warning msg="/workspaces/proyecto_Truper/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container truper-db  Running
+Deleted file: /var/www/html/scripts/../images/products/gallery/23031/PAEL-1CP+D1.jpg
+Not found: /var/www/html/scripts/../images/products/by_code/23031/PAEL-1CP+D1.jpg
+Done
+DISK: still exists: public/images/products/gallery/23031/PAEL-1CP+D1.jpg
+DISK LEGACY: removed: public/images/products/by_code/23031/PAEL-1CP+D1.jpg
+DB: products with custom image: 0
+DB: marketplace with custom image: 0
+HTTP status for /images/products/gallery/23031/PAEL-1CP+D1.jpg : 200
+\n== SKU: 24064 ==
+Selected file: FGA-30P+D1.jpg
+Invoking delete CLI for 24064 images/products/gallery/24064/FGA-30P+D1.jpg
+time="2026-05-07T00:47:29Z" level=warning msg="/workspaces/proyecto_Truper/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container truper-db  Running
+Deleted file: /var/www/html/scripts/../images/products/gallery/24064/FGA-30P+D1.jpg
+Not found: /var/www/html/scripts/../images/products/by_code/24064/FGA-30P+D1.jpg
+Done
+DISK: still exists: public/images/products/gallery/24064/FGA-30P+D1.jpg
+DISK LEGACY: removed: public/images/products/by_code/24064/FGA-30P+D1.jpg
+DB: products with custom image: 0
+DB: marketplace with custom image: 0
+HTTP status for /images/products/gallery/24064/FGA-30P+D1.jpg : 200
+\n== SKU: 19457 ==
+Selected file: ROTO-1-2N6+BIZQ1.jpg
+Invoking delete CLI for 19457 images/products/gallery/19457/ROTO-1-2N6+BIZQ1.jpg
+time="2026-05-07T00:47:30Z" level=warning msg="/workspaces/proyecto_Truper/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container truper-db  Running
+Deleted file: /var/www/html/scripts/../images/products/gallery/19457/ROTO-1-2N6+BIZQ1.jpg
+Not found: /var/www/html/scripts/../images/products/by_code/19457/ROTO-1-2N6+BIZQ1.jpg
+Done
+DISK: still exists: public/images/products/gallery/19457/ROTO-1-2N6+BIZQ1.jpg
+DISK LEGACY: removed: public/images/products/by_code/19457/ROTO-1-2N6+BIZQ1.jpg
+DB: products with custom image: 0
+DB: marketplace with custom image: 0
+HTTP status for /images/products/gallery/19457/ROTO-1-2N6+BIZQ1.jpg : 200
+\n== SKU: 27027 ==
+Selected file: COPLE-P+E1.jpg
+Invoking delete CLI for 27027 images/products/gallery/27027/COPLE-P+E1.jpg
+time="2026-05-07T00:47:32Z" level=warning msg="/workspaces/proyecto_Truper/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container truper-db  Running
+Deleted file: /var/www/html/scripts/../images/products/gallery/27027/COPLE-P+E1.jpg
+Not found: /var/www/html/scripts/../images/products/by_code/27027/COPLE-P+E1.jpg
+Updated DB row products.id=47
+Done
+DISK: still exists: public/images/products/gallery/27027/COPLE-P+E1.jpg
+DISK LEGACY: removed: public/images/products/by_code/27027/COPLE-P+E1.jpg
+DB: products with custom image: 0
+DB: marketplace with custom image: 0
+HTTP status for /images/products/gallery/27027/COPLE-P+E1.jpg : 200
+\n== SKU: 43030 ==
+Selected file: GUPO-100A+E1.jpg
+Invoking delete CLI for 43030 images/products/gallery/43030/GUPO-100A+E1.jpg
+time="2026-05-07T00:47:33Z" level=warning msg="/workspaces/proyecto_Truper/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container truper-db  Running
+Deleted file: /var/www/html/scripts/../images/products/gallery/43030/GUPO-100A+E1.jpg
+Not found: /var/www/html/scripts/../images/products/by_code/43030/GUPO-100A+E1.jpg
+Done
+DISK: still exists: public/images/products/gallery/43030/GUPO-100A+E1.jpg
+DISK LEGACY: removed: public/images/products/by_code/43030/GUPO-100A+E1.jpg
+DB: products with custom image: 0
+DB: marketplace with custom image: 0
+HTTP status for /images/products/gallery/43030/GUPO-100A+E1.jpg : 200
+\n== SKU: 20017 ==
+Selected file: APS-12+E1.jpg
+Invoking delete CLI for 20017 images/products/gallery/20017/APS-12+E1.jpg
+time="2026-05-07T00:47:34Z" level=warning msg="/workspaces/proyecto_Truper/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container truper-db  Running
+Deleted file: /var/www/html/scripts/../images/products/gallery/20017/APS-12+E1.jpg
+Not found: /var/www/html/scripts/../images/products/by_code/20017/APS-12+E1.jpg
+Done
+DISK: still exists: public/images/products/gallery/20017/APS-12+E1.jpg
+DISK LEGACY: removed: public/images/products/by_code/20017/APS-12+E1.jpg
+DB: products with custom image: 0
+DB: marketplace with custom image: 0
+HTTP status for /images/products/gallery/20017/APS-12+E1.jpg : 200
+\n== SKU: 19033 ==
+Selected file: PA-NM+D1.jpg
+Invoking delete CLI for 19033 images/products/gallery/19033/PA-NM+D1.jpg
+time="2026-05-07T00:47:35Z" level=warning msg="/workspaces/proyecto_Truper/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container truper-db  Running
+Deleted file: /var/www/html/scripts/../images/products/gallery/19033/PA-NM+D1.jpg
+Not found: /var/www/html/scripts/../images/products/by_code/19033/PA-NM+D1.jpg
+Done
+DISK: still exists: public/images/products/gallery/19033/PA-NM+D1.jpg
+DISK LEGACY: removed: public/images/products/by_code/19033/PA-NM+D1.jpg
+DB: products with custom image: 0
+DB: marketplace with custom image: 0
+HTTP status for /images/products/gallery/19033/PA-NM+D1.jpg : 200
+\n== SKU: 11701 ==
+Selected file: BVI-3-16+E1.jpg
+Invoking delete CLI for 11701 images/products/gallery/11701/BVI-3-16+E1.jpg
+time="2026-05-07T00:47:36Z" level=warning msg="/workspaces/proyecto_Truper/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container truper-db  Running
+Deleted file: /var/www/html/scripts/../images/products/gallery/11701/BVI-3-16+E1.jpg
+Not found: /var/www/html/scripts/../images/products/by_code/11701/BVI-3-16+E1.jpg
+Done
+DISK: still exists: public/images/products/gallery/11701/BVI-3-16+E1.jpg
+DISK LEGACY: removed: public/images/products/by_code/11701/BVI-3-16+E1.jpg
+DB: products with custom image: 0
+DB: marketplace with custom image: 0
+HTTP status for /images/products/gallery/11701/BVI-3-16+E1.jpg : 200

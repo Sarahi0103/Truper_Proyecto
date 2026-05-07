@@ -31,7 +31,7 @@ header("X-XSS-Protection: 1; mode=block");
 if ($is_https) {
     header("Strict-Transport-Security: max-age=31536000; includeSubDomains");
 }
-header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;");
+header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:;");
 
 // ===== OPTIMIZACIONES DE PERFORMANCE =====
 // Compresión gzip automática
@@ -507,6 +507,12 @@ function ensure_postgresql_form_schema() {
             return;
         }
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS deleted_product_skus (
+            sku VARCHAR(100) PRIMARY KEY,
+            deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            reason TEXT
+        )");
+
         $pdo->exec("CREATE TABLE IF NOT EXISTS clients (
             id SERIAL PRIMARY KEY,
             user_id INTEGER UNIQUE,
@@ -719,6 +725,18 @@ function get_xlsx_seed_products() {
     }
 
     $cache = [];
+    global $pdo;
+
+    if (isset($pdo) && ($pdo instanceof PDO) && db_table_exists('products')) {
+        try {
+            $count = (int)$pdo->query("SELECT COUNT(*) FROM products")->fetchColumn();
+            if ($count > 0) {
+                return $cache;
+            }
+        } catch (Exception $ignored) {
+        }
+    }
+
     $seedPath = __DIR__ . '/../db/PRODUCTOS_XLSX_IMPORT.sql';
     if (!file_exists($seedPath)) {
         return $cache;
@@ -728,6 +746,8 @@ function get_xlsx_seed_products() {
     if (!is_array($lines)) {
         return $cache;
     }
+
+    $deletedSkus = truper_get_deleted_product_sku_set();
 
     $id = 900000;
     foreach ($lines as $line) {
@@ -742,6 +762,11 @@ function get_xlsx_seed_products() {
         }
 
         $sku = str_replace("''", "'", $m[1]);
+        $normalizedSku = truper_normalize_sku_digits($sku);
+        if ($normalizedSku !== '' && isset($deletedSkus[$normalizedSku])) {
+            continue;
+        }
+
         $name = str_replace("''", "'", $m[2]);
         $description = str_replace("''", "'", $m[3]);
         $category = str_replace("''", "'", $m[4]);
@@ -764,6 +789,77 @@ function get_xlsx_seed_products() {
     }
 
     return $cache;
+}
+
+function truper_normalize_sku_digits($sku): string {
+    $digits = preg_replace('/\D+/', '', (string)$sku);
+    return is_string($digits) ? substr($digits, 0, 6) : '';
+}
+
+function truper_get_deleted_product_sku_set(): array {
+    static $cache = null;
+    if ($cache !== null) {
+        return $cache;
+    }
+
+    $cache = [];
+    global $pdo;
+
+    if (!isset($pdo) || !($pdo instanceof PDO)) {
+        return $cache;
+    }
+
+    try {
+        if (!truper_db_table_exists($pdo, 'public.deleted_product_skus')) {
+            return $cache;
+        }
+
+        $stmt = $pdo->query("SELECT sku FROM deleted_product_skus");
+        if ($stmt) {
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $sku = truper_normalize_sku_digits($row['sku'] ?? '');
+                if ($sku !== '') {
+                    $cache[$sku] = true;
+                }
+            }
+        }
+    } catch (Exception $ignored) {
+    }
+
+    return $cache;
+}
+
+function truper_is_deleted_product_sku($sku): bool {
+    $normalized = truper_normalize_sku_digits($sku);
+    if ($normalized === '') {
+        return false;
+    }
+
+    $deleted = truper_get_deleted_product_sku_set();
+    return isset($deleted[$normalized]);
+}
+
+function truper_register_deleted_product_sku(PDO $pdo, string $sku, string $reason = 'product-delete'): void {
+    $normalized = truper_normalize_sku_digits($sku);
+    if ($normalized === '') {
+        return;
+    }
+
+    try {
+        if (!truper_db_table_exists($pdo, 'public.deleted_product_skus')) {
+            $pdo->exec("CREATE TABLE IF NOT EXISTS deleted_product_skus (
+                sku VARCHAR(100) PRIMARY KEY,
+                deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                reason TEXT
+            )");
+        }
+
+        $stmt = $pdo->prepare("INSERT INTO deleted_product_skus (sku, reason)
+            VALUES (?, ?)
+            ON CONFLICT (sku) DO UPDATE SET deleted_at = CURRENT_TIMESTAMP, reason = EXCLUDED.reason");
+        $stmt->execute([$normalized, $reason]);
+    } catch (Exception $ignored) {
+    }
 }
 
 function ensure_xlsx_products_seeded() {

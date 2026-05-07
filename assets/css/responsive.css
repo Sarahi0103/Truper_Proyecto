@@ -24,9 +24,10 @@
     }
 
     .header-content {
-        gap: 0.5rem !important;
-        flex: 1;
-        min-width: 100%;
+        gap: 0.4rem !important;
+        flex: 0 1 100% !important;
+        min-width: auto !important;
+        margin-bottom: 0.5rem;
     }
 
     .logo img {
@@ -35,13 +36,15 @@
 
     .nav-menu {
         width: 100%;
-        gap: 0.4rem !important;
+        gap: 0.25rem !important;
         flex-wrap: wrap;
+        flex: 0 1 100%;
+        margin-bottom: 0.5rem;
     }
 
     .nav-menu a {
         padding: 0.35rem 0.6rem !important;
-        font-size: 0.75rem !important;
+        font-size: 0.70rem !important;
     }
 
     .header-actions {
@@ -57,11 +60,22 @@
 
     .user-menu {
         gap: 0.5rem !important;
-        font-size: 0.85rem !important;
+        font-size: 0.75rem !important;
+        flex: 0 1 100%;
+        justify-content: flex-end;
     }
 
     .user-name {
-        display: none;
+        display: none !important;
+    }
+
+    .user-role {
+        display: none !important;
+    }
+
+    .btn-logout {
+        padding: 0.4rem 0.8rem !important;
+        font-size: 0.75rem !important;
     }
 
     main {
@@ -195,11 +209,15 @@
 
     header {
         padding: 0.9rem 1rem !important;
-        gap: 1rem !important;
+        gap: 0.75rem !important;
+        flex-wrap: wrap;
     }
 
     .header-content {
-        gap: 1rem !important;
+        gap: 0.8rem !important;
+        flex: 0 1 100% !important;
+        min-width: auto !important;
+        margin-bottom: 0.5rem;
     }
 
     .logo img {
@@ -207,17 +225,35 @@
     }
 
     .nav-menu {
-        gap: 0.8rem !important;
+        gap: 0.6rem !important;
+        width: 100%;
+        flex: 0 1 100%;
+        margin-bottom: 0.5rem;
     }
 
     .nav-menu a {
-        padding: 0.4rem 0.75rem !important;
-        font-size: 0.85rem !important;
+        padding: 0.4rem 0.65rem !important;
+        font-size: 0.80rem !important;
     }
 
     .header-actions {
         gap: 0.6rem !important;
         margin-left: auto !important;
+    }
+
+    .user-menu {
+        gap: 0.75rem !important;
+        font-size: 0.85rem !important;
+        flex: 0 1 auto;
+    }
+
+    .user-role {
+        font-size: 0.75rem !important;
+    }
+
+    .btn-logout {
+        padding: 0.45rem 0.9rem !important;
+        font-size: 0.80rem !important;
     }
 
     main {
@@ -297,6 +333,33 @@
 
 /* ============ DESKTOP (769px - 1024px) ============ */
 @media (min-width: 769px) and (max-width: 1024px) {
+    header {
+        padding: 0.9rem 1.2rem !important;
+        gap: 1rem !important;
+        flex-wrap: nowrap;
+    }
+
+    .header-content {
+        gap: 1.2rem !important;
+        flex: 0 1 auto;
+        min-width: 0;
+    }
+
+    .nav-menu {
+        gap: 0.7rem !important;
+        flex: 1;
+    }
+
+    .nav-menu a {
+        padding: 0.4rem 0.7rem !important;
+        font-size: 0.85rem !important;
+    }
+
+    .user-menu {
+        gap: 0.8rem !important;
+        flex: 0 1 auto;
+    }
+
     main {
         padding: var(--padding-tablet) !important;
         max-width: 100% !important;
@@ -489,6 +552,50 @@
     .m-responsive { margin: 1rem !important; }
     .mt-responsive { margin-top: 1rem !important; }
     .mb-responsive { margin-bottom: 1rem !important; }
+}
+
+/* ============ LARGE DESKTOP (1025px+) ============ */
+@media (min-width: 1025px) {
+    header {
+        padding: 1rem 1.5rem !important;
+        gap: 1.5rem !important;
+        flex-wrap: nowrap;
+    }
+
+    .header-content {
+        gap: 2rem !important;
+        flex: 0 1 auto;
+        min-width: 0;
+    }
+
+    .logo img {
+        height: 36px !important;
+    }
+
+    .nav-menu {
+        gap: 1rem !important;
+        flex: 1;
+    }
+
+    .nav-menu a {
+        padding: 0.5rem 0.9rem !important;
+        font-size: 0.95rem !important;
+    }
+
+    .user-menu {
+        gap: 1rem !important;
+        flex: 0 1 auto;
+        margin-left: auto !important;
+    }
+
+    .user-info {
+        text-align: right;
+    }
+
+    .btn-logout {
+        padding: 0.55rem 1.2rem !important;
+        font-size: 0.95rem !important;
+    }
 }
 
 /* Font size responsive */

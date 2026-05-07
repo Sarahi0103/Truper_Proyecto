@@ -140,6 +140,61 @@ function client_summary($pdo, int $clientId): array {
     return $summary;
 }
 
+function order_monthly_stats($pdo, ?int $year, ?int $clientId = null): array {
+    $sql = "
+        SELECT
+            EXTRACT(MONTH FROM created_at)::int AS month_num,
+            COUNT(*) AS total_orders,
+            COALESCE(SUM(total_amount), 0) AS total_amount
+        FROM orders
+        WHERE created_at IS NOT NULL
+    ";
+
+    $params = [];
+
+    if ($year && $year > 0) {
+        $sql .= " AND EXTRACT(YEAR FROM created_at) = ?";
+        $params[] = $year;
+    }
+
+    if ($clientId) {
+        $sql .= " AND client_id = ?";
+        $params[] = $clientId;
+    }
+
+    $sql .= " GROUP BY month_num ORDER BY month_num ASC";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    return $stmt->fetchAll() ?: [];
+}
+
+function order_yearly_stats($pdo, ?int $clientId = null): array {
+    $sql = "
+        SELECT
+            EXTRACT(YEAR FROM created_at)::int AS year_val,
+            COUNT(*) AS total_orders,
+            COALESCE(SUM(total_amount), 0) AS total_amount
+        FROM orders
+        WHERE created_at IS NOT NULL
+    ";
+
+    $params = [];
+
+    if ($clientId) {
+        $sql .= " AND client_id = ?";
+        $params[] = $clientId;
+    }
+
+    $sql .= " GROUP BY year_val ORDER BY year_val DESC";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    return $stmt->fetchAll() ?: [];
+}
+
 try {
     switch ($action) {
         case 'purchase-stats':
@@ -149,17 +204,13 @@ try {
             }
 
             $year = isset($_GET['year']) ? (int)$_GET['year'] : null;
-            if (is_admin_user()) {
-                $product_id = $_GET['product_id'] ?? null;
-                $stats = $analyticsController->getPurchaseStatistics($product_id, $year);
-            } else {
-                $clientId = get_current_client_id($pdo);
-                if (!$clientId) {
-                    $response = ['success' => true, 'stats' => []];
-                    break;
-                }
-                $stats = client_purchase_stats($pdo, $clientId, $year);
+            $clientId = is_admin_user() ? null : get_current_client_id($pdo);
+            if (!$clientId && !is_admin_user()) {
+                $response = ['success' => true, 'stats' => []];
+                break;
             }
+
+            $stats = order_monthly_stats($pdo, $year, $clientId);
             $response = ['success' => true, 'stats' => $stats];
             break;
 
@@ -169,47 +220,55 @@ try {
                 break;
             }
 
+            $currentYear = (int)date('Y');
+            $previousYear = $currentYear - 1;
+            $allowPastYears = $currentYear > 2026;
+
             if (is_admin_user()) {
                 $years = [];
                 try {
-                    $queries = [
-                        "SELECT DISTINCT YEAR(created_at) AS year_value FROM orders WHERE created_at IS NOT NULL ORDER BY year_value DESC",
-                        "SELECT DISTINCT EXTRACT(YEAR FROM created_at) AS year_value FROM orders WHERE created_at IS NOT NULL ORDER BY year_value DESC"
-                    ];
-
-                    foreach ($queries as $sql) {
-                        try {
-                            $stmt = $pdo->query($sql);
-                            $rows = $stmt ? $stmt->fetchAll() : [];
-                            foreach ($rows as $row) {
-                                $yearValue = (int)($row['year_value'] ?? 0);
-                                if ($yearValue > 0) {
-                                    $years[] = $yearValue;
-                                }
-                            }
-                            if (!empty($years)) {
-                                break;
-                            }
-                        } catch (Exception $ignoredQuery) {
+                    $yearRows = order_yearly_stats($pdo, null);
+                    foreach ($yearRows as $row) {
+                        $yearValue = (int)($row['year_val'] ?? 0);
+                        if ($yearValue > 0) {
+                            $years[] = $yearValue;
                         }
                     }
                 } catch (Exception $ignored) {
                     $years = [];
                 }
-                if (empty($years)) {
-                    $years[] = (int)date('Y');
+
+                $years[] = $currentYear;
+                if ($allowPastYears) {
+                    $years[] = $previousYear;
                 }
-                $response = ['success' => true, 'years' => array_values(array_unique($years))];
+
+                $years = array_values(array_unique(array_map('intval', $years)));
+                rsort($years);
+
+                $response = ['success' => true, 'years' => $years];
                 break;
             }
 
             $clientId = get_current_client_id($pdo);
             if (!$clientId) {
-                $response = ['success' => true, 'years' => [(int)date('Y')]];
+                $fallbackYears = [$currentYear];
+                if ($allowPastYears) {
+                    $fallbackYears[] = $previousYear;
+                }
+                $response = ['success' => true, 'years' => $fallbackYears];
                 break;
             }
 
-            $response = ['success' => true, 'years' => client_available_years($pdo, $clientId)];
+            $years = client_available_years($pdo, $clientId);
+            $years[] = $currentYear;
+            if ($allowPastYears) {
+                $years[] = $previousYear;
+            }
+            $years = array_values(array_unique(array_map('intval', $years)));
+            rsort($years);
+
+            $response = ['success' => true, 'years' => $years];
             break;
 
         case 'my-summary':
@@ -317,40 +376,118 @@ try {
             }
             break;
 
+        case 'ticket-export':
+            require_admin();
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            $year = isset($_GET['year']) ? (int)$_GET['year'] : (int)date('Y');
+            $month = isset($_GET['month']) ? (int)$_GET['month'] : (int)date('m');
+            $exportType = $_GET['type'] ?? 'client'; // 'client', 'supplier', o 'both'
+            
+            if ($year < 2000) {
+                $year = (int)date('Y');
+            }
+            if ($month < 1 || $month > 12) {
+                $month = (int)date('m');
+            }
+
+            $ticketData = $analyticsController->getTicketsHistory($year, $month);
+            $clientTickets = $ticketData['tickets'] ?? [];
+            $supplierTickets = ($exportType === 'supplier' || $exportType === 'both') ? ($ticketData['supplier_tickets'] ?? []) : [];
+
+            $monthNames = [1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril', 5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto', 9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'];
+            $filename = 'historial_tickets_' . $year . '_' . str_pad((string)$month, 2, '0', STR_PAD_LEFT) . '.xls';
+
+            header('Content-Type: application/vnd.ms-excel; charset=utf-8');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            header('Pragma: no-cache');
+            header('Expires: 0');
+
+            echo "\xEF\xBB\xBF";
+            echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+            echo '<head><meta charset="UTF-8"><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>Historial de Tickets</title></head><body>';
+
+            // TABLA DE TICKETS DE CLIENTE
+            if ($exportType === 'client' || $exportType === 'both') {
+                echo '<table border="1" style="margin-bottom: 20px;">';
+                echo '<tr><th colspan="7" style="background-color: #FF7F00; color: white; padding: 10px;">Historial de Tickets Cliente - ' . htmlspecialchars(($monthNames[$month] ?? 'Mes') . ' ' . $year, ENT_QUOTES, 'UTF-8') . '</th></tr>';
+                echo '<tr style="background-color: #f0f0f0;"><th>Folio</th><th>Cliente</th><th>Tipo</th><th>Monto</th><th>Estado Pago</th><th>Fecha</th><th>Artículos</th></tr>';
+
+                if (empty($clientTickets)) {
+                    echo '<tr><td colspan="7" style="text-align: center; padding: 10px;">Sin tickets de cliente en este período</td></tr>';
+                }
+
+                foreach ($clientTickets as $ticket) {
+                    $typeLabel = [
+                        'sale' => 'Venta',
+                        'return' => 'Devolución',
+                        'adjustment' => 'Ajuste',
+                        'credit' => 'Crédito'
+                    ][$ticket['ticket_type'] ?? ''] ?? ($ticket['ticket_type'] ?? '');
+                    $statusLabel = ($ticket['payment_status'] ?? '') === 'completed' ? 'Pagado' : 'Pendiente';
+                    $customerName = $ticket['customer_name'] ?? 'Sin nombre';
+                    $email = $ticket['email'] ?? '';
+                    $clientCell = $email !== '' ? ($customerName . ' (' . $email . ')') : $customerName;
+
+                    echo '<tr>';
+                    echo '<td>' . htmlspecialchars((string)($ticket['folio'] ?? ''), ENT_QUOTES, 'UTF-8') . '</td>';
+                    echo '<td>' . htmlspecialchars($clientCell, ENT_QUOTES, 'UTF-8') . '</td>';
+                    echo '<td>' . htmlspecialchars($typeLabel, ENT_QUOTES, 'UTF-8') . '</td>';
+                    echo '<td>' . htmlspecialchars(number_format((float)($ticket['total_amount'] ?? 0), 2, '.', ','), ENT_QUOTES, 'UTF-8') . '</td>';
+                    echo '<td>' . htmlspecialchars($statusLabel, ENT_QUOTES, 'UTF-8') . '</td>';
+                    echo '<td>' . htmlspecialchars((string)($ticket['issued_date'] ?? ''), ENT_QUOTES, 'UTF-8') . '</td>';
+                    echo '<td>' . htmlspecialchars((string)($ticket['item_count'] ?? 0), ENT_QUOTES, 'UTF-8') . '</td>';
+                    echo '</tr>';
+                }
+                echo '</table>';
+            }
+
+            // TABLA DE TICKETS DE PROVEEDOR
+            if ($exportType === 'supplier' || $exportType === 'both') {
+                echo '<table border="1">';
+                echo '<tr><th colspan="7" style="background-color: #4CAF50; color: white; padding: 10px;">Historial de Órdenes de Proveedor - ' . htmlspecialchars(($monthNames[$month] ?? 'Mes') . ' ' . $year, ENT_QUOTES, 'UTF-8') . '</th></tr>';
+                echo '<tr style="background-color: #f0f0f0;"><th>Folio</th><th>Proveedor</th><th>Tipo</th><th>Monto</th><th>Estado Pago</th><th>Fecha</th><th>Artículos</th></tr>';
+
+                if (empty($supplierTickets)) {
+                    echo '<tr><td colspan="7" style="text-align: center; padding: 10px;">Sin órdenes de proveedor en este período</td></tr>';
+                }
+
+                foreach ($supplierTickets as $ticket) {
+                    $statusLabel = ($ticket['payment_status'] ?? '') === 'completed' ? 'Pagado' : 'Pendiente';
+                    $supplierName = $ticket['customer_name'] ?? 'Sin nombre';
+
+                    echo '<tr>';
+                    echo '<td>' . htmlspecialchars((string)($ticket['folio'] ?? ''), ENT_QUOTES, 'UTF-8') . '</td>';
+                    echo '<td>' . htmlspecialchars($supplierName, ENT_QUOTES, 'UTF-8') . '</td>';
+                    echo '<td>Compra</td>';
+                    echo '<td>' . htmlspecialchars(number_format((float)($ticket['total_amount'] ?? 0), 2, '.', ','), ENT_QUOTES, 'UTF-8') . '</td>';
+                    echo '<td>' . htmlspecialchars($statusLabel, ENT_QUOTES, 'UTF-8') . '</td>';
+                    echo '<td>' . htmlspecialchars((string)($ticket['issued_date'] ?? ''), ENT_QUOTES, 'UTF-8') . '</td>';
+                    echo '<td>' . htmlspecialchars((string)($ticket['item_count'] ?? 0), ENT_QUOTES, 'UTF-8') . '</td>';
+                    echo '</tr>';
+                }
+                echo '</table>';
+            }
+
+            echo '</body></html>';
+            exit;
+
         case 'yearly-stats':
             if ($method !== 'GET') {
                 $response = ['success' => false, 'message' => 'Método no permitido'];
                 break;
             }
 
-            if (is_admin_user()) {
-                $sql = "
-                    SELECT 
-                        EXTRACT(YEAR FROM created_at)::int as year_val,
-                        COUNT(*) as total_orders,
-                        COALESCE(SUM(total_amount), 0) as total_amount
-                    FROM orders
-                    GROUP BY year_val
-                    ORDER BY year_val DESC
-                ";
-                $stmt = $pdo->query($sql);
-                $stats = $stmt->fetchAll();
-            } else {
-                $clientId = get_current_client_id($pdo);
-                $sql = "
-                    SELECT 
-                        EXTRACT(YEAR FROM created_at)::int as year_val,
-                        COUNT(*) as total_orders,
-                        COALESCE(SUM(total_amount), 0) as total_amount
-                    FROM orders
-                    WHERE client_id = ?
-                    GROUP BY year_val
-                    ORDER BY year_val DESC
-                ";
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute([$clientId]);
-                $stats = $stmt->fetchAll();
+            $clientId = is_admin_user() ? null : get_current_client_id($pdo);
+            if (!$clientId && !is_admin_user()) {
+                $response = ['success' => true, 'stats' => []];
+                break;
             }
+
+            $stats = order_yearly_stats($pdo, $clientId);
             $response = ['success' => true, 'stats' => $stats];
             break;
 
@@ -468,6 +605,53 @@ try {
             $stmt->execute();
 
             $response = ['success' => true, 'clients' => $stmt->fetchAll()];
+            break;
+
+        case 'ticket-history':
+            require_admin();
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            $year = isset($_GET['year']) ? (int)$_GET['year'] : (int)date('Y');
+            $month = isset($_GET['month']) ? (int)$_GET['month'] : (int)date('m');
+
+            $result = $analyticsController->getTicketsHistory($year, $month);
+            $response = ['success' => true, 'data' => $result];
+            break;
+
+        case 'ticket-years':
+            require_admin();
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            $response = ['success' => true, 'years' => $analyticsController->getTicketAvailableYears()];
+            break;
+
+        case 'archive-tickets':
+            require_admin();
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            $year = isset($_POST['year']) ? (int)$_POST['year'] : null;
+            $month = isset($_POST['month']) ? (int)$_POST['month'] : null;
+
+            $result = $analyticsController->archiveTicketsOfMonth($year, $month);
+            $response = $result;
+
+            if ($result['success']) {
+                log_action(
+                    $_SESSION['user_id'],
+                    'ARCHIVE_TICKETS',
+                    'Se archivaron ' . ($result['archived_count'] ?? 0) . ' tickets de ' . ($result['year'] ?? 'N/A') . '-' . str_pad($result['month'] ?? 0, 2, '0', STR_PAD_LEFT),
+                    getTrusSIDBug()
+                );
+            }
             break;
 
         default:

@@ -11,7 +11,9 @@ $method = $_SERVER['REQUEST_METHOD'];
 $input = json_decode(file_get_contents('php://input'), true) ?: [];
 
 if ($method === 'GET') {
-    header('Cache-Control: public, max-age=60');
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
 } else {
     header('Cache-Control: no-cache, must-revalidate');
 }
@@ -293,7 +295,7 @@ function marketplace_sku_exists_admin_supply($pdo, string $sku, int $excludeId =
 }
 
 function seed_sku_exists_admin_supply(string $sku): bool {
-    if ($sku === '' || !function_exists('get_xlsx_seed_products')) {
+    if ($sku === '' || truper_is_deleted_product_sku($sku) || !function_exists('get_xlsx_seed_products')) {
         return false;
     }
 
@@ -1109,13 +1111,87 @@ function normalize_product_gallery_images_admin_supply(array $images): array {
     return $normalized;
 }
 
+function canonical_product_gallery_path_admin_supply(string $sku, string $imagePath): string {
+    $sku = normalize_sku_admin_supply($sku);
+    $raw = trim((string)$imagePath);
+    if (!is_valid_numeric_sku_admin_supply($sku) || $raw === '') {
+        return $raw;
+    }
+
+    $relative = ltrim($raw, '/');
+    $filename = basename($relative);
+    if ($filename === '' || $filename === '.' || $filename === '..') {
+        return $raw;
+    }
+
+    if (strpos($relative, 'images/products/gallery/' . $sku . '/') === 0) {
+        return 'images/products/gallery/' . $sku . '/' . $filename;
+    }
+
+    if (strpos($relative, 'images/products/by_code/' . $sku . '/') === 0) {
+        return 'images/products/gallery/' . $sku . '/' . $filename;
+    }
+
+    if (strpos($relative, 'images/products/') === 0) {
+        return 'images/products/gallery/' . $sku . '/' . $filename;
+    }
+
+    return $raw;
+}
+
+function ensure_canonical_gallery_image_admin_supply(string $sku, string $imagePath): string {
+    $sku = normalize_sku_admin_supply($sku);
+    $raw = trim((string)$imagePath);
+    if (!is_valid_numeric_sku_admin_supply($sku) || $raw === '') {
+        return $raw;
+    }
+
+    $canonicalRelative = canonical_product_gallery_path_admin_supply($sku, $raw);
+    $sourcePath = __DIR__ . '/../' . ltrim($raw, '/');
+    if (!is_file($sourcePath)) {
+        return $canonicalRelative;
+    }
+
+    if ($canonicalRelative === $raw) {
+        return $raw;
+    }
+
+    $canonicalPath = __DIR__ . '/../' . ltrim($canonicalRelative, '/');
+    $canonicalDir = dirname($canonicalPath);
+    if (!is_dir($canonicalDir)) {
+        @mkdir($canonicalDir, 0775, true);
+    }
+
+    if (!is_file($canonicalPath)) {
+        @copy($sourcePath, $canonicalPath);
+    }
+
+    return is_file($canonicalPath) ? $canonicalRelative : $raw;
+}
+
+function normalize_and_persist_gallery_images_admin_supply($pdo, string $sku, array $images): array {
+    $sku = normalize_sku_admin_supply($sku);
+    if (!is_valid_numeric_sku_admin_supply($sku)) {
+        return normalize_product_gallery_images_admin_supply($images);
+    }
+
+    $normalized = [];
+    foreach (normalize_product_gallery_images_admin_supply($images) as $image) {
+        $normalized[] = ensure_canonical_gallery_image_admin_supply($sku, $image);
+    }
+
+    return persist_product_gallery_images_admin_supply($pdo, $sku, $normalized);
+}
+
 function persist_product_gallery_images_admin_supply($pdo, string $sku, array $images): array {
     $images = normalize_product_gallery_images_admin_supply($images);
     if (empty($images)) {
         return [];
     }
 
-    $cover = $images[0];
+    $cover = ensure_canonical_gallery_image_admin_supply($sku, $images[0]);
+    $images[0] = $cover;
+    $images = normalize_product_gallery_images_admin_supply($images);
     $json = json_encode($images, JSON_UNESCAPED_UNICODE);
 
     foreach (['products', 'marketplace_ce_products'] as $table) {
@@ -1140,6 +1216,7 @@ function list_product_gallery_images_admin_supply(string $sku): array {
     try {
         $final = [];
         $needsPersist = false;
+        $diskImages = list_product_gallery_files_admin_supply($sku);
 
         $mergeImage = function (string $value) use (&$final) {
             $value = trim($value);
@@ -1183,7 +1260,10 @@ function list_product_gallery_images_admin_supply(string $sku): array {
                 $row = $stmt->fetch();
                 if ($row) {
                     $productExists = true;
-                    $rowImages = $extractRowImages($row);
+                    $rowImages = array_map(function ($path) use ($sku) {
+                        return ensure_canonical_gallery_image_admin_supply($sku, (string)$path);
+                    }, $extractRowImages($row));
+                    $rowImages = normalize_product_gallery_images_admin_supply($rowImages);
                     foreach ($rowImages as $rowImage) {
                         $mergeImage($rowImage);
                     }
@@ -1196,13 +1276,13 @@ function list_product_gallery_images_admin_supply(string $sku): array {
             }
         }
 
-        // NEVER bootstrap from disk if product exists in DB, even if gallery is empty.
-        // This ensures deleted images stay deleted and don't reappear from old files.
-        // Only bootstrap if product doesn't exist at all (first time).
-        if (empty($final) && !$productExists) {
-            foreach (list_product_gallery_files_admin_supply($sku) as $fileImage) {
-                $mergeImage((string)$fileImage);
-            }
+        // Always merge on-disk gallery files so legacy images are recovered.
+        // Deleted images will not reappear because the physical file is removed on delete.
+        foreach ($diskImages as $fileImage) {
+            $mergeImage(ensure_canonical_gallery_image_admin_supply($sku, (string)$fileImage));
+        }
+
+        if (!empty($diskImages)) {
             $needsPersist = true;
         }
 
@@ -1214,7 +1294,7 @@ function list_product_gallery_images_admin_supply(string $sku): array {
             return $final;
         }
 
-        return persist_product_gallery_images_admin_supply($pdo, $sku, $final);
+        return normalize_and_persist_gallery_images_admin_supply($pdo, $sku, $final);
     } catch (Exception $e) {}
     
     return [];
@@ -1235,21 +1315,138 @@ function delete_product_gallery_file_admin_supply(string $sku, string $imagePath
         return;
     }
 
-    // Only allow deleting files under known gallery roots.
-    $relative = ltrim($raw, '/');
-    $allowedPrefix = 'images/products/gallery/' . $sku . '/';
-    if (strpos($relative, $allowedPrefix) !== 0) {
-        return;
+    // Normalize input: strip query string and any scheme/host
+    $parsed = parse_url($raw);
+    $relative = '';
+    if ($parsed !== false && isset($parsed['path'])) {
+        $relative = ltrim($parsed['path'], '/');
+    } else {
+        $relative = ltrim(preg_replace('/\?.*$/', '', $raw), '/');
     }
 
+    // Extract filename
     $filename = basename($relative);
     if ($filename === '' || $filename === '.' || $filename === '..') {
         return;
     }
 
-    $target = __DIR__ . '/../images/products/gallery/' . $sku . '/' . $filename;
-    if (is_file($target)) {
-        @unlink($target);
+    // Candidate paths to attempt deletion (public and non-public variants)
+    $candidates = [
+        __DIR__ . '/../public/images/products/gallery/' . $sku . '/' . $filename,
+        __DIR__ . '/../public/images/products/by_code/' . $sku . '/' . $filename,
+        __DIR__ . '/../images/products/gallery/' . $sku . '/' . $filename,
+        __DIR__ . '/../images/products/by_code/' . $sku . '/' . $filename,
+    ];
+
+    // Also attempt deleting any file that ends with the filename under gallery dirs
+    $wildGallery = glob(__DIR__ . '/../public/images/products/gallery/' . $sku . '/*' . $filename);
+    if (is_array($wildGallery)) {
+        foreach ($wildGallery as $wf) {
+            $candidates[] = $wf;
+        }
+    }
+
+    foreach (array_unique($candidates) as $target) {
+        if (is_file($target)) {
+            @unlink($target);
+        }
+    }
+}
+
+function remove_directory_recursive_admin_supply(string $dirPath): void {
+    if ($dirPath === '' || !is_dir($dirPath)) {
+        return;
+    }
+
+    $items = @scandir($dirPath);
+    if (is_array($items)) {
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+
+            $path = $dirPath . '/' . $item;
+            if (is_dir($path)) {
+                remove_directory_recursive_admin_supply($path);
+            } elseif (is_file($path)) {
+                @unlink($path);
+            }
+        }
+    }
+
+    @rmdir($dirPath);
+}
+
+function purge_gallery_image_references_admin_supply($pdo, string $sku, string $imagePath): void {
+    $sku = normalize_sku_admin_supply($sku);
+    $raw = trim($imagePath);
+    if (!is_valid_numeric_sku_admin_supply($sku) || $raw === '') {
+        return;
+    }
+
+    $relative = ltrim($raw, '/');
+    $filename = basename($relative);
+    if ($filename === '' || $filename === '.' || $filename === '..') {
+        return;
+    }
+
+    $pathsToRemove = array_values(array_unique(array_filter([
+        $relative,
+        'images/products/gallery/' . $sku . '/' . $filename,
+        'images/products/by_code/' . $sku . '/' . $filename,
+    ])));
+
+    foreach (['products', 'marketplace_ce_products'] as $table) {
+        if (!db_table_exists($table)) {
+            continue;
+        }
+
+        try {
+            $skuColumn = sku_column_for_table_admin_supply($table);
+            if ($skuColumn === null) {
+                continue;
+            }
+
+            $stmt = $pdo->query("SELECT id, {$skuColumn} AS sku, image_url, variants_json FROM {$table}");
+            $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+            foreach ($rows as $row) {
+                $rowSku = normalize_sku_admin_supply($row['sku'] ?? '');
+                if (!is_valid_numeric_sku_admin_supply($rowSku) || $rowSku !== $sku) {
+                    continue;
+                }
+
+                $changed = false;
+                $nextImageUrl = trim((string)($row['image_url'] ?? ''));
+                if ($nextImageUrl !== '' && in_array($nextImageUrl, $pathsToRemove, true)) {
+                    $nextImageUrl = 'images/products/default-product.svg';
+                    $changed = true;
+                }
+
+                $nextVariants = [];
+                if (!empty($row['variants_json'])) {
+                    $decoded = json_decode((string)$row['variants_json'], true);
+                    if (is_array($decoded)) {
+                        foreach ($decoded as $value) {
+                            $value = trim((string)$value);
+                            if ($value === '' || in_array($value, $pathsToRemove, true)) {
+                                $changed = true;
+                                continue;
+                            }
+                            if (!in_array($value, $nextVariants, true)) {
+                                $nextVariants[] = $value;
+                            }
+                        }
+                    }
+                }
+
+                if ($changed) {
+                    $nextJson = json_encode($nextVariants, JSON_UNESCAPED_UNICODE);
+                    $update = $pdo->prepare("UPDATE {$table} SET image_url = ?, variants_json = ? WHERE id = ?");
+                    $update->execute([$nextImageUrl, $nextJson, (int)($row['id'] ?? 0)]);
+                }
+            }
+        } catch (Exception $ignored) {
+        }
     }
 }
 
@@ -1277,13 +1474,38 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
     // Guardar en disco: images/products/gallery/{sku}/
     $galleryDir = __DIR__ . '/../images/products/gallery/' . $sku;
     if (!is_dir($galleryDir)) {
-        if (!@mkdir($galleryDir, 0775, true)) {
-            throw new Exception("No se pudo crear directorio de galería: $galleryDir");
+        // Try creating with standard permissions, then fallback to more permissive.
+        $created = @mkdir($galleryDir, 0775, true);
+        if (!$created) {
+            // try more permissive and then chmod back
+            $created = @mkdir($galleryDir, 0777, true);
+            if ($created) {
+                @chmod($galleryDir, 0775);
+            }
+        }
+
+        if (!$created) {
+            // final attempt: try using recursive creation of parent and then current
+            $parent = dirname($galleryDir);
+            if (!is_dir($parent)) {
+                @mkdir($parent, 0777, true);
+            }
+            if (!is_dir($galleryDir)) {
+                @mkdir($galleryDir, 0777, true);
+            }
         }
     }
-    
+
+    // Try to ensure directory is writable; if not, attempt chmod to widen permissions.
     if (!is_writable($galleryDir)) {
-        throw new Exception("Directorio de galería no tiene permisos de escritura: $galleryDir");
+        @chmod($galleryDir, 0775);
+        if (!is_writable($galleryDir)) {
+            @chmod($galleryDir, 0777);
+        }
+    }
+
+    if (!is_dir($galleryDir) || !is_writable($galleryDir)) {
+        throw new Exception("No se pudo crear o escribir en el directorio de galería: $galleryDir");
     }
 
     // Nombre de archivo: timestamp + random para evitar colisiones
@@ -2268,12 +2490,88 @@ try {
             }
 
             try {
+                // Fetch product to get SKU and image info before deletion
+                $stmt = $pdo->prepare("SELECT sku, image_url, variants_json FROM products WHERE id = ?");
+                $stmt->execute([$id]);
+                $product = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if (!$product) {
+                    $response = ['success' => false, 'message' => 'Producto no encontrado'];
+                    break;
+                }
+
+                $sku = normalize_sku_admin_supply($product['sku'] ?? '');
+                
+                // Collect all image paths to delete from disk
+                $imagesToDelete = [];
+                if (!empty($product['image_url']) && strpos($product['image_url'], 'default-product.svg') === false) {
+                    $imagesToDelete[] = $product['image_url'];
+                }
+                if (!empty($product['variants_json'])) {
+                    $variants = json_decode($product['variants_json'], true) ?: [];
+                    foreach ($variants as $img) {
+                        $img = trim((string)$img);
+                        if ($img !== '' && strpos($img, 'default-product.svg') === false) {
+                            $imagesToDelete[] = $img;
+                        }
+                    }
+                }
+                
+                // Delete image files from disk
+                foreach (array_unique($imagesToDelete) as $imgPath) {
+                    delete_product_gallery_file_admin_supply($sku, $imgPath);
+                }
+                
+                // Delete product row
                 $stmt = $pdo->prepare("DELETE FROM products WHERE id = ?");
                 $stmt->execute([$id]);
-                $response = ['success' => true, 'message' => 'Producto eliminado correctamente'];
+
+                // Keep track of the deleted code so it does not reappear from seed data
+                truper_register_deleted_product_sku($pdo, $sku, 'product-delete');
+                
+                // If SKU has marketplace entries, clean them up too
+                if (!empty($sku) && is_valid_numeric_sku_admin_supply($sku)) {
+                    try {
+                        $stmt = $pdo->prepare("SELECT id, image_url, variants_json FROM marketplace_ce_products WHERE sku = ? OR sku LIKE ?");
+                        $stmt->execute([$sku, "%{$sku}%"]);
+                        $mpProducts = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                        foreach ($mpProducts as $mp) {
+                            if (!empty($mp['image_url']) && strpos($mp['image_url'], 'default-product.svg') === false) {
+                                delete_product_gallery_file_admin_supply($sku, $mp['image_url']);
+                            }
+                            if (!empty($mp['variants_json'])) {
+                                $vars = json_decode($mp['variants_json'], true) ?: [];
+                                foreach ($vars as $v) {
+                                    $v = trim((string)$v);
+                                    if ($v !== '' && strpos($v, 'default-product.svg') === false) {
+                                        delete_product_gallery_file_admin_supply($sku, $v);
+                                    }
+                                }
+                            }
+                        }
+                        // Delete marketplace entries
+                        $stmt = $pdo->prepare("DELETE FROM marketplace_ce_products WHERE sku = ? OR sku LIKE ?");
+                        $stmt->execute([$sku, "%{$sku}%"]);
+                    } catch (Exception $ignored) {}
+                }
+                
+                // Clean gallery directory if empty
+                if (!empty($sku) && is_valid_numeric_sku_admin_supply($sku)) {
+                    $galleryDirs = [
+                        __DIR__ . '/../images/products/gallery/' . $sku,
+                        __DIR__ . '/../public/images/products/gallery/' . $sku,
+                        __DIR__ . '/../images/products/by_code/' . $sku,
+                        __DIR__ . '/../public/images/products/by_code/' . $sku,
+                    ];
+                    foreach ($galleryDirs as $galleryDir) {
+                        remove_directory_recursive_admin_supply($galleryDir);
+                    }
+                }
+                
+                $response = ['success' => true, 'message' => 'Producto eliminado definitivamente', 'sku' => $sku];
             } catch (PDOException $e) {
                 if ($e->getCode() === '23503') {
-                    $response = ['success' => false, 'message' => 'No se puede eliminar porque este producto tiene pedidos o historial asociado. Mejor ocúltalo (desactiva Visible).'];
+                    $response = ['success' => false, 'message' => 'No se puede eliminar porque este producto tiene pedidos o historial asociado.'];
                 } else {
                     throw $e;
                 }
@@ -2464,35 +2762,7 @@ try {
                 }
             }
 
-            $json = json_encode(array_values($images));
-            $cover = $images[0];
-
-            // Update stock
-            $stmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ? OR sku LIKE ?");
-            $stmt->execute([$cover, $json, $sku, "%{$sku}%"]);
-
-            // Update marketplace
-            try {
-                $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET image_url = ?, variants_json = ? WHERE sku = ?");
-                $stmt->execute([$cover, $json, $sku]);
-            } catch (Exception $e) {}
-
-            // Verify files exist on disk for debug/helpful errors
-            $fileChecks = [];
-            foreach ($images as $imgPath) {
-                $full = __DIR__ . '/../' . ltrim($imgPath, '/');
-                $fileChecks[] = ['path' => $imgPath, 'exists' => is_file($full)];
-            }
-
-            // Persist gallery info into DB tables if possible
-            try {
-                if (function_exists('persist_product_gallery_images_admin_supply')) {
-                    persist_product_gallery_images_admin_supply($pdo, $sku, $images);
-                }
-            } catch (Exception $e) {
-                // ignore — we'll still return file info
-            }
-
+            $images = normalize_and_persist_gallery_images_admin_supply($pdo, $sku, $images);
             $cover = $images[0] ?? null;
 
             $response = [
@@ -2525,16 +2795,8 @@ try {
                 // Move cover to index 0
                 unset($images[$imageIndex]);
                 array_unshift($images, $cover);
-                
-                $json = json_encode(array_values($images));
-                
-                // Update stock
-                $stmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ? OR sku LIKE ?");
-                $stmt->execute([$cover, $json, $sku, "%{$sku}%"]);
-
-                // Update marketplace
-                $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET image_url = ?, variants_json = ? WHERE sku = ? OR sku LIKE ?");
-                $stmt->execute([$cover, $json, $sku, "%{$sku}%"]);
+                $images = normalize_and_persist_gallery_images_admin_supply($pdo, $sku, $images);
+                $cover = $images[0] ?? $cover;
             } else {
                 $cover = $images[0] ?? null;
             }
@@ -2563,23 +2825,37 @@ try {
 
             $images = list_product_gallery_images_admin_supply($sku);
             $imageIndex = array_search($image, $images);
-            
+
             if ($imageIndex !== false) {
                 unset($images[$imageIndex]);
                 $images = array_values($images);
-                $json = json_encode($images);
-                $cover = $images[0] ?? 'images/products/default-product.svg';
-
-                // Remove the physical file so it does not reappear from disk scans.
                 delete_product_gallery_file_admin_supply($sku, $image);
-                
-                // Update stock
-                $stmt = $pdo->prepare("UPDATE products SET image_url = ?, variants_json = ? WHERE sku = ? OR sku LIKE ?");
-                $stmt->execute([$cover, $json, $sku, "%{$sku}%"]);
+                purge_gallery_image_references_admin_supply($pdo, $sku, $image);
 
-                // Update marketplace
-                $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET image_url = ?, variants_json = ? WHERE sku = ? OR sku LIKE ?");
-                $stmt->execute([$cover, $json, $sku, "%{$sku}%"]);
+                if (!empty($images)) {
+                    $images = normalize_and_persist_gallery_images_admin_supply($pdo, $sku, $images);
+                    $json = json_encode($images, JSON_UNESCAPED_UNICODE);
+                    $cover = $images[0] ?? 'images/products/default-product.svg';
+                } else {
+                    $json = '[]';
+                    $cover = 'images/products/default-product.svg';
+                    foreach (['products', 'marketplace_ce_products'] as $table) {
+                        if (!db_table_exists($table)) {
+                            continue;
+                        }
+
+                        try {
+                            $stmt = $pdo->prepare("UPDATE {$table} SET image_url = ?, variants_json = ? WHERE sku = ? OR sku LIKE ?");
+                            $stmt->execute([$cover, $json, $sku, "%{$sku}%"]);
+                        } catch (Exception $ignored) {
+                        }
+                    }
+                }
+
+            } else {
+                // image not found in canonical list: still attempt to delete file and purge references
+                delete_product_gallery_file_admin_supply($sku, $image);
+                purge_gallery_image_references_admin_supply($pdo, $sku, $image);
             }
 
             $images_final = list_product_gallery_images_admin_supply($sku);
@@ -3367,12 +3643,57 @@ try {
             }
 
             try {
+                // Fetch marketplace product to get SKU and image info before deletion
+                $stmt = $pdo->prepare("SELECT sku, image_url, variants_json FROM marketplace_ce_products WHERE id = ?");
+                $stmt->execute([$id]);
+                $mpProduct = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if (!$mpProduct) {
+                    $response = ['success' => false, 'message' => 'Artículo no encontrado'];
+                    break;
+                }
+
+                $sku = normalize_sku_admin_supply($mpProduct['sku'] ?? '');
+                
+                // Collect all image paths to delete from disk
+                $imagesToDelete = [];
+                if (!empty($mpProduct['image_url']) && strpos($mpProduct['image_url'], 'default-product.svg') === false) {
+                    $imagesToDelete[] = $mpProduct['image_url'];
+                }
+                if (!empty($mpProduct['variants_json'])) {
+                    $variants = json_decode($mpProduct['variants_json'], true) ?: [];
+                    foreach ($variants as $img) {
+                        $img = trim((string)$img);
+                        if ($img !== '' && strpos($img, 'default-product.svg') === false) {
+                            $imagesToDelete[] = $img;
+                        }
+                    }
+                }
+                
+                // Delete image files from disk
+                foreach (array_unique($imagesToDelete) as $imgPath) {
+                    delete_product_gallery_file_admin_supply($sku, $imgPath);
+                }
+                
+                // Delete marketplace product row
                 $stmt = $pdo->prepare("DELETE FROM marketplace_ce_products WHERE id = ?");
                 $stmt->execute([$id]);
-                $response = ['success' => true, 'message' => 'Artículo CE eliminado correctamente'];
+                
+                // Clean gallery directory if empty
+                if (!empty($sku) && is_valid_numeric_sku_admin_supply($sku)) {
+                    $galleryDir = __DIR__ . '/../images/products/gallery/' . $sku;
+                    if (is_dir($galleryDir)) {
+                        $files = @scandir($galleryDir);
+                        if (is_array($files) && count(array_diff($files, ['.', '..'])) === 0) {
+                            @rmdir($galleryDir);
+                        }
+                    }
+                }
+                
+                $response = ['success' => true, 'message' => 'Artículo CE eliminado definitivamente', 'sku' => $sku];
             } catch (PDOException $e) {
                 if ($e->getCode() === '23503') {
-                    $response = ['success' => false, 'message' => 'No se puede eliminar porque este artículo tiene historial asociado. Mejor ocúltalo.'];
+                    $response = ['success' => false, 'message' => 'No se puede eliminar porque este artículo tiene historial asociado.'];
                 } else {
                     throw $e;
                 }

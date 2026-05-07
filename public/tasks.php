@@ -13,8 +13,8 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tareas - Truper Platform</title>
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/styles.css?v=2.1">
+    <link rel="stylesheet" href="css/theme.css?v=2.1">
     <link rel="stylesheet" href="css/dashboard.css">
 </head>
 <body>
@@ -62,26 +62,24 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
 
             <div id="taskSummary" class="grid grid-4" style="margin-bottom: 1rem;"></div>
 
-            <!-- FILTROS -->
-            <div class="card" style="margin-bottom: 2rem;">
+            <!-- FILTROS POR PRIORIDAD -->
+            <div class="card tasks-filter-card" style="margin-bottom: 2rem;">
                 <div class="card-body">
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
-                        <div>
-                            <label>Filtrar por Estado</label>
-                            <select id="taskFilter" onchange="filterTasks()">
-                                <option value="">Todas</option>
-                                <option value="pending">Pendiente</option>
-                                <option value="in_progress">En Progreso</option>
-                                <option value="completed">Completada</option>
-                                <option value="cancelled">Cancelada</option>
-                            </select>
+                    <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;">
+                        <div style="flex: 1; min-width: 300px;">
+                            <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Filtrar por Prioridad</label>
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                <button class="btn-priority btn-priority-all active" onclick="filterByPriority('all')">Todas</button>
+                                <button class="btn-priority btn-priority-urgent" onclick="filterByPriority('urgent')">🔴 Urgente</button>
+                                <button class="btn-priority btn-priority-high" onclick="filterByPriority('high')">🟠 Alta</button>
+                                <button class="btn-priority btn-priority-medium" onclick="filterByPriority('medium')">🟡 Media</button>
+                                <button class="btn-priority btn-priority-low" onclick="filterByPriority('low')">🟢 Baja</button>
+                            </div>
                         </div>
-                        <?php if ($is_admin): ?>
-                        <div>
-                            <label>Ordenar por Prioridad</label>
-                            <button class="btn btn-secondary" onclick="sortTasksByPriority()">Aplicar</button>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="showCompleted" onchange="toggleCompletedTasks()" />
+                            <label for="showCompleted" style="cursor: pointer; margin: 0;">Mostrar completadas</label>
                         </div>
-                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -137,7 +135,12 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
 
                     <div class="form-group">
                         <label>Horas Estimadas</label>
-                        <input type="number" id="estimatedHours" placeholder="0.00" min="0" step="0.5">
+                        <div style="display: inline-flex; gap: 0.3rem; align-items: center;">
+                            <input type="number" id="estimatedHours" min="1" max="12" placeholder="HH" style="width: 45px; padding: 0.4rem; text-align: center;" title="Hora (1-12)">
+                            <span style="font-weight: bold;">:</span>
+                            <input type="number" id="estimatedMins" min="0" max="59" placeholder="MM" style="width: 45px; padding: 0.4rem; text-align: center;" title="Minutos (0-59)">
+                            <button type="button" id="estimatedAmpm" class="btn btn-small" style="width: 50px; padding: 0.4rem 0.6rem;" onclick="toggleEstimatedAmPm()">AM</button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -165,7 +168,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
     <script>
         window.TRUPER_TASKS_ROLE = '<?php echo htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'); ?>';
     </script>
-    <script src="js/tasks.js"></script>
+    <script src="js/tasks.js?v=20260506b8"></script>
     <script>
         function logout() {
             if (confirm('¿Deseas cerrar sesión?')) {

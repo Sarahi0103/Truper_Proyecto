@@ -12,8 +12,8 @@ $userName = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8'
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mis Tickets - Truper Platform</title>
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/styles.css?v=2.1">
+    <link rel="stylesheet" href="css/theme.css?v=2.1">
     <style>
         .tickets-wrapper { display: grid; grid-template-columns: 1fr 3fr; gap: 2rem; margin: 2rem 0; }
         .tickets-sidebar { display: flex; flex-direction: column; gap: 1rem; }

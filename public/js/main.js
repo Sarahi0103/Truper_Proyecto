@@ -46,13 +46,19 @@ function ensureThemeToggleButton() {
         wrap.innerHTML = '<button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo obscuro</span></button>';
     }
 
+    const btn = wrap.querySelector('button');
+    if (btn) {
+        btn.style.setProperty('background', '#111111', 'important');
+        btn.style.setProperty('color', '#ffffff', 'important');
+        btn.style.setProperty('border-color', '#111111', 'important');
+    }
+
     if (target && wrap.parentElement !== target) {
         target.prepend(wrap);
     }
 
     wrap.classList.toggle('theme-toggle-inline', target !== document.body);
 
-    const btn = wrap.querySelector('button');
     if (btn && !btn.__themeBound) {
         btn.removeAttribute('onclick');
         btn.addEventListener('click', toggleTheme);
@@ -162,6 +168,7 @@ async function apiCall(endpoint, method = 'GET', data = null, options = {}) {
         const fetchOptions = {
             method: method,
             credentials: 'include',
+            cache: 'no-store',
             headers: {
                 'Content-Type': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
