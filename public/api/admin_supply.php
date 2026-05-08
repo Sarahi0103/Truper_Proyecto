@@ -95,6 +95,27 @@ function images_root_admin_supply(): string {
     return dirname(__DIR__, 2) . '/images';
 }
 
+// Normalize any image path/url to a relative path starting with images/...
+function normalize_image_relative_path_admin_supply(string $path): string {
+    $raw = trim($path);
+    if ($raw === '') {
+        return '';
+    }
+
+    $parsed = parse_url($raw);
+    if ($parsed !== false && isset($parsed['path'])) {
+        $raw = (string)$parsed['path'];
+    }
+
+    $raw = ltrim((string)preg_replace('/\?.*$/', '', $raw), '/');
+    $imagesPos = stripos($raw, 'images/');
+    if ($imagesPos !== false) {
+        $raw = substr($raw, $imagesPos);
+    }
+
+    return ltrim($raw, '/');
+}
+
 function first_existing_column_admin_supply(string $table, array $candidates): ?string {
     foreach ($candidates as $candidate) {
         if (db_column_exists($table, (string)$candidate)) {
@@ -1152,7 +1173,8 @@ function ensure_canonical_gallery_image_admin_supply(string $sku, string $imageP
     }
 
     $canonicalRelative = canonical_product_gallery_path_admin_supply($sku, $raw);
-        $sourcePath = images_root_admin_supply() . '/' . ltrim($raw, '/');
+    $sourceRelative = normalize_image_relative_path_admin_supply($raw);
+    $sourcePath = images_root_admin_supply() . '/' . preg_replace('#^images/#', '', $sourceRelative);
     if (!is_file($sourcePath)) {
         return $canonicalRelative;
     }
@@ -1161,12 +1183,12 @@ function ensure_canonical_gallery_image_admin_supply(string $sku, string $imageP
         return $raw;
     }
 
-        $canonicalPath = images_root_admin_supply() . '/' . ltrim($canonicalRelative, '/');
+    $canonicalPath = images_root_admin_supply() . '/' . preg_replace('#^images/#', '', ltrim($canonicalRelative, '/'));
     $canonicalDir = dirname($canonicalPath);
     if (!is_dir($canonicalDir)) {
         @mkdir($canonicalDir, 0777, true);
-        @chmod($canonicalDir, 0777);
     }
+    @chmod($canonicalDir, 0777);
 
     if (!is_file($canonicalPath)) {
         @copy($sourcePath, $canonicalPath);
@@ -1218,7 +1240,7 @@ function persist_product_gallery_images_admin_supply($pdo, string $sku, array $i
 
 function list_product_gallery_images_admin_supply(string $sku): array {
     global $pdo;
-    if (!is_valid_numeric_sku_admin_supply($sku)) return [];
+    if (!is_valid_numeric_sku_admin_supply($sku) || truper_is_deleted_product_sku($sku)) return [];
 
     try {
         $final = [];
@@ -1322,14 +1344,8 @@ function delete_product_gallery_file_admin_supply(string $sku, string $imagePath
         return;
     }
 
-    // Normalize input: strip query string and any scheme/host
-    $parsed = parse_url($raw);
-    $relative = '';
-    if ($parsed !== false && isset($parsed['path'])) {
-        $relative = ltrim($parsed['path'], '/');
-    } else {
-        $relative = ltrim(preg_replace('/\?.*$/', '', $raw), '/');
-    }
+    // Normalize input: strip host/query and keep only images/... segment when present.
+    $relative = normalize_image_relative_path_admin_supply($raw);
 
     // Extract filename
     $filename = basename($relative);
@@ -1337,18 +1353,29 @@ function delete_product_gallery_file_admin_supply(string $sku, string $imagePath
         return;
     }
 
-    // Candidate paths to attempt deletion (public and non-public variants)
+    // Candidate paths to attempt deletion
     $candidates = [
-        images_root_admin_supply() . '/products/gallery/' . $sku . '/' . $filename,
-        images_root_admin_supply() . '/products/by_code/' . $sku . '/' . $filename,
         images_root_admin_supply() . '/products/gallery/' . $sku . '/' . $filename,
         images_root_admin_supply() . '/products/by_code/' . $sku . '/' . $filename,
     ];
 
-    // Also attempt deleting any file that ends with the filename under gallery dirs
+    // If we got a relative path, try it directly as well.
+    if ($relative !== '') {
+        $relativeUnderImages = preg_replace('#^images/#', '', $relative);
+        $candidates[] = images_root_admin_supply() . '/' . ltrim((string)$relativeUnderImages, '/');
+    }
+
+    // Also attempt deleting any file that ends with the filename under gallery dirs.
     $wildGallery = glob(images_root_admin_supply() . '/products/gallery/' . $sku . '/*' . $filename);
     if (is_array($wildGallery)) {
         foreach ($wildGallery as $wf) {
+            $candidates[] = $wf;
+        }
+    }
+
+    $wildLegacy = glob(images_root_admin_supply() . '/products/by_code/' . $sku . '/*' . $filename);
+    if (is_array($wildLegacy)) {
+        foreach ($wildLegacy as $wf) {
             $candidates[] = $wf;
         }
     }
@@ -1391,7 +1418,7 @@ function purge_gallery_image_references_admin_supply($pdo, string $sku, string $
         return;
     }
 
-    $relative = ltrim($raw, '/');
+    $relative = normalize_image_relative_path_admin_supply($raw);
     $filename = basename($relative);
     if ($filename === '' || $filename === '.' || $filename === '..') {
         return;
@@ -1424,7 +1451,12 @@ function purge_gallery_image_references_admin_supply($pdo, string $sku, string $
 
                 $changed = false;
                 $nextImageUrl = trim((string)($row['image_url'] ?? ''));
-                if ($nextImageUrl !== '' && in_array($nextImageUrl, $pathsToRemove, true)) {
+                $nextImageNormalized = normalize_image_relative_path_admin_supply($nextImageUrl);
+                if ($nextImageUrl !== '' && (
+                    in_array($nextImageUrl, $pathsToRemove, true)
+                    || in_array($nextImageNormalized, $pathsToRemove, true)
+                    || basename($nextImageNormalized) === $filename
+                )) {
                     $nextImageUrl = 'images/products/default-product.svg';
                     $changed = true;
                 }
@@ -1435,7 +1467,8 @@ function purge_gallery_image_references_admin_supply($pdo, string $sku, string $
                     if (is_array($decoded)) {
                         foreach ($decoded as $value) {
                             $value = trim((string)$value);
-                            if ($value === '' || in_array($value, $pathsToRemove, true)) {
+                            $valueNormalized = normalize_image_relative_path_admin_supply($value);
+                            if ($value === '' || in_array($value, $pathsToRemove, true) || in_array($valueNormalized, $pathsToRemove, true) || basename($valueNormalized) === $filename) {
                                 $changed = true;
                                 continue;
                             }
@@ -1479,8 +1512,7 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
     }
 
     // Guardar en disco: images/products/gallery/{sku}/
-    // Usar ruta absoluta desde la raíz del proyecto web
-    $galleryDir = realpath(__DIR__ . '/..') . '/images/products/gallery/' . $sku;
+    $galleryDir = images_root_admin_supply() . '/products/gallery/' . $sku;
     $baseGalleryDir = dirname($galleryDir);
     
     // Ensure base gallery directory exists with write permissions
@@ -2185,6 +2217,17 @@ try {
                 break;
             }
 
+            if (truper_is_deleted_product_sku($sku)) {
+                $response = [
+                    'success' => true,
+                    'available' => false,
+                    'message' => 'Este código está marcado como eliminado y no se puede reutilizar',
+                    'sku' => $sku,
+                    'deleted' => true,
+                ];
+                break;
+            }
+
             $id = (int)($_GET['id'] ?? 0);
             $allowSeedSku = in_array((string)($_GET['allow_seed'] ?? '0'), ['1', 'true', 'TRUE', 'yes', 'on'], true);
             $usage = sku_usage_admin_supply($pdo, $sku, 0, $id);
@@ -2249,6 +2292,17 @@ try {
                 break;
             }
 
+            if (truper_is_deleted_product_sku($sku)) {
+                $response = [
+                    'success' => true,
+                    'available' => false,
+                    'message' => 'Este código está marcado como eliminado y no se puede reutilizar',
+                    'sku' => $sku,
+                    'deleted' => true,
+                ];
+                break;
+            }
+
             $usage = sku_usage_admin_supply($pdo, $sku, $id);
             $sameRecord = record_matches_normalized_sku_admin_supply($pdo, 'marketplace_ce_products', $id, $sku);
             $seedConflict = $usage['in_seed'] && !$sameRecord;
@@ -2291,6 +2345,10 @@ try {
             }
             if (!is_valid_numeric_sku_admin_supply($sku)) {
                 $response = ['success' => false, 'message' => 'El código del producto debe tener exactamente 5 o 6 números'];
+                break;
+            }
+            if (truper_is_deleted_product_sku($sku)) {
+                $response = ['success' => false, 'message' => 'Este código está marcado como eliminado y no se puede reutilizar'];
                 break;
             }
             if ($price < 0) {
@@ -2384,6 +2442,10 @@ try {
             
                 if (!is_valid_numeric_sku_admin_supply($sku)) {
                 $response = ['success' => false, 'message' => 'El código del producto debe tener exactamente 5 o 6 números'];
+                break;
+            }
+            if ($id <= 0 && truper_is_deleted_product_sku($sku)) {
+                $response = ['success' => false, 'message' => 'Este código está marcado como eliminado y no se puede reutilizar'];
                 break;
             }
             if ($price < 0 || $stockQty < 0 || $reorder < 0) {
@@ -2739,6 +2801,10 @@ try {
             $sku = normalize_sku_admin_supply($_POST['sku'] ?? ($input['sku'] ?? ''));
             if (!is_valid_numeric_sku_admin_supply($sku)) {
                 $response = ['success' => false, 'message' => 'SKU inválido'];
+                break;
+            }
+            if (truper_is_deleted_product_sku($sku)) {
+                $response = ['success' => false, 'message' => 'El SKU está marcado como eliminado y no admite galería'];
                 break;
             }
 
@@ -3610,6 +3676,11 @@ try {
             }
             if (!is_valid_numeric_sku_admin_supply($sku)) {
                 $response = ['success' => false, 'message' => 'El código SKU CE debe tener 5 o 6 números'];
+                break;
+            }
+
+            if ($id <= 0 && truper_is_deleted_product_sku($sku)) {
+                $response = ['success' => false, 'message' => 'Este código está marcado como eliminado y no se puede reutilizar'];
                 break;
             }
 
