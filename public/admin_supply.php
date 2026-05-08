@@ -399,8 +399,8 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     </div>
                     <div id="stockQuickResult" class="text-muted" style="font-size:12px; margin-top:8px;"></div>
                 </div>
-                <div id="stockPagination" class="mt-3"></div>
                 <div id="stockListCaption" class="admin-list-caption">Cargando productos...</div>
+                <div id="stockPagination" class="mt-3"></div>
                 <div id="stockRows"><p class="text-muted">Cargando...</p></div>
             </div></div>
         </section>
@@ -708,8 +708,8 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     </div>
                     <div id="marketplaceCsvProgress" class="mt-2 text-muted" style="font-size:12px;"></div>
                 </div>
-                <div id="marketplacePagination" class="mt-3"></div>
                 <div id="marketplaceListCaption" class="admin-list-caption">Cargando artículos CE...</div>
+                <div id="marketplacePagination" class="mt-3"></div>
                 <div id="marketplaceList" class="text-muted">Cargando artículos CE...</div>
             </div></div>
         </section>
