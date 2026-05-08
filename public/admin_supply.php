@@ -2076,6 +2076,7 @@ async function deleteProductByAdmin(id) {
     // Background sync to keep server state in sync (non-blocking)
     void loadStock(stockCurrentPage);
     void loadSupplierProducts();
+    void loadMarketplaceCeAdmin(marketplaceCurrentPage);
 }
 
 function syncStockVisibilityState(id, nextVisible) {
@@ -3715,6 +3716,7 @@ async function uploadMarketplaceImages() {
         // background sync for consistency
         void loadMarketplaceGalleryForCurrentSku();
         void loadMarketplaceCeAdmin(marketplaceCurrentPage);
+        void loadStock(stockCurrentPage);
 
         return true;
     } catch (error) {
@@ -3865,6 +3867,7 @@ async function createProductByAdmin() {
 
     // Refresh supplier products in background
     void loadSupplierProducts();
+    void loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 25);
     activateAdminSupplyTab('stockTab', 'productCreateResult');
 }
 
@@ -4059,7 +4062,7 @@ async function deleteMarketplaceSelectedItems() {
         return;
     }
 
-    if (!confirm(`¿Eliminar ${selectedIds.length} artículo(s) seleccionado(s)? Se ocultarán del Marketplace CE.`)) {
+    if (!confirm(`¿Eliminar ${selectedIds.length} artículo(s) seleccionado(s)? Se borrarán definitivamente del Marketplace CE.`)) {
         return;
     }
 
@@ -4078,7 +4081,7 @@ async function deleteMarketplaceSelectedItems() {
 
     if (successCount > 0) {
         if (quickBox) quickBox.innerHTML = `<span style="color:#22c55e;">${successCount} artículo(s) eliminado(s).</span>`;
-        showAlert(`${successCount} artículo(s) CE eliminado(s)`, 'success');
+        showAlert(`${successCount} artículo(s) CE eliminado(s) definitivamente`, 'success');
     }
     if (firstError) {
         if (quickBox) quickBox.innerHTML += ` <span style="color:#f87171;">${escapeHtml(firstError)}</span>`;
@@ -4275,7 +4278,7 @@ async function deleteMarketplaceCeByAdmin(id) {
         return;
     }
 
-    if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Artículo CE eliminado del Marketplace CE')}</div>`;
+    if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Artículo CE eliminado definitivamente del Marketplace CE')}</div>`;
     // Optimistic removal from marketplace cache
     try {
         marketplaceItemsCache = (marketplaceItemsCache || []).filter((p) => Number(p.id) !== Number(id));
