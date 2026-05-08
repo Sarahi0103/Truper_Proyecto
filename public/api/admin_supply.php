@@ -3,11 +3,7 @@ require_once '../../config/config.php';
 ini_set('display_errors', '0');
 ob_start();
 
-// In development environment allow bypassing admin login for automated tests.
-// Production / Render will still require authentication.
-if (getenv('APP_ENV') !== 'development') {
-    require_admin();
-}
+require_admin();
 header('Content-Type: application/json');
 
 $action = $_GET['action'] ?? 'stock';
