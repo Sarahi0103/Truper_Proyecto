@@ -1159,11 +1159,13 @@ function ensure_canonical_gallery_image_admin_supply(string $sku, string $imageP
     $canonicalPath = __DIR__ . '/../' . ltrim($canonicalRelative, '/');
     $canonicalDir = dirname($canonicalPath);
     if (!is_dir($canonicalDir)) {
-        @mkdir($canonicalDir, 0775, true);
+        @mkdir($canonicalDir, 0777, true);
+        @chmod($canonicalDir, 0777);
     }
 
     if (!is_file($canonicalPath)) {
         @copy($sourcePath, $canonicalPath);
+        @chmod($canonicalPath, 0666);
     }
 
     return is_file($canonicalPath) ? $canonicalRelative : $raw;
@@ -1472,40 +1474,28 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
     }
 
     // Guardar en disco: images/products/gallery/{sku}/
-    $galleryDir = __DIR__ . '/../images/products/gallery/' . $sku;
+    // Usar ruta absoluta desde la raíz del proyecto web
+    $galleryDir = realpath(__DIR__ . '/..') . '/images/products/gallery/' . $sku;
+    $baseGalleryDir = dirname($galleryDir);
+    
+    // Ensure base gallery directory exists with write permissions
+    if (!is_dir($baseGalleryDir)) {
+        @mkdir($baseGalleryDir, 0777, true);
+    }
+    @chmod($baseGalleryDir, 0777);
+    
+    // Create SKU-specific directory
     if (!is_dir($galleryDir)) {
-        // Try creating with standard permissions, then fallback to more permissive.
-        $created = @mkdir($galleryDir, 0775, true);
-        if (!$created) {
-            // try more permissive and then chmod back
-            $created = @mkdir($galleryDir, 0777, true);
-            if ($created) {
-                @chmod($galleryDir, 0775);
-            }
-        }
-
-        if (!$created) {
-            // final attempt: try using recursive creation of parent and then current
-            $parent = dirname($galleryDir);
-            if (!is_dir($parent)) {
-                @mkdir($parent, 0777, true);
-            }
-            if (!is_dir($galleryDir)) {
-                @mkdir($galleryDir, 0777, true);
-            }
-        }
+        @mkdir($galleryDir, 0777, true);
     }
+    @chmod($galleryDir, 0777);
 
-    // Try to ensure directory is writable; if not, attempt chmod to widen permissions.
+    // Final validation
+    if (!is_dir($galleryDir)) {
+        throw new Exception("No se pudo crear directorio de galería: $galleryDir");
+    }
     if (!is_writable($galleryDir)) {
-        @chmod($galleryDir, 0775);
-        if (!is_writable($galleryDir)) {
-            @chmod($galleryDir, 0777);
-        }
-    }
-
-    if (!is_dir($galleryDir) || !is_writable($galleryDir)) {
-        throw new Exception("No se pudo crear o escribir en el directorio de galería: $galleryDir");
+        throw new Exception("Directorio de galería no tiene permisos de escritura: $galleryDir");
     }
 
     // Nombre de archivo: timestamp + random para evitar colisiones
@@ -2225,6 +2215,10 @@ try {
                 'message' => $message,
                 'sku' => $sku
             ];
+            // If SKU collides only with seed and not present in DB, include a hint to allow marking as deleted
+            if ($exists && !$usage['in_products'] && !$usage['in_marketplace'] && $usage['in_seed']) {
+                $response['seed_only'] = true;
+            }
             break;
 
         case 'marketplace-sku-check':
@@ -2710,6 +2704,27 @@ try {
             }
             break;
 
+        case 'mark-sku-deleted':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $skuRaw = sanitize($_POST['sku'] ?? ($input['sku'] ?? ''));
+            $sku = normalize_sku_admin_supply($skuRaw);
+            if ($sku === '') {
+                $response = ['success' => false, 'message' => 'SKU inválido'];
+                break;
+            }
+
+            try {
+                truper_register_deleted_product_sku($pdo, $sku, 'marked-deleted-via-ui');
+                $response = ['success' => true, 'message' => 'Código marcado como eliminado para evitar re-seed', 'sku' => $sku];
+            } catch (Exception $e) {
+                $response = ['success' => false, 'message' => 'No fue posible marcar el SKU como eliminado'];
+            }
+            break;
+
         case 'product-gallery-upload':
         case 'marketplace-image-upload':
         case 'upload-marketplace-images':
@@ -2826,10 +2841,45 @@ try {
             $images = list_product_gallery_images_admin_supply($sku);
             $imageIndex = array_search($image, $images);
 
+            $debugEnabled = !empty($input['debug']) || (!empty($_POST['debug']) && $_POST['debug']);
+            $deleteDebug = [];
+
             if ($imageIndex !== false) {
                 unset($images[$imageIndex]);
                 $images = array_values($images);
-                delete_product_gallery_file_admin_supply($sku, $image);
+                if ($debugEnabled) {
+                    // perform debug-aware deletion attempts
+                    $raw = trim($image);
+                    $parsed = parse_url($raw);
+                    $relative = '';
+                    if ($parsed !== false && isset($parsed['path'])) {
+                        $relative = ltrim($parsed['path'], '/');
+                    } else {
+                        $relative = ltrim(preg_replace('/\?.*$/', '', $raw), '/');
+                    }
+                    $filename = basename($relative);
+                    $candidates = [
+                        __DIR__ . '/../public/images/products/gallery/' . $sku . '/' . $filename,
+                        __DIR__ . '/../public/images/products/by_code/' . $sku . '/' . $filename,
+                        __DIR__ . '/../images/products/gallery/' . $sku . '/' . $filename,
+                        __DIR__ . '/../images/products/by_code/' . $sku . '/' . $filename,
+                    ];
+                    $wildGallery = glob(__DIR__ . '/../public/images/products/gallery/' . $sku . '/*' . $filename);
+                    if (is_array($wildGallery)) {
+                        foreach ($wildGallery as $wf) $candidates[] = $wf;
+                    }
+                    foreach (array_unique($candidates) as $target) {
+                        $existsBefore = is_file($target);
+                        $deleted = false;
+                        if ($existsBefore) {
+                            $deleted = @unlink($target);
+                        }
+                        $existsAfter = is_file($target);
+                        $deleteDebug[] = ['target' => $target, 'before' => $existsBefore, 'deleted' => (bool)$deleted, 'after' => $existsAfter];
+                    }
+                } else {
+                    delete_product_gallery_file_admin_supply($sku, $image);
+                }
                 purge_gallery_image_references_admin_supply($pdo, $sku, $image);
 
                 if (!empty($images)) {
@@ -2854,7 +2904,38 @@ try {
 
             } else {
                 // image not found in canonical list: still attempt to delete file and purge references
-                delete_product_gallery_file_admin_supply($sku, $image);
+                if ($debugEnabled) {
+                    $raw = trim($image);
+                    $parsed = parse_url($raw);
+                    $relative = '';
+                    if ($parsed !== false && isset($parsed['path'])) {
+                        $relative = ltrim($parsed['path'], '/');
+                    } else {
+                        $relative = ltrim(preg_replace('/\?.*$/', '', $raw), '/');
+                    }
+                    $filename = basename($relative);
+                    $candidates = [
+                        __DIR__ . '/../public/images/products/gallery/' . $sku . '/' . $filename,
+                        __DIR__ . '/../public/images/products/by_code/' . $sku . '/' . $filename,
+                        __DIR__ . '/../images/products/gallery/' . $sku . '/' . $filename,
+                        __DIR__ . '/../images/products/by_code/' . $sku . '/' . $filename,
+                    ];
+                    $wildGallery = glob(__DIR__ . '/../public/images/products/gallery/' . $sku . '/*' . $filename);
+                    if (is_array($wildGallery)) {
+                        foreach ($wildGallery as $wf) $candidates[] = $wf;
+                    }
+                    foreach (array_unique($candidates) as $target) {
+                        $existsBefore = is_file($target);
+                        $deleted = false;
+                        if ($existsBefore) {
+                            $deleted = @unlink($target);
+                        }
+                        $existsAfter = is_file($target);
+                        $deleteDebug[] = ['target' => $target, 'before' => $existsBefore, 'deleted' => (bool)$deleted, 'after' => $existsAfter];
+                    }
+                } else {
+                    delete_product_gallery_file_admin_supply($sku, $image);
+                }
                 purge_gallery_image_references_admin_supply($pdo, $sku, $image);
             }
 
@@ -2867,6 +2948,9 @@ try {
                 'images' => $images_final,
                 'cover' => $images_final[0] ?? null
             ];
+            if (!empty($deleteDebug)) {
+                $response['delete_debug'] = $deleteDebug;
+            }
             break;
 
         case 'product-gallery-reorder':
