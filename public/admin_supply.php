@@ -399,9 +399,9 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     </div>
                     <div id="stockQuickResult" class="text-muted" style="font-size:12px; margin-top:8px;"></div>
                 </div>
+                <div id="stockPagination" class="mt-3"></div>
                 <div id="stockListCaption" class="admin-list-caption">Cargando productos...</div>
                 <div id="stockRows"><p class="text-muted">Cargando...</p></div>
-                <div id="stockPagination" class="mt-3"></div>
             </div></div>
         </section>
 
@@ -708,9 +708,9 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     </div>
                     <div id="marketplaceCsvProgress" class="mt-2 text-muted" style="font-size:12px;"></div>
                 </div>
+                <div id="marketplacePagination" class="mt-3"></div>
                 <div id="marketplaceListCaption" class="admin-list-caption">Cargando artículos CE...</div>
                 <div id="marketplaceList" class="text-muted">Cargando artículos CE...</div>
-                <div id="marketplacePagination" class="mt-3"></div>
             </div></div>
         </section>
     </div>
@@ -1066,6 +1066,40 @@ async function validateSkuAvailability(kind, options = {}) {
     }
 
     if (check.available === false) {
+        // If server indicates the collision is only with the seed catalog, offer to mark SKU as deleted
+        if (check.seed_only) {
+            const btnId = `${statusId}-mark-deleted`;
+            const msg = (check.message || 'Ese código ya existe en el catálogo base') + ` `;
+            const el = document.getElementById(statusId);
+            if (el) {
+                el.innerHTML = '';
+                const span = document.createElement('span');
+                span.style.color = '#b91c1c';
+                span.textContent = msg;
+                el.appendChild(span);
+
+                const btn = document.createElement('button');
+                btn.id = btnId;
+                btn.type = 'button';
+                btn.className = 'btn btn-small btn-danger';
+                btn.style.marginLeft = '8px';
+                btn.textContent = 'Marcar como eliminado';
+                btn.onclick = async function () {
+                    btn.disabled = true;
+                    const res = await apiCall('/admin_supply.php?action=mark-sku-deleted', 'POST', { sku: sku });
+                    if (res && res.success) {
+                        setSkuStatus(statusId, 'Código marcado como eliminado. Ahora está disponible para creación.', 'success');
+                        // re-run check to refresh state
+                        await validateSkuAvailability(kind, options);
+                    } else {
+                        setSkuStatus(statusId, (res && res.message) ? res.message : 'No fue posible marcar como eliminado', 'error');
+                    }
+                };
+                el.appendChild(btn);
+            }
+            return false;
+        }
+
         setSkuStatus(statusId, check.message || 'Código ya registrado.', 'error');
         return false;
     }
@@ -1942,8 +1976,9 @@ async function deleteStockSelectedItems() {
         console.warn('Optimistic bulk removal failed:', e);
     }
 
-    // Background sync
+    // Background sync: refresh stock and marketplace quickly
     await loadStock(stockCurrentPage);
+    void loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 10);
 }
 
 function resetProductForm() {
@@ -2073,10 +2108,10 @@ async function deleteProductByAdmin(id) {
         console.warn('Optimistic product removal failed:', e);
     }
 
-    // Background sync to keep server state in sync (non-blocking)
+    // Background sync to keep server state in sync (non-blocking). Use small per_page for quick refresh.
     void loadStock(stockCurrentPage);
     void loadSupplierProducts();
-    void loadMarketplaceCeAdmin(marketplaceCurrentPage);
+    void loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 10);
 }
 
 function syncStockVisibilityState(id, nextVisible) {
@@ -3344,6 +3379,8 @@ async function deleteProductGalleryImage(sku, imagePath) {
     }
 
     void loadStock(stockCurrentPage);
+    // Also refresh marketplace list quickly so storefronts reflect changes
+    void loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 10);
 }
 
 function moveProductGalleryImage(sku, imagePath, direction) {
@@ -3867,7 +3904,7 @@ async function createProductByAdmin() {
 
     // Refresh supplier products in background
     void loadSupplierProducts();
-    void loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 25);
+    void loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 10);
     activateAdminSupplyTab('stockTab', 'productCreateResult');
 }
 
