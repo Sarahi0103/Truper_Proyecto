@@ -21,12 +21,7 @@ class TicketIntegration {
     public function onOrderCompleted($orderId, $orderData) {
         try {
             // Obtener datos de la orden
-            $stmt = $this->pdo->prepare("
-                SELECT o.id, o.user_id, o.total_amount, o.tax_amount, 
-                       o.discount_amount, o.payment_method, o.created_at
-                FROM orders o
-                WHERE o.id = :order_id
-            ");
+            $stmt = $this->pdo->prepare("SELECT o.id, o.client_id AS user_id, o.total_amount, 0 AS tax_amount, 0 AS discount_amount, NULL AS payment_method, o.created_at FROM orders o WHERE o.id = :order_id");
             $stmt->execute([':order_id' => $orderId]);
             $order = $stmt->fetch(PDO::FETCH_ASSOC);
             
@@ -39,7 +34,7 @@ class TicketIntegration {
                 'order_id' => $orderId,
                 'user_id' => $order['user_id'],
                 'ticket_type' => 'sale',
-                'subtotal' => $orderData['subtotal'] ?? ($order['total_amount'] - $order['tax_amount']),
+                'subtotal' => $orderData['subtotal'] ?? ($order['total_amount'] - ($order['tax_amount'] ?? 0)),
                 'tax_amount' => $order['tax_amount'],
                 'discount_amount' => $order['discount_amount'],
                 'total_amount' => $order['total_amount'],
@@ -80,14 +75,7 @@ class TicketIntegration {
     public function onTicketSentViaWhatsApp($ticketId, $phoneNumber, $messageId = null) {
         try {
             // Registrar el envío
-            $stmt = $this->pdo->prepare("
-                INSERT INTO ticket_whatsapp_sends (
-                    ticket_id, phone_number, whatsapp_message_id, 
-                    sent_at, created_at
-                ) VALUES (
-                    :ticket_id, :phone, :msg_id, NOW(), NOW()
-                )
-            ");
+            $stmt = $this->pdo->prepare("INSERT INTO ticket_whatsapp_sends (ticket_id, phone_number, whatsapp_message_id, sent_at, created_at) VALUES (:ticket_id, :phone, :msg_id, NOW(), NOW())");
             
             $stmt->execute([
                 ':ticket_id' => $ticketId,
@@ -114,13 +102,7 @@ class TicketIntegration {
      */
     public function onTicketGenerated($ticketId, $generationType = 'manual') {
         try {
-            $stmt = $this->pdo->prepare("
-                INSERT INTO ticket_generations (
-                    ticket_id, type, generated_by, generated_at
-                ) VALUES (
-                    :ticket_id, :type, :user_id, NOW()
-                )
-            ");
+            $stmt = $this->pdo->prepare("INSERT INTO ticket_generations (ticket_id, type, generated_by, generated_at) VALUES (:ticket_id, :type, :user_id, NOW())");
             
             $stmt->execute([
                 ':ticket_id' => $ticketId,
@@ -144,13 +126,7 @@ class TicketIntegration {
      */
     public function onTicketDownloaded($ticketId, $format = 'pdf') {
         try {
-            $stmt = $this->pdo->prepare("
-                INSERT INTO ticket_downloads (
-                    ticket_id, format, downloaded_by, downloaded_at
-                ) VALUES (
-                    :ticket_id, :format, :user_id, NOW()
-                )
-            ");
+            $stmt = $this->pdo->prepare("INSERT INTO ticket_downloads (ticket_id, format, downloaded_by, downloaded_at) VALUES (:ticket_id, :format, :user_id, NOW())");
             
             $stmt->execute([
                 ':ticket_id' => $ticketId,
@@ -184,8 +160,8 @@ class TicketIntegration {
             
             // Envíos por WhatsApp
             $whatsappSql = "
-                SELECT 'whatsapp' as type, 'Enviado por WhatsApp' as action,
-                       CONCAT('A: ', phone_number) as description,
+                  SELECT 'whatsapp' as type, 'Enviado por WhatsApp' as action,
+                      'A: ' || phone_number as description,
                        sent_at as timestamp
                 FROM ticket_whatsapp_sends
                 WHERE ticket_id = :ticket_id
@@ -248,7 +224,7 @@ class TicketIntegration {
                 SELECT 
                     st.id, st.folio, st.ticket_type, st.total_amount,
                     st.payment_status, st.issued_date,
-                       COUNT(DISTINCT ti.id) as item_count,
+                    COUNT(DISTINCT ti.id) as item_count,
                     COUNT(DISTINCT tws.id) as whatsapp_sends,
                     COUNT(DISTINCT td.id) as downloads
                 FROM sales_tickets st
@@ -291,9 +267,10 @@ class TicketIntegration {
         try {
             // Obtener items de la orden
             $stmt = $this->pdo->prepare("
-                SELECT oi.product_id, oi.product_name, oi.quantity,
-                       oi.unit_price, oi.line_total
+                  SELECT oi.product_id, p.name AS product_name, oi.quantity,
+                      oi.unit_price, oi.subtotal AS line_total
                 FROM order_items oi
+                  LEFT JOIN products p ON oi.product_id = p.id
                 WHERE oi.order_id = :order_id
             ");
             $stmt->execute([':order_id' => $orderId]);
@@ -302,13 +279,8 @@ class TicketIntegration {
             // Insertar en ticket_items
             foreach ($items as $item) {
                 $insertStmt = $this->pdo->prepare("
-                    INSERT INTO ticket_items (
-                        ticket_id, product_id, product_name,
-                        quantity, unit_price, total
-                    ) VALUES (
-                        :ticket_id, :product_id, :product_name,
-                        :quantity, :unit_price, :total
-                    )
+                    INSERT INTO ticket_items (ticket_id, product_id, product_name, quantity, unit_price, total, discount, created_at)
+                    VALUES (:ticket_id, :product_id, :product_name, :quantity, :unit_price, :total, 0, NOW())
                 ");
                 
                 $insertStmt->execute([
@@ -333,13 +305,7 @@ class TicketIntegration {
      */
     private function logEvent($ticketId, $action, $description) {
         try {
-            $stmt = $this->pdo->prepare("
-                INSERT INTO ticket_audit_log (
-                    ticket_id, action, description, admin_id, ip_address, created_at
-                ) VALUES (
-                    :ticket_id, :action, :description, :admin_id, :ip, NOW()
-                )
-            ");
+            $stmt = $this->pdo->prepare("INSERT INTO ticket_audit_log (ticket_id, action, description, admin_id, ip_address, created_at) VALUES (:ticket_id, :action, :description, :admin_id, :ip, NOW())");
             
             $stmt->execute([
                 ':ticket_id' => $ticketId,
@@ -369,6 +335,20 @@ class TicketIntegration {
                     old_value JSON,
                     new_value JSON,
                     ip_address VARCHAR(45),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ");
+
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS ticket_items (
+                    id SERIAL PRIMARY KEY,
+                    ticket_id INT NOT NULL REFERENCES sales_tickets(id) ON DELETE CASCADE,
+                    product_id INT REFERENCES products(id) ON DELETE SET NULL,
+                    product_name VARCHAR(255),
+                    quantity INT NOT NULL,
+                    unit_price DECIMAL(12,2) NOT NULL,
+                    total DECIMAL(12,2) NOT NULL,
+                    discount DECIMAL(12,2) DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ");
@@ -423,6 +403,7 @@ class TicketIntegration {
             ");
             
             // Índices
+            $pdo->exec("CREATE INDEX IF NOT EXISTS idx_ticket_items_ticket ON ticket_items(ticket_id)");
             $pdo->exec("CREATE INDEX IF NOT EXISTS idx_whatsapp_ticket ON ticket_whatsapp_sends(ticket_id)");
             $pdo->exec("CREATE INDEX IF NOT EXISTS idx_generations_ticket ON ticket_generations(ticket_id)");
             $pdo->exec("CREATE INDEX IF NOT EXISTS idx_downloads_ticket ON ticket_downloads(ticket_id)");

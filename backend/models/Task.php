@@ -17,13 +17,19 @@ class Task {
      * Crear tarea
      */
     public function create($assigned_to, $title, $description, $priority, $due_date, $assigned_by) {
-        $query = "INSERT INTO {$this->table} (assigned_to, assigned_by, title, description, priority, due_date, status, created_at) 
-                  VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("iissis", $assigned_to, $assigned_by, $title, $description, $priority, $due_date);
-        
-        if ($stmt->execute()) {
-            return ['success' => true, 'task_id' => $stmt->insert_id];
+        $stmt = $this->conn->prepare("INSERT INTO {$this->table} (assigned_to, assigned_by, title, description, priority, due_date, status, created_at) VALUES (:assigned_to, :assigned_by, :title, :description, :priority, :due_date, 'pending', NOW()) RETURNING id");
+        $stmt->execute([
+            ':assigned_to' => $assigned_to,
+            ':assigned_by' => $assigned_by,
+            ':title' => $title,
+            ':description' => $description,
+            ':priority' => $priority,
+            ':due_date' => $due_date,
+        ]);
+
+        $taskId = $stmt->fetchColumn();
+        if ($taskId) {
+            return ['success' => true, 'task_id' => (int)$taskId];
         }
         return ['success' => false];
     }
@@ -32,59 +38,43 @@ class Task {
      * Obtener tareas del empleado
      */
     public function getEmployeeTasks($employee_id) {
-        $query = "SELECT t.*, u.name as assigned_by_name, a.name as assigned_to_name 
-                  FROM {$this->table} t 
-                  JOIN users u ON t.assigned_by = u.id 
-                  JOIN users a ON t.assigned_to = a.id 
-                  WHERE t.assigned_to = ? AND t.status != 'completed' 
-                  ORDER BY t.due_date ASC";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("i", $employee_id);
-        $stmt->execute();
-        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt = $this->conn->prepare("SELECT t.*, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END AS assigned_by_name, a.first_name || CASE WHEN a.last_name IS NOT NULL AND a.last_name <> '' THEN ' ' || a.last_name ELSE '' END AS assigned_to_name FROM {$this->table} t JOIN users u ON t.assigned_by = u.id JOIN users a ON t.assigned_to = a.id WHERE t.assigned_to = :employee_id AND t.status <> 'completed' ORDER BY t.due_date ASC");
+        $stmt->execute([':employee_id' => $employee_id]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
      * Obtener todas las tareas
      */
     public function getAll($filter = null) {
-        $query = "SELECT t.*, u.name as assigned_by_name, a.name as assigned_to_name 
-                  FROM {$this->table} t 
-                  JOIN users u ON t.assigned_by = u.id 
-                  JOIN users a ON t.assigned_to = a.id";
-        
+        $sql = "SELECT t.*, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END AS assigned_by_name, a.first_name || CASE WHEN a.last_name IS NOT NULL AND a.last_name <> '' THEN ' ' || a.last_name ELSE '' END AS assigned_to_name FROM {$this->table} t JOIN users u ON t.assigned_by = u.id JOIN users a ON t.assigned_to = a.id";
+
         if ($filter === 'pending') {
-            $query .= " WHERE t.status = 'pending'";
+            $sql .= " WHERE t.status = 'pending'";
         } elseif ($filter === 'in_progress') {
-            $query .= " WHERE t.status = 'in_progress'";
+            $sql .= " WHERE t.status = 'in_progress'";
         }
-        
-        $query .= " ORDER BY t.due_date ASC";
-        
-        $result = $this->conn->query($query);
-        return $result->fetch_all(MYSQLI_ASSOC);
+
+        $sql .= " ORDER BY t.due_date ASC";
+
+        $stmt = $this->conn->query($sql);
+        return $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
     }
 
     /**
      * Actualizar estado de tarea
      */
     public function updateStatus($task_id, $status) {
-        $query = "UPDATE {$this->table} SET status = ?, updated_at = NOW() WHERE id = ?";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("si", $status, $task_id);
-        
-        return $stmt->execute();
+        $stmt = $this->conn->prepare("UPDATE {$this->table} SET status = :status, updated_at = NOW() WHERE id = :id");
+        return $stmt->execute([':status' => $status, ':id' => $task_id]);
     }
 
     /**
      * Eliminar tarea
      */
     public function delete($task_id) {
-        $query = "DELETE FROM {$this->table} WHERE id = ?";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("i", $task_id);
-        
-        return $stmt->execute();
+        $stmt = $this->conn->prepare("DELETE FROM {$this->table} WHERE id = :id");
+        return $stmt->execute([':id' => $task_id]);
     }
 }
 ?>

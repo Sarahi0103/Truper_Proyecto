@@ -1,10 +1,36 @@
-ya # 🚀 GUÍA DE INSTALACIÓN RÁPIDA - Truper Platform
+# 🚀 GUÍA DE INSTALACIÓN RÁPIDA - Truper Platform
 
 ## Requisitos Previos
 - PHP 7.4+
 - PostgreSQL 12+
 - Apache/Nginx
 - Composer (opcional)
+
+## Instalación Recomendada: Docker Compose
+
+Este proyecto ya trae un stack listo para desarrollo local:
+
+```bash
+docker compose up -d
+```
+
+Servicios y puertos:
+
+- Web: http://localhost:8088
+- Base de datos: localhost:5433
+
+Credenciales del entorno Docker:
+
+- Base de datos: `truper_platform`
+- Usuario: `truper_admin`
+- Contraseña: `Truper123!`
+
+Validación rápida dentro de Docker:
+
+```bash
+docker compose exec -T web php -l /var/www/html/backend/models/BarcodeReader.php
+cat db/ALTER_PAYMENT_TERMS.sql | docker compose exec -T db psql -U truper_admin -d truper_platform
+```
 
 ## Paso 1: Instalar PostgreSQL
 
@@ -23,17 +49,11 @@ sudo systemctl start postgresql
 
 ```bash
 # Conectar a PostgreSQL
-psql -U postgres
+psql -U truper_admin -d truper_platform
 
 # Crear usuario
-CREATE ROLE truper_admin WITH LOGIN PASSWORD 'TruperSecure2024!';
-ALTER ROLE truper_admin CREATEDB;
-
-# Crear base de datos
-CREATE DATABASE truper_platform OWNER truper_admin;
-
-# Salir
-\q
+-- La base y el usuario ya existen en el stack Docker.
+-- Si instalas PostgreSQL manualmente, crea el rol y la base con tus propios valores.
 ```
 
 ## Paso 3: Importar Schema
@@ -80,10 +100,8 @@ C:\Windows\System32\drivers\etc\hosts
 
 ## Paso 5: Verificar Instalación
 
-1. Abrir navegador: `http://truper.local/truper_platform/public/`
-2. Iniciar sesión con:
-   - Email: `admin@truper.com`
-   - Contraseña: `Admin123!`
+1. Abrir navegador: `http://localhost:8088/`
+2. Iniciar sesión con el usuario administrador configurado en la base de datos.
 
 ## Datos de Prueba
 
@@ -96,8 +114,9 @@ psql -U truper_admin -d truper_platform -f PRODUCTOS_EJEMPLO.sql
 ## Troubleshooting
 
 ### Error: "Connection refused"
-- Verificar que PostgreSQL está corriendo
+- Verificar que Docker Compose esté levantado
 - Comprobar credenciales en `config/database.php`
+- Revisar `docker compose ps` y `docker compose logs -f db`
 
 ### Error 500 - Internal Server Error
 - Revisar permisos de carpetas

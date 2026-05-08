@@ -30,7 +30,7 @@ $conn = $db->connect();
 
 if ($conn) {
     echo "✓ Conexión a base de datos exitosa\n";
-    $conn->close();
+    $db->close();
 } else {
     die("✗ Error de conexión a base de datos\n");
 }

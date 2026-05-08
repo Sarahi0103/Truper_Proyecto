@@ -17,13 +17,20 @@ class Product {
      * Crear producto
      */
     public function create($name, $sku, $description, $cost_price, $sell_price, $category, $unit) {
-        $query = "INSERT INTO {$this->table} (name, sku, description, cost_price, sell_price, category, unit, created_at) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?, NOW())";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("sssddss", $name, $sku, $description, $cost_price, $sell_price, $category, $unit);
-        
-        if ($stmt->execute()) {
-            return ['success' => true, 'product_id' => $stmt->insert_id];
+        $stmt = $this->conn->prepare("INSERT INTO {$this->table} (name, sku, description, cost_price, sell_price, unit, category, created_at) VALUES (:name, :sku, :description, :cost_price, :sell_price, :unit, :category, NOW()) RETURNING id");
+        $stmt->execute([
+            ':name' => $name,
+            ':sku' => $sku,
+            ':description' => $description,
+            ':cost_price' => $cost_price,
+            ':sell_price' => $sell_price,
+            ':unit' => $unit,
+            ':category' => $category,
+        ]);
+
+        $productId = $stmt->fetchColumn();
+        if ($productId) {
+            return ['success' => true, 'product_id' => (int)$productId];
         }
         return ['success' => false];
     }
@@ -32,31 +39,26 @@ class Product {
      * Obtener todos los productos
      */
     public function getAll() {
-        $query = "SELECT * FROM {$this->table} WHERE active = 1 ORDER BY name ASC";
-        $result = $this->conn->query($query);
-        return $result->fetch_all(MYSQLI_ASSOC);
+        $stmt = $this->conn->query("SELECT * FROM {$this->table} WHERE COALESCE(active, is_active) = true ORDER BY name ASC");
+        return $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
     }
 
     /**
      * Obtener por ID
      */
     public function getById($id) {
-        $query = "SELECT * FROM {$this->table} WHERE id = ? AND active = 1";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("i", $id);
-        $stmt->execute();
-        return $stmt->get_result()->fetch_assoc();
+        $stmt = $this->conn->prepare("SELECT * FROM {$this->table} WHERE id = :id AND COALESCE(active, is_active) = true");
+        $stmt->execute([':id' => $id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     /**
      * Obtener por SKU
      */
     public function getBySku($sku) {
-        $query = "SELECT * FROM {$this->table} WHERE sku = ? AND active = 1";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("s", $sku);
-        $stmt->execute();
-        return $stmt->get_result()->fetch_assoc();
+        $stmt = $this->conn->prepare("SELECT * FROM {$this->table} WHERE sku = :sku AND COALESCE(active, is_active) = true");
+        $stmt->execute([':sku' => $sku]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     /**
@@ -70,34 +72,34 @@ class Product {
      * Buscar productos
      */
     public function search($query) {
-        $query = "%" . $query . "%";
-        $sql = "SELECT * FROM {$this->table} WHERE name LIKE ? OR sku LIKE ? OR description LIKE ? AND active = 1";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("sss", $query, $query, $query);
-        $stmt->execute();
-        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $needle = '%' . $query . '%';
+        $stmt = $this->conn->prepare("SELECT * FROM {$this->table} WHERE (name ILIKE :needle OR sku ILIKE :needle OR description ILIKE :needle) AND COALESCE(active, is_active) = true");
+        $stmt->execute([':needle' => $needle]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
      * Obtener productos por categoría
      */
     public function getByCategory($category) {
-        $query = "SELECT * FROM {$this->table} WHERE category = ? AND active = 1 ORDER BY name ASC";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("s", $category);
-        $stmt->execute();
-        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt = $this->conn->prepare("SELECT * FROM {$this->table} WHERE category = :category AND COALESCE(active, is_active) = true ORDER BY name ASC");
+        $stmt->execute([':category' => $category]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
      * Actualizar producto
      */
     public function update($id, $name, $description, $cost_price, $sell_price, $category) {
-        $query = "UPDATE {$this->table} SET name = ?, description = ?, cost_price = ?, sell_price = ?, category = ? WHERE id = ?";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("ssddsi", $name, $description, $cost_price, $sell_price, $category, $id);
-        
-        return $stmt->execute();
+        $stmt = $this->conn->prepare("UPDATE {$this->table} SET name = :name, description = :description, cost_price = :cost_price, sell_price = :sell_price, category = :category WHERE id = :id");
+        return $stmt->execute([
+            ':name' => $name,
+            ':description' => $description,
+            ':cost_price' => $cost_price,
+            ':sell_price' => $sell_price,
+            ':category' => $category,
+            ':id' => $id,
+        ]);
     }
 }
 ?>

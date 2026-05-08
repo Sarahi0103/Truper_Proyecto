@@ -1,36 +1,23 @@
 -- ============================================
--- BASE DE DATOS Truper - SCRIPT DE INICIALIZACIÓN
--- ============================================
-
-CREATE DATABASE IF NOT EXISTS trupper_db;
-USE trupper_db;
-
--- ============================================
--- TABLA: USUARIOS
+-- BASE DE DATOS Truper - SCRIPT LEGADO (PostgreSQL)
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS users (
-    id INT PRIMARY KEY AUTO_INCREMENT,
+    id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     name VARCHAR(255) NOT NULL,
     phone VARCHAR(20),
     birthday DATE,
-    role ENUM('admin', 'employee', 'client') DEFAULT 'client',
+    role VARCHAR(20) NOT NULL DEFAULT 'client' CHECK (role IN ('admin', 'employee', 'client')),
     points INT DEFAULT 0,
-    active BOOLEAN DEFAULT 1,
+    active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_email (email),
-    INDEX idx_role (role)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ============================================
--- TABLA: PRODUCTOS
--- ============================================
-
 CREATE TABLE IF NOT EXISTS products (
-    id INT PRIMARY KEY AUTO_INCREMENT,
+    id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     sku VARCHAR(100) UNIQUE NOT NULL,
     barcode VARCHAR(100),
@@ -39,191 +26,138 @@ CREATE TABLE IF NOT EXISTS products (
     unit VARCHAR(50),
     cost_price DECIMAL(10, 2),
     sell_price DECIMAL(10, 2) NOT NULL,
-    active BOOLEAN DEFAULT 1,
+    active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_sku (sku),
-    INDEX idx_barcode (barcode),
-    INDEX idx_category (category)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
--- ============================================
--- TABLA: ÓRDENES
--- ============================================
 
 CREATE TABLE IF NOT EXISTS orders (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT NOT NULL,
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     total DECIMAL(10, 2) NOT NULL,
-    status ENUM('pending', 'processing', 'completed', 'cancelled') DEFAULT 'pending',
-    payment_status ENUM('pending', 'partial', 'paid') DEFAULT 'pending',
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'cancelled')),
+    payment_status VARCHAR(20) DEFAULT 'pending' CHECK (payment_status IN ('pending', 'partial', 'paid')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    INDEX idx_user_id (user_id),
-    INDEX idx_status (status),
-    INDEX idx_created_at (created_at)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ============================================
--- TABLA: ITEMS DE ÓRDENES
--- ============================================
-
 CREATE TABLE IF NOT EXISTS order_items (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    order_id INT NOT NULL,
-    product_id INT NOT NULL,
+    id SERIAL PRIMARY KEY,
+    order_id INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    product_id INT NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
     quantity INT NOT NULL,
     unit_price DECIMAL(10, 2) NOT NULL,
     subtotal DECIMAL(10, 2) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (order_id) REFERENCES orders(id),
-    FOREIGN KEY (product_id) REFERENCES products(id),
-    INDEX idx_order_id (order_id),
-    INDEX idx_product_id (product_id)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
--- ============================================
--- TABLA: PAGOS
--- ============================================
 
 CREATE TABLE IF NOT EXISTS payment_tracking (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    order_id INT NOT NULL,
+    id SERIAL PRIMARY KEY,
+    order_id INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
     amount_paid DECIMAL(10, 2) NOT NULL,
     payment_method VARCHAR(50),
-    payment_date DATETIME NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (order_id) REFERENCES orders(id),
-    INDEX idx_order_id (order_id),
-    INDEX idx_payment_date (payment_date)
+    payment_date TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
--- ============================================
--- TABLA: COMPROBANTES/TICKETS
--- ============================================
 
 CREATE TABLE IF NOT EXISTS payments (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    order_id INT NOT NULL,
+    id SERIAL PRIMARY KEY,
+    order_id INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
     amount DECIMAL(10, 2) NOT NULL,
     payment_method VARCHAR(50),
-    reference VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (order_id) REFERENCES orders(id),
-    INDEX idx_order_id (order_id)
+    reference_number VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
--- ============================================
--- TABLA: TAREAS
--- ============================================
 
 CREATE TABLE IF NOT EXISTS tasks (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    assigned_to INT NOT NULL,
-    assigned_by INT NOT NULL,
+    id SERIAL PRIMARY KEY,
+    assigned_to INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    assigned_by INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
     description TEXT,
-    priority ENUM('low', 'medium', 'high') DEFAULT 'medium',
-    status ENUM('pending', 'in_progress', 'completed') DEFAULT 'pending',
+    priority VARCHAR(20) DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'completed')),
     due_date DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (assigned_to) REFERENCES users(id),
-    FOREIGN KEY (assigned_by) REFERENCES users(id),
-    INDEX idx_assigned_to (assigned_to),
-    INDEX idx_status (status)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ============================================
--- TABLA: SOLICITUDES DE MAYOREO
--- ============================================
-
 CREATE TABLE IF NOT EXISTS wholesale_requests (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT NOT NULL,
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     company_name VARCHAR(255) NOT NULL,
     contact_email VARCHAR(255),
     contact_phone VARCHAR(20),
     business_type VARCHAR(100),
     description TEXT,
-    status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    INDEX idx_status (status)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ============================================
--- TABLA: COTIZACIONES DE MAYOREO
--- ============================================
-
 CREATE TABLE IF NOT EXISTS wholesale_quotes (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    request_id INT NOT NULL,
-    user_id INT NOT NULL,
+    id SERIAL PRIMARY KEY,
+    request_id INT NOT NULL REFERENCES wholesale_requests(id) ON DELETE CASCADE,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     total_amount DECIMAL(10, 2),
     discount_percent DECIMAL(5, 2) DEFAULT 0,
     final_amount DECIMAL(10, 2),
-    status ENUM('pending', 'accepted', 'rejected', 'converted') DEFAULT 'pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (request_id) REFERENCES wholesale_requests(id),
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    INDEX idx_status (status)
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected', 'converted')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
--- ============================================
--- TABLA: ITEMS DE COTIZACIONES
--- ============================================
 
 CREATE TABLE IF NOT EXISTS wholesale_quote_items (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    quote_id INT NOT NULL,
-    product_id INT NOT NULL,
+    id SERIAL PRIMARY KEY,
+    quote_id INT NOT NULL REFERENCES wholesale_quotes(id) ON DELETE CASCADE,
+    product_id INT NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
     quantity INT NOT NULL,
     unit_price DECIMAL(10, 2),
-    subtotal DECIMAL(10, 2),
-    FOREIGN KEY (quote_id) REFERENCES wholesale_quotes(id),
-    FOREIGN KEY (product_id) REFERENCES products(id)
+    subtotal DECIMAL(10, 2)
 );
-
--- ============================================
--- TABLA: ESCANEOS DE CÓDIGOS DE BARRAS
--- ============================================
 
 CREATE TABLE IF NOT EXISTS barcode_scans (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    product_id INT NOT NULL,
+    id SERIAL PRIMARY KEY,
+    product_id INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     barcode VARCHAR(100),
-    scanned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (product_id) REFERENCES products(id),
-    INDEX idx_barcode (barcode),
-    INDEX idx_scanned_at (scanned_at)
+    scanned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ============================================
--- DATOS DE EJEMPLO
--- ============================================
+CREATE INDEX IF NOT EXISTS idx_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_sku ON products(sku);
+CREATE INDEX IF NOT EXISTS idx_barcode ON products(barcode);
+CREATE INDEX IF NOT EXISTS idx_category ON products(category);
+-- Some deployments use `client_id` instead of `user_id` on orders
+CREATE INDEX IF NOT EXISTS idx_user_id ON orders(client_id);
+CREATE INDEX IF NOT EXISTS idx_status ON orders(status);
+CREATE INDEX IF NOT EXISTS idx_created_at ON orders(created_at);
+CREATE INDEX IF NOT EXISTS idx_order_id ON order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_product_id ON order_items(product_id);
+CREATE INDEX IF NOT EXISTS idx_payment_order_id ON payments(order_id);
+CREATE INDEX IF NOT EXISTS idx_assigned_to ON tasks(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_task_status ON tasks(status);
+CREATE INDEX IF NOT EXISTS idx_wholesale_status ON wholesale_requests(status);
+CREATE INDEX IF NOT EXISTS idx_quote_status ON wholesale_quotes(status);
+CREATE INDEX IF NOT EXISTS idx_barcode_scan_barcode ON barcode_scans(barcode);
+CREATE INDEX IF NOT EXISTS idx_barcode_scan_scanned_at ON barcode_scans(scanned_at);
 
--- Usuario Admin
-INSERT INTO users (email, password, name, phone, role) VALUES 
-('admin@truper.com', '$2y$12$ViZrw8LXZv8Hc.uQj3uKGuC/YqLcPJeYLDhQkK8M7H7iKz7.m1Nrm', 'Administrador', '+1-234-567-8900', 'admin');
+-- Use current schema column names: password_hash, first_name, last_name, birthdate/points
+INSERT INTO users (email, password_hash, first_name, last_name, phone, role) VALUES 
+('admin@truper.com', '$2y$12$ViZrw8LXZv8Hc.uQj3uKGuC/YqLcPJeYLDhQkK8M7H7iKz7.m1Nrm', 'Administrador', 'Truper', '+1-234-567-8900', 'admin')
+ON CONFLICT (email) DO NOTHING;
 
--- Usuario Cliente
-INSERT INTO users (email, password, name, phone, birthday, role, points) VALUES 
-('cliente@truper.com', '$2y$12$ViZrw8LXZv8Hc.uQj3uKGuC/YqLcPJeYLDhQkK8M7H7iKz7.m1Nrm', 'Cliente Demo', '+1-987-654-3210', '1990-05-15', 'client', 100);
+INSERT INTO users (email, password_hash, first_name, last_name, phone, birthdate, role, points) VALUES 
+('cliente@truper.com', '$2y$12$ViZrw8LXZv8Hc.uQj3uKGuC/YqLcPJeYLDhQkK8M7H7iKz7.m1Nrm', 'Cliente', 'Demo', '+1-987-654-3210', '1990-05-15', 'client', 100)
+ON CONFLICT (email) DO NOTHING;
 
--- Productos de ejemplo
-INSERT INTO products (name, sku, description, category, unit, cost_price, sell_price) VALUES 
-('Martillo de Peña', 'HAM001', 'Martillo profesional de peña de 500g', 'Herramientas', 'pieza', 15.00, 35.00),
-('Destornillador Phillips', 'SCR001', 'Set de destornilladores Phillips de precisión', 'Herramientas', 'set', 8.00, 22.00),
-('Llave Inglesa Ajustable', 'WRN001', 'Llave inglesa de 10 pulgadas', 'Herramientas', 'pieza', 12.00, 28.00),
-('Taladro Eléctrico 20V', 'DRL001', 'Taladro con batería y accesorios', 'Herramientas', 'pieza', 75.00, 180.00),
-('Cinta Métrica 25m', 'TAP001', 'Cinta métrica de acero de 25 metros', 'Herramientas', 'pieza', 5.00, 15.00);
-
--- Permiso para crear tablas
-GRANT ALL PRIVILEGES ON trupper_db.* TO 'trupper_user'@'localhost' IDENTIFIED BY 'trupper_password';
-FLUSH PRIVILEGES;
+-- Include `unit_price` to satisfy schemas that require it (set same as sell_price)
+INSERT INTO products (name, sku, description, category, unit, cost_price, unit_price, sell_price) VALUES 
+('Martillo de Peña', 'HAM001', 'Martillo profesional de peña de 500g', 'Herramientas', 'pieza', 15.00, 35.00, 35.00),
+('Destornillador Phillips', 'SCR001', 'Set de destornilladores Phillips de precisión', 'Herramientas', 'set', 8.00, 22.00, 22.00),
+('Llave Inglesa Ajustable', 'WRN001', 'Llave inglesa de 10 pulgadas', 'Herramientas', 'pieza', 12.00, 28.00, 28.00),
+('Taladro Eléctrico 20V', 'DRL001', 'Taladro con batería y accesorios', 'Herramientas', 'pieza', 75.00, 180.00, 180.00),
+('Cinta Métrica 25m', 'TAP001', 'Cinta métrica de acero de 25 metros', 'Herramientas', 'pieza', 5.00, 15.00, 15.00)
+ON CONFLICT (sku) DO NOTHING;
 
 
 

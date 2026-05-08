@@ -347,9 +347,9 @@ class AnalyticsController {
                     st.payment_status,
                     st.issued_date,
                     st.verified_date,
-                    u.name as customer_name,
+                    u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END as customer_name,
                     u.email,
-                    (SELECT COUNT(*) FROM sales_ticket_items WHERE sales_ticket_id = st.id) as item_count,
+                    (SELECT COUNT(*) FROM ticket_items WHERE ticket_id = st.id) as item_count,
                     st.description
                 FROM sales_tickets st
                 LEFT JOIN users u ON st.user_id = u.id

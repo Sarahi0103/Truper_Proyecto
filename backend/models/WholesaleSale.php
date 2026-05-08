@@ -17,13 +17,19 @@ class WholesaleSale {
      * Crear solicitud de venta mayoreo
      */
     public function createRequest($user_id, $company_name, $contact_email, $contact_phone, $business_type, $description) {
-        $query = "INSERT INTO wholesale_requests (user_id, company_name, contact_email, contact_phone, business_type, description, status, created_at) 
-                  VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("isssss", $user_id, $company_name, $contact_email, $contact_phone, $business_type, $description);
-        
-        if ($stmt->execute()) {
-            return ['success' => true, 'request_id' => $stmt->insert_id];
+        $stmt = $this->conn->prepare("INSERT INTO wholesale_requests (user_id, company_name, contact_email, contact_phone, business_type, description, status, created_at) VALUES (:user_id, :company_name, :contact_email, :contact_phone, :business_type, :description, 'pending', NOW()) RETURNING id");
+        $stmt->execute([
+            ':user_id' => $user_id,
+            ':company_name' => $company_name,
+            ':contact_email' => $contact_email,
+            ':contact_phone' => $contact_phone,
+            ':business_type' => $business_type,
+            ':description' => $description,
+        ]);
+
+        $requestId = $stmt->fetchColumn();
+        if ($requestId) {
+            return ['success' => true, 'request_id' => (int)$requestId];
         }
         return ['success' => false];
     }
@@ -32,35 +38,25 @@ class WholesaleSale {
      * Obtener todas las solicitudes de mayoreo
      */
     public function getRequests($status = null) {
-        $query = "SELECT wr.*, u.name, u.phone FROM wholesale_requests wr 
-                  JOIN users u ON wr.user_id = u.id";
-        
+        $sql = "SELECT wr.*, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END AS name, u.phone FROM wholesale_requests wr JOIN users u ON wr.user_id = u.id";
+        $params = [];
         if ($status) {
-            $query .= " WHERE wr.status = ?";
+            $sql .= " WHERE wr.status = :status";
+            $params[':status'] = $status;
         }
-        
-        $query .= " ORDER BY wr.created_at DESC";
-        
-        if ($status) {
-            $stmt = $this->conn->prepare($query);
-            $stmt->bind_param("s", $status);
-            $stmt->execute();
-            return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-        } else {
-            $result = $this->conn->query($query);
-            return $result->fetch_all(MYSQLI_ASSOC);
-        }
+        $sql .= " ORDER BY wr.created_at DESC";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
      * Actualizar estado de solicitud
      */
     public function updateRequestStatus($request_id, $status) {
-        $query = "UPDATE wholesale_requests SET status = ? WHERE id = ?";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("si", $status, $request_id);
-        
-        return $stmt->execute();
+        $stmt = $this->conn->prepare("UPDATE wholesale_requests SET status = :status WHERE id = :id");
+        return $stmt->execute([':status' => $status, ':id' => $request_id]);
     }
 
     /**
@@ -72,11 +68,9 @@ class WholesaleSale {
         $total = 0;
         foreach ($items as $item) {
             // Obtener precio de producto
-            $query = "SELECT sell_price FROM products WHERE id = ?";
-            $stmt = $this->conn->prepare($query);
-            $stmt->bind_param("i", $item['product_id']);
-            $stmt->execute();
-            $product = $stmt->get_result()->fetch_assoc();
+            $stmt = $this->conn->prepare("SELECT COALESCE(sell_price, unit_price) AS sell_price FROM products WHERE id = :id");
+            $stmt->execute([':id' => $item['product_id']]);
+            $product = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($product) {
                 // Aplicar descuento mayoreo (generalmente 20-30% menos)
@@ -89,20 +83,24 @@ class WholesaleSale {
         // Aplicar descuento adicional si existe
         $final_total = $total * (1 - ($discount_percent / 100));
         
-        $query = "INSERT INTO wholesale_quotes (request_id, user_id, total_amount, discount_percent, final_amount, status, created_at) 
-                  VALUES (?, ?, ?, ?, ?, 'pending', NOW())";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("idddi", $request_id, $user_id, $total, $discount_percent, $final_total);
-        
-        if ($stmt->execute()) {
-            $quote_id = $stmt->insert_id;
+        $stmt = $this->conn->prepare("INSERT INTO wholesale_quotes (request_id, user_id, total_amount, discount_percent, final_amount, status, created_at) VALUES (:request_id, :user_id, :total_amount, :discount_percent, :final_amount, 'pending', NOW()) RETURNING id");
+        $stmt->execute([
+            ':request_id' => $request_id,
+            ':user_id' => $user_id,
+            ':total_amount' => $total,
+            ':discount_percent' => $discount_percent,
+            ':final_amount' => $final_total,
+        ]);
+
+        $quote_id = $stmt->fetchColumn();
+        if ($quote_id) {
             
             // Insertar items de la cotización
             foreach ($items as $item) {
                 $this->addQuoteItem($quote_id, $item['product_id'], $item['quantity']);
             }
             
-            return ['success' => true, 'quote_id' => $quote_id];
+            return ['success' => true, 'quote_id' => (int)$quote_id];
         }
         
         return ['success' => false];
@@ -112,56 +110,47 @@ class WholesaleSale {
      * Agregar item a cotización
      */
     private function addQuoteItem($quote_id, $product_id, $quantity) {
-        $query = "SELECT sell_price FROM products WHERE id = ?";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("i", $product_id);
-        $stmt->execute();
-        $product = $stmt->get_result()->fetch_assoc();
+        $stmt = $this->conn->prepare("SELECT COALESCE(sell_price, unit_price) AS sell_price FROM products WHERE id = :id");
+        $stmt->execute([':id' => $product_id]);
+        $product = $stmt->fetch(PDO::FETCH_ASSOC);
         
         $wholesale_price = $product['sell_price'] * 0.7;
         $subtotal = $quantity * $wholesale_price;
         
-        $query = "INSERT INTO wholesale_quote_items (quote_id, product_id, quantity, unit_price, subtotal) 
-                  VALUES (?, ?, ?, ?, ?)";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("iiidd", $quote_id, $product_id, $quantity, $wholesale_price, $subtotal);
-        
-        return $stmt->execute();
+        $stmt = $this->conn->prepare("INSERT INTO wholesale_quote_items (quote_id, product_id, quantity, unit_price, subtotal) VALUES (:quote_id, :product_id, :quantity, :unit_price, :subtotal)");
+        return $stmt->execute([
+            ':quote_id' => $quote_id,
+            ':product_id' => $product_id,
+            ':quantity' => $quantity,
+            ':unit_price' => $wholesale_price,
+            ':subtotal' => $subtotal,
+        ]);
     }
 
     /**
      * Obtener cotizaciones
      */
     public function getQuotes($status = null) {
-        $query = "SELECT wq.*, wr.company_name FROM wholesale_quotes wq 
-                  JOIN wholesale_requests wr ON wq.request_id = wr.id";
-        
+        $sql = "SELECT wq.*, wr.company_name FROM wholesale_quotes wq JOIN wholesale_requests wr ON wq.request_id = wr.id";
+        $params = [];
         if ($status) {
-            $query .= " WHERE wq.status = ?";
+            $sql .= " WHERE wq.status = :status";
+            $params[':status'] = $status;
         }
-        
-        $query .= " ORDER BY wq.created_at DESC";
-        
-        if ($status) {
-            $stmt = $this->conn->prepare($query);
-            $stmt->bind_param("s", $status);
-            $stmt->execute();
-            return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-        } else {
-            $result = $this->conn->query($query);
-            return $result->fetch_all(MYSQLI_ASSOC);
-        }
+        $sql .= " ORDER BY wq.created_at DESC";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
      * Convertir cotización a pedido
      */
     public function convertQuoteToOrder($quote_id) {
-        $query = "SELECT * FROM wholesale_quotes WHERE id = ?";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("i", $quote_id);
-        $stmt->execute();
-        $quote = $stmt->get_result()->fetch_assoc();
+        $stmt = $this->conn->prepare("SELECT * FROM wholesale_quotes WHERE id = :id");
+        $stmt->execute([':id' => $quote_id]);
+        $quote = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if (!$quote) {
             return ['success' => false];
@@ -179,11 +168,9 @@ class WholesaleSale {
         $order_id = $result['order_id'];
         
         // Copiar items de la cotización
-        $query = "SELECT * FROM wholesale_quote_items WHERE quote_id = ?";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("i", $quote_id);
-        $stmt->execute();
-        $items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt = $this->conn->prepare("SELECT * FROM wholesale_quote_items WHERE quote_id = :quote_id");
+        $stmt->execute([':quote_id' => $quote_id]);
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         foreach ($items as $item) {
             $order->addItem($order_id, $item['product_id'], $item['quantity'], $item['unit_price']);
@@ -199,11 +186,8 @@ class WholesaleSale {
      * Actualizar estado de cotización
      */
     public function updateQuoteStatus($quote_id, $status) {
-        $query = "UPDATE wholesale_quotes SET status = ? WHERE id = ?";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("si", $status, $quote_id);
-        
-        return $stmt->execute();
+        $stmt = $this->conn->prepare("UPDATE wholesale_quotes SET status = :status WHERE id = :id");
+        return $stmt->execute([':status' => $status, ':id' => $quote_id]);
     }
 }
 ?>

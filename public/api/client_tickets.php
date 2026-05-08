@@ -71,7 +71,7 @@ try {
             
             // Obtener detalles del ticket
             $stmt = $pdo->prepare("
-                SELECT st.*, u.name as customer_name, u.email
+                SELECT st.*, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END as customer_name, u.email
                 FROM sales_tickets st
                 LEFT JOIN users u ON st.user_id = u.id
                 WHERE st.id = :id

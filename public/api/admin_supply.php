@@ -419,7 +419,7 @@ function ensure_product_categories_runtime_admin_supply($pdo): void {
     if (!$created) {
         try {
             $pdo->exec("CREATE TABLE IF NOT EXISTS product_categories (
-                id INTEGER PRIMARY KEY AUTO_INCREMENT,
+                id SERIAL PRIMARY KEY,
                 name VARCHAR(120) NOT NULL UNIQUE,
                 sort_order INTEGER NOT NULL DEFAULT 0,
                 is_active BOOLEAN NOT NULL DEFAULT 1,

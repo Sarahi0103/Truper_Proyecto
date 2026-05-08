@@ -6,12 +6,12 @@
     "license": "All Rights Reserved",
     "require": {
         "php": ">=7.4.0",
-        "ext-mysqli": "*",
+        
         "ext-json": "*"
     },
     "scripts": {
         "start": "php -S localhost:8000",
-        "install-db": "mysql -u root -p < db/trupper_db.sql"
+        "install-db": "psql -U truper_admin -d truper_platform -f db/trupper_db.sql"
     },
     "keywords": [
         "inventory",

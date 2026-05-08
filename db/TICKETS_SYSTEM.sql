@@ -1,164 +1,99 @@
 -- ============================================
--- SISTEMA DE TICKETS DE VENTAS
--- Historial de transacciones con folio único
+-- SISTEMA DE TICKETS DE VENTAS (PostgreSQL)
+-- Esquema compatible con `backend/models/SalesTicket.php`
 -- ============================================
 
--- Tabla principal de tickets
 CREATE TABLE IF NOT EXISTS sales_tickets (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    
-    -- Folio único (YYYYMM-XXXXX)
+    id SERIAL PRIMARY KEY,
     folio VARCHAR(50) UNIQUE NOT NULL,
-    
-    -- Referencia a orden o venta
-    order_id INT,
-    user_id INT NOT NULL,
-    
-    -- Detalles de la transacción
-    ticket_type ENUM('sale', 'return', 'adjustment', 'credit') DEFAULT 'sale',
+    order_id INT REFERENCES orders(id) ON DELETE SET NULL,
+    user_id INT REFERENCES users(id) ON DELETE SET NULL,
+    ticket_type VARCHAR(50) NOT NULL DEFAULT 'sale' CHECK (ticket_type IN ('sale', 'return', 'adjustment', 'credit')),
     description TEXT,
-    
-    -- Montos
-    subtotal DECIMAL(12, 2) NOT NULL DEFAULT 0,
+    subtotal_amount DECIMAL(12, 2) NOT NULL DEFAULT 0,
     tax_amount DECIMAL(12, 2) NOT NULL DEFAULT 0,
     discount_amount DECIMAL(12, 2) NOT NULL DEFAULT 0,
     total_amount DECIMAL(12, 2) NOT NULL DEFAULT 0,
-    
-    -- Método de pago
     payment_method VARCHAR(50),
-    payment_status ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'completed',
-    
-    -- Detalles de auditoría
-    issued_by INT NOT NULL,
-    verified_by INT,
-    notes TEXT,
-    
-    -- Fechas
+    payment_status VARCHAR(50) NOT NULL DEFAULT 'completed' CHECK (payment_status IN ('pending', 'completed', 'failed', 'refunded')),
+    issued_by INT REFERENCES users(id) ON DELETE SET NULL,
     issued_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    verified_by INT REFERENCES users(id) ON DELETE SET NULL,
     verified_date TIMESTAMP NULL,
+    archived_at TIMESTAMP NULL,
     archived_date TIMESTAMP NULL,
-    
-    -- Estado
-    status ENUM('active', 'archived', 'cancelled') DEFAULT 'active',
-    
-    -- Índices
-    INDEX idx_folio (folio),
-    INDEX idx_user (user_id),
-    INDEX idx_order (order_id),
-    INDEX idx_status (status),
-    INDEX idx_issued_date (issued_date),
-    INDEX idx_payment_status (payment_status),
-    
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT,
-    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL,
-    FOREIGN KEY (issued_by) REFERENCES users(id) ON DELETE RESTRICT,
-    FOREIGN KEY (verified_by) REFERENCES users(id) ON DELETE SET NULL
+    deleted_at TIMESTAMP NULL,
+    notes TEXT,
+    status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived', 'cancelled')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabla de items del ticket
-CREATE TABLE IF NOT EXISTS sales_ticket_items (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    
-    sales_ticket_id INT NOT NULL,
-    product_id INT,
-    
-    -- Descripción del item
-    sku VARCHAR(50),
+CREATE TABLE IF NOT EXISTS ticket_items (
+    id SERIAL PRIMARY KEY,
+    ticket_id INT NOT NULL REFERENCES sales_tickets(id) ON DELETE CASCADE,
+    product_id INT REFERENCES products(id) ON DELETE SET NULL,
     product_name VARCHAR(255),
     quantity INT NOT NULL,
     unit_price DECIMAL(12, 2) NOT NULL,
-    line_total DECIMAL(12, 2) NOT NULL,
-    
-    -- Metadata
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    INDEX idx_ticket (sales_ticket_id),
-    INDEX idx_product (product_id),
-    
-    FOREIGN KEY (sales_ticket_id) REFERENCES sales_tickets(id) ON DELETE CASCADE,
-    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
+    total DECIMAL(12, 2) NOT NULL,
+    discount DECIMAL(12, 2) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabla de auditoría de tickets (cambios/acciones)
-CREATE TABLE IF NOT EXISTS sales_ticket_audit_log (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    
-    sales_ticket_id INT NOT NULL,
+CREATE TABLE IF NOT EXISTS ticket_audit_log (
+    id SERIAL PRIMARY KEY,
+    ticket_id INT NOT NULL REFERENCES sales_tickets(id) ON DELETE CASCADE,
     action VARCHAR(50) NOT NULL,
-    action_by INT NOT NULL,
-    
-    -- Qué cambió
-    old_values JSON,
-    new_values JSON,
-    reason TEXT,
-    
-    -- Timestamps
-    action_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    INDEX idx_ticket (sales_ticket_id),
-    INDEX idx_action_date (action_date),
-    
-    FOREIGN KEY (sales_ticket_id) REFERENCES sales_tickets(id) ON DELETE CASCADE,
-    FOREIGN KEY (action_by) REFERENCES users(id) ON DELETE RESTRICT
+    description TEXT,
+    admin_id INT REFERENCES users(id) ON DELETE SET NULL,
+    old_value JSONB,
+    new_value JSONB,
+    ip_address VARCHAR(45),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabla de contador de folios por mes
 CREATE TABLE IF NOT EXISTS ticket_folio_counter (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    
-    year_month VARCHAR(7) UNIQUE NOT NULL,  -- YYYY-MM
-    counter INT DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    INDEX idx_year_month (year_month)
+    year_month VARCHAR(7) PRIMARY KEY,
+    counter INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabla de archivo de tickets eliminados (para estadísticas históricas)
 CREATE TABLE IF NOT EXISTS sales_tickets_archived (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    
+    id SERIAL PRIMARY KEY,
     original_ticket_id INT,
     folio VARCHAR(50) UNIQUE NOT NULL,
-    
-    -- Datos completos guardados como JSON
-    ticket_data JSON NOT NULL,
-    
-    -- Cuándo se archivó
+    ticket_data JSONB NOT NULL,
     archived_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     archive_reason VARCHAR(255),
-    
-    -- Estadísticas agregadas
     total_amount DECIMAL(12, 2),
-    ticket_type VARCHAR(50),
-    
-    INDEX idx_folio (folio),
-    INDEX idx_archived_date (archived_date),
-    INDEX idx_year_month (DATE_FORMAT(archived_date, '%Y-%m'))
+    ticket_type VARCHAR(50)
 );
 
--- Tabla de estadísticas mensuales de ventas
 CREATE TABLE IF NOT EXISTS sales_monthly_statistics (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    
-    year_month VARCHAR(7) NOT NULL UNIQUE,  -- YYYY-MM
-    
-    -- Totales
+    id SERIAL PRIMARY KEY,
+    year_month VARCHAR(7) NOT NULL UNIQUE,
     total_sales DECIMAL(12, 2) DEFAULT 0,
     total_returns DECIMAL(12, 2) DEFAULT 0,
     total_adjustments DECIMAL(12, 2) DEFAULT 0,
-    
-    -- Conteos
     ticket_count INT DEFAULT 0,
     return_count INT DEFAULT 0,
-    
-    -- Datos
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
-    INDEX idx_year_month (year_month)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Vistas útiles
+CREATE INDEX IF NOT EXISTS idx_tickets_folio ON sales_tickets(folio);
+CREATE INDEX IF NOT EXISTS idx_tickets_user ON sales_tickets(user_id);
+CREATE INDEX IF NOT EXISTS idx_tickets_order ON sales_tickets(order_id);
+CREATE INDEX IF NOT EXISTS idx_tickets_status ON sales_tickets(status);
+CREATE INDEX IF NOT EXISTS idx_tickets_date ON sales_tickets(issued_date);
+CREATE INDEX IF NOT EXISTS idx_ticket_items_ticket ON ticket_items(ticket_id);
+CREATE INDEX IF NOT EXISTS idx_ticket_items_product ON ticket_items(product_id);
+CREATE INDEX IF NOT EXISTS idx_audit_ticket ON ticket_audit_log(ticket_id);
+CREATE INDEX IF NOT EXISTS idx_audit_date ON ticket_audit_log(created_at);
+CREATE INDEX IF NOT EXISTS idx_ticket_folio_counter_year_month ON ticket_folio_counter(year_month);
+CREATE INDEX IF NOT EXISTS idx_monthly_statistics_year_month ON sales_monthly_statistics(year_month);
+
 CREATE OR REPLACE VIEW v_current_tickets AS
 SELECT 
     st.id,
@@ -167,23 +102,23 @@ SELECT
     st.total_amount,
     st.payment_status,
     st.issued_date,
-    u.email as customer_email,
-    u.name as customer_name,
-    COUNT(sti.id) as item_count
+    u.email AS customer_email,
+    u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END AS customer_name,
+    COUNT(sti.id) AS item_count
 FROM sales_tickets st
 LEFT JOIN users u ON st.user_id = u.id
-LEFT JOIN sales_ticket_items sti ON st.id = sti.sales_ticket_id
+LEFT JOIN ticket_items sti ON st.id = sti.ticket_id
 WHERE st.status = 'active'
-GROUP BY st.id
+GROUP BY st.id, u.email, u.first_name, u.last_name
 ORDER BY st.issued_date DESC;
 
 CREATE OR REPLACE VIEW v_ticket_summary AS
 SELECT 
-    DATE_FORMAT(issued_date, '%Y-%m') as month,
+    TO_CHAR(issued_date, 'YYYY-MM') AS month,
     ticket_type,
-    COUNT(*) as count,
-    SUM(total_amount) as total_amount,
-    AVG(total_amount) as avg_amount
+    COUNT(*) AS count,
+    SUM(total_amount) AS total_amount,
+    AVG(total_amount) AS avg_amount
 FROM sales_tickets
 WHERE status = 'active'
-GROUP BY DATE_FORMAT(issued_date, '%Y-%m'), ticket_type;
+GROUP BY TO_CHAR(issued_date, 'YYYY-MM'), ticket_type;

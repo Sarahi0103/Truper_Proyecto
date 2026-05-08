@@ -22,9 +22,8 @@ class BarcodeReader {
         // Buscar producto por código de barras
         $query = "SELECT id, name, sku, sell_price FROM products WHERE sku = ? OR barcode = ?";
         $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("ss", $barcode, $barcode);
-        $stmt->execute();
-        $product = $stmt->get_result()->fetch_assoc();
+        $stmt->execute([$barcode, $barcode]);
+        $product = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if (!$product) {
             return [
@@ -37,13 +36,12 @@ class BarcodeReader {
         // Registrar escaneo
         $query = "INSERT INTO barcode_scans (product_id, barcode, scanned_at) VALUES (?, ?, NOW())";
         $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("is", $product['id'], $barcode);
-        $stmt->execute();
+        $stmt->execute([$product['id'], $barcode]);
         
         return [
             'success' => true,
             'product' => $product,
-            'scan_id' => $stmt->insert_id
+            'scan_id' => $this->conn->lastInsertId()
         ];
     }
 
@@ -72,9 +70,7 @@ class BarcodeReader {
                 // Actualizar código de barras del producto
                 $query = "UPDATE products SET barcode = ? WHERE sku = ?";
                 $stmt = $this->conn->prepare($query);
-                $stmt->bind_param("ss", $barcode, $sku);
-                
-                if ($stmt->execute()) {
+                if ($stmt->execute([$barcode, $sku])) {
                     $results[] = [
                         'sku' => $sku,
                         'barcode' => $barcode,
@@ -111,9 +107,8 @@ class BarcodeReader {
                   LIMIT ?";
         
         $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("i", $limit);
-        $stmt->execute();
-        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->execute([(int)$limit]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
@@ -125,14 +120,13 @@ class BarcodeReader {
                     COUNT(*) as total_scans,
                     COUNT(DISTINCT bs.product_id) as unique_products
                   FROM barcode_scans bs
-                  WHERE bs.scanned_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+                                    WHERE bs.scanned_at >= (NOW() - (?::int * INTERVAL '1 day'))
                   GROUP BY DATE(bs.scanned_at)
                   ORDER BY scan_date DESC";
         
         $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("i", $days);
-        $stmt->execute();
-        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+                $stmt->execute([(int)$days]);
+                return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 
@@ -155,11 +149,9 @@ class PaymentTracker {
         $query = "INSERT INTO payment_tracking (order_id, amount_paid, payment_method, payment_date, created_at) 
                   VALUES (?, ?, ?, ?, NOW())";
         $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("idss", $order_id, $amount, $payment_method, $payment_date);
-        
-        if ($stmt->execute()) {
+        if ($stmt->execute([$order_id, $amount, $payment_method, $payment_date])) {
             $this->updateOrderPaymentStatus($order_id);
-            return ['success' => true, 'payment_id' => $stmt->insert_id];
+            return ['success' => true, 'payment_id' => $this->conn->lastInsertId()];
         }
         
         return ['success' => false];
@@ -177,9 +169,8 @@ class PaymentTracker {
                   GROUP BY o.id";
         
         $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("i", $order_id);
-        $stmt->execute();
-        $result = $stmt->get_result()->fetch_assoc();
+        $stmt->execute([(int)$order_id]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if ($result) {
             $result['payment_percentage'] = ($result['paid_amount'] / $result['total']) * 100;
@@ -195,9 +186,8 @@ class PaymentTracker {
     public function getPaymentHistory($order_id) {
         $query = "SELECT * FROM payment_tracking WHERE order_id = ? ORDER BY payment_date DESC";
         $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("i", $order_id);
-        $stmt->execute();
-        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->execute([(int)$order_id]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
@@ -216,16 +206,14 @@ class PaymentTracker {
         
         $query = "UPDATE orders SET payment_status = ? WHERE id = ?";
         $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("si", $status, $order_id);
-        
-        return $stmt->execute();
+        return $stmt->execute([$status, (int)$order_id]);
     }
 
     /**
      * Obtener órdenes pendientes de pago
      */
     public function getPendingPayments() {
-        $query = "SELECT o.*, u.name, u.email,
+        $query = "SELECT o.*, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END AS name, u.email,
                   COALESCE(SUM(pt.amount_paid), 0) as paid_amount,
                   o.total - COALESCE(SUM(pt.amount_paid), 0) as pending_amount
                   FROM orders o
@@ -236,7 +224,7 @@ class PaymentTracker {
                   ORDER BY o.created_at ASC";
         
         $result = $this->conn->query($query);
-        return $result->fetch_all(MYSQLI_ASSOC);
+        return $result ? $result->fetchAll(PDO::FETCH_ASSOC) : [];
     }
 
     /**
@@ -254,9 +242,8 @@ class PaymentTracker {
                   ORDER BY payment_date DESC";
         
         $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("ss", $start_date, $end_date);
-        $stmt->execute();
-        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+                $stmt->execute([$start_date, $end_date]);
+                return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 ?>

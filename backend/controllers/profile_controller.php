@@ -60,11 +60,8 @@ elseif ($action === 'change_password') {
     
     // Actualizar contraseña
     $hashed = Security::hashPassword($new_password);
-    $query = "UPDATE users SET password = ? WHERE id = ?";
-    $stmt = $GLOBALS['db']->prepare($query);
-    $stmt->bind_param("si", $hashed, $_SESSION['user_id']);
-    
-    if ($stmt->execute()) {
+    $stmt = $GLOBALS['db']->prepare("UPDATE users SET password = :password, updated_at = NOW() WHERE id = :id");
+    if ($stmt->execute([':password' => $hashed, ':id' => $_SESSION['user_id']])) {
         header("Location: /views/profile.php?success=Contraseña actualizada");
     } else {
         header("Location: /views/profile.php?error=Error al actualizar contraseña");
