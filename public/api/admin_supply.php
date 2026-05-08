@@ -90,6 +90,11 @@ function normalize_category_admin_supply($value): string {
     return $normalized;
 }
 
+// Path helper: ensure API actions operate on project images directory (project_root/images)
+function images_root_admin_supply(): string {
+    return dirname(__DIR__, 2) . '/images';
+}
+
 function first_existing_column_admin_supply(string $table, array $candidates): ?string {
     foreach ($candidates as $candidate) {
         if (db_column_exists($table, (string)$candidate)) {
@@ -886,7 +891,7 @@ function convert_image_to_base64_admin_supply(string $tmpName, string $mimeType)
     $maxWidth = 800;
     $maxHeight = 800;
 
-    $productsDir = __DIR__ . '/../images/products';
+    $productsDir = images_root_admin_supply() . '/products';
     if (!is_dir($productsDir)) {
         mkdir($productsDir, 0755, true);
     }
@@ -1002,7 +1007,7 @@ function store_product_image(array $file): string {
     }
 
     // Create products directory if it doesn't exist
-    $productsDir = __DIR__ . '/../images/products';
+    $productsDir = images_root_admin_supply() . '/products';
     if (!is_dir($productsDir)) {
         mkdir($productsDir, 0755, true);
     }
@@ -1046,11 +1051,11 @@ function normalize_gallery_base_name_admin_supply(string $base): string {
 }
 
 function product_gallery_dir_admin_supply(string $sku): string {
-    return __DIR__ . '/../images/products/gallery/' . $sku;
+    return images_root_admin_supply() . '/products/gallery/' . $sku;
 }
 
 function product_gallery_dir_legacy_admin_supply(string $sku): string {
-    return __DIR__ . '/../images/products/by_code/' . $sku;
+    return images_root_admin_supply() . '/products/by_code/' . $sku;
 }
 
 function list_product_gallery_files_admin_supply(string $sku): array {
@@ -1060,7 +1065,8 @@ function list_product_gallery_files_admin_supply(string $sku): array {
     $result = [];
 
     // Primary: new gallery/ directory (admin-uploaded images)
-    $galleryDir = __DIR__ . '/../images/products/gallery/' . $sku;
+        $galleryDir = images_root_admin_supply() . '/products/gallery/' . $sku;
+        $legacyDir = images_root_admin_supply() . '/products/by_code/' . $sku;
     if (is_dir($galleryDir)) {
         $matches = glob($galleryDir . '/*.{jpg,jpeg,png,webp,gif,JPG,JPEG,PNG,WEBP,GIF}', GLOB_BRACE);
         if (!empty($matches) && is_array($matches)) {
@@ -1074,7 +1080,6 @@ function list_product_gallery_files_admin_supply(string $sku): array {
     }
 
     // Fallback: legacy by_code/ directory (catalog seed images)
-    $legacyDir = __DIR__ . '/../images/products/by_code/' . $sku;
     if (is_dir($legacyDir)) {
         $matches = glob($legacyDir . '/*.{jpg,jpeg,png,webp,gif,JPG,JPEG,PNG,WEBP,GIF}', GLOB_BRACE);
         if (!empty($matches) && is_array($matches)) {
@@ -1147,7 +1152,7 @@ function ensure_canonical_gallery_image_admin_supply(string $sku, string $imageP
     }
 
     $canonicalRelative = canonical_product_gallery_path_admin_supply($sku, $raw);
-    $sourcePath = __DIR__ . '/../' . ltrim($raw, '/');
+        $sourcePath = images_root_admin_supply() . '/' . ltrim($raw, '/');
     if (!is_file($sourcePath)) {
         return $canonicalRelative;
     }
@@ -1156,7 +1161,7 @@ function ensure_canonical_gallery_image_admin_supply(string $sku, string $imageP
         return $raw;
     }
 
-    $canonicalPath = __DIR__ . '/../' . ltrim($canonicalRelative, '/');
+        $canonicalPath = images_root_admin_supply() . '/' . ltrim($canonicalRelative, '/');
     $canonicalDir = dirname($canonicalPath);
     if (!is_dir($canonicalDir)) {
         @mkdir($canonicalDir, 0777, true);
@@ -1334,14 +1339,14 @@ function delete_product_gallery_file_admin_supply(string $sku, string $imagePath
 
     // Candidate paths to attempt deletion (public and non-public variants)
     $candidates = [
-        __DIR__ . '/../public/images/products/gallery/' . $sku . '/' . $filename,
-        __DIR__ . '/../public/images/products/by_code/' . $sku . '/' . $filename,
-        __DIR__ . '/../images/products/gallery/' . $sku . '/' . $filename,
-        __DIR__ . '/../images/products/by_code/' . $sku . '/' . $filename,
+        images_root_admin_supply() . '/products/gallery/' . $sku . '/' . $filename,
+        images_root_admin_supply() . '/products/by_code/' . $sku . '/' . $filename,
+        images_root_admin_supply() . '/products/gallery/' . $sku . '/' . $filename,
+        images_root_admin_supply() . '/products/by_code/' . $sku . '/' . $filename,
     ];
 
     // Also attempt deleting any file that ends with the filename under gallery dirs
-    $wildGallery = glob(__DIR__ . '/../public/images/products/gallery/' . $sku . '/*' . $filename);
+    $wildGallery = glob(images_root_admin_supply() . '/products/gallery/' . $sku . '/*' . $filename);
     if (is_array($wildGallery)) {
         foreach ($wildGallery as $wf) {
             $candidates[] = $wf;
@@ -1911,8 +1916,8 @@ function list_available_product_images($pdo): array {
         }
     };
 
-    $scanDir(__DIR__ . '/../images/products', 'images/products');
-    $scanDir(__DIR__ . '/../images', 'images');
+    $scanDir(images_root_admin_supply() . '/products', 'images/products');
+    $scanDir(images_root_admin_supply(), 'images');
 
     try {
         if (db_column_exists('products', 'image_url')) {
@@ -1994,7 +1999,7 @@ function resolve_admin_supply_image_by_sku($rawSku): ?string {
     static $cache = null;
     if ($cache === null) {
         $cache = [];
-        $baseDir = __DIR__ . '/../images/products/by_code';
+        $baseDir = images_root_admin_supply() . '/products/by_code';
         if (is_dir($baseDir)) {
             $dirs = scandir($baseDir);
             if (is_array($dirs)) {
@@ -2552,10 +2557,8 @@ try {
                 // Clean gallery directory if empty
                 if (!empty($sku) && is_valid_numeric_sku_admin_supply($sku)) {
                     $galleryDirs = [
-                        __DIR__ . '/../images/products/gallery/' . $sku,
-                        __DIR__ . '/../public/images/products/gallery/' . $sku,
-                        __DIR__ . '/../images/products/by_code/' . $sku,
-                        __DIR__ . '/../public/images/products/by_code/' . $sku,
+                        images_root_admin_supply() . '/products/gallery/' . $sku,
+                        images_root_admin_supply() . '/products/by_code/' . $sku,
                     ];
                     foreach ($galleryDirs as $galleryDir) {
                         remove_directory_recursive_admin_supply($galleryDir);
@@ -2859,12 +2862,12 @@ try {
                     }
                     $filename = basename($relative);
                     $candidates = [
-                        __DIR__ . '/../public/images/products/gallery/' . $sku . '/' . $filename,
-                        __DIR__ . '/../public/images/products/by_code/' . $sku . '/' . $filename,
-                        __DIR__ . '/../images/products/gallery/' . $sku . '/' . $filename,
-                        __DIR__ . '/../images/products/by_code/' . $sku . '/' . $filename,
+                        images_root_admin_supply() . '/products/gallery/' . $sku . '/' . $filename,
+                        images_root_admin_supply() . '/products/by_code/' . $sku . '/' . $filename,
+                        images_root_admin_supply() . '/products/gallery/' . $sku . '/' . $filename,
+                        images_root_admin_supply() . '/products/by_code/' . $sku . '/' . $filename,
                     ];
-                    $wildGallery = glob(__DIR__ . '/../public/images/products/gallery/' . $sku . '/*' . $filename);
+                    $wildGallery = glob(images_root_admin_supply() . '/products/gallery/' . $sku . '/*' . $filename);
                     if (is_array($wildGallery)) {
                         foreach ($wildGallery as $wf) $candidates[] = $wf;
                     }
@@ -2915,12 +2918,10 @@ try {
                     }
                     $filename = basename($relative);
                     $candidates = [
-                        __DIR__ . '/../public/images/products/gallery/' . $sku . '/' . $filename,
-                        __DIR__ . '/../public/images/products/by_code/' . $sku . '/' . $filename,
-                        __DIR__ . '/../images/products/gallery/' . $sku . '/' . $filename,
-                        __DIR__ . '/../images/products/by_code/' . $sku . '/' . $filename,
+                        images_root_admin_supply() . '/products/gallery/' . $sku . '/' . $filename,
+                        images_root_admin_supply() . '/products/by_code/' . $sku . '/' . $filename,
                     ];
-                    $wildGallery = glob(__DIR__ . '/../public/images/products/gallery/' . $sku . '/*' . $filename);
+                    $wildGallery = glob(images_root_admin_supply() . '/products/gallery/' . $sku . '/*' . $filename);
                     if (is_array($wildGallery)) {
                         foreach ($wildGallery as $wf) $candidates[] = $wf;
                     }
@@ -3014,7 +3015,7 @@ try {
             // Require CSRF for safety
             require_csrf_token();
 
-            $root = __DIR__ . '/../images/products/by_code';
+            $root = images_root_admin_supply() . '/products/by_code';
             if (!is_dir($root)) {
                 $response = ['success' => false, 'message' => 'No hay directorio de imágenes legacy'];
                 break;
@@ -3765,7 +3766,7 @@ try {
                 
                 // Clean gallery directory if empty
                 if (!empty($sku) && is_valid_numeric_sku_admin_supply($sku)) {
-                    $galleryDir = __DIR__ . '/../images/products/gallery/' . $sku;
+                    $galleryDir = images_root_admin_supply() . '/products/gallery/' . $sku;
                     if (is_dir($galleryDir)) {
                         $files = @scandir($galleryDir);
                         if (is_array($files) && count(array_diff($files, ['.', '..'])) === 0) {
@@ -4145,7 +4146,7 @@ try {
                 break;
             }
 
-            $baseDir = __DIR__ . '/../images/products/by_code';
+            $baseDir = images_root_admin_supply() . '/products/by_code';
             if (!is_dir($baseDir)) {
                 $response = ['success' => false, 'message' => 'Directorio de imágenes no encontrado'];
                 break;
