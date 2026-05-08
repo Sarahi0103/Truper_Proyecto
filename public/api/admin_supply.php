@@ -92,7 +92,25 @@ function normalize_category_admin_supply($value): string {
 
 // Path helper: ensure API actions operate on project images directory (project_root/images)
 function images_root_admin_supply(): string {
-    return dirname(__DIR__, 2) . '/images';
+    // Prefer an absolute resolved path to avoid leftover "../" segments
+    $candidate = dirname(__DIR__, 2) . '/images';
+    $resolved = @realpath($candidate);
+    if ($resolved !== false && $resolved !== '') {
+        return rtrim($resolved, '/');
+    }
+
+    // Fallback: try resolving relative to current file's parent
+    $alt = @realpath(__DIR__ . '/..');
+    if ($alt !== false && $alt !== '') {
+        $altCandidate = $alt . '/images';
+        $altResolved = @realpath($altCandidate);
+        if ($altResolved !== false && $altResolved !== '') {
+            return rtrim($altResolved, '/');
+        }
+    }
+
+    // Last resort: return the non-resolved candidate (still valid path)
+    return $candidate;
 }
 
 // Normalize any image path/url to a relative path starting with images/...
