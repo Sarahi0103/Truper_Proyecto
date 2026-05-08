@@ -38,6 +38,9 @@ try {
         throw new Exception('El carrito está vacío');
     }
 
+    $shippingMethod = $input['shippingMethod'] ?? 'standard';
+    $paymentMethod = $input['paymentMethod'] ?? 'credit_card';
+
     // Calculate totals
     $subtotal = 0;
     foreach ($cartItems as $item) {
@@ -46,28 +49,28 @@ try {
 
     // Calculate shipping
     $shippingCost = 0;
-    if ($input['shippingMethod'] === 'express') {
+    if ($shippingMethod === 'express') {
         $shippingCost = 15;
     }
 
     $total = $subtotal + $shippingCost;
 
-    // Generate order number
-    $orderNumber = 'ORD-' . date('Y') . '-' . strtoupper(bin2hex(random_bytes(3)));
+    // Resolve or create the client record linked to the current user
+    $clientStmt = $pdo->prepare("SELECT id FROM clients WHERE user_id = ? LIMIT 1");
+    $clientStmt->execute([$_SESSION['user_id']]);
+    $client = $clientStmt->fetch(PDO::FETCH_ASSOC);
 
-    // Create order
-    $stmt = $pdo->prepare("
-        INSERT INTO orders 
-        (client_id, order_number, total_amount, status, payment_status, order_date, delivery_date, notes, payment_terms, payment_due_date, is_wholesale, balance)
-        VALUES (?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, false, ?)
-    ");
-
-    $deliveryDate = date('Y-m-d', strtotime('+5 days'));
-    if ($input['shippingMethod'] === 'express') {
-        $deliveryDate = date('Y-m-d', strtotime('+2 days'));
+    if ($client) {
+        $clientId = (int) $client['id'];
+    } else {
+        $clientInsert = $pdo->prepare("INSERT INTO clients (user_id, company_name, created_at, updated_at) VALUES (?, NULL, NOW(), NOW()) RETURNING id");
+        $clientInsert->execute([$_SESSION['user_id']]);
+        $clientId = (int) $clientInsert->fetchColumn();
     }
 
+    $deliveryDate = date('Y-m-d', strtotime($shippingMethod === 'express' ? '+2 days' : '+5 days'));
     $notes = "Dirección: " . $input['address'] . ", " . $input['city'] . "\n";
+    $notes .= "Código postal: " . $input['postalCode'] . "\n";
     if (!empty($input['deliveryNotes'])) {
         $notes .= "Notas de entrega: " . $input['deliveryNotes'] . "\n";
     }
@@ -75,20 +78,26 @@ try {
         $notes .= "Notas: " . $input['orderNotes'];
     }
 
-    $paymentTerms = $input['paymentMethod'] === 'on_delivery' ? '30_days' : 'immediate';
-    $paymentDueDate = $paymentTerms === '30_days' ? date('Y-m-d', strtotime('+30 days')) : date('Y-m-d');
+    // Generate order number
+    $orderNumber = 'ORD-' . date('Y') . '-' . strtoupper(bin2hex(random_bytes(3)));
+
+    // Create order
+    $stmt = $pdo->prepare("
+        INSERT INTO orders 
+        (client_id, order_number, total_amount, payment_status, payment_amount, balance, order_date, delivery_date, notes, is_wholesale, status)
+        VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, ?, false, ?)
+    ");
 
     $result = $stmt->execute([
-        $_SESSION['user_id'],  // client_id (using user_id as client placeholder)
+        $clientId,
         $orderNumber,
         $total,
         'pending',
-        'pending',
+        0,
+        $total,
         $deliveryDate,
         $notes,
-        $paymentTerms,
-        $paymentDueDate,
-        $total
+        'pending'
     ]);
 
     if (!$result) {
@@ -99,21 +108,11 @@ try {
 
     // Add order items
     foreach ($cartItems as $item) {
-        $itemStmt = $pdo->prepare("
-            INSERT INTO order_items 
-            (order_id, product_id, quantity, unit_price, subtotal)
-            VALUES (?, ?, ?, ?, ?)
-        ");
-
-        $itemPrice = $item['price'] ?? 0;
-        $itemQty = $item['quantity'] ?? 1;
-        $itemSubtotal = $itemPrice * $itemQty;
-
-        // Try to find product by ID or SKU
         $productId = null;
+
         if (!empty($item['id'])) {
             $pstmt = $pdo->prepare("SELECT id FROM products WHERE id = ? LIMIT 1");
-            $pstmt->execute([$item['id']]);
+            $pstmt->execute([(int) $item['id']]);
             $product = $pstmt->fetch(PDO::FETCH_ASSOC);
             $productId = $product['id'] ?? null;
         }
@@ -125,11 +124,26 @@ try {
             $productId = $product['id'] ?? null;
         }
 
+        if (!$productId) {
+            throw new Exception('No se pudo identificar uno de los productos del carrito');
+        }
+
+        $itemStmt = $pdo->prepare("
+            INSERT INTO order_items 
+            (order_id, product_id, quantity, unit_price, subtotal, discount_percentage, discount_amount, line_total)
+            VALUES (?, ?, ?, ?, ?, 0, 0, ?)
+        ");
+
+        $itemPrice = $item['price'] ?? 0;
+        $itemQty = $item['quantity'] ?? 1;
+        $itemSubtotal = $itemPrice * $itemQty;
+
         $itemResult = $itemStmt->execute([
             $orderId,
             $productId,
             $itemQty,
             $itemPrice,
+            $itemSubtotal,
             $itemSubtotal
         ]);
 
@@ -141,33 +155,37 @@ try {
     // Create payment record
     $paymentStmt = $pdo->prepare("
         INSERT INTO payments 
-        (order_id, amount, status, payment_date, payment_method)
+        (order_id, amount, payment_method, payment_date, notes)
         VALUES (?, ?, ?, NOW(), ?)
     ");
 
-    $paymentMethod = $input['paymentMethod'] ?? 'credit_card';
-    $paymentStatus = $paymentMethod === 'on_delivery' ? 'pending' : 'pending';
+    $paymentMethodMap = [
+        'credit_card' => 'card',
+        'bank_transfer' => 'transfer',
+        'on_delivery' => 'cash',
+    ];
+
+    $paymentMethodDb = $paymentMethodMap[$paymentMethod] ?? 'cash';
 
     $paymentStmt->execute([
         $orderId,
         $total,
-        $paymentStatus,
-        $paymentMethod
+        $paymentMethodDb,
+        'Pago registrado desde checkout'
     ]);
 
     // Log action
     $logStmt = $pdo->prepare("
         INSERT INTO action_logs 
-        (user_id, action, entity_type, entity_id, details, created_at)
-        VALUES (?, ?, ?, ?, ?, NOW())
+        (user_id, action, description, ip_address, timestamp)
+        VALUES (?, ?, ?, ?, NOW())
     ");
 
     $logStmt->execute([
         $_SESSION['user_id'],
         'order_created',
-        'order',
-        $orderId,
-        'Pedido creado desde checkout: ' . $orderNumber
+        'Pedido creado desde checkout: ' . $orderNumber,
+        $_SERVER['REMOTE_ADDR'] ?? null
     ]);
 
     // Send confirmation email (placeholder for actual email implementation)
