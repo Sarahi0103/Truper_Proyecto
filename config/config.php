@@ -46,8 +46,9 @@ $is_api_request = strpos($request_path, '/api/') !== false;
 $has_authenticated_session = isset($_SESSION['user_id']) && isset($_SESSION['role']);
 $is_auth_context = preg_match('#/(admin_login|login|register)\.php$#', $request_path) === 1
     || strpos($request_path, '/api/auth.php') !== false;
+$is_dynamic_catalog_page = in_array($request_path, ['/', '/index.php', '/products.php', '/product_detail.php', '/marketplace_ce.php'], true);
 
-if ($has_authenticated_session || $is_auth_context) {
+if ($has_authenticated_session || $is_auth_context || $is_dynamic_catalog_page) {
     // Evita reutilizar páginas con CSRF viejo y corrige "Sesión inválida" al iniciar sesión.
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
     header('Pragma: no-cache');
