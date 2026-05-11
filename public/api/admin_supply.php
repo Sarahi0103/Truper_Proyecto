@@ -91,22 +91,44 @@ function normalize_category_admin_supply($value): string {
 }
 
 // Path helper: ensure API actions operate on project images directory (project_root/images)
+
 function images_root_admin_supply(): string {
     // __DIR__ is /var/www/html/public/api
-    // We need /var/www/html/public/images (inside public folder)
+    // Prefer: /var/www/html/public/images (Docker standard)
+    // Fallback: /var/www/html/images (legacy)
     
     // Go up: /var/www/html/public/api -> /var/www/html/public
     $publicDir = dirname(__DIR__); // /var/www/html/public
     
-    // Build images path (inside public folder)
-    $imagesDir = $publicDir . '/images';
+    // Try preferred path first: /var/www/html/public/images
+    $preferredPath = $publicDir . '/images';
     
-    // Ensure all directories exist - create without relying on realpath
-    ensure_directory_exists($imagesDir);
+    // If preferred path doesn't exist, try creating it
+    if (!is_dir($preferredPath)) {
+        try {
+            ensure_directory_exists($preferredPath, 0777);
+            return $preferredPath;
+        } catch (Exception $e) {
+            // Fall through to try legacy path
+        }
+    }
     
-    return $imagesDir;
+    // If we got here and preferred path exists or was created successfully, use it
+    if (is_dir($preferredPath)) {
+        return $preferredPath;
+    }
+    
+    // Fallback: try legacy path /var/www/html/images
+    $projectRoot = dirname($publicDir); // /var/www/html
+    $legacyPath = $projectRoot . '/images';
+    try {
+        ensure_directory_exists($legacyPath, 0777);
+        return $legacyPath;
+    } catch (Exception $e) {
+        // Return preferred anyway and let the caller handle errors
+        return $preferredPath;
+    }
 }
-
 // Helper function to create directories with proper permissions
 function ensure_directory_exists($path, $perms = 0777) {
     // Clean the path - remove any .. or .
