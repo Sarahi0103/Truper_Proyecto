@@ -771,10 +771,22 @@ function getSafeImageSrc(src) {
 
 // Helper: upsert a product into the stock cache and re-render quickly
 function upsertStockCache(product) {
-    if (!product || !product.id) return;
-    const idx = stockItemsCache.findIndex((p) => Number(p.id) === Number(product.id));
+    if (!product) return;
+    const normalizedSku = normalizeNumericSku(product.sku || '');
+    let idx = -1;
+
+    if (Number(product.id) > 0) {
+        idx = stockItemsCache.findIndex((p) => Number(p.id) === Number(product.id));
+    }
+
+    if (idx < 0 && /^\d{5,6}$/.test(normalizedSku)) {
+        idx = stockItemsCache.findIndex((p) => normalizeNumericSku(p.sku || '') === normalizedSku);
+    }
+
     if (idx >= 0) {
-        stockItemsCache[idx] = Object.assign({}, stockItemsCache[idx], product);
+        stockItemsCache[idx] = Object.assign({}, stockItemsCache[idx], product, {
+            id: Number(product.id) > 0 ? Number(product.id) : Number(stockItemsCache[idx].id || 0)
+        });
     } else {
         // insert at the top for immediate visibility
         stockItemsCache.unshift(product);
@@ -790,10 +802,22 @@ function upsertStockCache(product) {
 
 // Helper: upsert a CE item into the marketplace cache and re-render quickly
 function upsertMarketplaceCache(item) {
-    if (!item || !item.id) return;
-    const idx = marketplaceItemsCache.findIndex((p) => Number(p.id) === Number(item.id));
+    if (!item) return;
+    const normalizedSku = normalizeNumericSku(item.sku || '');
+    let idx = -1;
+
+    if (Number(item.id) > 0) {
+        idx = marketplaceItemsCache.findIndex((p) => Number(p.id) === Number(item.id));
+    }
+
+    if (idx < 0 && /^\d{5,6}$/.test(normalizedSku)) {
+        idx = marketplaceItemsCache.findIndex((p) => normalizeNumericSku(p.sku || '') === normalizedSku);
+    }
+
     if (idx >= 0) {
-        marketplaceItemsCache[idx] = Object.assign({}, marketplaceItemsCache[idx], item);
+        marketplaceItemsCache[idx] = Object.assign({}, marketplaceItemsCache[idx], item, {
+            id: Number(item.id) > 0 ? Number(item.id) : Number(marketplaceItemsCache[idx].id || 0)
+        });
     } else {
         marketplaceItemsCache.unshift(item);
     }
@@ -3884,8 +3908,10 @@ async function createProductByAdmin() {
     resetProductForm();
 
     // Optimistic update using the submitted payload so edit flow reflects latest values immediately.
+    const existingStockBySku = (stockItemsCache || []).find((p) => normalizeNumericSku(p.sku || '') === normalizedSku);
+    const existingMarketplaceBySku = (marketplaceItemsCache || []).find((p) => normalizeNumericSku(p.sku || '') === normalizedSku);
     const optimisticProduct = {
-        id: Number((res.product && res.product.id) || editId || 0),
+        id: Number((res.product && res.product.id) || editId || (existingStockBySku && existingStockBySku.id) || 0),
         sku: (res.product && res.product.sku) ? res.product.sku : normalizedSku,
         name: (res.product && res.product.name) ? res.product.name : productName,
         category: payload.category,
@@ -3898,11 +3924,13 @@ async function createProductByAdmin() {
         variants_json: getGalleryState('stock')?.images || []
     };
     upsertStockCache(optimisticProduct);
+    upsertMarketplaceCache(Object.assign({}, optimisticProduct, {
+        id: Number((existingMarketplaceBySku && existingMarketplaceBySku.id) || 0),
+        condition_label: (existingMarketplaceBySku && existingMarketplaceBySku.condition_label) || 'Seminuevo'
+    }));
 
-    // Always refresh from server to avoid stale cache (form/category/image mismatches after edit).
-    await loadStock(stockPageBeforeSave);
-
-    // Refresh supplier products in background
+    // Refresh in background to keep server state authoritative without blocking UI.
+    void loadStock(stockPageBeforeSave);
     void loadSupplierProducts();
     void loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 10);
     activateAdminSupplyTab('stockTab', 'productCreateResult');
@@ -4287,19 +4315,33 @@ async function saveMarketplaceCeByAdmin() {
     showAlert(res.message || 'Artículo CE guardado correctamente', 'success');
     resetMarketplaceForm();
 
-    // Optimistically update local cache/UI when server returns the item
-    if (res.item) {
-        upsertMarketplaceCache(res.item);
-        // Also reflect in stock cache if the marketplaces and stock share the same id/sku
-        try {
-            upsertStockCache(res.item);
-        } catch (e) {}
-    } else {
-        await Promise.all([
-            loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 25),
-            loadStock(stockCurrentPage || 1, 25)
-        ]);
-    }
+    const existingMarketplaceBySku = (marketplaceItemsCache || []).find((p) => normalizeNumericSku(p.sku || '') === normalizedSku);
+    const existingStockBySku = (stockItemsCache || []).find((p) => normalizeNumericSku(p.sku || '') === normalizedSku);
+    const optimisticMarketplace = Object.assign({}, existingMarketplaceBySku || {}, {
+        id: Number((res.item && res.item.id) || currentId || (existingMarketplaceBySku && existingMarketplaceBySku.id) || 0),
+        sku: normalizedSku,
+        name: marketplaceName,
+        condition_label: payload.condition_label,
+        category: payload.category,
+        unit_price: payload.unit_price,
+        stock_quantity: payload.stock_quantity,
+        is_active: payload.is_active,
+        description: payload.description,
+        image_url: payload.image_url,
+        variants_json: getGalleryState('marketplace')?.images || []
+    }, res.item || {});
+
+    upsertMarketplaceCache(optimisticMarketplace);
+    upsertStockCache(Object.assign({}, optimisticMarketplace, {
+        id: Number((existingStockBySku && existingStockBySku.id) || 0),
+        reorder_level: Number((existingStockBySku && existingStockBySku.reorder_level) || 10)
+    }));
+
+    // Keep UI fast with optimistic update, then sync in background.
+    void Promise.all([
+        loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 25),
+        loadStock(stockCurrentPage || 1, 25)
+    ]);
 
     activateAdminSupplyTab('marketplaceTab', 'marketplaceResult');
 }
