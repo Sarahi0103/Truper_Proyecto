@@ -2695,6 +2695,112 @@ try {
                     throw $e;
                 }
             }
+                try {
+                    // Fetch product to get SKU and image info before deletion
+                    $stmt = $pdo->prepare("SELECT id, sku, image_url, variants_json FROM products WHERE id = ?");
+                    $stmt->execute([$id]);
+                    $product = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                    if (!$product) {
+                        $response = ['success' => false, 'message' => 'Producto no encontrado'];
+                        break;
+                    }
+
+                    $sku = normalize_sku_admin_supply($product['sku'] ?? '');
+                
+                    // Step 1: Delete image files from disk
+                    $imagesToDelete = [];
+                    if (!empty($product['image_url']) && strpos($product['image_url'], 'default-product.svg') === false) {
+                        $imagesToDelete[] = $product['image_url'];
+                    }
+                    if (!empty($product['variants_json'])) {
+                        $variants = json_decode($product['variants_json'], true) ?: [];
+                        foreach ($variants as $img) {
+                            $img = trim((string)$img);
+                            if ($img !== '' && strpos($img, 'default-product.svg') === false) {
+                                $imagesToDelete[] = $img;
+                            }
+                        }
+                    }
+                
+                    // Delete image files from disk - iterate and ensure each is deleted
+                    $deletedImages = 0;
+                    foreach (array_unique($imagesToDelete) as $imgPath) {
+                        delete_product_gallery_file_admin_supply($sku, $imgPath);
+                        $deletedImages++;
+                    }
+                
+                    // Step 2: If SKU has marketplace entries, clean them up too BEFORE deleting product
+                    $mpDeleted = 0;
+                    if (!empty($sku) && is_valid_numeric_sku_admin_supply($sku)) {
+                        try {
+                            $stmt = $pdo->prepare("SELECT id, image_url, variants_json FROM marketplace_ce_products WHERE sku = ? OR sku LIKE ?");
+                            $stmt->execute([$sku, "%{$sku}%"]);
+                            $mpProducts = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                            foreach ($mpProducts as $mp) {
+                                // Delete marketplace images from disk
+                                if (!empty($mp['image_url']) && strpos($mp['image_url'], 'default-product.svg') === false) {
+                                    delete_product_gallery_file_admin_supply($sku, $mp['image_url']);
+                                }
+                                if (!empty($mp['variants_json'])) {
+                                    $vars = json_decode($mp['variants_json'], true) ?: [];
+                                    foreach ($vars as $v) {
+                                        $v = trim((string)$v);
+                                        if ($v !== '' && strpos($v, 'default-product.svg') === false) {
+                                            delete_product_gallery_file_admin_supply($sku, $v);
+                                        }
+                                    }
+                                }
+                            }
+                            // Delete marketplace entries from database
+                            $stmt = $pdo->prepare("DELETE FROM marketplace_ce_products WHERE sku = ? OR sku LIKE ?");
+                            $stmt->execute([$sku, "%{$sku}%"]);
+                            $mpDeleted = $stmt->rowCount();
+                        } catch (Exception $e) {
+                            // Log but continue - we still want to delete the main product
+                        }
+                    }
+                
+                    // Step 3: Delete product from database
+                    $stmt = $pdo->prepare("DELETE FROM products WHERE id = ?");
+                    $stmt->execute([$id]);
+                    $productDeleted = $stmt->rowCount();
+                
+                    if ($productDeleted === 0) {
+                        $response = ['success' => false, 'message' => 'No se pudo eliminar el producto de la BD'];
+                        break;
+                    }
+                
+                    // Step 4: Register the deleted SKU
+                    truper_register_deleted_product_sku($pdo, $sku, 'product-delete');
+                
+                    // Step 5: Clean gallery directories if empty
+                    if (!empty($sku) && is_valid_numeric_sku_admin_supply($sku)) {
+                        $galleryDirs = [
+                            images_root_admin_supply() . '/products/gallery/' . $sku,
+                            images_root_admin_supply() . '/products/by_code/' . $sku,
+                        ];
+                        foreach ($galleryDirs as $galleryDir) {
+                            if (is_dir($galleryDir)) {
+                                remove_directory_recursive_admin_supply($galleryDir);
+                            }
+                        }
+                    }
+                
+                    $response = [
+                        'success' => true, 
+                        'message' => "Producto eliminado completamente (SKU: $sku, imágenes: $deletedImages, marketplace CE: $mpDeleted)",
+                        'sku' => $sku,
+                        'images_deleted' => $deletedImages,
+                        'marketplace_deleted' => $mpDeleted
+                    ];
+                } catch (PDOException $e) {
+                    if ($e->getCode() === '23503') {
+                        $response = ['success' => false, 'message' => 'No se puede eliminar porque este producto tiene pedidos o historial asociado.'];
+                    } else {
+                        $response = ['success' => false, 'message' => 'Error al eliminar: ' . $e->getMessage()];
+                    }
+                }
             break;
 
         case 'product-visibility':
