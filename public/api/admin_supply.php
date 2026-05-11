@@ -93,16 +93,13 @@ function normalize_category_admin_supply($value): string {
 // Path helper: ensure API actions operate on project images directory (project_root/images)
 function images_root_admin_supply(): string {
     // __DIR__ is /var/www/html/public/api
-    // We need /var/www/html/images
+    // We need /var/www/html/public/images (inside public folder)
     
     // Go up: /var/www/html/public/api -> /var/www/html/public
-    $level1 = dirname(__DIR__); // /var/www/html/public
+    $publicDir = dirname(__DIR__); // /var/www/html/public
     
-    // Go up again: /var/www/html/public -> /var/www/html
-    $projectRoot = dirname($level1); // /var/www/html
-    
-    // Build images path
-    $imagesDir = $projectRoot . '/images';
+    // Build images path (inside public folder)
+    $imagesDir = $publicDir . '/images';
     
     // Ensure all directories exist - create without relying on realpath
     ensure_directory_exists($imagesDir);
