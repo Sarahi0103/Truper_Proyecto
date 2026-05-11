@@ -92,25 +92,34 @@ function normalize_category_admin_supply($value): string {
 
 // Path helper: ensure API actions operate on project images directory (project_root/images)
 function images_root_admin_supply(): string {
-    // Prefer an absolute resolved path to avoid leftover "../" segments
-    $candidate = dirname(__DIR__, 2) . '/images';
-    $resolved = @realpath($candidate);
-    if ($resolved !== false && $resolved !== '') {
-        return rtrim($resolved, '/');
-    }
-
-    // Fallback: try resolving relative to current file's parent
-    $alt = @realpath(__DIR__ . '/..');
-    if ($alt !== false && $alt !== '') {
-        $altCandidate = $alt . '/images';
-        $altResolved = @realpath($altCandidate);
-        if ($altResolved !== false && $altResolved !== '') {
-            return rtrim($altResolved, '/');
+    // Resolve the public directory which always exists
+    $publicDir = @realpath(__DIR__ . '/..');
+    if ($publicDir !== false && $publicDir !== '') {
+        // Go up one more level to project root
+        $projectRoot = dirname($publicDir);
+        if ($projectRoot && $projectRoot !== '') {
+            $imagesDir = $projectRoot . '/images';
+            
+            // Create images directory if it doesn't exist
+            if (!is_dir($imagesDir)) {
+                @mkdir($imagesDir, 0777, true);
+                @chmod($imagesDir, 0777);
+            }
+            
+            // If we can resolve it, use the resolved path
+            $resolved = @realpath($imagesDir);
+            if ($resolved !== false && $resolved !== '') {
+                return rtrim($resolved, '/');
+            }
+            
+            // Otherwise return the constructed path (it will work even if realpath fails)
+            return rtrim($imagesDir, '/');
         }
     }
 
-    // Last resort: return the non-resolved candidate (still valid path)
-    return $candidate;
+    // Last resort fallback using __DIR__ directly
+    $candidate = dirname(__DIR__, 2) . '/images';
+    return rtrim($candidate, '/');
 }
 
 // Normalize any image path/url to a relative path starting with images/...
@@ -1530,27 +1539,57 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
     }
 
     // Guardar en disco: images/products/gallery/{sku}/
-    $galleryDir = images_root_admin_supply() . '/products/gallery/' . $sku;
-    $baseGalleryDir = dirname($galleryDir);
+    $imagesRoot = images_root_admin_supply();
+    $productsDir = $imagesRoot . '/products';
+    $baseGalleryDir = $productsDir . '/gallery';
+    $galleryDir = $baseGalleryDir . '/' . $sku;
     
-    // Ensure base gallery directory exists with write permissions
+    // Ensure all directories exist with proper permissions
+    // First level: images/
+    if (!is_dir($imagesRoot)) {
+        if (!@mkdir($imagesRoot, 0777, true)) {
+            throw new Exception("No se pudo crear directorio: $imagesRoot");
+        }
+    }
+    @chmod($imagesRoot, 0777);
+    
+    // Second level: images/products/
+    if (!is_dir($productsDir)) {
+        if (!@mkdir($productsDir, 0777, true)) {
+            throw new Exception("No se pudo crear directorio: $productsDir");
+        }
+    }
+    @chmod($productsDir, 0777);
+    
+    // Third level: images/products/gallery/
     if (!is_dir($baseGalleryDir)) {
-        @mkdir($baseGalleryDir, 0777, true);
+        if (!@mkdir($baseGalleryDir, 0777, true)) {
+            throw new Exception("No se pudo crear directorio: $baseGalleryDir");
+        }
     }
     @chmod($baseGalleryDir, 0777);
     
-    // Create SKU-specific directory
+    // Fourth level: images/products/gallery/{sku}/
     if (!is_dir($galleryDir)) {
-        @mkdir($galleryDir, 0777, true);
+        if (!@mkdir($galleryDir, 0777, true)) {
+            throw new Exception("No se pudo crear directorio de galería: $galleryDir");
+        }
     }
     @chmod($galleryDir, 0777);
 
     // Final validation
     if (!is_dir($galleryDir)) {
-        throw new Exception("No se pudo crear directorio de galería: $galleryDir");
+        throw new Exception("Directorio de galería no existe después de crear: $galleryDir");
     }
     if (!is_writable($galleryDir)) {
-        throw new Exception("Directorio de galería no tiene permisos de escritura: $galleryDir");
+        // Try again to fix permissions
+        if (!@chmod($galleryDir, 0777)) {
+            throw new Exception("Directorio de galería no tiene permisos de escritura: $galleryDir");
+        }
+        // Verify it's writable now
+        if (!is_writable($galleryDir)) {
+            throw new Exception("No se pudo establecer permisos de escritura en: $galleryDir");
+        }
     }
 
     // Nombre de archivo: timestamp + random para evitar colisiones
