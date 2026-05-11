@@ -13,6 +13,28 @@ if (!function_exists('catalog_normalize_image_path')) {
     }
 }
 
+if (!function_exists('catalog_local_image_exists')) {
+    function catalog_local_image_exists(string $path): bool {
+        $path = catalog_normalize_image_path($path);
+        if ($path === '' || strpos($path, 'data:image/') === 0 || preg_match('/^https?:\/\//i', $path) === 1) {
+            return $path !== '';
+        }
+
+        $candidates = [
+            __DIR__ . '/../public/' . $path,
+            __DIR__ . '/../' . $path,
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
 if (!function_exists('catalog_is_gallery_image_reference')) {
     function catalog_is_gallery_image_reference(string $value): bool {
         $value = trim($value);
@@ -49,6 +71,9 @@ if (!function_exists('catalog_resolve_gallery_images_by_sku')) {
         $mergeImage = static function (string $value) use (&$images): void {
             $value = catalog_normalize_image_path($value);
             if ($value === '' || strpos($value, 'default-product.svg') !== false) {
+                return;
+            }
+            if (strpos($value, 'http://') !== 0 && strpos($value, 'https://') !== 0 && strpos($value, 'data:image/') !== 0 && !catalog_local_image_exists($value)) {
                 return;
             }
             if (!in_array($value, $images, true)) {

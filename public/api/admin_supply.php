@@ -2245,12 +2245,26 @@ function resolve_admin_supply_image_by_sku($rawSku): ?string {
         return null;
     }
 
+    $galleryImages = list_product_gallery_images_admin_supply($sku);
+    if (!empty($galleryImages) && is_array($galleryImages)) {
+        return (string)$galleryImages[0];
+    }
+
     return $cache[$sku] ?? null;
+}
+
+function admin_supply_local_image_exists(string $path): bool {
+    $path = trim($path);
+    if ($path === '' || strpos($path, 'data:image/') === 0 || preg_match('/^https?:\/\//i', $path) === 1) {
+        return $path !== '';
+    }
+
+    return is_file(__DIR__ . '/' . ltrim($path, '/'));
 }
 
 function apply_catalog_image_fallback_admin_supply(array $item): array {
     $current = trim((string)($item['image_url'] ?? ''));
-    $needsFallback = ($current === '' || strcasecmp($current, 'images/products/default-product.svg') === 0);
+    $needsFallback = ($current === '' || strcasecmp($current, 'images/products/default-product.svg') === 0 || !admin_supply_local_image_exists($current));
     if (!$needsFallback) {
         return $item;
     }
