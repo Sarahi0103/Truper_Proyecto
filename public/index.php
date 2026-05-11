@@ -23,33 +23,6 @@ try {
     $products = [];
 }
 
-$xlsxSeedProducts = get_xlsx_seed_products();
-if (count($products) < 10 && !empty($xlsxSeedProducts)) {
-    $existingSkus = [];
-    foreach ($products as $item) {
-        $existingSkus[$item['sku'] ?? ''] = true;
-    }
-    foreach ($xlsxSeedProducts as $seed) {
-        if (!isset($existingSkus[$seed['sku']])) {
-            $products[] = $seed;
-            $existingSkus[$seed['sku']] = true;
-        }
-    }
-}
-
-$demoProducts = [
-    ['id' => 1001, 'name' => 'Taladro Percutor 1/2" 750W', 'sku' => 'TRUP-001', 'unit_price' => 1899, 'category' => 'Herramientas Eléctricas', 'description' => 'Taladro de alto rendimiento para concreto y metal.', 'technical_specs' => 'Potencia 750W | Velocidad variable | Mandril 1/2"', 'stock_quantity' => 35, 'image_url' => 'images/products/default-product.svg', 'variants_json' => '["Modelo Compacto", "Modelo Industrial"]'],
-    ['id' => 1002, 'name' => 'Juego de Llaves Combinadas 12 pzas', 'sku' => 'TRUP-002', 'unit_price' => 799, 'category' => 'Herramientas Manuales', 'description' => 'Juego profesional de llaves de acero cromo vanadio.', 'technical_specs' => '12 piezas | Acero Cr-V | Medidas métricas', 'stock_quantity' => 50, 'image_url' => 'images/products/default-product.svg', 'variants_json' => '["6-17 mm", "8-19 mm"]'],
-    ['id' => 1003, 'name' => 'Esmeriladora Angular 4-1/2" 900W', 'sku' => 'TRUP-003', 'unit_price' => 1299, 'category' => 'Herramientas Eléctricas', 'description' => 'Corte y desbaste con control y seguridad.', 'technical_specs' => '900W | Disco 4-1/2" | Guarda ajustable', 'stock_quantity' => 28, 'image_url' => 'images/products/default-product.svg', 'variants_json' => '["Con maletín", "Sin maletín"]'],
-    ['id' => 1004, 'name' => 'Martillo Uña 16 oz', 'sku' => 'TRUP-004', 'unit_price' => 249, 'category' => 'Herramientas Manuales', 'description' => 'Martillo de acero forjado con mango antiderrapante.', 'technical_specs' => '16 oz | Acero templado | Mango ergonómico', 'stock_quantity' => 120, 'image_url' => 'images/products/default-product.svg', 'variants_json' => '["Mango fibra", "Mango madera"]'],
-    ['id' => 1005, 'name' => 'Pinza de Electricista 8"', 'sku' => 'TRUP-005', 'unit_price' => 329, 'category' => 'Electricidad', 'description' => 'Pinza profesional para corte y sujeción.', 'technical_specs' => 'Acero Cr-V | Aislamiento 1000V', 'stock_quantity' => 64, 'image_url' => 'images/products/default-product.svg', 'variants_json' => '["8 pulgadas", "9 pulgadas"]'],
-    ['id' => 1006, 'name' => 'Flexómetro 8 m', 'sku' => 'TRUP-006', 'unit_price' => 189, 'category' => 'Medición', 'description' => 'Cinta métrica con freno y carcasa resistente.', 'technical_specs' => '8 metros | Cinta de acero | Gancho magnético', 'stock_quantity' => 90, 'image_url' => 'images/products/default-product.svg', 'variants_json' => '["5 m", "8 m"]'],
-    ['id' => 1007, 'name' => 'Rotomartillo SDS Plus 850W', 'sku' => 'TRUP-007', 'unit_price' => 2599, 'category' => 'Herramientas Eléctricas', 'description' => 'Perforación y cincelado para uso profesional.', 'technical_specs' => '850W | SDS Plus | 3 modos', 'stock_quantity' => 22, 'image_url' => 'images/products/default-product.svg', 'variants_json' => '["Con brocas", "Solo equipo"]'],
-    ['id' => 1008, 'name' => 'Juego de Dados 40 pzas', 'sku' => 'TRUP-008', 'unit_price' => 1149, 'category' => 'Mecánica', 'description' => 'Set completo para taller automotriz.', 'technical_specs' => '1/2" | Acero Cr-V | Estuche rígido', 'stock_quantity' => 41, 'image_url' => 'images/products/default-product.svg', 'variants_json' => '["Métrico", "Mixto"]'],
-    ['id' => 1009, 'name' => 'Batería de Litio 20V 4Ah', 'sku' => 'TRUP-009', 'unit_price' => 1399, 'category' => 'Accesorios', 'description' => 'Batería compatible con línea inalámbrica.', 'technical_specs' => '20V | 4Ah | Indicador LED', 'stock_quantity' => 57, 'image_url' => 'images/products/default-product.svg', 'variants_json' => '["2Ah", "4Ah", "6Ah"]'],
-    ['id' => 1010, 'name' => 'Cargador Rápido 20V', 'sku' => 'TRUP-010', 'unit_price' => 699, 'category' => 'Accesorios', 'description' => 'Carga rápida para baterías de litio.', 'technical_specs' => 'Entrada 127V | Salida 20V | Protección térmica', 'stock_quantity' => 38, 'image_url' => 'images/products/default-product.svg', 'variants_json' => '["Estándar", "Rápido"]']
-];
-
 function normalize_product_code($sku) {
     $sku = (string)$sku;
     return preg_replace('/^XLS-/i', '', $sku);
@@ -181,21 +154,6 @@ function resolve_images_by_product_code($code, array $productRow = []) {
     }
 
     return $images;
-}
-
-if (count($products) < 10) {
-    $existingSkus = [];
-    foreach ($products as $item) {
-        $existingSkus[$item['sku'] ?? ''] = true;
-    }
-    foreach ($demoProducts as $demo) {
-        if (count($products) >= 10) {
-            break;
-        }
-        if (!isset($existingSkus[$demo['sku']])) {
-            $products[] = $demo;
-        }
-    }
 }
 
 $quickCategoriesMap = [];

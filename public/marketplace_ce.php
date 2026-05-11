@@ -18,36 +18,20 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
 $marketplaceItems = [];
 $allCategories    = [];
 try {
-    $pdo->exec("CREATE TABLE IF NOT EXISTS marketplace_ce_products (
-        id SERIAL PRIMARY KEY,
-        sku VARCHAR(100) UNIQUE NOT NULL,
-        name VARCHAR(220) NOT NULL,
-        description TEXT NOT NULL,
-        condition_label VARCHAR(80) NOT NULL DEFAULT 'Seminuevo',
-        category VARCHAR(120),
-        unit_price DECIMAL(12,2) NOT NULL DEFAULT 0,
-        stock_quantity INTEGER NOT NULL DEFAULT 1,
-        image_url TEXT,
-        variants_json TEXT,
-        is_active BOOLEAN NOT NULL DEFAULT true,
-        created_by INTEGER REFERENCES users(id),
-        updated_by INTEGER REFERENCES users(id),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )");
-    /* Add category column if missing (migration guard) */
-    try { $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS category VARCHAR(120)"); } catch (Exception $ig) {}
-    try { $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS variants_json TEXT"); } catch (Exception $ig) {}
+    $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS technical_specs TEXT");
+    $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url TEXT");
+    $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS variants_json TEXT");
 
-    $marketplaceVisibilityWhere = '';
-    if (db_column_exists('marketplace_ce_products', 'is_active')) {
-        $marketplaceVisibilityWhere = " WHERE (CASE WHEN is_active IS NULL THEN 1 WHEN LOWER(CAST(is_active AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
-    } elseif (db_column_exists('marketplace_ce_products', 'active')) {
-        $marketplaceVisibilityWhere = " WHERE active = 1";
+    $productsVisibilityWhere = '';
+    if (db_column_exists('products', 'is_active')) {
+        $productsVisibilityWhere = " WHERE (CASE WHEN is_active IS NULL THEN 1 WHEN LOWER(CAST(is_active AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
+    } elseif (db_column_exists('products', 'active')) {
+        $productsVisibilityWhere = " WHERE active = 1";
     }
 
-    $stmtCe = $pdo->query("SELECT id, sku, name, description, condition_label, COALESCE(category,'Marketplace CE') AS category, unit_price, stock_quantity, COALESCE(image_url,'images/products/default-product.svg') AS image_url, variants_json FROM marketplace_ce_products" . $marketplaceVisibilityWhere . " ORDER BY created_at DESC LIMIT 300");
-    $marketplaceItems = $stmtCe ? $stmtCe->fetchAll() : [];
+    $stmtCe = $pdo->prepare("SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category, description, technical_specs, stock_quantity, image_url, variants_json FROM products" . $productsVisibilityWhere . " ORDER BY name LIMIT 300");
+    $stmtCe->execute();
+    $marketplaceItems = $stmtCe->fetchAll();
 
     // Intentar cargar categorías directamente de la base de datos para mostrar incluso las vacías
     $categoriesTotals = [];
@@ -327,8 +311,8 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
                     $itemSku   = htmlspecialchars((string)$item['sku'], ENT_QUOTES, 'UTF-8');
                     $itemName  = htmlspecialchars((string)$item['name'], ENT_QUOTES, 'UTF-8');
                     $itemDesc  = htmlspecialchars((string)$item['description'], ENT_QUOTES, 'UTF-8');
-                    $itemCond  = htmlspecialchars((string)($item['condition_label'] ?? 'Seminuevo'), ENT_QUOTES, 'UTF-8');
-                    $itemCat   = htmlspecialchars((string)($item['category'] ?? 'Marketplace CE'), ENT_QUOTES, 'UTF-8');
+                    $itemCond  = htmlspecialchars((string)($item['condition_label'] ?? 'Abastecimiento'), ENT_QUOTES, 'UTF-8');
+                    $itemCat   = htmlspecialchars((string)($item['category'] ?? 'Abastecimiento'), ENT_QUOTES, 'UTF-8');
                     $itemImg   = htmlspecialchars((string)($item['image_url'] ?: 'images/products/default-product.svg'), ENT_QUOTES, 'UTF-8');
                     $itemPrice = (float)($item['unit_price'] ?? 0);
                     $itemStock = (int)($item['stock_quantity'] ?? 0);
@@ -371,7 +355,7 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
                         <?php endif; ?>
                     </div>
                     <div class="product-content">
-                        <div class="catalog-tag">Marketplace CE</div>
+                        <div class="catalog-tag">Abastecimiento</div>
                         <div class="product-code-label"><strong>Código:</strong> <strong><?php echo $itemSku; ?></strong></div>
                         <h3 class="product-title"><?php echo $itemName; ?></h3>
                         <p class="product-spec"><?php echo $itemDesc; ?></p>
