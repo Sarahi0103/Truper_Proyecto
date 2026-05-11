@@ -2482,6 +2482,14 @@ try {
                 'image_url' => $imageUrl
             ]);
 
+            // Ensure gallery directory exists for newly created products in legacy fallback flow.
+            try {
+                $galleryDir = images_root_admin_supply() . '/products/gallery/' . $sku;
+                ensure_directory_exists($galleryDir, 0777);
+            } catch (Exception $ignored) {
+                // Non-fatal: product was created and gallery can be created on first upload.
+            }
+
             log_action(
                 $_SESSION['user_id'],
                 'ADMIN_CREATE_PRODUCT',
@@ -2672,91 +2680,6 @@ try {
             }
 
             try {
-                // Fetch product to get SKU and image info before deletion
-                $stmt = $pdo->prepare("SELECT sku, image_url, variants_json FROM products WHERE id = ?");
-                $stmt->execute([$id]);
-                $product = $stmt->fetch(PDO::FETCH_ASSOC);
-                
-                if (!$product) {
-                    $response = ['success' => false, 'message' => 'Producto no encontrado'];
-                    break;
-                }
-
-                $sku = normalize_sku_admin_supply($product['sku'] ?? '');
-                
-                // Collect all image paths to delete from disk
-                $imagesToDelete = [];
-                if (!empty($product['image_url']) && strpos($product['image_url'], 'default-product.svg') === false) {
-                    $imagesToDelete[] = $product['image_url'];
-                }
-                if (!empty($product['variants_json'])) {
-                    $variants = json_decode($product['variants_json'], true) ?: [];
-                    foreach ($variants as $img) {
-                        $img = trim((string)$img);
-                        if ($img !== '' && strpos($img, 'default-product.svg') === false) {
-                            $imagesToDelete[] = $img;
-                        }
-                    }
-                }
-                
-                // Delete image files from disk
-                foreach (array_unique($imagesToDelete) as $imgPath) {
-                    delete_product_gallery_file_admin_supply($sku, $imgPath);
-                }
-                
-                // Delete product row
-                $stmt = $pdo->prepare("DELETE FROM products WHERE id = ?");
-                $stmt->execute([$id]);
-
-                // Keep track of the deleted code so it does not reappear from seed data
-                truper_register_deleted_product_sku($pdo, $sku, 'product-delete');
-                
-                // If SKU has marketplace entries, clean them up too
-                if (!empty($sku) && is_valid_numeric_sku_admin_supply($sku)) {
-                    try {
-                        $stmt = $pdo->prepare("SELECT id, image_url, variants_json FROM marketplace_ce_products WHERE sku = ? OR sku LIKE ?");
-                        $stmt->execute([$sku, "%{$sku}%"]);
-                        $mpProducts = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-                        foreach ($mpProducts as $mp) {
-                            if (!empty($mp['image_url']) && strpos($mp['image_url'], 'default-product.svg') === false) {
-                                delete_product_gallery_file_admin_supply($sku, $mp['image_url']);
-                            }
-                            if (!empty($mp['variants_json'])) {
-                                $vars = json_decode($mp['variants_json'], true) ?: [];
-                                foreach ($vars as $v) {
-                                    $v = trim((string)$v);
-                                    if ($v !== '' && strpos($v, 'default-product.svg') === false) {
-                                        delete_product_gallery_file_admin_supply($sku, $v);
-                                    }
-                                }
-                            }
-                        }
-                        // Delete marketplace entries
-                        $stmt = $pdo->prepare("DELETE FROM marketplace_ce_products WHERE sku = ? OR sku LIKE ?");
-                        $stmt->execute([$sku, "%{$sku}%"]);
-                    } catch (Exception $ignored) {}
-                }
-                
-                // Clean gallery directory if empty
-                if (!empty($sku) && is_valid_numeric_sku_admin_supply($sku)) {
-                    $galleryDirs = [
-                        images_root_admin_supply() . '/products/gallery/' . $sku,
-                        images_root_admin_supply() . '/products/by_code/' . $sku,
-                    ];
-                    foreach ($galleryDirs as $galleryDir) {
-                        remove_directory_recursive_admin_supply($galleryDir);
-                    }
-                }
-                
-                $response = ['success' => true, 'message' => 'Producto eliminado definitivamente', 'sku' => $sku];
-            } catch (PDOException $e) {
-                if ($e->getCode() === '23503') {
-                    $response = ['success' => false, 'message' => 'No se puede eliminar porque este producto tiene pedidos o historial asociado.'];
-                } else {
-                    throw $e;
-                }
-            }
-                try {
                     // Fetch product to get SKU and image info before deletion
                     $stmt = $pdo->prepare("SELECT id, sku, image_url, variants_json FROM products WHERE id = ?");
                     $stmt->execute([$id]);
@@ -3969,6 +3892,14 @@ try {
                 $values[] = $id;
                 $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET ' . implode(', ', $sets) . ' WHERE id = ?');
                 $stmt->execute($values);
+
+                // Keep gallery route available for CE SKU even when no upload happened in this request.
+                try {
+                    $galleryDir = images_root_admin_supply() . '/products/gallery/' . $sku;
+                    ensure_directory_exists($galleryDir, 0777);
+                } catch (Exception $ignored) {
+                    // Non-fatal: CE item is already updated.
+                }
                 
                 // Update visibility separately to avoid type conflicts
                 set_marketplace_visibility_compatible($pdo, $id, $isActive);
@@ -4000,6 +3931,14 @@ try {
 
                 $stmt = $pdo->prepare('INSERT INTO marketplace_ce_products (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ')');
                 $stmt->execute($values);
+
+                // Ensure gallery route exists for newly created CE items.
+                try {
+                    $galleryDir = images_root_admin_supply() . '/products/gallery/' . $sku;
+                    ensure_directory_exists($galleryDir, 0777);
+                } catch (Exception $ignored) {
+                    // Non-fatal: CE item is already created.
+                }
                 
                 // If insertion succeeded and we have is_active column issue, ensure it's set
                 try {
