@@ -90,6 +90,7 @@ $whatsappPhone = function_exists('whatsapp_phone_digits') ? whatsapp_phone_digit
 
 function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []): array {
     static $cache = null;
+    global $pdo;
 
     $normalizedSku = preg_replace('/[^a-zA-Z0-9_\-]/', '', $sku);
     $images = [];
@@ -117,6 +118,35 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
                     $mergeImage($value);
                 }
             }
+        }
+    }
+
+    if (empty($images) && isset($pdo) && $pdo instanceof PDO && db_table_exists('products')) {
+        try {
+            $stmt = $pdo->prepare("SELECT image_url, variants_json FROM products WHERE sku = ? OR sku LIKE ? LIMIT 1");
+            $stmt->execute([$sku, "%{$sku}%"]);
+            $productRow = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+            if (!empty($productRow['image_url'])) {
+                $mergeImage((string)$productRow['image_url']);
+            }
+
+            if (!empty($productRow['variants_json'])) {
+                $parsed = json_decode((string)$productRow['variants_json'], true);
+                if (is_array($parsed)) {
+                    foreach ($parsed as $value) {
+                        $value = trim((string)$value);
+                        if (strpos($value, 'images/') === 0 || strpos($value, 'data:image/') === 0 || preg_match('/\.(jpg|jpeg|png|webp|gif)$/i', $value) === 1) {
+                            $mergeImage($value);
+                        }
+                    }
+                }
+            }
+
+            if (!empty($images)) {
+                return $images;
+            }
+        } catch (Exception $ignored) {
         }
     }
 
