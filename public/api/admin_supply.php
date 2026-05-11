@@ -2536,10 +2536,14 @@ try {
                     break;
                 }
 
-                    // Preserve existing gallery images if any, or use newly uploaded ones
-                    $existingGallery = list_product_gallery_images_admin_supply($sku);
-                    $finalGallery = !empty($existingGallery) ? $existingGallery : $galleryImages;
+                    // Use the current gallery on disk as the source of truth during edits.
+                    // If the gallery was cleared, persist that state instead of restoring old images.
+                    $finalGallery = $galleryImages;
                     $variantsJson = json_encode($finalGallery, JSON_UNESCAPED_UNICODE);
+
+                    $finalImageUrl = !empty($finalGallery)
+                        ? $finalGallery[0]
+                        : 'images/products/default-product.svg';
                 
                 update_product_compatible($pdo, $id, [
                     'sku' => $sku,
@@ -2551,9 +2555,30 @@ try {
                         'variants_json' => $variantsJson,
                     'stock_quantity' => max(0, $stockQty),
                     'reorder_level' => max(0, $reorder),
-                    'image_url' => $imageUrl,
+                    'image_url' => $finalImageUrl,
                     'is_active' => $isVisible
                 ]);
+
+                if (!empty($finalGallery)) {
+                    persist_product_gallery_images_admin_supply($pdo, $sku, $finalGallery);
+                } else {
+                    foreach (['products', 'marketplace_ce_products'] as $table) {
+                        if (!db_table_exists($table)) {
+                            continue;
+                        }
+
+                        try {
+                            $stmt = $pdo->prepare("UPDATE {$table} SET image_url = ?, variants_json = ? WHERE sku = ? OR sku LIKE ?");
+                            $stmt->execute(['images/products/default-product.svg', '[]', $sku, "%{$sku}%"]);
+                        } catch (Exception $ignored) {
+                        }
+                    }
+
+                    $galleryDir = images_root_admin_supply() . '/products/gallery/' . $sku;
+                    if (is_dir($galleryDir)) {
+                        remove_directory_recursive_admin_supply($galleryDir);
+                    }
+                }
 
                 $response = [
                     'success' => true,
