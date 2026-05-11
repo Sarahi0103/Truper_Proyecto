@@ -3601,11 +3601,19 @@ async function uploadProductImages() {
         const response = await fetch('/api/admin_supply.php?action=product-gallery-upload', {
             method: 'POST',
             body: formData,
-            credentials: 'same-origin',
+            credentials: 'include',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
             }
         });
+
+        if (response.status === 401) {
+            if (resultBox) {
+                resultBox.innerHTML = '<div class="alert alert-error">Tu sesión de administrador expiró. Vuelve a iniciar sesión.</div>';
+            }
+            window.location.href = '/admin_login.php?error=expired&return_to=' + encodeURIComponent('/admin_supply.php');
+            return false;
+        }
 
         if (uploadProgress) uploadProgress.style.width = '95%';
 
@@ -3724,11 +3732,17 @@ async function uploadMarketplaceImages() {
         const response = await fetch('/api/admin_supply.php?action=product-gallery-upload', {
             method: 'POST',
             body: formData,
-            credentials: 'same-origin',
+            credentials: 'include',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
             }
         });
+
+        if (response.status === 401) {
+            showGalleryResult('marketplace', 'Tu sesión de administrador expiró. Vuelve a iniciar sesión.', 'error');
+            window.location.href = '/admin_login.php?error=expired&return_to=' + encodeURIComponent('/admin_supply.php');
+            return false;
+        }
 
         if (uploadProgress) uploadProgress.style.width = '95%';
 
