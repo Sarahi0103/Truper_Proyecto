@@ -141,6 +141,8 @@ if (!function_exists('catalog_resolve_gallery_images_by_sku')) {
         if ($diskCache === null) {
             $diskCache = [];
             $roots = [
+                __DIR__ . '/../public/images/products/by_code' => 'images/products/by_code',
+                __DIR__ . '/../public/images/products/gallery' => 'images/products/gallery',
                 __DIR__ . '/../images/products/by_code' => 'images/products/by_code',
                 __DIR__ . '/../images/products/gallery' => 'images/products/gallery',
             ];
@@ -174,9 +176,15 @@ if (!function_exists('catalog_resolve_gallery_images_by_sku')) {
                         return $scoreA <=> $scoreB;
                     });
 
-                    $diskCache[$dir] = array_map(static function ($path) use ($webPrefix, $dir) {
+                    $rootImages = array_map(static function ($path) use ($webPrefix, $dir) {
                         return rtrim($webPrefix, '/') . '/' . $dir . '/' . basename((string)$path);
                     }, $matches);
+
+                    if (isset($diskCache[$dir])) {
+                        $diskCache[$dir] = array_values(array_unique(array_merge($diskCache[$dir], $rootImages)));
+                    } else {
+                        $diskCache[$dir] = array_values(array_unique($rootImages));
+                    }
                 }
             }
         }
