@@ -335,7 +335,7 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
                     $stockClass = $itemStock <= 2 ? 'stock-low' : 'stock-ok';
                     $stockLabel = $itemStock <= 2 ? 'Pocas piezas: ' : 'Disponibles: ';
                     
-                    $images = marketplace_ce_gallery_images_by_sku((string)($item['sku'] ?? ''), $item);
+                    $images = catalog_resolve_gallery_images_by_sku((string)($item['sku'] ?? ''), $item, $pdo);
                     // 2) Fallback: variants_json (puede ser base64 o rutas)
                     if (empty($images) && !empty($item['variants_json'])) {
                         $parsed = json_decode($item['variants_json'], true);

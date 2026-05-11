@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../config/catalog_images.php';
 require_once __DIR__ . '/../backend/config/security.php';
 require_once __DIR__ . '/../backend/config/database.php';
 require_once __DIR__ . '/../backend/models/Product.php';
@@ -6,78 +7,6 @@ require_once __DIR__ . '/../backend/models/Product.php';
 $product_model = new Product();
 $products = $product_model->getAll();
 $category_filter = $_GET['category'] ?? null;
-
-if (!function_exists('public_catalog_normalize_image_path')) {
-    function public_catalog_normalize_image_path(string $path): string {
-        $path = trim($path);
-        if ($path === '') {
-            return '';
-        }
-
-        $path = preg_replace('/\?.*$/', '', $path) ?? $path;
-        $path = ltrim($path, '/');
-        if (strpos($path, 'images/') === 0) {
-            return $path;
-        }
-
-        return $path;
-    }
-}
-
-if (!function_exists('public_catalog_resolve_images_by_product_code')) {
-    function public_catalog_resolve_images_by_product_code(string $code, array $productRow = []): array {
-        $code = trim($code);
-        $images = [];
-
-        $mergeImage = function (string $value) use (&$images) {
-            $value = public_catalog_normalize_image_path($value);
-            if ($value === '' || strpos($value, 'default-product.svg') !== false) {
-                return;
-            }
-            if (!in_array($value, $images, true)) {
-                $images[] = $value;
-            }
-        };
-
-        $imageUrl = public_catalog_normalize_image_path((string)($productRow['image_url'] ?? ''));
-        if ($imageUrl !== '' && strpos($imageUrl, 'default-product.svg') === false) {
-            $mergeImage($imageUrl);
-        }
-
-        if (!empty($productRow['variants_json'])) {
-            $decoded = json_decode((string)$productRow['variants_json'], true);
-            if (is_array($decoded)) {
-                foreach ($decoded as $item) {
-                    $mergeImage((string)$item);
-                }
-            }
-        }
-
-        if (!empty($images)) {
-            return $images;
-        }
-
-        $galleryRoot = __DIR__ . '/../images/products/gallery/' . $code;
-        if (is_dir($galleryRoot)) {
-            $matches = glob($galleryRoot . '/*.{jpg,jpeg,png,webp,gif,JPG,JPEG,PNG,WEBP,GIF}', GLOB_BRACE);
-            if (is_array($matches) && !empty($matches)) {
-                usort($matches, function ($a, $b) {
-                    return strcmp((string)$a, (string)$b);
-                });
-
-                foreach ($matches as $match) {
-                    $mergeImage('images/products/gallery/' . $code . '/' . basename($match));
-                }
-            }
-        }
-
-        if (empty($images)) {
-            $images[] = 'images/products/default-product.svg';
-        }
-
-        return $images;
-    }
-}
 
 if ($category_filter) {
     $products = $product_model->getByCategory($category_filter);
@@ -138,7 +67,7 @@ if ($category_filter) {
 
             <div class="products-grid" id="products-grid">
                 <?php foreach ($products as $product): ?>
-                <?php $productImages = public_catalog_resolve_images_by_product_code((string)($product['sku'] ?? ''), $product); ?>
+                <?php $productImages = catalog_resolve_gallery_images_by_sku((string)($product['sku'] ?? ''), $product); ?>
                 <div class="product-card">
                     <div class="product-image">
                         <img src="/<?php echo htmlspecialchars($productImages[0] ?? 'images/products/default-product.svg'); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>">

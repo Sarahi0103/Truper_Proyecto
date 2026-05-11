@@ -87,6 +87,8 @@ function cache_set($key, $data, $ttl = null) {
 // Incluir base de datos
 $pdo = include __DIR__ . '/database.php';
 
+require_once __DIR__ . '/catalog_images.php';
+
 // Contacto principal para cotizaciones y dudas por WhatsApp.
 define('COMPANY_WHATSAPP_PHONE', getenv('COMPANY_WHATSAPP_PHONE') ?: '3317915887');
 

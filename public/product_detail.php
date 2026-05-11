@@ -180,7 +180,7 @@ $productDescription = decode_legacy_entities((string)($product['description'] ??
 $productTechnicalSpecs = decode_legacy_entities((string)($product['technical_specs'] ?? ''));
 $productCategory = decode_legacy_entities((string)($product['category'] ?? ''));
 $imagePath = !empty($product['image_url']) ? $product['image_url'] : 'images/products/default-product.svg';
-$galleryImages = resolve_images_by_product_code($displaySku, $product);
+$galleryImages = catalog_resolve_gallery_images_by_sku($displaySku, $product, $pdo);
 
 $variants = [];
 if (!empty($product['variants_json'])) {
