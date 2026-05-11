@@ -138,6 +138,42 @@ if (!function_exists('catalog_resolve_gallery_images_by_sku')) {
             }
         }
 
+        $skuRoots = [
+            __DIR__ . '/../public/images/products/gallery/' . $normalizedSku => 'images/products/gallery',
+            __DIR__ . '/../images/products/gallery/' . $normalizedSku => 'images/products/gallery',
+            __DIR__ . '/../public/images/products/by_code/' . $normalizedSku => 'images/products/by_code',
+            __DIR__ . '/../images/products/by_code/' . $normalizedSku => 'images/products/by_code',
+        ];
+
+        foreach ($skuRoots as $skuDir => $webPrefix) {
+            if (!is_dir($skuDir)) {
+                continue;
+            }
+
+            $matches = glob($skuDir . '/*.{jpg,jpeg,png,webp,gif,JPG,JPEG,PNG,WEBP,GIF}', GLOB_BRACE);
+            if (empty($matches) || !is_array($matches)) {
+                continue;
+            }
+
+            usort($matches, static function ($a, $b) {
+                $scoreA = catalog_gallery_image_priority_score((string)$a);
+                $scoreB = catalog_gallery_image_priority_score((string)$b);
+                if ($scoreA === $scoreB) {
+                    return strcmp((string)$a, (string)$b);
+                }
+
+                return $scoreA <=> $scoreB;
+            });
+
+            foreach ($matches as $path) {
+                $mergeImage(rtrim($webPrefix, '/') . '/' . $normalizedSku . '/' . basename((string)$path));
+            }
+
+            if (!empty($images)) {
+                return $images;
+            }
+        }
+
         if ($diskCache === null) {
             $diskCache = [];
             $roots = [
