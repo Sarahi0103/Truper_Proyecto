@@ -1105,6 +1105,14 @@ function store_product_image(array $file): string {
         throw new Exception('No se pudo crear directorio de productos: ' . $e->getMessage());
     }
 
+    $incomingHash = gallery_image_hash_admin_supply($tmp);
+    if ($incomingHash !== '') {
+        $existingImage = gallery_existing_image_by_hash_admin_supply($productsDir, $incomingHash);
+        if ($existingImage !== null) {
+            return 'images/products/' . $existingImage;
+        }
+    }
+
     // Ensure it's writable
     if (!is_writable($productsDir)) {
         @chmod($productsDir, 0777);
@@ -1124,6 +1132,10 @@ function store_product_image(array $file): string {
 
     // Ensure file has correct permissions
     @chmod($filepath, 0666);
+
+    if ($incomingHash !== '') {
+        @file_put_contents($filepath . '.sha1', $incomingHash, LOCK_EX);
+    }
 
     // Return web-accessible path
     return 'images/products/' . $filename;
@@ -1218,6 +1230,61 @@ function normalize_product_gallery_images_admin_supply(array $images): array {
     }
 
     return $normalized;
+}
+
+function gallery_image_hash_admin_supply(string $filePath): string {
+    if ($filePath === '' || !is_file($filePath) || !is_readable($filePath)) {
+        return '';
+    }
+
+    $hash = @hash_file('sha1', $filePath);
+    return is_string($hash) ? trim($hash) : '';
+}
+
+function gallery_existing_image_by_hash_admin_supply(string $galleryDir, string $hash): ?string {
+    $hash = trim($hash);
+    if ($hash === '' || !is_dir($galleryDir)) {
+        return null;
+    }
+
+    $hashFiles = glob($galleryDir . '/*.sha1');
+    if (!is_array($hashFiles)) {
+        return null;
+    }
+
+    foreach ($hashFiles as $hashFile) {
+        if (!is_file($hashFile) || !is_readable($hashFile)) {
+            continue;
+        }
+
+        $storedHash = trim((string)@file_get_contents($hashFile));
+        if ($storedHash === '' || strcasecmp($storedHash, $hash) !== 0) {
+            continue;
+        }
+
+        $imagePath = preg_replace('/\.sha1$/i', '', (string)$hashFile);
+        if ($imagePath !== '' && is_file($imagePath)) {
+            return basename($imagePath);
+        }
+    }
+
+    $imageFiles = glob($galleryDir . '/*.{jpg,jpeg,png,webp,gif,JPG,JPEG,PNG,WEBP,GIF}', GLOB_BRACE);
+    if (!is_array($imageFiles)) {
+        return null;
+    }
+
+    foreach ($imageFiles as $imageFile) {
+        if (!is_file($imageFile) || !is_readable($imageFile)) {
+            continue;
+        }
+
+        $existingHash = gallery_image_hash_admin_supply((string)$imageFile);
+        if ($existingHash !== '' && strcasecmp($existingHash, $hash) === 0) {
+            return basename((string)$imageFile);
+        }
+    }
+
+    return null;
 }
 
 function canonical_product_gallery_path_admin_supply(string $sku, string $imagePath): string {
@@ -1597,6 +1664,7 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
     // Guardar en disco: images/products/gallery/{sku}/
     $imagesRoot = images_root_admin_supply();
     $galleryDir = $imagesRoot . '/products/gallery/' . $sku;
+    $incomingHash = gallery_image_hash_admin_supply($tmp);
     
     // Use helper to create all necessary directories
     try {
@@ -1606,6 +1674,13 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
         ensure_directory_exists($galleryDir, 0777);
     } catch (Exception $e) {
         throw new Exception("Error al crear estructura de directorios: " . $e->getMessage());
+    }
+
+    if ($incomingHash !== '') {
+        $existingImage = gallery_existing_image_by_hash_admin_supply($galleryDir, $incomingHash);
+        if ($existingImage !== null) {
+            return 'images/products/gallery/' . $sku . '/' . $existingImage;
+        }
     }
 
     // Final validation
@@ -1673,15 +1748,27 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
             if (!$saved) {
                 throw new Exception("No se pudo guardar imagen procesada");
             }
+
+            if ($incomingHash !== '') {
+                @file_put_contents($destPath . '.sha1', $incomingHash, LOCK_EX);
+            }
         } else {
             // GD no pudo procesar, mover archivo directo
             if (!move_uploaded_file($tmp, $destPath)) {
                 throw new Exception("No se pudo mover archivo de imagen: " . error_get_last()['message'] ?? 'error desconocido');
             }
+
+            if ($incomingHash !== '') {
+                @file_put_contents($destPath . '.sha1', $incomingHash, LOCK_EX);
+            }
         }
     } else {
         if (!move_uploaded_file($tmp, $destPath)) {
             throw new Exception("No se pudo mover archivo de imagen (GD no disponible): " . error_get_last()['message'] ?? 'error desconocido');
+        }
+
+        if ($incomingHash !== '') {
+            @file_put_contents($destPath . '.sha1', $incomingHash, LOCK_EX);
         }
     }
     
