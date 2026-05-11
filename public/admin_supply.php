@@ -3479,12 +3479,29 @@ async function setMarketplaceGalleryCover(sku, imagePath) {
 async function deleteMarketplaceGalleryImage(sku, imagePath) {
     if (!confirm('¿Eliminar esta imagen de la galería CE?')) return;
 
+    const previousImages = Array.isArray(marketplaceGalleryCache) ? marketplaceGalleryCache.slice() : [];
+    const previousCover = marketplaceGalleryCover || previousImages[0] || '';
+
+    try {
+        const optimisticImages = previousImages.filter((image) => image !== imagePath);
+        setGalleryState('marketplace', sku, optimisticImages.slice(), optimisticImages[0] || '');
+        renderProductGallery(optimisticImages, sku, 'marketplace');
+        syncGalleryModeUi('marketplace', optimisticImages[0] || '');
+    } catch (e) {
+        console.warn('Optimistic marketplace image delete preflight failed:', e);
+    }
+
     const res = await apiCall('/admin_supply.php?action=product-gallery-delete', 'POST', {
         sku: sku,
         image: imagePath
     });
 
     if (!res || !res.success) {
+        if (previousImages.length > 0) {
+            setGalleryState('marketplace', sku, previousImages.slice(), previousCover);
+            renderProductGallery(previousImages, sku, 'marketplace');
+            syncGalleryModeUi('marketplace', previousCover);
+        }
         showGalleryResult('marketplace', (res && res.message) ? res.message : 'No se pudo eliminar la imagen CE', 'error');
         return;
     }
@@ -3702,9 +3719,19 @@ async function uploadMarketplaceImages() {
     }
 
     try {
+        const previousImages = Array.isArray(marketplaceGalleryCache) ? marketplaceGalleryCache.slice() : [];
+
         // Compress all images client-side in parallel (faster)
         const files = Array.from(input.files);
+        const previewUrls = files.map((file) => URL.createObjectURL(file));
         const uploadProgress = document.getElementById('marketplaceUploadProgress');
+
+        if (previewUrls.length > 0) {
+            setGalleryState('marketplace', sku, previewUrls.slice(), previewUrls[0] || '');
+            renderProductGallery(previewUrls, sku, 'marketplace');
+            syncGalleryModeUi('marketplace', previewUrls[0] || '');
+        }
+
         const compressedFiles = await Promise.all(
             files.map(async (file, idx) => {
                 try {
@@ -3739,6 +3766,7 @@ async function uploadMarketplaceImages() {
         });
 
         if (response.status === 401) {
+            previewUrls.forEach((url) => URL.revokeObjectURL(url));
             showGalleryResult('marketplace', 'Tu sesión de administrador expiró. Vuelve a iniciar sesión.', 'error');
             window.location.href = '/admin_login.php?error=expired&return_to=' + encodeURIComponent('/admin_supply.php');
             return false;
@@ -3748,6 +3776,13 @@ async function uploadMarketplaceImages() {
 
         const data = await response.json();
         if (!data || !data.success) {
+            previewUrls.forEach((url) => URL.revokeObjectURL(url));
+            if (previousImages.length > 0) {
+                const previousCover = previousImages[0] || '';
+                setGalleryState('marketplace', sku, previousImages.slice(), previousCover);
+                renderProductGallery(previousImages, sku, 'marketplace');
+                syncGalleryModeUi('marketplace', previousCover);
+            }
             showGalleryResult('marketplace', (data && data.message) ? data.message : 'No fue posible cargar las imágenes CE', 'error');
             return false;
         }
@@ -3762,6 +3797,7 @@ async function uploadMarketplaceImages() {
             : (data.cover ? [data.cover] : []);
         if (/^\d{5,6}$/.test(currentSku) && renderedImages.length > 0) {
             // Optimistic: update cache and render immediately
+            previewUrls.forEach((url) => URL.revokeObjectURL(url));
             setGalleryState('marketplace', currentSku, renderedImages, data.cover || renderedImages[0] || '');
             renderProductGallery(renderedImages, currentSku, 'marketplace');
             syncGalleryModeUi('marketplace', data.cover || renderedImages[0] || '');
