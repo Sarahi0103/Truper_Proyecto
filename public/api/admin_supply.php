@@ -131,29 +131,38 @@ function images_root_admin_supply(): string {
 }
 // Helper function to create directories with proper permissions
 function ensure_directory_exists($path, $perms = 0777) {
-    // Clean the path - remove any .. or .
+    // Normalize path, resolving .. and . segments safely
     $path = str_replace('\\', '/', $path);
-    $parts = array_filter(explode('/', $path), function($p) {
-        return $p !== '' && $p !== '.' && $p !== '..';
-    });
-    
-    $current = '';
+    $isAbsolute = strlen($path) > 0 && $path[0] === '/';
+    $parts = explode('/', trim($path, '/'));
+    $stack = [];
     foreach ($parts as $part) {
-        $current .= '/' . $part;
-        
+        if ($part === '' || $part === '.') continue;
+        if ($part === '..') {
+            if (!empty($stack)) array_pop($stack);
+            continue;
+        }
+        $stack[] = $part;
+    }
+
+    $normalized = ($isAbsolute ? '/' : '') . implode('/', $stack);
+    if ($normalized === '') $normalized = $isAbsolute ? '/' : '.';
+
+    $current = $isAbsolute ? '' : '';
+    $segments = explode('/', ltrim($normalized, '/'));
+    foreach ($segments as $seg) {
+        if ($seg === '') continue;
+        $current .= '/' . $seg;
         if (!is_dir($current)) {
             $mkdir_result = @mkdir($current, $perms, true);
             if (!$mkdir_result && !is_dir($current)) {
-                // If mkdir failed and directory still doesn't exist, throw error
                 throw new Exception("Could not create directory: $current");
             }
         }
-        
-        // Always try to set permissions
         @chmod($current, $perms);
     }
-    
-    return $current;
+
+    return $normalized;
 }
 
 // Normalize any image path/url to a relative path starting with images/...
@@ -2628,6 +2637,14 @@ try {
                     'is_active' => $isVisible,
                     'variants_json' => $variantsJson
                 ]);
+
+                // Ensure product gallery directory exists even if no images yet
+                try {
+                    $galleryDir = images_root_admin_supply() . '/products/gallery/' . $sku;
+                    ensure_directory_exists($galleryDir, 0777);
+                } catch (Exception $ignored) {
+                    // Non-fatal: product already created, UI will report image issues if any
+                }
 
             $response = [
                 'success' => true,
