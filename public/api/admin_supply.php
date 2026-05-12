@@ -4076,7 +4076,7 @@ try {
                     error_log('marketplace-save UPDATE error: ' . $e->getMessage());
                     $response = ['success' => false, 'message' => 'Error al actualizar artículo CE'];
                     if (($_SESSION['role'] ?? '') === 'admin') {
-                        $response['debug'] = ['sql_error' => $e->getMessage()];
+                        $response['debug'] = ['detail' => $e->getMessage()];
                     }
                     break;
                 }
@@ -4124,7 +4124,7 @@ try {
                     error_log('marketplace-save INSERT error: ' . $e->getMessage());
                     $response = ['success' => false, 'message' => 'Error al crear artículo CE'];
                     if (($_SESSION['role'] ?? '') === 'admin') {
-                        $response['debug'] = ['sql_error' => $e->getMessage()];
+                        $response['debug'] = ['detail' => $e->getMessage()];
                     }
                     break;
                 }
@@ -4149,7 +4149,7 @@ try {
                     // Non-fatal: insertion succeeded; visibility attempt failed.
                     if (($_SESSION['role'] ?? '') === 'admin') {
                         if (!isset($response)) $response = [];
-                        $response['visibility_debug'] = $e->getMessage();
+                        $response['debug'] = ['detail' => $e->getMessage()];
                     }
                 }
                 
