@@ -6,11 +6,16 @@
     RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
     RewriteRule ^(.*)$ http://%1/$1 [R=301,L]
     
-    # Permitir archivos y directorios existentes
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    
-    # Redirigir todas las solicitudes a index.php
+    # Servir archivos y directorios existentes sin reescribir
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Mantener rutas históricas sin /public para assets y páginas
+    RewriteRule ^(css|js|images|img)/(.*)$ public/$1/$2 [L]
+    RewriteRule ^(admin_supply|marketplace_ce|cart|orders|product_detail|admin_login|login|register|dashboard|health)\.php$ public/$0 [L]
+
+    # Fallback de aplicación
     RewriteRule ^(.*)$ index.php [L]
 </IfModule>
 
