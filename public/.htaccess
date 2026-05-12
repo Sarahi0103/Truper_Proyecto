@@ -5,8 +5,8 @@
     Options -Indexes
     
     # Excluir explícitamente archivos PHP que NO deben redirigirse
-    RewriteCond %{REQUEST_URI} ^/(marketplace_ce|admin_supply|admin_login|orders|dashboard|profile|cashier|wholesale|tasks|analytics|test-ce)\.php$ [NC]
-    RewriteRule ^ - [L]
+        # Permitir acceso a TODOS los archivos .php sin redirigir
+        RewriteRule \.php$ - [L]
     
     # Permitir acceso a directorios existentes
     RewriteCond %{REQUEST_FILENAME} -d
