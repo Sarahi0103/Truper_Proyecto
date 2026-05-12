@@ -4133,18 +4133,26 @@ try {
                 $stmt = $pdo->prepare("DELETE FROM marketplace_ce_products WHERE id = ?");
                 $stmt->execute([$id]);
                 
-                // Clean gallery directory if empty
+                // Clean gallery directory - use robust deletion
+                $deletedDir = 0;
                 if (!empty($sku) && is_valid_numeric_sku_admin_supply($sku)) {
-                    $galleryDir = images_root_admin_supply() . '/products/gallery/' . $sku;
-                    if (is_dir($galleryDir)) {
-                        $files = @scandir($galleryDir);
-                        if (is_array($files) && count(array_diff($files, ['.', '..'])) === 0) {
-                            @rmdir($galleryDir);
+                    // Check if this SKU still exists in products table
+                    $stmt = $pdo->prepare("SELECT id FROM products WHERE sku = ? LIMIT 1");
+                    $stmt->execute([$sku]);
+                    $still_in_products = $stmt->fetchColumn() !== false;
+                    
+                    // Only delete directory if SKU is NOT in products table anymore
+                    if (!$still_in_products) {
+                        $galleryDir = images_root_admin_supply() . '/products/gallery/' . $sku;
+                        if (is_dir($galleryDir)) {
+                            if (remove_directory_recursive_admin_supply($galleryDir)) {
+                                $deletedDir = 1;
+                            }
                         }
                     }
                 }
                 
-                $response = ['success' => true, 'message' => 'Artículo CE eliminado definitivamente', 'sku' => $sku];
+                $response = ['success' => true, 'message' => 'Artículo CE eliminado definitivamente', 'sku' => $sku, 'directory_deleted' => $deletedDir];
             } catch (PDOException $e) {
                 if ($e->getCode() === '23503') {
                     $response = ['success' => false, 'message' => 'No se puede eliminar porque este artículo tiene historial asociado.'];
