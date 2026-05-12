@@ -10,13 +10,10 @@
     RewriteCond %{REQUEST_FILENAME} -f [OR]
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
-
-    # Mantener rutas históricas sin /public para assets y páginas
-    RewriteRule ^(css|js|images|img)/(.*)$ public/$1/$2 [L]
-    RewriteRule ^(admin_supply|marketplace_ce|cart|orders|product_detail|admin_login|login|register|dashboard|health)\.php$ public/$0 [L]
-
-    # Fallback de aplicación
-    RewriteRule ^(.*)$ index.php [L]
+    
+    # Si Document Root es public/, no necesitamos reescribir a public/
+    # Los archivos están siendo servidos directamente desde public/
+    # por lo que las rutas ya son correctas
 </IfModule>
 
 # Desabilitar listado de directorios
