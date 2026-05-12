@@ -1,9 +1,26 @@
 <?php
-// Routing fallback: if request is for marketplace_ce, serve that file
-$requestUri = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
-if (preg_match('/marketplace_ce/i', (string)$requestUri)) {
-    if (file_exists(__DIR__ . '/marketplace_ce.php')) {
-        require_once __DIR__ . '/marketplace_ce.php';
+// Failsafe for hosting rewrites: serve known static assets if this request was routed to index.php.
+$requestPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+if (preg_match('#^/(css|js|images|img)/#', $requestPath) === 1 || preg_match('#\.(css|js|png|jpe?g|gif|webp|svg)$#i', $requestPath) === 1) {
+    $assetPath = __DIR__ . '/' . ltrim($requestPath, '/');
+    $assetReal = realpath($assetPath);
+    $publicReal = realpath(__DIR__);
+
+    if ($assetReal !== false && $publicReal !== false && strpos($assetReal, $publicReal) === 0 && is_file($assetReal)) {
+        $ext = strtolower(pathinfo($assetReal, PATHINFO_EXTENSION));
+        $mimeMap = [
+            'css' => 'text/css; charset=UTF-8',
+            'js' => 'application/javascript; charset=UTF-8',
+            'png' => 'image/png',
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'gif' => 'image/gif',
+            'webp' => 'image/webp',
+            'svg' => 'image/svg+xml',
+        ];
+        header('Content-Type: ' . ($mimeMap[$ext] ?? 'application/octet-stream'));
+        header('Cache-Control: public, max-age=2592000');
+        readfile($assetReal);
         exit;
     }
 }
