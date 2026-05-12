@@ -29,7 +29,7 @@ try {
         $productsVisibilityWhere = " WHERE active = 1 AND sku ~ '^[0-9]{5,6}$'";
     }
 
-    $stmtCe = $pdo->prepare("SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category, description, technical_specs, stock_quantity, image_url, variants_json FROM products" . $productsVisibilityWhere . " ORDER BY name LIMIT 300");
+    $stmtCe = $pdo->prepare("SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category, description, condition_label, stock_quantity, image_url, variants_json FROM marketplace_ce_products" . $productsVisibilityWhere . " ORDER BY name LIMIT 300");
     $stmtCe->execute();
     $marketplaceItems = $stmtCe->fetchAll();
 
@@ -105,9 +105,9 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
         }
     }
 
-    if (empty($images) && isset($pdo) && $pdo instanceof PDO && db_table_exists('products')) {
+    if (empty($images) && isset($pdo) && $pdo instanceof PDO && db_table_exists('marketplace_ce_products')) {
         try {
-            $stmt = $pdo->prepare("SELECT image_url, variants_json FROM products WHERE sku = ? OR sku LIKE ? LIMIT 1");
+            $stmt = $pdo->prepare("SELECT image_url, variants_json FROM marketplace_ce_products WHERE sku = ? OR sku LIKE ? LIMIT 1");
             $stmt->execute([$sku, "%{$sku}%"]);
             $productRow = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
