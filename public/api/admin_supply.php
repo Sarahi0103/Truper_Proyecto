@@ -2560,14 +2560,27 @@ try {
 
             $imageUrl = sanitize($_POST['image_url'] ?? ($input['image_url'] ?? 'images/products/default-product.svg'));
             if (isset($_FILES['image'])) {
-                $imageUrl = store_product_image($_FILES['image']);
+                $imageUrl = store_product_image_for_sku_admin_supply($_FILES['image'], $sku);
             } elseif (isset($_FILES['images']) && is_array($_FILES['images']['name'] ?? null)) {
                 $uploadedFiles = normalize_uploaded_files($_FILES['images']);
                 foreach ($uploadedFiles as $uploadedFile) {
                     if (($uploadedFile['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
-                        $imageUrl = store_product_image($uploadedFile);
+                        $imageUrl = store_product_image_for_sku_admin_supply($uploadedFile, $sku);
                         break;
                     }
+                }
+            }
+
+            $finalGallery = [];
+            if (!empty($galleryImages)) {
+                $finalGallery = $galleryImages;
+            } elseif ($imageUrl !== '' && strcasecmp($imageUrl, 'images/products/default-product.svg') !== 0) {
+                $finalGallery = [$imageUrl];
+            }
+            if (!empty($finalGallery)) {
+                $persistedGallery = persist_product_gallery_images_admin_supply($pdo, $sku, $finalGallery);
+                if (!empty($persistedGallery)) {
+                    $imageUrl = $persistedGallery[0] ?? $imageUrl;
                 }
             }
 
@@ -2674,8 +2687,10 @@ try {
                 }
 
                     // Use the current gallery on disk as the source of truth during edits.
-                    // If the gallery was cleared, persist that state instead of restoring old images.
-                    $finalGallery = $galleryImages;
+                    // If there is no disk gallery, keep the selected image_url instead of reverting to default.
+                    $finalGallery = !empty($galleryImages)
+                        ? $galleryImages
+                        : (!empty($imageUrl) && strcasecmp($imageUrl, 'images/products/default-product.svg') !== 0 ? [$imageUrl] : []);
                     $variantsJson = json_encode($finalGallery, JSON_UNESCAPED_UNICODE);
 
                     $finalImageUrl = !empty($finalGallery)
@@ -2729,8 +2744,10 @@ try {
                 break;
             }
 
-                // Use gallery images from disk, or fallback to just image_url
-                $finalGallery = !empty($galleryImages) ? $galleryImages : [$imageUrl];
+                // Use gallery images from disk, or fallback to the selected image_url.
+                $finalGallery = !empty($galleryImages)
+                    ? $galleryImages
+                    : (!empty($imageUrl) && strcasecmp($imageUrl, 'images/products/default-product.svg') !== 0 ? [$imageUrl] : []);
                 $variantsJson = json_encode($finalGallery, JSON_UNESCAPED_UNICODE);
             
                 create_product_compatible($pdo, [
@@ -3966,7 +3983,7 @@ try {
 
             $imageUrl = sanitize($_POST['image_url'] ?? ($input['image_url'] ?? 'images/products/default-product.svg'));
             if (isset($_FILES['image']) && ($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
-                $imageUrl = store_product_image($_FILES['image']);
+                $imageUrl = store_product_image_for_sku_admin_supply($_FILES['image'], $sku);
             }
 
             if ($id > 0) {
