@@ -1,32 +1,28 @@
-# Configuración de Apache - Routing correcto para todas las rutas PHP
+# Configuración de Apache - Routing para todas las páginas y APIs
 <IfModule mod_rewrite.c>
     RewriteEngine On
     DirectoryIndex index.php
     Options -Indexes
     
-    # Si la solicitud es a /images/* y no existe, devolver 404 en lugar de redirigir a index.php
+    # Si la solicitud es a /images/* y no existe, devolver 404
     RewriteCond %{REQUEST_URI} ^/images/ [NC]
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ - [L,R=404]
 
-    # Permitir que archivos reales se sirvan sin reescritura
+    # PRIMERO: Permitir que archivos reales se sirvan directamente
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [L]
     
-    # Permitir que directorios reales se sirvan sin reescritura
+    # SEGUNDO: Permitir que directorios reales se sirvan directamente
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
     
-    # Rutas específicas que NO deben ir a index.php
-    RewriteRule ^(marketplace_ce|admin_login|cart|orders|product_detail|admin_supply|login|register|dashboard|checkout|my_tickets|profile|account|tickets|analytics|wholesale|cashier|order_confirmation)\.php$ - [L]
-    
-    # API routes
-    RewriteRule ^api/ - [L]
-    
-    # Si la solicitud no es un archivo o carpeta, redirigir a index.php (solo para rutas dinámicas)
+    # TERCERO: Solo reescribir solicitudes dinámicas desconocidas a index.php
+    # NO toques /api/, archivos .js, .css, .svg, u otros archivos estáticos
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} !^/api/
     RewriteRule ^(.*)$ index.php [L]
 </IfModule>
 
