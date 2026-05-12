@@ -27,6 +27,16 @@ PERSIST_DIR="/var/www/data/images"
 if [ -d "${PERSIST_DIR}" ]; then
   echo "Using persistent images dir: ${PERSIST_DIR}"
   mkdir -p "${PERSIST_DIR}/products/gallery"
+
+  # Preserve static assets used by the UI.
+  if [ -f "/var/www/html/public/images/truper-logo.svg" ] && [ ! -f "${PERSIST_DIR}/truper-logo.svg" ]; then
+    cp "/var/www/html/public/images/truper-logo.svg" "${PERSIST_DIR}/truper-logo.svg"
+  fi
+  if [ -f "/var/www/html/public/images/products/default-product.svg" ] && [ ! -f "${PERSIST_DIR}/products/default-product.svg" ]; then
+    mkdir -p "${PERSIST_DIR}/products"
+    cp "/var/www/html/public/images/products/default-product.svg" "${PERSIST_DIR}/products/default-product.svg"
+  fi
+
   chown -R www-data:www-data "${PERSIST_DIR}"
   rm -rf /var/www/html/public/images || true
   ln -s "${PERSIST_DIR}" /var/www/html/public/images
