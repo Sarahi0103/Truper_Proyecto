@@ -4070,7 +4070,16 @@ try {
 
                 $values[] = $id;
                 $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET ' . implode(', ', $sets) . ' WHERE id = ?');
-                $stmt->execute($values);
+                try {
+                    $stmt->execute($values);
+                } catch (PDOException $e) {
+                    error_log('marketplace-save UPDATE error: ' . $e->getMessage());
+                    $response = ['success' => false, 'message' => 'Error al actualizar artículo CE'];
+                    if (($_SESSION['role'] ?? '') === 'admin') {
+                        $response['debug'] = ['sql_error' => $e->getMessage()];
+                    }
+                    break;
+                }
 
                 // Keep gallery route available for CE SKU even when no upload happened in this request.
                 try {
@@ -4109,7 +4118,16 @@ try {
                 if ($mkActiveCol !== null) { $columns[] = $mkActiveCol; $placeholders[] = '?'; $values[] = $isActive ? 1 : 0; }
 
                 $stmt = $pdo->prepare('INSERT INTO marketplace_ce_products (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ')');
-                $stmt->execute($values);
+                try {
+                    $stmt->execute($values);
+                } catch (PDOException $e) {
+                    error_log('marketplace-save INSERT error: ' . $e->getMessage());
+                    $response = ['success' => false, 'message' => 'Error al crear artículo CE'];
+                    if (($_SESSION['role'] ?? '') === 'admin') {
+                        $response['debug'] = ['sql_error' => $e->getMessage()];
+                    }
+                    break;
+                }
 
                 // Ensure gallery route exists for newly created CE items.
                 try {
@@ -4122,10 +4140,18 @@ try {
                 // If insertion succeeded and we have is_active column issue, ensure it's set
                 try {
                     $lastId = $pdo->lastInsertId('marketplace_ce_products_id_seq');
-                    if ($lastId && $mkActiveCol === null) {
+                    if ($lastId) {
+                        // Ensure visibility is set even if the table lacks an active column
                         set_marketplace_visibility_compatible($pdo, (int)$lastId, $isActive);
                     }
-                } catch (Exception $ignored) {}
+                } catch (Exception $e) {
+                    error_log('marketplace-save set visibility error: ' . $e->getMessage());
+                    // Non-fatal: insertion succeeded; visibility attempt failed.
+                    if (($_SESSION['role'] ?? '') === 'admin') {
+                        if (!isset($response)) $response = [];
+                        $response['visibility_debug'] = $e->getMessage();
+                    }
+                }
                 
                 $response = ['success' => true, 'message' => 'Artículo CE creado'];
             }
