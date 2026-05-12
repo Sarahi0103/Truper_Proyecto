@@ -1,5 +1,5 @@
 # Configuración de Apache
-<IfModule mod_rewrite.c">
+<IfModule mod_rewrite.c>
     RewriteEngine On
     DirectoryIndex index.php
     Options -Indexes
@@ -10,16 +10,19 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ - [L,R=404]
 
-    # Permitir archivos PHP reales
+    # NO redirigir si es un archivo real existente
     RewriteCond %{REQUEST_FILENAME} -f
-    RewriteCond %{REQUEST_FILENAME} \.php$ [NC]
+    RewriteRule ^ - [L]
+    
+    # NO redirigir si es un directorio existente
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+    
+    # NO redirigir si termina con .php
+    RewriteCond %{REQUEST_URI} \.php$ [NC]
     RewriteRule ^ - [L]
 
-    # Si la solicitud no es un archivo o carpeta, redirigir a index.php
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_URI} !^/api/ [NC]
-    RewriteCond %{REQUEST_FILENAME} !\.php$ [NC]
+    # Redirigir TODO lo demás a index.php
     RewriteRule ^(.*)$ index.php [L]
 </IfModule>
 
