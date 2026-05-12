@@ -18,14 +18,14 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
 $marketplaceItems = [];
 $allCategories    = [];
 try {
-    $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS technical_specs TEXT");
-    $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url TEXT");
-    $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS variants_json TEXT");
+    $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS image_url TEXT");
+    $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS variants_json TEXT");
+    $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS condition_label VARCHAR(80) DEFAULT 'Seminuevo'");
 
     $productsVisibilityWhere = '';
-    if (db_column_exists('products', 'is_active')) {
+    if (db_column_exists('marketplace_ce_products', 'is_active')) {
         $productsVisibilityWhere = " WHERE (CASE WHEN is_active IS NULL THEN 1 WHEN LOWER(CAST(is_active AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1 AND sku ~ '^[0-9]{5,6}$'";
-    } elseif (db_column_exists('products', 'active')) {
+    } elseif (db_column_exists('marketplace_ce_products', 'active')) {
         $productsVisibilityWhere = " WHERE active = 1 AND sku ~ '^[0-9]{5,6}$'";
     }
 
@@ -311,15 +311,15 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
                     $itemSku   = htmlspecialchars((string)$item['sku'], ENT_QUOTES, 'UTF-8');
                     $itemName  = htmlspecialchars((string)$item['name'], ENT_QUOTES, 'UTF-8');
                     $itemDesc  = htmlspecialchars((string)$item['description'], ENT_QUOTES, 'UTF-8');
-                    $itemCond  = htmlspecialchars((string)($item['condition_label'] ?? 'Abastecimiento'), ENT_QUOTES, 'UTF-8');
-                    $itemCat   = htmlspecialchars((string)($item['category'] ?? 'Abastecimiento'), ENT_QUOTES, 'UTF-8');
+                    $itemCond  = htmlspecialchars((string)($item['condition_label'] ?? 'Seminuevo'), ENT_QUOTES, 'UTF-8');
+                    $itemCat   = htmlspecialchars((string)($item['category'] ?? 'Marketplace CE'), ENT_QUOTES, 'UTF-8');
                     $itemImg   = htmlspecialchars((string)($item['image_url'] ?: 'images/products/default-product.svg'), ENT_QUOTES, 'UTF-8');
                     $itemPrice = (float)($item['unit_price'] ?? 0);
                     $itemStock = (int)($item['stock_quantity'] ?? 0);
                     $stockClass = $itemStock <= 2 ? 'stock-low' : 'stock-ok';
                     $stockLabel = $itemStock <= 2 ? 'Pocas piezas: ' : 'Disponibles: ';
                     
-                    $images = catalog_resolve_gallery_images_by_sku((string)($item['sku'] ?? ''), $item, $pdo);
+                    $images = marketplace_ce_gallery_images_by_sku((string)($item['sku'] ?? ''), $item);
                     // 2) Fallback: variants_json (puede ser base64 o rutas)
                     if (empty($images) && !empty($item['variants_json'])) {
                         $parsed = json_decode($item['variants_json'], true);

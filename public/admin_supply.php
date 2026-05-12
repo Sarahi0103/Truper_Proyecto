@@ -667,14 +667,14 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     <div id="marketplaceGalleryList" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:0.6rem; margin-top:0.6rem;"></div>
                 </div>
 
-                <div class="d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap;">
-                    <button class="btn btn-primary" type="button" id="marketplaceSaveButton" onclick="saveMarketplaceCeByAdmin()">Guardar artículo CE</button>
-                    <button class="btn btn-secondary" type="button" onclick="resetMarketplaceForm()">Cancelar</button>
-                </div>
-
                 <div class="admin-preview-wrap">
                     <p class="admin-list-caption">Vista previa (estilo portada):</p>
                     <div id="marketplacePreviewHost" class="catalog-grid-min"></div>
+                </div>
+
+                <div class="d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap; margin-top: 0.75rem;">
+                    <button class="btn btn-primary" type="button" id="marketplaceSaveButton" onclick="saveMarketplaceCeByAdmin()">Guardar artículo CE</button>
+                    <button class="btn btn-secondary" type="button" onclick="resetMarketplaceForm()">Cancelar</button>
                 </div>
 
                 <div id="marketplaceResult" class="mt-2"></div>
