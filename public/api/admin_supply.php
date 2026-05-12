@@ -129,6 +129,20 @@ function images_root_admin_supply(): string {
         return $preferredPath;
     }
 }
+
+function image_storage_roots_admin_supply(): array {
+    $roots = [images_root_admin_supply()];
+
+    $publicDir = dirname(__DIR__);
+    $legacyPath = dirname($publicDir) . '/images';
+    $roots[] = $legacyPath;
+
+    $roots = array_values(array_unique(array_filter($roots, static function ($path) {
+        return is_string($path) && $path !== '';
+    })));
+
+    return $roots;
+}
 // Helper function to create directories with proper permissions
 function ensure_directory_exists($path, $perms = 0777) {
     // Normalize path, resolving .. and . segments safely
@@ -1503,30 +1517,37 @@ function delete_product_gallery_file_admin_supply(string $sku, string $imagePath
         return;
     }
 
-    // Candidate paths to attempt deletion
-    $candidates = [
-        images_root_admin_supply() . '/products/gallery/' . $sku . '/' . $filename,
-        images_root_admin_supply() . '/products/by_code/' . $sku . '/' . $filename,
-    ];
+    // Candidate paths to attempt deletion across all storage roots
+    $candidates = [];
+    foreach (image_storage_roots_admin_supply() as $imagesRoot) {
+        $candidates[] = $imagesRoot . '/products/gallery/' . $sku . '/' . $filename;
+        $candidates[] = $imagesRoot . '/products/by_code/' . $sku . '/' . $filename;
+    }
 
     // If we got a relative path, try it directly as well.
     if ($relative !== '') {
         $relativeUnderImages = preg_replace('#^images/#', '', $relative);
-        $candidates[] = images_root_admin_supply() . '/' . ltrim((string)$relativeUnderImages, '/');
-    }
-
-    // Also attempt deleting any file that ends with the filename under gallery dirs.
-    $wildGallery = glob(images_root_admin_supply() . '/products/gallery/' . $sku . '/*' . $filename);
-    if (is_array($wildGallery)) {
-        foreach ($wildGallery as $wf) {
-            $candidates[] = $wf;
+        foreach (image_storage_roots_admin_supply() as $imagesRoot) {
+            $candidates[] = $imagesRoot . '/' . ltrim((string)$relativeUnderImages, '/');
         }
     }
 
-    $wildLegacy = glob(images_root_admin_supply() . '/products/by_code/' . $sku . '/*' . $filename);
-    if (is_array($wildLegacy)) {
-        foreach ($wildLegacy as $wf) {
-            $candidates[] = $wf;
+    // Also attempt deleting any file that ends with the filename under gallery dirs.
+    foreach (image_storage_roots_admin_supply() as $imagesRoot) {
+        $wildGallery = glob($imagesRoot . '/products/gallery/' . $sku . '/*' . $filename);
+        if (is_array($wildGallery)) {
+            foreach ($wildGallery as $wf) {
+                $candidates[] = $wf;
+            }
+        }
+    }
+
+    foreach (image_storage_roots_admin_supply() as $imagesRoot) {
+        $wildLegacy = glob($imagesRoot . '/products/by_code/' . $sku . '/*' . $filename);
+        if (is_array($wildLegacy)) {
+            foreach ($wildLegacy as $wf) {
+                $candidates[] = $wf;
+            }
         }
     }
 
@@ -1784,6 +1805,30 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
     
     if (!is_file($destPath)) {
         throw new Exception("Archivo de imagen no se guardó correctamente");
+    }
+
+    foreach (image_storage_roots_admin_supply() as $mirrorRoot) {
+        if ($mirrorRoot === $imagesRoot) {
+            continue;
+        }
+
+        $mirrorDir = $mirrorRoot . '/products/gallery/' . $sku;
+        try {
+            ensure_directory_exists($mirrorRoot, 0777);
+            ensure_directory_exists($mirrorRoot . '/products', 0777);
+            ensure_directory_exists($mirrorRoot . '/products/gallery', 0777);
+            ensure_directory_exists($mirrorDir, 0777);
+        } catch (Exception $e) {
+            continue;
+        }
+
+        $mirrorPath = $mirrorDir . '/' . $filename;
+        if ($mirrorPath !== $destPath) {
+            @copy($destPath, $mirrorPath);
+            if ($incomingHash !== '') {
+                @copy($destPath . '.sha1', $mirrorPath . '.sha1');
+            }
+        }
     }
 
     return 'images/products/gallery/' . $sku . '/' . $filename;
@@ -2889,13 +2934,13 @@ try {
                     // Step 5: Clean gallery directories if empty
                     $deletedDirs = 0;
                     if (!empty($sku) && is_valid_numeric_sku_admin_supply($sku)) {
-                        $galleryDirs = [
-                            images_root_admin_supply() . '/products/gallery/' . $sku,
-                            images_root_admin_supply() . '/products/by_code/' . $sku,
-                        ];
-                        foreach ($galleryDirs as $galleryDir) {
-                            if (is_dir($galleryDir)) {
-                                if (remove_directory_recursive_admin_supply($galleryDir)) {
+                        foreach (image_storage_roots_admin_supply() as $imagesRoot) {
+                            $galleryDirs = [
+                                $imagesRoot . '/products/gallery/' . $sku,
+                                $imagesRoot . '/products/by_code/' . $sku,
+                            ];
+                            foreach ($galleryDirs as $galleryDir) {
+                                if (is_dir($galleryDir) && remove_directory_recursive_admin_supply($galleryDir)) {
                                     $deletedDirs++;
                                 }
                             }
@@ -4143,10 +4188,10 @@ try {
                     
                     // Only delete directory if SKU is NOT in products table anymore
                     if (!$still_in_products) {
-                        $galleryDir = images_root_admin_supply() . '/products/gallery/' . $sku;
-                        if (is_dir($galleryDir)) {
-                            if (remove_directory_recursive_admin_supply($galleryDir)) {
-                                $deletedDir = 1;
+                        foreach (image_storage_roots_admin_supply() as $imagesRoot) {
+                            $galleryDir = $imagesRoot . '/products/gallery/' . $sku;
+                            if (is_dir($galleryDir) && remove_directory_recursive_admin_supply($galleryDir)) {
+                                $deletedDir++;
                             }
                         }
                     }
