@@ -22,14 +22,37 @@ try {
     $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS variants_json TEXT");
     $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS condition_label VARCHAR(80) DEFAULT 'Seminuevo'");
 
-    $productsVisibilityWhere = '';
-    if (db_column_exists('marketplace_ce_products', 'is_active')) {
-        $productsVisibilityWhere = " WHERE (CASE WHEN is_active IS NULL THEN 1 WHEN LOWER(CAST(is_active AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1 AND sku ~ '^[0-9]{5,6}$'";
-    } elseif (db_column_exists('marketplace_ce_products', 'active')) {
-        $productsVisibilityWhere = " WHERE active = 1 AND sku ~ '^[0-9]{5,6}$'";
+    $hasUnitPrice = db_column_exists('marketplace_ce_products', 'unit_price');
+    $hasSellPrice = db_column_exists('marketplace_ce_products', 'sell_price');
+    $priceExpr = '0';
+    if ($hasUnitPrice && $hasSellPrice) {
+        $priceExpr = 'COALESCE(unit_price, sell_price, 0)';
+    } elseif ($hasUnitPrice) {
+        $priceExpr = 'COALESCE(unit_price, 0)';
+    } elseif ($hasSellPrice) {
+        $priceExpr = 'COALESCE(sell_price, 0)';
     }
 
-    $stmtCe = $pdo->prepare("SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category, description, condition_label, stock_quantity, image_url, variants_json FROM marketplace_ce_products" . $productsVisibilityWhere . " ORDER BY name LIMIT 300");
+    $nameExpr = db_column_exists('marketplace_ce_products', 'name') ? 'name' : "''";
+    $skuExpr = db_column_exists('marketplace_ce_products', 'sku') ? 'sku' : "''";
+    $categoryExpr = db_column_exists('marketplace_ce_products', 'category') ? 'category' : "'Marketplace CE'";
+    $descriptionExpr = db_column_exists('marketplace_ce_products', 'description') ? 'description' : "''";
+    $conditionExpr = db_column_exists('marketplace_ce_products', 'condition_label') ? 'condition_label' : "'Seminuevo'";
+    $stockExpr = db_column_exists('marketplace_ce_products', 'stock_quantity') ? 'stock_quantity' : '0';
+    $imageExpr = db_column_exists('marketplace_ce_products', 'image_url') ? 'image_url' : "'images/products/default-product.svg'";
+    $variantsExpr = db_column_exists('marketplace_ce_products', 'variants_json') ? 'variants_json' : "'[]'";
+
+    $productsVisibilityWhere = '';
+    if (db_column_exists('marketplace_ce_products', 'is_active')) {
+        $productsVisibilityWhere = " WHERE (CASE WHEN is_active IS NULL THEN 1 WHEN LOWER(CAST(is_active AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1 AND {$skuExpr} ~ '^[0-9]{5,6}$'";
+    } elseif (db_column_exists('marketplace_ce_products', 'active')) {
+        $productsVisibilityWhere = " WHERE active = 1 AND {$skuExpr} ~ '^[0-9]{5,6}$'";
+    } else {
+        $productsVisibilityWhere = " WHERE {$skuExpr} ~ '^[0-9]{5,6}$'";
+    }
+
+    $sqlCe = "SELECT id, {$nameExpr} AS name, {$skuExpr} AS sku, {$priceExpr} AS unit_price, {$categoryExpr} AS category, {$descriptionExpr} AS description, {$conditionExpr} AS condition_label, {$stockExpr} AS stock_quantity, {$imageExpr} AS image_url, {$variantsExpr} AS variants_json FROM marketplace_ce_products" . $productsVisibilityWhere . " ORDER BY name LIMIT 300";
+    $stmtCe = $pdo->prepare($sqlCe);
     $stmtCe->execute();
     $marketplaceItems = $stmtCe->fetchAll();
 

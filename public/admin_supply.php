@@ -1085,7 +1085,7 @@ async function validateSkuAvailability(kind, options = {}) {
             return false;
         }
 
-        setSkuStatus(statusId, 'Validación local aplicada (servidor no disponible).', 'warning');
+        setSkuStatus(statusId, 'Validación local aplicada temporalmente. Puedes continuar y guardar.', 'muted');
         return true;
     }
 
