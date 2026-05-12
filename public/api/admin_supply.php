@@ -4028,15 +4028,17 @@ try {
             $usage = sku_usage_admin_supply($pdo, $sku, $id);
             $sameRecord = record_matches_normalized_sku_admin_supply($pdo, 'marketplace_ce_products', $id, $sku);
             $seedConflict = $usage['in_seed'] && !$sameRecord;
-            if ($usage['in_products'] || $usage['in_marketplace'] || $seedConflict) {
-                $response = [
-                    'success' => false,
-                    'message' => $usage['in_marketplace']
-                        ? 'Ya existe un artículo CE con ese código'
-                        : ($usage['in_products']
-                            ? 'Ese código ya está registrado en productos'
-                            : 'Ese código ya existe en el catálogo base')
-                ];
+
+            // Marketplace CE must be unique inside marketplace_ce_products
+            if ($usage['in_marketplace'] && !$sameRecord) {
+                $response = [ 'success' => false, 'message' => 'Ya existe un artículo CE con ese código' ];
+                break;
+            }
+
+            // Do NOT block if the SKU exists in the regular `products` table — CE and Stock are independent
+            // But block if SKU is present in the seed catalog and it's not the same record
+            if ($seedConflict) {
+                $response = [ 'success' => false, 'message' => 'Ese código ya existe en el catálogo base' ];
                 break;
             }
 
