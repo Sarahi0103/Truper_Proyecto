@@ -10,19 +10,22 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ - [L,R=404]
 
-    # PRIMERO: Permitir que archivos reales se sirvan directamente
+    # NO REESCRIBIR - Archivos PHP conocidos que deben servirse directamente
+    RewriteRule ^(marketplace_ce|admin_login|cart|orders|product_detail|admin_supply|login|register|dashboard|checkout|my_tickets|profile|account|tickets|analytics|wholesale|cashier|order_confirmation|health)\.php$ - [L]
+    
+    # NO REESCRIBIR - Archivos reales  
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [L]
     
-    # SEGUNDO: Permitir que directorios reales se sirvan directamente
+    # NO REESCRIBIR - Directorios reales
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
     
-    # TERCERO: Solo reescribir solicitudes dinámicas desconocidas a index.php
-    # NO toques /api/, archivos .js, .css, .svg, u otros archivos estáticos
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_URI} !^/api/
+    # NO REESCRIBIR - API
+    RewriteCond %{REQUEST_URI} ^/api/ [NC]
+    RewriteRule ^ - [L]
+    
+    # Reescribir todo lo demás a index.php (solo solicitudes dinámicas desconocidas)
     RewriteRule ^(.*)$ index.php [L]
 </IfModule>
 
