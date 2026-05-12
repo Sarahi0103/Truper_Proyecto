@@ -21,10 +21,21 @@ sed -ri "s#^[[:space:]]*<Directory .*#    <Directory ${APP_ROOT}/>#" /etc/apache
 
 # Initialize image directories
 echo "Initializing image directories..."
-mkdir -p /var/www/html/public/images/products/gallery
-chmod 777 /var/www/html/public/images/products/gallery 2>/dev/null || true
-chmod 777 /var/www/html/public/images/products 2>/dev/null || true
-chmod 777 /var/www/html/public/images 2>/dev/null || true
+PERSIST_DIR="/var/www/data/images"
+
+# If a persistent host-mounted directory is available, use it for images
+if [ -d "${PERSIST_DIR}" ]; then
+  echo "Using persistent images dir: ${PERSIST_DIR}"
+  mkdir -p "${PERSIST_DIR}/products/gallery"
+  chown -R www-data:www-data "${PERSIST_DIR}"
+  rm -rf /var/www/html/public/images || true
+  ln -s "${PERSIST_DIR}" /var/www/html/public/images
+else
+  mkdir -p /var/www/html/public/images/products/gallery
+  chmod 777 /var/www/html/public/images/products/gallery 2>/dev/null || true
+  chmod 777 /var/www/html/public/images/products 2>/dev/null || true
+  chmod 777 /var/www/html/public/images 2>/dev/null || true
+fi
 
 # Execute init script if available
 if [ -f "/var/www/html/init_dirs.sh" ]; then
