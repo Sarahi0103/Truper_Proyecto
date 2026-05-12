@@ -4,23 +4,22 @@
     DirectoryIndex index.php
     Options -Indexes
     
-    # Excluir explícitamente archivos PHP que NO deben redirigirse
-        # Permitir acceso a TODOS los archivos .php sin redirigir
-        RewriteRule \.php$ - [L]
-    
     # Permitir acceso a directorios existentes
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
     
-    # Permitir acceso a archivos existentes (CSS, JS, imágenes, etc.)
+    # Permitir acceso a archivos existentes (CSS, JS, imágenes, PHP, etc.)
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [L]
+    
+    # Explícitamente permitir estos archivos PHP principales
+    RewriteRule ^(marketplace_ce\.php|admin_supply\.php|check_images\.php|index\.php|cart\.php|orders\.php)$ - [L]
     
     # Si la solicitud es a /images/* y no existe, devolver 404
     RewriteCond %{REQUEST_URI} ^/images/ [NC]
     RewriteRule ^ - [L,R=404]
 
-    # Redirigir TODO lo demás a index.php
+    # Redirigir TODO lo demás a index.php (para SPA/routing)
     RewriteRule ^ index.php [L]
 </IfModule>
 

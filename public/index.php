@@ -1,4 +1,13 @@
 <?php
+// Routing fallback: if request is for marketplace_ce, serve that file
+$requestUri = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+if (preg_match('/marketplace_ce/i', (string)$requestUri)) {
+    if (file_exists(__DIR__ . '/marketplace_ce.php')) {
+        require_once __DIR__ . '/marketplace_ce.php';
+        exit;
+    }
+}
+
 require_once '../config/config.php';
 
 ensure_xlsx_products_seeded();
