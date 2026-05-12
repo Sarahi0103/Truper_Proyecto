@@ -1537,28 +1537,38 @@ function delete_product_gallery_file_admin_supply(string $sku, string $imagePath
     }
 }
 
-function remove_directory_recursive_admin_supply(string $dirPath): void {
+function remove_directory_recursive_admin_supply(string $dirPath): bool {
     if ($dirPath === '' || !is_dir($dirPath)) {
-        return;
+        return false;
     }
 
     $items = @scandir($dirPath);
-    if (is_array($items)) {
-        foreach ($items as $item) {
-            if ($item === '.' || $item === '..') {
-                continue;
-            }
+    if (!is_array($items)) {
+        return false;
+    }
 
-            $path = $dirPath . '/' . $item;
-            if (is_dir($path)) {
-                remove_directory_recursive_admin_supply($path);
-            } elseif (is_file($path)) {
-                @unlink($path);
-            }
+    foreach ($items as $item) {
+        if ($item === '.' || $item === '..') {
+            continue;
+        }
+
+        $path = $dirPath . '/' . $item;
+        if (is_dir($path)) {
+            remove_directory_recursive_admin_supply($path);
+        } elseif (is_file($path)) {
+            @unlink($path);
         }
     }
 
-    @rmdir($dirPath);
+    // Try multiple times to remove directory (handle race conditions)
+    for ($attempt = 0; $attempt < 3; $attempt++) {
+        if (@rmdir($dirPath)) {
+            return true;
+        }
+        usleep(100000); // 100ms between attempts
+    }
+
+    return false;
 }
 
 function purge_gallery_image_references_admin_supply($pdo, string $sku, string $imagePath): void {
@@ -2877,6 +2887,7 @@ try {
                     truper_register_deleted_product_sku($pdo, $sku, 'product-delete');
                 
                     // Step 5: Clean gallery directories if empty
+                    $deletedDirs = 0;
                     if (!empty($sku) && is_valid_numeric_sku_admin_supply($sku)) {
                         $galleryDirs = [
                             images_root_admin_supply() . '/products/gallery/' . $sku,
@@ -2884,17 +2895,20 @@ try {
                         ];
                         foreach ($galleryDirs as $galleryDir) {
                             if (is_dir($galleryDir)) {
-                                remove_directory_recursive_admin_supply($galleryDir);
+                                if (remove_directory_recursive_admin_supply($galleryDir)) {
+                                    $deletedDirs++;
+                                }
                             }
                         }
                     }
                 
                     $response = [
                         'success' => true, 
-                        'message' => "Producto eliminado completamente (SKU: $sku, imágenes: $deletedImages, marketplace CE: $mpDeleted)",
+                        'message' => "Producto eliminado completamente (SKU: $sku, imágenes: $deletedImages, marketplace CE: $mpDeleted, directorios: $deletedDirs)",
                         'sku' => $sku,
                         'images_deleted' => $deletedImages,
-                        'marketplace_deleted' => $mpDeleted
+                        'marketplace_deleted' => $mpDeleted,
+                        'directories_deleted' => $deletedDirs
                     ];
                 } catch (PDOException $e) {
                     if ($e->getCode() === '23503') {
