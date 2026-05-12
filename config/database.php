@@ -39,7 +39,7 @@ define('AUTO_DB_INIT', strtolower((string)(getenv('AUTO_DB_INIT') ?: 'true')) !=
 define('AUTO_DB_INIT_SCHEMA_FILE', __DIR__ . '/../database.sql');
 
 // Configuración de seguridad
-define('SESSION_TIMEOUT', 1800); // 30 minutos
+define('SESSION_TIMEOUT', 2400); // 40 minutos
 define('MAX_LOGIN_ATTEMPTS', 5);
 define('LOCKOUT_TIME', 900); // 15 minutos
 

@@ -14,7 +14,7 @@ $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_set_cookie_params([
-        'lifetime' => 3600,
+        'lifetime' => (defined('SESSION_TIMEOUT') ? SESSION_TIMEOUT : 2400),
         'path' => '/',
         'domain' => '',
         'secure' => $is_https,

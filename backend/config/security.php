@@ -5,7 +5,10 @@
 
 // Configuración de sesión segura (antes de iniciar sesión)
 if (session_status() === PHP_SESSION_NONE) {
-    $sessionTimeout = defined('SESSION_TIMEOUT') ? SESSION_TIMEOUT : 1800;
+    if (!defined('SESSION_TIMEOUT')) {
+        define('SESSION_TIMEOUT', 2400); // 40 minutos por defecto si no está definido
+    }
+    $sessionTimeout = SESSION_TIMEOUT;
     $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
         || (($_SERVER['SERVER_PORT'] ?? null) == 443);
 
@@ -16,7 +19,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
     if (PHP_VERSION_ID >= 70300) {
         session_set_cookie_params([
-            'lifetime' => 0,
+            'lifetime' => (int)$sessionTimeout,
             'path' => '/',
             'domain' => '',
             'secure' => $isHttps,

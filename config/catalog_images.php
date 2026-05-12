@@ -73,9 +73,6 @@ if (!function_exists('catalog_resolve_gallery_images_by_sku')) {
             if ($value === '' || strpos($value, 'default-product.svg') !== false) {
                 return;
             }
-            if (strpos($value, 'http://') !== 0 && strpos($value, 'https://') !== 0 && strpos($value, 'data:image/') !== 0 && !catalog_local_image_exists($value)) {
-                return;
-            }
             if (!in_array($value, $images, true)) {
                 $images[] = $value;
             }
