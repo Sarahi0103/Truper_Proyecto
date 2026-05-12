@@ -4,26 +4,22 @@
     DirectoryIndex index.php
     Options -Indexes
     
-    # Si la solicitud es a /images/* y no existe, devolver 404 en lugar de redirigir a index.php
-    RewriteCond %{REQUEST_URI} ^/images/ [NC]
+    # PERMITIR acceso directo a archivos PHP específicos
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule \.php$ - [L]
+    
+    # Si la solicitud es a /images/* y no existe, devolver 404
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} ^/images/ [NC]
     RewriteRule ^ - [L,R=404]
 
-    # NO redirigir si es un archivo real existente
-    RewriteCond %{REQUEST_FILENAME} -f
-    RewriteRule ^ - [L]
-    
     # NO redirigir si es un directorio existente
-    RewriteCond %{REQUEST_FILENAME} -d
-    RewriteRule ^ - [L]
-    
-    # NO redirigir si termina con .php
-    RewriteCond %{REQUEST_URI} \.php$ [NC]
-    RewriteRule ^ - [L]
-
+    RewriteCond %{REQUEST_FILENAME} !-d
+    # NO redirigir si es un archivo existente (CSS, JS, imágenes, etc.)
+    RewriteCond %{REQUEST_FILENAME} !-f
     # Redirigir TODO lo demás a index.php
-    RewriteRule ^(.*)$ index.php [L]
+    RewriteRule ^ index.php [L]
 </IfModule>
 
 # Headers de Seguridad
