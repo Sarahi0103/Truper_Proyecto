@@ -10,6 +10,10 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ - [L,R=404]
 
+    # No redirigir archivos PHP existentes (admin_supply.php, marketplace_ce.php, etc.)
+    RewriteCond %{REQUEST_FILENAME} \.php$ [NC]
+    RewriteRule ^ - [L]
+
     # Si la solicitud no es un archivo o carpeta, redirigir a index.php
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
