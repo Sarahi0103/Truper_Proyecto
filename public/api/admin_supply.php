@@ -4,6 +4,7 @@ ini_set('display_errors', '0');
 ob_start();
 
 require_admin();
+require_once __DIR__ . '/ensure-sync.php';
 header('Content-Type: application/json');
 
 $action = $_GET['action'] ?? 'stock';
@@ -2651,13 +2652,22 @@ try {
                 'image_url' => $imageUrl
             ]);
 
-            // Ensure gallery directory exists for newly created products in legacy fallback flow.
+                // Ensure gallery directory exists for newly created products in legacy fallback flow.
             try {
                 $galleryDir = images_root_admin_supply() . '/products/gallery/' . $sku;
                 ensure_directory_exists($galleryDir, 0777);
             } catch (Exception $ignored) {
                 // Non-fatal: product was created and gallery can be created on first upload.
             }
+
+                // Background: ensure marketplace stock/records sync for this SKU
+                try {
+                    if (function_exists('auto_sync_stock_after_change')) {
+                        @auto_sync_stock_after_change($pdo, $sku);
+                    }
+                } catch (Throwable $e) {
+                    error_log('auto_sync_stock_after_change (create-fallback) failed: ' . $e->getMessage());
+                }
 
             log_action(
                 $_SESSION['user_id'],
@@ -2677,6 +2687,14 @@ try {
                     'image_url' => $imageUrl
                 ]
             ];
+            // Background: ensure marketplace stock/records sync for this SKU
+            try {
+                if (function_exists('auto_sync_stock_after_change')) {
+                    @auto_sync_stock_after_change($pdo, $sku);
+                }
+            } catch (Throwable $e) {
+                error_log('auto_sync_stock_after_change (create) failed: ' . $e->getMessage());
+            }
             break;
 
         case 'product-save':
@@ -2796,6 +2814,14 @@ try {
                         'name' => $name
                     ]
                 ];
+                // Background: sync updated stock to marketplace for this SKU
+                try {
+                    if (function_exists('auto_sync_stock_after_change')) {
+                        @auto_sync_stock_after_change($pdo, $sku);
+                    }
+                } catch (Throwable $e) {
+                    error_log('auto_sync_stock_after_change (update) failed: ' . $e->getMessage());
+                }
                 break;
             }
 
@@ -2955,6 +2981,17 @@ try {
                         'marketplace_deleted' => $mpDeleted,
                         'directories_deleted' => $deletedDirs
                     ];
+                    // Background: cleanup orphaned marketplace records and ensure global sync
+                    try {
+                        if (function_exists('cleanup_orphaned_records')) {
+                            @cleanup_orphaned_records($pdo);
+                        }
+                        if (function_exists('auto_sync_stock_after_change')) {
+                            @auto_sync_stock_after_change($pdo, null);
+                        }
+                    } catch (Throwable $e) {
+                        error_log('post-delete sync/cleanup failed: ' . $e->getMessage());
+                    }
                 } catch (PDOException $e) {
                     if ($e->getCode() === '23503') {
                         $response = ['success' => false, 'message' => 'No se puede eliminar porque este producto tiene pedidos o historial asociado.'];
@@ -3801,6 +3838,14 @@ try {
                 }
                 $pdo->commit();
                 $response = ['success' => true, 'processed' => $processed];
+                // Background: sync all products to marketplace after batch import
+                try {
+                    if (function_exists('auto_sync_stock_after_change')) {
+                        @auto_sync_stock_after_change($pdo, null);
+                    }
+                } catch (Throwable $e) {
+                    error_log('auto_sync_stock_after_change (batch) failed: ' . $e->getMessage());
+                }
             } catch (Exception $e) {
                 $pdo->rollBack();
                 $response = ['success' => false, 'message' => 'Error: ' . $e->getMessage()];
