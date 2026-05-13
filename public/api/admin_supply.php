@@ -223,6 +223,58 @@ function first_existing_column_admin_supply(string $table, array $candidates): ?
     return null;
 }
 
+function force_delete_product_dependencies_admin_supply(PDO $pdo, int $productId): int {
+    if ($productId <= 0) {
+        return 0;
+    }
+
+    $sql = "
+        SELECT tc.table_schema, tc.table_name, kcu.column_name
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.key_column_usage kcu
+          ON tc.constraint_name = kcu.constraint_name
+         AND tc.table_schema = kcu.table_schema
+        JOIN information_schema.constraint_column_usage ccu
+          ON ccu.constraint_name = tc.constraint_name
+         AND ccu.table_schema = tc.table_schema
+        WHERE tc.constraint_type = 'FOREIGN KEY'
+          AND ccu.table_name = 'products'
+          AND ccu.column_name = 'id'
+        ORDER BY tc.table_schema, tc.table_name
+    ";
+
+    $stmt = $pdo->query($sql);
+    $refs = $stmt ? ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+
+    $deletedRows = 0;
+    foreach ($refs as $ref) {
+        $schema = (string)($ref['table_schema'] ?? '');
+        $table = (string)($ref['table_name'] ?? '');
+        $column = (string)($ref['column_name'] ?? '');
+
+        if ($schema === '' || $table === '' || $column === '') {
+            continue;
+        }
+
+        if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $schema)
+            || !preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $table)
+            || !preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $column)) {
+            continue;
+        }
+
+        if (!db_table_exists($table)) {
+            continue;
+        }
+
+        $deleteSql = 'DELETE FROM "' . $schema . '"."' . $table . '" WHERE "' . $column . '" = ?';
+        $deleteStmt = $pdo->prepare($deleteSql);
+        $deleteStmt->execute([$productId]);
+        $deletedRows += (int)$deleteStmt->rowCount();
+    }
+
+    return $deletedRows;
+}
+
 function sku_column_for_table_admin_supply(string $table): ?string {
     return first_existing_column_admin_supply($table, ['sku', 'product_code', 'code', 'codigo']);
 }
@@ -2957,7 +3009,10 @@ try {
                         }
                     }
                 
-                    // Step 3: Delete product from database
+                    // Step 3: Force-delete dependent rows so product delete is not blocked by FK history
+                    $dependentRowsDeleted = force_delete_product_dependencies_admin_supply($pdo, $id);
+
+                    // Step 4: Delete product from database
                     $stmt = $pdo->prepare("DELETE FROM products WHERE id = ?");
                     $stmt->execute([$id]);
                     $productDeleted = $stmt->rowCount();
@@ -2967,10 +3022,10 @@ try {
                         break;
                     }
                 
-                    // Step 4: Register the deleted SKU
+                    // Step 5: Register the deleted SKU
                     truper_register_deleted_product_sku($pdo, $sku, 'product-delete');
                 
-                    // Step 5: Clean gallery directories if empty
+                    // Step 6: Clean gallery directories if empty
                     $deletedDirs = 0;
                     if (!empty($sku) && is_valid_numeric_sku_admin_supply($sku)) {
                         foreach (image_storage_roots_admin_supply() as $imagesRoot) {
@@ -2988,8 +3043,9 @@ try {
                 
                     $response = [
                         'success' => true, 
-                        'message' => "Producto eliminado completamente (SKU: $sku, imágenes: $deletedImages, marketplace CE: $mpDeleted, directorios: $deletedDirs)",
+                        'message' => "Producto eliminado completamente (SKU: $sku, dependencias: $dependentRowsDeleted, imágenes: $deletedImages, marketplace CE: $mpDeleted, directorios: $deletedDirs)",
                         'sku' => $sku,
+                        'dependencies_deleted' => $dependentRowsDeleted,
                         'images_deleted' => $deletedImages,
                         'marketplace_deleted' => $mpDeleted,
                         'directories_deleted' => $deletedDirs
