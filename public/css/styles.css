@@ -241,7 +241,7 @@ header {
 }
 
 .logo img {
-    height: 32px;
+    height: 26px;
     width: auto;
     display: block;
 }
@@ -2367,7 +2367,7 @@ footer {
     }
 
     .logo img {
-        height: 24px;
+        height: 20px;
     }
 
     .nav-menu {

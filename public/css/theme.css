@@ -82,9 +82,8 @@ body.auth-page {
 }
 
 body.catalog-minimal {
-    background:
-        linear-gradient(180deg, rgba(0, 0, 0, 0.02), transparent 180px),
-        var(--theme-bg);
+    /* Remove faint black gradient so page background remains the theme background (white in light theme) */
+    background: var(--theme-bg);
 }
 
 :root[data-theme="dark"] body.catalog-minimal {
