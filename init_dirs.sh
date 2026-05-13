@@ -24,6 +24,7 @@ for dir in "${DIRS[@]}"; do
     
     # Asegurar permisos de escritura
     if [ -d "$dir" ]; then
+        chown -R www-data:www-data "$dir" 2>/dev/null || true
         chmod 775 "$dir" 2>/dev/null || true
         echo "  ✓ Permisos establecidos: $dir (775)"
     fi
@@ -37,5 +38,8 @@ else
     # Intentar cambiar permisos
     chmod 755 "public/images/products/gallery" 2>/dev/null || true
 fi
+
+chown -R www-data:www-data public/images 2>/dev/null || true
+chmod -R u+rwX,g+rwX,o+rX public/images 2>/dev/null || true
 
 echo "=== Inicialización completada ==="

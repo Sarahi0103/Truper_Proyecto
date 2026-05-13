@@ -42,7 +42,10 @@ if [ -d "${PERSIST_DIR}" ]; then
   ln -s "${PERSIST_DIR}" /var/www/html/public/images
 else
   mkdir -p /var/www/html/public/images/products/gallery
+  mkdir -p /var/www/html/public/images/products/by_code
+  chown -R www-data:www-data /var/www/html/public/images 2>/dev/null || true
   chmod 777 /var/www/html/public/images/products/gallery 2>/dev/null || true
+  chmod 777 /var/www/html/public/images/products/by_code 2>/dev/null || true
   chmod 777 /var/www/html/public/images/products 2>/dev/null || true
   chmod 777 /var/www/html/public/images 2>/dev/null || true
 fi
@@ -51,6 +54,10 @@ fi
 if [ -f "/var/www/html/init_dirs.sh" ]; then
   bash /var/www/html/init_dirs.sh || true
 fi
+
+# Final pass: ensure runtime user can write product image trees.
+chown -R www-data:www-data /var/www/html/public/images 2>/dev/null || true
+chmod -R u+rwX,g+rwX,o+rX /var/www/html/public/images 2>/dev/null || true
 
 echo "✓ Image directories initialized"
 
