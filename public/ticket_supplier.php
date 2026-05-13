@@ -48,6 +48,7 @@ function display_product_code($sku) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ticket proveedor <?php echo htmlspecialchars($order['folio'], ENT_QUOTES, 'UTF-8'); ?></title>
     <link rel="stylesheet" href="css/theme.css?v=2.1">
+    <link rel="stylesheet" href="css/responsive-complete.css">
     <style>
         body { font-family: monospace; margin: 0; padding: 10px; background: var(--ui-bg); color: var(--ui-text); }
         .ticket { width: min(100%, <?php echo $format === 'a4' ? '760px' : '300px'; ?>); margin: 0 auto; background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: 6px; padding: 10px; box-sizing: border-box; }

@@ -9,10 +9,11 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
 <head>
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Tickets - Truper Platform</title>
     <link rel="stylesheet" href="css/styles.css?v=2.1">
     <link rel="stylesheet" href="css/theme.css?v=2.1">
+    <link rel="stylesheet" href="css/responsive-complete.css">
     <style>
         .tickets-hero {
             background: linear-gradient(135deg, rgba(255, 127, 0, 0.16), rgba(17, 17, 17, 0.04));
@@ -207,5 +208,6 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             }
         }
     </script>
+    <script src="js/mobile-optimize.js"></script>
 </body>
 </html>

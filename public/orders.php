@@ -10,10 +10,11 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Pedidos - Truper Platform</title>
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <link rel="stylesheet" href="css/styles.css">    <link rel="stylesheet" href="css/theme.css">    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/responsive-complete.css">
     <style>
         .orders-page main {
             padding-top: 2rem;
@@ -545,5 +546,6 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
             }
         }
     </script>
+    <script src="js/mobile-optimize.js"></script>
 </body>
 </html>

@@ -9,10 +9,11 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
 <head>
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Abastecimiento - Truper Platform</title>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/responsive-complete.css">
     <style>
         .admin-supply-shell {
             display: flex;
@@ -4739,5 +4740,6 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 </script>
+    <script src="js/mobile-optimize.js"></script>
 </body>
 </html>

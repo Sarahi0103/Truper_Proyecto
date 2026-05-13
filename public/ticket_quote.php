@@ -108,9 +108,10 @@ function ticket_quote_product_code($item) {
 <head>
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Ticket de cotización <?php echo htmlspecialchars($folio, ENT_QUOTES, 'UTF-8'); ?></title>
     <link rel="stylesheet" href="css/theme.css?v=2.1">
+    <link rel="stylesheet" href="css/responsive-complete.css">
     <style>
         body {
             margin: 0;
@@ -300,5 +301,6 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 <?php endif; ?>
 </script>
+    <script src="js/mobile-optimize.js"></script>
 </body>
 </html>

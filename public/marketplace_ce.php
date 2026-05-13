@@ -197,6 +197,7 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
     <meta name="description" content="Marketplace CE de Truper: herramientas y artículos de medio uso con precio accesible. Consulta disponibilidad y cotiza fácilmente.">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/responsive-complete.css">
     <style>
         /* ===== Marketplace CE extras ===== */
         .ce-hero {

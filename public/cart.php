@@ -9,10 +9,11 @@ $isAdmin = $isLogged && (($_SESSION['role'] ?? '') === 'admin');
 <head>
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Mi Carrito - Truper Platform</title>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/responsive-complete.css">
     <style>
         .cart-page { padding: 2rem 1rem; }
         .cart-page-header { 
@@ -465,5 +466,6 @@ $isAdmin = $isLogged && (($_SESSION['role'] ?? '') === 'admin');
             renderCartPage(cart);
         });
     </script>
+    <script src="js/mobile-optimize.js"></script>
 </body>
 </html>

@@ -11,12 +11,6 @@ COPY . /var/www/html
 
 RUN chown -R www-data:www-data /var/www/html
 
-# Ensure a persistent data dir is available inside the container image (runtime should mount a real volume)
-RUN mkdir -p /var/www/data/images \
-    && chown -R www-data:www-data /var/www/data
-
-COPY docker/apache-virtual.conf /etc/apache2/sites-available/000-default.conf
-
 RUN chmod +x /var/www/html/docker/start.sh
 
 EXPOSE 80

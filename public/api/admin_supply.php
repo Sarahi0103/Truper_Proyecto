@@ -4028,17 +4028,15 @@ try {
             $usage = sku_usage_admin_supply($pdo, $sku, $id);
             $sameRecord = record_matches_normalized_sku_admin_supply($pdo, 'marketplace_ce_products', $id, $sku);
             $seedConflict = $usage['in_seed'] && !$sameRecord;
-
-            // Marketplace CE must be unique inside marketplace_ce_products
-            if ($usage['in_marketplace'] && !$sameRecord) {
-                $response = [ 'success' => false, 'message' => 'Ya existe un artículo CE con ese código' ];
-                break;
-            }
-
-            // Do NOT block if the SKU exists in the regular `products` table — CE and Stock are independent
-            // But block if SKU is present in the seed catalog and it's not the same record
-            if ($seedConflict) {
-                $response = [ 'success' => false, 'message' => 'Ese código ya existe en el catálogo base' ];
+            if ($usage['in_products'] || $usage['in_marketplace'] || $seedConflict) {
+                $response = [
+                    'success' => false,
+                    'message' => $usage['in_marketplace']
+                        ? 'Ya existe un artículo CE con ese código'
+                        : ($usage['in_products']
+                            ? 'Ese código ya está registrado en productos'
+                            : 'Ese código ya existe en el catálogo base')
+                ];
                 break;
             }
 
@@ -4070,16 +4068,7 @@ try {
 
                 $values[] = $id;
                 $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET ' . implode(', ', $sets) . ' WHERE id = ?');
-                try {
-                    $stmt->execute($values);
-                } catch (PDOException $e) {
-                    error_log('marketplace-save UPDATE error: ' . $e->getMessage());
-                    $response = ['success' => false, 'message' => 'Error al actualizar artículo CE'];
-                    if (($_SESSION['role'] ?? '') === 'admin') {
-                        $response['debug'] = ['detail' => $e->getMessage()];
-                    }
-                    break;
-                }
+                $stmt->execute($values);
 
                 // Keep gallery route available for CE SKU even when no upload happened in this request.
                 try {
@@ -4118,16 +4107,7 @@ try {
                 if ($mkActiveCol !== null) { $columns[] = $mkActiveCol; $placeholders[] = '?'; $values[] = $isActive ? 1 : 0; }
 
                 $stmt = $pdo->prepare('INSERT INTO marketplace_ce_products (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ')');
-                try {
-                    $stmt->execute($values);
-                } catch (PDOException $e) {
-                    error_log('marketplace-save INSERT error: ' . $e->getMessage());
-                    $response = ['success' => false, 'message' => 'Error al crear artículo CE'];
-                    if (($_SESSION['role'] ?? '') === 'admin') {
-                        $response['debug'] = ['detail' => $e->getMessage()];
-                    }
-                    break;
-                }
+                $stmt->execute($values);
 
                 // Ensure gallery route exists for newly created CE items.
                 try {
@@ -4140,18 +4120,10 @@ try {
                 // If insertion succeeded and we have is_active column issue, ensure it's set
                 try {
                     $lastId = $pdo->lastInsertId('marketplace_ce_products_id_seq');
-                    if ($lastId) {
-                        // Ensure visibility is set even if the table lacks an active column
+                    if ($lastId && $mkActiveCol === null) {
                         set_marketplace_visibility_compatible($pdo, (int)$lastId, $isActive);
                     }
-                } catch (Exception $e) {
-                    error_log('marketplace-save set visibility error: ' . $e->getMessage());
-                    // Non-fatal: insertion succeeded; visibility attempt failed.
-                    if (($_SESSION['role'] ?? '') === 'admin') {
-                        if (!isset($response)) $response = [];
-                        $response['debug'] = ['detail' => $e->getMessage()];
-                    }
-                }
+                } catch (Exception $ignored) {}
                 
                 $response = ['success' => true, 'message' => 'Artículo CE creado'];
             }

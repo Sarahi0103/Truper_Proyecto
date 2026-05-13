@@ -10,10 +10,11 @@ $userName = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8'
 <head>
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Mis Tickets - Truper Platform</title>
     <link rel="stylesheet" href="css/styles.css?v=2.1">
     <link rel="stylesheet" href="css/theme.css?v=2.1">
+    <link rel="stylesheet" href="css/responsive-complete.css">
     <style>
         .tickets-wrapper { display: grid; grid-template-columns: 1fr 3fr; gap: 2rem; margin: 2rem 0; }
         .tickets-sidebar { display: flex; flex-direction: column; gap: 1rem; }
@@ -368,5 +369,6 @@ function applyFilters() {
     loadTickets();
 }
 </script>
+    <script src="js/mobile-optimize.js"></script>
 </body>
 </html>

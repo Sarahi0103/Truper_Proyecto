@@ -11,11 +11,12 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
 <head>
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Tareas - Truper Platform</title>
     <link rel="stylesheet" href="css/styles.css?v=2.1">
     <link rel="stylesheet" href="css/theme.css?v=2.1">
     <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/responsive-complete.css">
 </head>
 <body>
     <!-- HEADER -->
@@ -176,5 +177,6 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
             }
         }
     </script>
+    <script src="js/mobile-optimize.js"></script>
 </body>
 </html>
