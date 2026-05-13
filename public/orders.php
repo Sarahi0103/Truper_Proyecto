@@ -348,9 +348,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                 <a href="profile.php">Perfil</a>
             </nav>
             <div class="header-actions">
-                <div class="theme-toggle">
-                    <button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo obscuro</span></button>
-                </div>
+
                 <div class="user-menu">
                     <div class="user-info">
                         <div class="user-name"><?php echo $user_name; ?></div>

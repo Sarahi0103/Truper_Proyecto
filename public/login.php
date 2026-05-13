@@ -38,9 +38,7 @@ if (is_logged_in() && !$force_login_screen) {
             </aside>
 
             <div class="auth-form-wrap">
-                <div class="theme-toggle">
-                    <button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo obscuro</span></button>
-                </div>
+
                 <div class="login-box">
                     <div class="auth-back-row">
                         <a href="index.php" class="auth-back-link" onclick="if (window.history.length > 1) { window.history.back(); return false; }">← Volver a la página anterior</a>

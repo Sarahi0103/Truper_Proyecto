@@ -548,9 +548,7 @@ $stock = (int)($product['stock_quantity'] ?? 0);
         </nav>
     </div>
     <div class="user-menu">
-        <div class="theme-toggle">
-            <button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo obscuro</span></button>
-        </div>
+
         <a href="index.php" class="btn btn-small btn-ghost">Volver al catálogo</a>
     </div>
 </header>

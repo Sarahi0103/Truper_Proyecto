@@ -214,9 +214,7 @@ if ($isLogged) {
                 <?php endif; ?>
             </nav>
             <div class="header-actions">
-                <div class="theme-toggle">
-                    <button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo obscuro</span></button>
-                </div>
+
                 <?php if (!$isLogged): ?>
                     <a href="login.php" class="btn btn-primary btn-small">Ingresar</a>
                 <?php else: ?>

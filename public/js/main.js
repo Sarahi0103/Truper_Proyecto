@@ -10,65 +10,30 @@ const APP = {
 };
 
 function getThemePreference() {
-    return localStorage.getItem('theme') || 'light';
+    // Force light theme always (disable dark mode)
+    return 'light';
 }
 
 function setThemePreference(theme) {
-    const next = theme === 'dark' ? 'dark' : 'light';
+    // Always set to light theme
+    const next = 'light';
     document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('theme', next);
-
-    const toggleLabel = document.querySelector('[data-theme-toggle-label]');
-    if (toggleLabel) {
-        toggleLabel.textContent = next === 'dark' ? 'Modo obscuro' : 'Modo claro';
-    }
+    // Don't save to localStorage to prevent dark mode persistence
 }
 
 function toggleTheme() {
-    const current = document.documentElement.getAttribute('data-theme') || getThemePreference();
-    setThemePreference(current === 'dark' ? 'light' : 'dark');
+    // Theme toggle disabled - always use light mode
+    return;
 }
 
 function ensureThemeToggleButton() {
-    let wrap = document.querySelector('.theme-toggle');
-    const header = document.querySelector('header');
-    const preferredTargets = [
-        document.querySelector('header .header-content'),
-        document.querySelector('header .header-actions'),
-        document.querySelector('header .user-menu'),
-        document.querySelector('.auth-form-wrap')
-    ].filter(Boolean);
-    const target = preferredTargets[0] || header || document.body;
-
-    if (!wrap) {
-        wrap = document.createElement('div');
-        wrap.className = 'theme-toggle';
-        wrap.innerHTML = '<button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo obscuro</span></button>';
-    }
-
-    const btn = wrap.querySelector('button');
-    if (btn) {
-        btn.style.setProperty('background', '#111111', 'important');
-        btn.style.setProperty('color', '#ffffff', 'important');
-        btn.style.setProperty('border-color', '#111111', 'important');
-    }
-
-    if (target && wrap.parentElement !== target) {
-        target.prepend(wrap);
-    }
-
-    wrap.classList.toggle('theme-toggle-inline', target !== document.body);
-
-    if (btn && !btn.__themeBound) {
-        btn.removeAttribute('onclick');
-        btn.addEventListener('click', toggleTheme);
-        btn.__themeBound = true;
-    }
+    // Theme toggle button disabled - no button needed with light-only mode
+    return;
 }
 
 function initThemeSystem() {
-    setThemePreference(getThemePreference());
-    ensureThemeToggleButton();
+    // Always initialize to light theme
+    document.documentElement.setAttribute('data-theme', 'light');
 }
 
 /**

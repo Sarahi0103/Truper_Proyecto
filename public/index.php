@@ -381,9 +381,6 @@ function homepage_update_label($type) {
                 <?php endif; ?>
             </nav>
             <div class="header-actions">
-                <div class="theme-toggle">
-                    <button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo obscuro</span></button>
-                </div>
                 <a href="<?php echo htmlspecialchars($whatsappHelpUrl, ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener" class="btn btn-secondary btn-small">Dudas por WhatsApp</a>
                 <?php if (!$isLogged): ?>
                     <a href="/admin_login.php" class="btn btn-primary btn-small">Solo para administradores</a>

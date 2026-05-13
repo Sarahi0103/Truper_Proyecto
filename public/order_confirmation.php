@@ -199,9 +199,7 @@ if ($orderId && $isLogged) {
                 <a href="dashboard.php">Dashboard</a>
             </nav>
             <div class="header-actions">
-                <div class="theme-toggle">
-                    <button type="button" data-theme-toggle-btn><span data-theme-toggle-label>Modo obscuro</span></button>
-                </div>
+
             </div>
         </div>
     </header>
