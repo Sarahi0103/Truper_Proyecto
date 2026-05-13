@@ -275,11 +275,6 @@ $isAdmin = $isLogged && (($_SESSION['role'] ?? '') === 'admin');
                     <span id="cartTotalAmount">$0</span>
                 </div>
                 <div class="summary-actions">
-                    <?php if ($isLogged): ?>
-                    <a href="checkout.php" class="btn btn-primary btn-full">✅ Ir a Checkout</a>
-                    <?php else: ?>
-                    <a href="login.php?return_to=checkout.php" class="btn btn-primary btn-full">✅ Iniciar sesión para comprar</a>
-                    <?php endif; ?>
                     <button id="printTicket" class="btn btn-primary btn-full">⬇️ Descargar Ticket</button>
                     <button id="shareWhatsApp" class="btn btn-secondary btn-full">📱 WhatsApp</button>
                     <button id="clearCart" class="btn btn-ghost btn-full">🗑️ Vaciar Carrito</button>
