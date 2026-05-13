@@ -10,30 +10,30 @@ const APP = {
 };
 
 function getThemePreference() {
-    // Force light theme always (disable dark mode)
-    return 'light';
+    // Force dark theme always
+    return 'dark';
 }
 
 function setThemePreference(theme) {
-    // Always set to light theme
-    const next = 'light';
+    // Always set to dark theme
+    const next = 'dark';
     document.documentElement.setAttribute('data-theme', next);
-    // Don't save to localStorage to prevent dark mode persistence
+    // Don't save to localStorage to prevent theme switching
 }
 
 function toggleTheme() {
-    // Theme toggle disabled - always use light mode
+    // Theme toggle disabled - always use dark mode
     return;
 }
 
 function ensureThemeToggleButton() {
-    // Theme toggle button disabled - no button needed with light-only mode
+    // Theme toggle button disabled - no button needed with dark-only mode
     return;
 }
 
 function initThemeSystem() {
-    // Always initialize to light theme
-    document.documentElement.setAttribute('data-theme', 'light');
+    // Always initialize to dark theme
+    document.documentElement.setAttribute('data-theme', 'dark');
 }
 
 /**
