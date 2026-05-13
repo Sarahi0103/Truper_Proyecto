@@ -76,7 +76,20 @@ function normalize_sku_admin_supply($value): string {
 }
 
 function is_valid_numeric_sku_admin_supply(string $sku): bool {
-    return (bool)preg_match('/^\d{5,6}$/', $sku);
+    // Accept any non-empty SKU (numeric or with letters) - used for general lookups
+    $sku = trim($sku);
+    return strlen($sku) > 0 && !preg_match('/[<>"%{}|\\^`\[\]]/', $sku);
+}
+
+// Validation for CREATING new products: only 5-6 digit numeric SKUs
+function is_valid_numeric_sku_for_creation_admin_supply(string $sku): bool {
+    return (bool)preg_match('/^\d{5,6}$/', trim($sku));
+}
+
+// Validation for DELETING products: accept any valid SKU (numeric or with letters)
+function is_valid_sku_for_deletion_admin_supply(string $sku): bool {
+    $sku = trim($sku);
+    return strlen($sku) > 0 && !preg_match('/[<>"%{}|\\^`\[\]]/', $sku);
 }
 
 function normalize_category_admin_supply($value): string {
@@ -1500,7 +1513,7 @@ function list_product_gallery_uploaded_images_admin_supply(string $sku): array {
 }
 
 function delete_product_gallery_file_admin_supply(string $sku, string $imagePath): void {
-    if (!is_valid_numeric_sku_admin_supply($sku)) {
+    if (!is_valid_sku_for_deletion_admin_supply($sku)) {
         return;
     }
 
@@ -1596,7 +1609,7 @@ function remove_directory_recursive_admin_supply(string $dirPath): bool {
 function purge_gallery_image_references_admin_supply($pdo, string $sku, string $imagePath): void {
     $sku = normalize_sku_admin_supply($sku);
     $raw = trim($imagePath);
-    if (!is_valid_numeric_sku_admin_supply($sku) || $raw === '') {
+    if (!is_valid_sku_for_deletion_admin_supply($sku) || $raw === '') {
         return;
     }
 
@@ -1627,7 +1640,7 @@ function purge_gallery_image_references_admin_supply($pdo, string $sku, string $
             $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
             foreach ($rows as $row) {
                 $rowSku = normalize_sku_admin_supply($row['sku'] ?? '');
-                if (!is_valid_numeric_sku_admin_supply($rowSku) || $rowSku !== $sku) {
+                if (!is_valid_sku_for_deletion_admin_supply($rowSku) || $rowSku !== $sku) {
                     continue;
                 }
 
@@ -2588,8 +2601,8 @@ try {
                 $response = ['success' => false, 'message' => 'SKU y nombre son obligatorios'];
                 break;
             }
-            if (!is_valid_numeric_sku_admin_supply($sku)) {
-                $response = ['success' => false, 'message' => 'El código del producto debe tener exactamente 5 o 6 números'];
+            if (!is_valid_numeric_sku_for_creation_admin_supply($sku)) {
+                $response = ['success' => false, 'message' => 'El código del producto debe tener exactamente 5 o 6 números (sin letras)'];
                 break;
             }
             if (truper_is_deleted_product_sku($sku)) {
@@ -2723,8 +2736,8 @@ try {
                 // Get all gallery images from disk BEFORE save to include them in variants_json
                 $galleryImages = list_product_gallery_files_admin_supply($sku);
             
-                if (!is_valid_numeric_sku_admin_supply($sku)) {
-                $response = ['success' => false, 'message' => 'El código del producto debe tener exactamente 5 o 6 números'];
+                if (!is_valid_numeric_sku_for_creation_admin_supply($sku)) {
+                $response = ['success' => false, 'message' => 'El código del producto debe tener exactamente 5 o 6 números (sin letras)'];
                 break;
             }
             if ($id <= 0 && truper_is_deleted_product_sku($sku)) {
