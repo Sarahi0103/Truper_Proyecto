@@ -2961,6 +2961,9 @@ async function reorderGalleryImages(sku, orderedImages, mode = 'stock') {
     renderProductGallery(renderedImages, sku, mode);
     syncGalleryModeUi(mode, cover);
     showGalleryResult(mode, res.message || 'Orden de imágenes actualizado', 'success');
+    if (mode === 'marketplace') {
+        void loadMarketplaceGalleryForCurrentSku();
+    }
     void loadProductImageReferences();
     return true;
 }
@@ -3353,6 +3356,8 @@ async function deleteProductGalleryImage(sku, imagePath) {
     } catch (e) {
         console.warn('Optimistic image delete failed:', e);
     }
+
+    void loadMarketplaceGalleryForCurrentSku();
 
     // Background sync
     // Forced refresh to ensure server state reflected in UI
