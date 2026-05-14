@@ -44,11 +44,11 @@ try {
 
     $productsVisibilityWhere = '';
     if (db_column_exists('marketplace_ce_products', 'is_active')) {
-        $productsVisibilityWhere = " WHERE (CASE WHEN is_active IS NULL THEN 1 WHEN LOWER(CAST(is_active AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1 AND {$skuExpr} ~ '^[0-9]{5,6}$'";
+        $productsVisibilityWhere = " WHERE (CASE WHEN is_active IS NULL THEN 1 WHEN LOWER(CAST(is_active AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
     } elseif (db_column_exists('marketplace_ce_products', 'active')) {
-        $productsVisibilityWhere = " WHERE active = 1 AND {$skuExpr} ~ '^[0-9]{5,6}$'";
+        $productsVisibilityWhere = " WHERE active = 1";
     } else {
-        $productsVisibilityWhere = " WHERE {$skuExpr} ~ '^[0-9]{5,6}$'";
+        $productsVisibilityWhere = '';
     }
 
     $sqlCe = "SELECT id, {$nameExpr} AS name, {$skuExpr} AS sku, {$priceExpr} AS unit_price, {$categoryExpr} AS category, {$descriptionExpr} AS description, {$conditionExpr} AS condition_label, {$stockExpr} AS stock_quantity, {$imageExpr} AS image_url, {$variantsExpr} AS variants_json FROM marketplace_ce_products" . $productsVisibilityWhere . " ORDER BY name LIMIT 300";
