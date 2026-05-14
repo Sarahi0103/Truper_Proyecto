@@ -550,7 +550,7 @@ function homepage_update_label($type) {
                             <span class="stock-badge <?php echo $stock <= 10 ? 'stock-low' : 'stock-ok'; ?>">
                                 <?php echo $stock <= 10 ? 'Stock bajo: ' : 'Stock: '; ?><?php echo $stock; ?>
                             </span>
-                            <div class="catalog-price"><?php echo '$' . number_format((float)$product['unit_price'], 0, ',', '.'); ?></div>
+                            <div class="catalog-price"><?php echo '$' . number_format((float)$product['unit_price'], 2, '.', ','); ?></div>
                             <div class="product-actions">
                                 <button
                                     type="button"

@@ -70,15 +70,23 @@ function normalize_bool_admin_supply($value, bool $default = false): bool {
 }
 
 function normalize_sku_admin_supply($value): string {
-    $sku = trim((string)$value);
-    $digits = preg_replace('/\D+/', '', $sku);
-    return substr($digits, 0, 6);
+    $raw = trim((string)$value);
+    $digits = preg_replace('/\D+/', '', $raw);
+    if ($digits === '') return '';
+    // Ensure at least 5 digits by left-padding with zeros, and limit to 6 digits.
+    if (strlen($digits) < 5) {
+        $digits = str_pad($digits, 5, '0', STR_PAD_LEFT);
+    }
+    if (strlen($digits) > 6) {
+        $digits = substr($digits, 0, 6);
+    }
+    return $digits;
 }
 
 function is_valid_numeric_sku_admin_supply(string $sku): bool {
-    // Accept any non-empty SKU (numeric or with letters) - used for general lookups
-    $sku = trim($sku);
-    return strlen($sku) > 0 && !preg_match('/[<>"%{}|\\^`\[\]]/', $sku);
+    // Strict numeric SKU validation: only 5 or 6 digits allowed
+    $sku = trim((string)$sku);
+    return (bool)preg_match('/^\d{5,6}$/', $sku);
 }
 
 // Validation for CREATING new products: only 5-6 digit numeric SKUs

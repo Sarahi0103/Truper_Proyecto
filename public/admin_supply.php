@@ -304,7 +304,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <input type="hidden" id="newProductSeedMode" value="0">
 
                 <div class="grid grid-2">
-                    <div class="form-group"><label>Código del producto (5 o 6 números)</label><input id="newProductSku" type="text" maxlength="6" inputmode="numeric" pattern="\d{5,6}" placeholder="Ej. 23032"><small id="newProductSkuStatus" class="text-muted">Debe ser único y de 5 o 6 números.</small></div>
+                    <div class="form-group"><label>Código del producto (5 o 6 números)</label><input id="newProductSku" type="text" maxlength="6" inputmode="numeric" pattern="\d{5,6}" placeholder="Ej. 23032"><small id="newProductSkuStatus" class="text-muted">Se valida en la base de datos y debe ser único.</small></div>
                     <div class="form-group"><label>Nombre</label><input id="newProductName" type="text" maxlength="255"></div>
                 </div>
 
@@ -1022,7 +1022,6 @@ function setSkuStatus(statusId, message, tone = 'muted') {
 }
 
 async function validateSkuAvailability(kind, options = {}) {
-    const strict = Boolean(options.strict);
     const isMarketplace = kind === 'marketplace';
     const skuInput = document.getElementById(isMarketplace ? 'marketplaceSku' : 'newProductSku');
     const statusId = isMarketplace ? 'marketplaceSkuStatus' : 'newProductSkuStatus';
@@ -1039,7 +1038,7 @@ async function validateSkuAvailability(kind, options = {}) {
         return false;
     }
 
-    setSkuStatus(statusId, 'Verificando disponibilidad...', 'muted');
+    setSkuStatus(statusId, 'Verificando en la base de datos...', 'muted');
     const version = ++skuCheckVersion[kind];
     const currentId = isMarketplace
         ? Number(document.getElementById('marketplaceEditId').value || 0)
@@ -1055,39 +1054,8 @@ async function validateSkuAvailability(kind, options = {}) {
     }
 
     if (!check || !check.success) {
-        if (strict) {
-            setSkuStatus(statusId, 'No fue posible verificar la disponibilidad. Intenta de nuevo.', 'warning');
-            return false;
-        }
-
-        // Fallback local: use loaded caches so the admin can continue even if SKU endpoint is temporarily unavailable.
-        const normalizeRowSku = (row) => normalizeNumericSku(displayProductCode(row?.sku || ''));
-
-        const existsInStock = stockItemsCache.some((row) => {
-            const isSeedRow = Boolean(row?.seed_only || row?.__seed_only);
-            if (isSeedRow && !isMarketplace) {
-                return false;
-            }
-            if (!isMarketplace && Number(row?.id || 0) === currentId) {
-                return false;
-            }
-            return normalizeRowSku(row) === sku;
-        });
-
-        const existsInMarketplace = marketplaceItemsCache.some((row) => {
-            if (isMarketplace && Number(row?.id || 0) === currentId) {
-                return false;
-            }
-            return normalizeRowSku(row) === sku;
-        });
-
-        if (existsInStock || existsInMarketplace) {
-            setSkuStatus(statusId, existsInStock ? 'Ya existe un producto con ese código.' : 'Ya existe un artículo CE con ese código.', 'error');
-            return false;
-        }
-
-        setSkuStatus(statusId, 'Validación local aplicada temporalmente. Puedes continuar y guardar.', 'muted');
-        return true;
+        setSkuStatus(statusId, 'No fue posible verificar el código en la base de datos. Intenta de nuevo.', 'warning');
+        return false;
     }
 
     if (check.available === false) {
