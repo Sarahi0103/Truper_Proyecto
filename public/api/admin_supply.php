@@ -1956,7 +1956,9 @@ function reorder_product_gallery_images_admin_supply($pdo, string $sku, array $o
     $orderedImages = normalize_product_gallery_images_admin_supply($orderedImages);
     if (empty($orderedImages)) return [];
 
-    return persist_product_gallery_images_admin_supply($pdo, $sku, $orderedImages);
+    // Ensure all images are canonicalized and persisted so deleted/legacy
+    // files are not re-introduced by partial normalization.
+    return normalize_and_persist_gallery_images_admin_supply($pdo, $sku, $orderedImages);
 }
 
 
