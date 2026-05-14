@@ -588,7 +588,7 @@ $stock = (int)($product['stock_quantity'] ?? 0);
                     </div>
 
                     <div class="detail-price-box">
-                        <div class="detail-price">$<?php echo number_format((float)$product['unit_price'], 0, ',', '.'); ?></div>
+                        <div class="detail-price">$<?php echo number_format((float)$product['unit_price'], 2, '.', ','); ?></div>
                         <div class="detail-stock <?php echo $stock > 10 ? 'in-stock' : ($stock > 0 ? 'low-stock' : 'out-of-stock'); ?>">
                             <span>📦</span>
                             <span>

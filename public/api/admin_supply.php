@@ -1145,17 +1145,17 @@ function convert_image_to_base64_admin_supply(string $tmpName, string $mimeType)
     ob_start();
     if ($mimeType === 'image/png' || $mimeType === 'image/gif') {
         if (function_exists('imagewebp')) {
-            // Calidad 88 para WebP (muy buena, archivo más pequeño que JPEG)
-            imagewebp($img, null, 88);
+            // Calidad más alta para conservar mejor detalle visual
+            imagewebp($img, null, 95);
             $finalExt = 'webp';
         } else {
-            // Compresión 6 para PNG (balance entre tamaño y velocidad)
+            // PNG sigue siendo sin pérdida; se mantiene la ruta de guardado
             imagepng($img, null, 6);
             $finalExt = 'png';
         }
     } else {
-        // Calidad 87 para JPEG (excelente calidad visual)
-        imagejpeg($img, null, 87);
+        // Calidad más alta para JPEG
+        imagejpeg($img, null, 95);
         $finalExt = 'jpg';
     }
     $compressedData = ob_get_clean();
@@ -1835,9 +1835,9 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
             if ($ext === 'png') {
                 $saved = imagepng($img, $destPath, 8);
             } elseif (in_array($ext, ['webp']) && function_exists('imagewebp')) {
-                $saved = imagewebp($img, $destPath, 82);
+                $saved = imagewebp($img, $destPath, 95);
             } else {
-                $saved = imagejpeg($img, $destPath, 82);
+                $saved = imagejpeg($img, $destPath, 95);
                 if ($saved) {
                     // normalize extension to jpg
                     $filename = pathinfo($filename, PATHINFO_FILENAME) . '.jpg';
