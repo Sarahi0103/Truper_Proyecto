@@ -59,6 +59,6 @@ fi
 chown -R www-data:www-data /var/www/html/public/images 2>/dev/null || true
 chmod -R u+rwX,g+rwX,o+rX /var/www/html/public/images 2>/dev/null || true
 
-echo "✓ Image directories initialized"
+echo "âœ“ Image directories initialized"
 
 exec apache2-foreground

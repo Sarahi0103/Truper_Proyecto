@@ -6,7 +6,6 @@
 require_once '../../config/config.php';
 require_once '../../src/models/Product.php';
 
-ensure_xlsx_products_seeded();
 
 header('Content-Type: application/json');
 

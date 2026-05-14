@@ -479,26 +479,7 @@ function marketplace_sku_exists_admin_supply($pdo, string $sku, int $excludeId =
 }
 
 function seed_sku_exists_admin_supply(string $sku): bool {
-    if ($sku === '' || truper_is_deleted_product_sku($sku) || !function_exists('get_xlsx_seed_products')) {
-        return false;
-    }
-
-    try {
-        $items = get_xlsx_seed_products();
-        if (!is_array($items)) {
-            return false;
-        }
-
-        foreach ($items as $item) {
-            $seedSku = normalize_sku_admin_supply($item['sku'] ?? '');
-            if ($seedSku !== '' && $seedSku === $sku) {
-                return true;
-            }
-        }
-    } catch (Exception $ignored) {
-        return false;
-    }
-
+    // Seeder eliminado: el catálogo base ya no existe
     return false;
 }
 
@@ -1478,7 +1459,7 @@ function persist_product_gallery_images_admin_supply($pdo, string $sku, array $i
 
 function list_product_gallery_images_admin_supply(string $sku): array {
     global $pdo;
-    if (!is_valid_numeric_sku_admin_supply($sku) || truper_is_deleted_product_sku($sku)) return [];
+    if (!is_valid_numeric_sku_admin_supply($sku)) return [];
 
     try {
         $final = [];
@@ -1816,7 +1797,7 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
         
         $img = @imagecreatefromstring($imageString);
         if ($img) {
-            $maxW = 900; $maxH = 900;
+            $maxW = 1400; $maxH = 1400;
             $w = imagesx($img); $h = imagesy($img);
             if ($w > $maxW || $h > $maxH) {
                 $ratio = min($maxW / $w, $maxH / $h);
@@ -1825,19 +1806,26 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
                 if (in_array($ext, ['png', 'gif', 'webp'])) {
                     imagealphablending($newImg, false);
                     imagesavealpha($newImg, true);
+                    $transparent = imagecolorallocatealpha($newImg, 255, 255, 255, 127);
+                    imagefilledrectangle($newImg, 0, 0, $nw, $nh, $transparent);
                 }
                 imagecopyresampled($newImg, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
+                // Aplicar sharpen para mejorar nitidez tras resize
+                if (function_exists('imageconvolution')) {
+                    $sharpen = [[-1,-1,-1],[-1,16,-1],[-1,-1,-1]];
+                    @imageconvolution($newImg, $sharpen, 8, 0);
+                }
                 imagedestroy($img);
                 $img = $newImg;
             }
             
             $saved = false;
             if ($ext === 'png') {
-                $saved = imagepng($img, $destPath, 8);
+                $saved = imagepng($img, $destPath, 3); // 0=sin compresión, 9=máxima; 3=alta calidad
             } elseif (in_array($ext, ['webp']) && function_exists('imagewebp')) {
-                $saved = imagewebp($img, $destPath, 95);
+                $saved = imagewebp($img, $destPath, 92);
             } else {
-                $saved = imagejpeg($img, $destPath, 95);
+                $saved = imagejpeg($img, $destPath, 92);
                 if ($saved) {
                     // normalize extension to jpg
                     $filename = pathinfo($filename, PATHINFO_FILENAME) . '.jpg';
@@ -2114,47 +2102,8 @@ function update_product_compatible($pdo, int $id, array $payload): void {
 }
 
 function ensure_products_seeded_for_admin_supply($pdo): void {
-    if (!function_exists('get_xlsx_seed_products')) {
-        return;
-    }
-
-    try {
-        $countStmt = $pdo->query('SELECT COUNT(*) FROM products');
-        $count = (int)$countStmt->fetchColumn();
-        if ($count >= 10) {
-            return;
-        }
-
-        $seedProducts = get_xlsx_seed_products();
-        if (!is_array($seedProducts) || empty($seedProducts)) {
-            return;
-        }
-
-        foreach ($seedProducts as $seed) {
-            $sku = (string)($seed['sku'] ?? '');
-            if ($sku === '' || product_sku_exists_admin_supply($pdo, normalize_sku_admin_supply($sku))) {
-                continue;
-            }
-
-            try {
-                create_product_compatible($pdo, [
-                    'sku' => $sku,
-                    'name' => (string)($seed['name'] ?? 'Producto'),
-                    'category' => (string)($seed['category'] ?? 'General'),
-                    'description' => (string)($seed['description'] ?? ''),
-                    'barcode' => (string)($seed['barcode'] ?? ''),
-                    'price' => (float)($seed['unit_price'] ?? 0),
-                    'stock_quantity' => (int)($seed['stock_quantity'] ?? 50),
-                    'reorder_level' => 10,
-                    'image_url' => (string)($seed['image_url'] ?? 'images/products/default-product.svg')
-                ]);
-            } catch (Exception $ignored) {
-                // Continue trying next seed row.
-            }
-        }
-    } catch (Exception $ignored) {
-        // Best-effort seeding only.
-    }
+    // Seeder eliminado: la BD se gestiona manualmente
+    return;
 }
 
 function bootstrap_admin_supply_schema($pdo): void {
@@ -2296,17 +2245,7 @@ function list_available_product_images($pdo): array {
     } catch (Exception $ignored) {
     }
 
-    if (function_exists('get_xlsx_seed_products')) {
-        try {
-            $seedItems = get_xlsx_seed_products();
-            if (is_array($seedItems)) {
-                foreach ($seedItems as $seed) {
-                    $appendImage($seed['image_url'] ?? '');
-                }
-            }
-        } catch (Throwable $ignored) {
-        }
-    }
+    // Seeder eliminado: no se agregan imagenes del catalogo base
 
     $images = array_values(array_unique($images));
     sort($images);
@@ -2537,16 +2476,6 @@ try {
                 break;
             }
 
-            if (truper_is_deleted_product_sku($sku)) {
-                $response = [
-                    'success' => true,
-                    'available' => false,
-                    'message' => 'Este código está marcado como eliminado y no se puede reutilizar',
-                    'sku' => $sku,
-                    'deleted' => true,
-                ];
-                break;
-            }
 
             $id = (int)($_GET['id'] ?? 0);
             $allowSeedSku = in_array((string)($_GET['allow_seed'] ?? '0'), ['1', 'true', 'TRUE', 'yes', 'on'], true);
@@ -2612,16 +2541,6 @@ try {
                 break;
             }
 
-            if (truper_is_deleted_product_sku($sku)) {
-                $response = [
-                    'success' => true,
-                    'available' => false,
-                    'message' => 'Este código está marcado como eliminado y no se puede reutilizar',
-                    'sku' => $sku,
-                    'deleted' => true,
-                ];
-                break;
-            }
 
             $usage = sku_usage_admin_supply($pdo, $sku, $id);
             $sameRecord = record_matches_normalized_sku_admin_supply($pdo, 'marketplace_ce_products', $id, $sku);
@@ -2665,10 +2584,6 @@ try {
             }
             if (!is_valid_numeric_sku_for_creation_admin_supply($sku)) {
                 $response = ['success' => false, 'message' => 'El código del producto debe tener exactamente 5 o 6 números (sin letras)'];
-                break;
-            }
-            if (truper_is_deleted_product_sku($sku)) {
-                $response = ['success' => false, 'message' => 'Este código está marcado como eliminado y no se puede reutilizar'];
                 break;
             }
             if ($price < 0) {
@@ -2802,7 +2717,7 @@ try {
                 $response = ['success' => false, 'message' => 'El código del producto debe tener exactamente 5 o 6 números (sin letras)'];
                 break;
             }
-            if ($id <= 0 && truper_is_deleted_product_sku($sku)) {
+            if ($id <= 0) {
                 $response = ['success' => false, 'message' => 'Este código está marcado como eliminado y no se puede reutilizar'];
                 break;
             }
@@ -3032,10 +2947,7 @@ try {
                         break;
                     }
                 
-                    // Step 5: Register the deleted SKU
-                    truper_register_deleted_product_sku($pdo, $sku, 'product-delete');
-                
-                    // Step 6: Clean gallery directories if empty
+                    // Step 5: Clean gallery directories if empty
                     $deletedDirs = 0;
                     if (!empty($sku) && is_valid_numeric_sku_admin_supply($sku)) {
                         foreach (image_storage_roots_admin_supply() as $imagesRoot) {
@@ -3213,24 +3125,8 @@ try {
             break;
 
         case 'mark-sku-deleted':
-            if ($method !== 'POST') {
-                $response = ['success' => false, 'message' => 'Metodo no permitido'];
-                break;
-            }
-
-            $skuRaw = sanitize($_POST['sku'] ?? ($input['sku'] ?? ''));
-            $sku = normalize_sku_admin_supply($skuRaw);
-            if ($sku === '') {
-                $response = ['success' => false, 'message' => 'SKU inválido'];
-                break;
-            }
-
-            try {
-                truper_register_deleted_product_sku($pdo, $sku, 'marked-deleted-via-ui');
-                $response = ['success' => true, 'message' => 'Código marcado como eliminado para evitar re-seed', 'sku' => $sku];
-            } catch (Exception $e) {
-                $response = ['success' => false, 'message' => 'No fue posible marcar el SKU como eliminado'];
-            }
+            // Función deprecada: el seeder ya no existe, responder OK por compatibilidad
+            $response = ['success' => true, 'message' => 'Sin efecto (seeder eliminado)'];
             break;
 
         case 'product-gallery-upload':
@@ -3244,10 +3140,6 @@ try {
             $sku = normalize_sku_admin_supply($_POST['sku'] ?? ($input['sku'] ?? ''));
             if (!is_valid_numeric_sku_admin_supply($sku)) {
                 $response = ['success' => false, 'message' => 'SKU inválido'];
-                break;
-            }
-            if (truper_is_deleted_product_sku($sku)) {
-                $response = ['success' => false, 'message' => 'El SKU está marcado como eliminado y no admite galería'];
                 break;
             }
 
@@ -4130,7 +4022,7 @@ try {
                 break;
             }
 
-            if ($id <= 0 && truper_is_deleted_product_sku($sku)) {
+            if ($id <= 0) {
                 $response = ['success' => false, 'message' => 'Este código está marcado como eliminado y no se puede reutilizar'];
                 break;
             }

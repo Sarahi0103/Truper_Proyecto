@@ -27,8 +27,6 @@ if (preg_match('#^/(css|js|images|img)/#', $requestPath) === 1 || preg_match('#\
 
 require_once '../config/config.php';
 
-ensure_xlsx_products_seeded();
-
 $products = [];
 try {
     $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS technical_specs TEXT");
