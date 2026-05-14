@@ -359,11 +359,13 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
                 ?>
                 <article class="product-card-min"
                     data-ce-item
+                    data-id="<?php echo (int)$item['id']; ?>"
                     data-name="<?php echo $itemName; ?>"
                     data-sku="<?php echo $itemSku; ?>"
                     data-category="<?php echo $itemCat; ?>"
                     data-condition="<?php echo $itemCond; ?>">
                     <div class="product-media" style="position:relative; overflow:hidden;">
+                        <a href="product_detail.php?id=<?php echo (int)$item['id']; ?>&source=ce" class="product-media-link" aria-label="Ver detalle de <?php echo $itemName; ?>"></a>
                         <div class="gallery-track" style="display:flex; transition:transform 0.3s; width:100%; height:100%;">
                             <?php foreach ($images as $idx => $imgSrc): ?>
                                 <img src="<?php echo htmlspecialchars($imgSrc, ENT_QUOTES, 'UTF-8'); ?>"
