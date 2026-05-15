@@ -1664,7 +1664,7 @@ async function loadStock(page = 1, customPerPage = null) {
     stockCurrentPage = page;
     // Use custom per_page if provided (for faster loading after save), otherwise use default
     const perPageToUse = customPerPage !== null ? customPerPage : stockPerPage;
-    const res = await apiCall(`/admin_supply.php?action=stock&page=${page}&per_page=${perPageToUse}`, 'GET', null, { silent: true });
+    const res = await apiCall(`/admin_supply.php?action=stock&page=${page}&per_page=${perPageToUse}&_=${Date.now()}`, 'GET', null, { silent: true });
     const body = document.getElementById('stockRows');
     
     if (!res || !res.success || !Array.isArray(res.items)) {
@@ -2901,14 +2901,42 @@ function setGalleryState(mode, sku, images, cover = '') {
 
 function syncGalleryModeUi(mode, cover = '') {
     if (mode === 'marketplace') {
-        const select = document.getElementById('marketplaceImageRef');
-        if (select && cover) select.value = cover;
+        const target = document.getElementById('marketplaceImageRef');
+        if (target && cover) {
+            if (target.tagName.toLowerCase() === 'select') {
+                let exists = false;
+                for (let i = 0; i < target.options.length; i++) {
+                    if (target.options[i].value === cover) exists = true;
+                }
+                if (!exists) {
+                    const opt = document.createElement('option');
+                    opt.value = cover;
+                    opt.text = cover;
+                    target.appendChild(opt);
+                }
+            }
+            target.value = cover;
+        }
         updateMarketplacePreview();
         return;
     }
 
-    const select = document.getElementById('newProductImageRef');
-    if (select && cover) select.value = cover;
+    const target = document.getElementById('newProductImageRef');
+    if (target && cover) {
+        if (target.tagName.toLowerCase() === 'select') {
+            let exists = false;
+            for (let i = 0; i < target.options.length; i++) {
+                if (target.options[i].value === cover) exists = true;
+            }
+            if (!exists) {
+                const opt = document.createElement('option');
+                opt.value = cover;
+                opt.text = cover;
+                target.appendChild(opt);
+            }
+        }
+        target.value = cover;
+    }
     updateStockPreview();
 }
 
@@ -2974,9 +3002,28 @@ async function reorderGalleryImages(sku, orderedImages, mode = 'stock') {
     renderProductGallery(renderedImages, sku, mode);
     syncGalleryModeUi(mode, cover);
     showGalleryResult(mode, res.message || 'Orden de imágenes actualizado', 'success');
-    if (mode === 'marketplace') {
-        void loadMarketplaceGalleryForCurrentSku();
+    
+    // Update main product caches and grids so the new cover is visible
+    try {
+        if (mode === 'stock') {
+            const prod = stockItemsCache.find(p => String(p.sku || '') === String(sku));
+            if (prod) {
+                prod.image_url = cover || prod.image_url;
+                upsertStockCache(prod);
+            }
+            void loadStock(stockCurrentPage);
+        } else {
+            const item = marketplaceItemsCache.find(p => String(p.sku || '') === String(sku));
+            if (item) {
+                item.image_url = cover || item.image_url;
+                upsertMarketplaceCache(item);
+            }
+            void loadMarketplaceCeAdmin(marketplaceCurrentPage);
+        }
+    } catch (e) {
+        console.warn('Cache update after reorder failed:', e);
     }
+
     void loadProductImageReferences();
     return true;
 }
@@ -3335,85 +3382,61 @@ async function setProductGalleryCover(sku, imagePath) {
         console.warn('Optimistic cover update failed:', e);
     }
 
-    // Background sync for consistency
-    // Immediate forced refresh (cache-bust) to avoid stale ETag/304 cases
-    try {
-        const forced = await apiCall(`/admin_supply.php?action=product-gallery-list&sku=${encodeURIComponent(sku)}&_=${Date.now()}`, 'GET', null, { silent: true });
-        if (forced && forced.success) {
-            const images = Array.isArray(forced.images) && forced.images.length > 0 ? forced.images : (forced.cover ? [forced.cover] : []);
-            setGalleryState('stock', sku, images, forced.cover || images[0] || '');
-            renderProductGallery(images, sku, 'stock');
-            syncGalleryModeUi('stock', forced.cover || images[0] || '');
-        } else {
-            void loadProductGalleryForCurrentSku();
-        }
-    } catch (e) {
-        console.warn('Forced gallery refresh failed:', e);
-        void loadProductGalleryForCurrentSku();
-    }
-
     void loadStock(stockCurrentPage);
 }
 
 async function deleteProductGalleryImage(sku, imagePath) {
     if (!confirm('¿Eliminar esta imagen de la galería?')) return;
+
+    // 1. Optimistic update INMEDIATO — antes de llamar a la API
+    const previousImages = Array.isArray(stockGalleryCache) ? stockGalleryCache.slice() : [];
+    const previousCover = previousImages[0] || '';
+    const optimisticImages = previousImages.filter((i) => i !== imagePath);
+
+    setGalleryState('stock', sku, optimisticImages.slice(), optimisticImages[0] || '');
+    renderProductGallery(optimisticImages, sku, 'stock');
+    syncGalleryModeUi('stock', optimisticImages[0] || '');
+
+    // 2. Llamada a la API
     const res = await apiCall('/admin_supply.php?action=product-gallery-delete', 'POST', {
         sku: sku,
         image: imagePath
     });
 
-    console.log('product-gallery-delete response:', res);
-
     if (!res || !res.success) {
+        // Revertir al estado anterior si falla
+        setGalleryState('stock', sku, previousImages.slice(), previousCover);
+        renderProductGallery(previousImages, sku, 'stock');
+        syncGalleryModeUi('stock', previousCover);
         showGalleryResult('stock', (res && res.message) ? res.message : 'No se pudo eliminar la imagen', 'error');
         return;
     }
 
     showGalleryResult('stock', res.message || 'Imagen eliminada', 'success');
 
-    // Optimistic UI: remove from cache and re-render immediately
+    // 3. Usar las imágenes que devuelve el servidor como fuente de verdad definitiva
+    //    (NO hacer re-fetch — evita que la imagen reaparezca)
+    const serverImages = Array.isArray(res.images) && res.images.length >= 0
+        ? res.images
+        : optimisticImages;
+    const serverCover = res.cover || serverImages[0] || '';
+
+    setGalleryState('stock', sku, serverImages.slice(), serverCover);
+    renderProductGallery(serverImages, sku, 'stock');
+    syncGalleryModeUi('stock', serverCover);
+
+    // Actualizar cache de producto si existe
     try {
-        const cache = stockGalleryCache || [];
-        const idx = cache.findIndex((i) => i === imagePath);
-        if (idx >= 0) {
-            cache.splice(idx, 1);
-            setGalleryState('stock', sku, cache.slice(), cache[0] || '');
-            renderProductGallery(cache, sku, 'stock');
-            syncGalleryModeUi('stock', cache[0] || '');
-        }
-        // update product cover if needed
         const prod = stockItemsCache.find(p => String(p.sku || '') === String(sku));
         if (prod) {
-            prod.image_url = cache[0] || prod.image_url;
+            prod.image_url = serverCover || prod.image_url;
             upsertStockCache(prod);
         }
     } catch (e) {
-        console.warn('Optimistic image delete failed:', e);
+        console.warn('Stock cache update after delete failed:', e);
     }
-
-    void loadMarketplaceGalleryForCurrentSku();
-
-    // Background sync
-    // Forced refresh to ensure server state reflected in UI
-    try {
-        const forced = await apiCall(`/admin_supply.php?action=product-gallery-list&sku=${encodeURIComponent(sku)}&_=${Date.now()}`, 'GET', null, { silent: true });
-        if (forced && forced.success) {
-            const images = Array.isArray(forced.images) && forced.images.length > 0 ? forced.images : (forced.cover ? [forced.cover] : []);
-            setGalleryState('stock', sku, images, forced.cover || images[0] || '');
-            renderProductGallery(images, sku, 'stock');
-            syncGalleryModeUi('stock', forced.cover || images[0] || '');
-        } else {
-            void loadProductGalleryForCurrentSku();
-        }
-    } catch (e) {
-        console.warn('Forced gallery refresh failed:', e);
-        void loadProductGalleryForCurrentSku();
-    }
-
-    void loadStock(stockCurrentPage);
-    // Also refresh marketplace list quickly so storefronts reflect changes
-    void loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 10);
 }
+
 
 function moveProductGalleryImage(sku, imagePath, direction) {
     return moveGalleryImage(sku, imagePath, direction, 'stock');
@@ -3464,81 +3487,59 @@ async function setMarketplaceGalleryCover(sku, imagePath) {
         console.warn('Optimistic marketplace cover failed:', e);
     }
 
-    // Background sync
-    // Forced refresh to ensure server state reflected in UI
-    try {
-        const forced = await apiCall(`/admin_supply.php?action=product-gallery-list&sku=${encodeURIComponent(sku)}&_=${Date.now()}`, 'GET', null, { silent: true });
-        if (forced && forced.success) {
-            const images = Array.isArray(forced.images) && forced.images.length > 0 ? forced.images : (forced.cover ? [forced.cover] : []);
-            setGalleryState('marketplace', sku, images, forced.cover || images[0] || '');
-            renderProductGallery(images, sku, 'marketplace');
-            syncGalleryModeUi('marketplace', forced.cover || images[0] || '');
-        } else {
-            void loadMarketplaceGalleryForCurrentSku();
-        }
-    } catch (e) {
-        console.warn('Forced marketplace gallery refresh failed:', e);
-        void loadMarketplaceGalleryForCurrentSku();
-    }
-
     void loadMarketplaceCeAdmin(marketplaceCurrentPage);
 }
 
 async function deleteMarketplaceGalleryImage(sku, imagePath) {
     if (!confirm('¿Eliminar esta imagen de la galería CE?')) return;
 
+    // 1. Optimistic update INMEDIATO — antes de llamar a la API
     const previousImages = Array.isArray(marketplaceGalleryCache) ? marketplaceGalleryCache.slice() : [];
-    const previousCover = marketplaceGalleryCover || previousImages[0] || '';
+    const previousCover = previousImages[0] || '';
+    const optimisticImages = previousImages.filter((image) => image !== imagePath);
 
-    try {
-        const optimisticImages = previousImages.filter((image) => image !== imagePath);
-        setGalleryState('marketplace', sku, optimisticImages.slice(), optimisticImages[0] || '');
-        renderProductGallery(optimisticImages, sku, 'marketplace');
-        syncGalleryModeUi('marketplace', optimisticImages[0] || '');
-    } catch (e) {
-        console.warn('Optimistic marketplace image delete preflight failed:', e);
-    }
+    setGalleryState('marketplace', sku, optimisticImages.slice(), optimisticImages[0] || '');
+    renderProductGallery(optimisticImages, sku, 'marketplace');
+    syncGalleryModeUi('marketplace', optimisticImages[0] || '');
 
+    // 2. Llamada a la API
     const res = await apiCall('/admin_supply.php?action=product-gallery-delete', 'POST', {
         sku: sku,
         image: imagePath
     });
 
     if (!res || !res.success) {
-        if (previousImages.length > 0) {
-            setGalleryState('marketplace', sku, previousImages.slice(), previousCover);
-            renderProductGallery(previousImages, sku, 'marketplace');
-            syncGalleryModeUi('marketplace', previousCover);
-        }
+        // Revertir al estado anterior si falla
+        setGalleryState('marketplace', sku, previousImages.slice(), previousCover);
+        renderProductGallery(previousImages, sku, 'marketplace');
+        syncGalleryModeUi('marketplace', previousCover);
         showGalleryResult('marketplace', (res && res.message) ? res.message : 'No se pudo eliminar la imagen CE', 'error');
         return;
     }
 
     showGalleryResult('marketplace', res.message || 'Imagen CE eliminada', 'success');
 
-    // Optimistic UI: remove image from marketplace cache and re-render
+    // 3. Usar las imágenes que devuelve el servidor como fuente de verdad definitiva
+    //    (NO hacer re-fetch — evita que la imagen reaparezca)
+    const serverImages = Array.isArray(res.images) && res.images.length >= 0
+        ? res.images
+        : optimisticImages;
+    const serverCover = res.cover || serverImages[0] || '';
+
+    setGalleryState('marketplace', sku, serverImages.slice(), serverCover);
+    renderProductGallery(serverImages, sku, 'marketplace');
+    syncGalleryModeUi('marketplace', serverCover);
+
+    // Actualizar cache de marketplace si existe
     try {
-        const cache = marketplaceGalleryCache || [];
-        const idx = cache.findIndex((i) => i === imagePath);
-        if (idx >= 0) {
-            cache.splice(idx, 1);
-            setGalleryState('marketplace', sku, cache.slice(), cache[0] || '');
-            renderProductGallery(cache, sku, 'marketplace');
-            syncGalleryModeUi('marketplace', cache[0] || '');
-        }
         const item = marketplaceItemsCache.find(p => String(p.sku || '') === String(sku));
         if (item) {
-            item.image_url = cache[0] || item.image_url;
+            item.image_url = serverCover || item.image_url;
             upsertMarketplaceCache(item);
         }
     } catch (e) {
-        console.warn('Optimistic marketplace delete failed:', e);
+        console.warn('Marketplace cache update after delete failed:', e);
     }
-
-    // Background sync
-    void loadMarketplaceGalleryForCurrentSku();
-    void loadMarketplaceCeAdmin(marketplaceCurrentPage);
-    void loadStock(stockCurrentPage);
 }
 
 // Image compression helper (client-side optimization)
@@ -4093,7 +4094,7 @@ async function loadMarketplaceCeAdmin(page = 1, customPerPage = null) {
     marketplaceCurrentPage = page;
     // Use custom per_page if provided (for faster loading after save), otherwise use default
     const perPageToUse = customPerPage !== null ? customPerPage : marketplacePerPage;
-    const res = await apiCall(`/admin_supply.php?action=marketplace-list&page=${page}&per_page=${perPageToUse}`, 'GET', null, { silent: true });
+    const res = await apiCall(`/admin_supply.php?action=marketplace-list&page=${page}&per_page=${perPageToUse}&_=${Date.now()}`, 'GET', null, { silent: true });
 
     if (!res || !res.success || !Array.isArray(res.items)) {
         if (box) box.innerHTML = '<p class="text-muted">No fue posible cargar artículos CE.</p>';

@@ -1432,6 +1432,8 @@ function normalize_and_persist_gallery_images_admin_supply($pdo, string $sku, ar
 }
 
 function persist_product_gallery_images_admin_supply($pdo, string $sku, array $images): array {
+    error_log("PERSIST REQ SKU: " . $sku);
+    error_log("PERSIST REQ IMAGES: " . json_encode($images));
     $images = normalize_product_gallery_images_admin_supply($images);
     if (empty($images)) {
         return [];
@@ -1448,9 +1450,23 @@ function persist_product_gallery_images_admin_supply($pdo, string $sku, array $i
         }
 
         try {
-            $stmt = $pdo->prepare("UPDATE {$table} SET image_url = ?, variants_json = ? WHERE sku = ? OR sku LIKE ?");
-            $stmt->execute([$cover, $json, $sku, "%{$sku}%"]);
+            $sets = ['image_url = ?'];
+            $params = [$cover];
+            
+            if (db_column_exists($table, 'variants_json')) {
+                $sets[] = 'variants_json = ?';
+                $params[] = $json;
+            }
+            
+            $params[] = $sku;
+            $params[] = "%{$sku}%";
+            
+            $stmt = $pdo->prepare("UPDATE {$table} SET " . implode(', ', $sets) . " WHERE sku = ? OR sku LIKE ?");
+            $res = $stmt->execute($params);
+            $rowCount = $stmt->rowCount();
+            error_log("UPDATE {$table} execute result: " . var_export($res, true) . ", rowCount: " . $rowCount);
         } catch (Exception $ignored) {
+            error_log("Error persisting gallery to {$table}: " . $ignored->getMessage());
         }
     }
 
@@ -1738,6 +1754,11 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
     $tmp = $file['tmp_name'] ?? '';
     if ($tmp === '' || !is_uploaded_file($tmp)) {
         throw new Exception('Archivo de imagen inválido');
+    }
+
+    $maxFileSize = 10 * 1024 * 1024; // 10MB
+    if (($file['size'] ?? 0) > $maxFileSize) {
+        throw new Exception('La imagen excede el tamaño máximo permitido de 10MB');
     }
 
     $allowedExt = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
@@ -2688,6 +2709,8 @@ try {
             break;
 
         case 'product-save':
+            error_log("SAVE REQ SKU: " . ($input['sku'] ?? 'MISSING'));
+            error_log("SAVE REQ IMG_URL: " . ($input['image_url'] ?? 'MISSING'));
             if ($method !== 'POST') {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];
                 break;
@@ -2742,23 +2765,56 @@ try {
             }
 
             if ($id > 0) {
-                $check = $pdo->prepare('SELECT id FROM products WHERE id = ? LIMIT 1');
+                $check = $pdo->prepare('SELECT id, variants_json FROM products WHERE id = ? LIMIT 1');
                 $check->execute([$id]);
-                if (!(int)$check->fetchColumn()) {
+                $row = $check->fetch();
+                if (!$row) {
                     $response = ['success' => false, 'message' => 'Producto no encontrado'];
                     break;
                 }
 
-                    // Use the current gallery on disk as the source of truth during edits.
-                    // If there is no disk gallery, keep the selected image_url instead of reverting to default.
-                    $finalGallery = !empty($galleryImages)
-                        ? $galleryImages
-                        : (!empty($imageUrl) && strcasecmp($imageUrl, 'images/products/default-product.svg') !== 0 ? [$imageUrl] : []);
-                    $variantsJson = json_encode($finalGallery, JSON_UNESCAPED_UNICODE);
+                $dbVariants = json_decode((string)($row['variants_json'] ?? '[]'), true);
+                if (!is_array($dbVariants)) $dbVariants = [];
 
-                    $finalImageUrl = !empty($finalGallery)
-                        ? $finalGallery[0]
-                        : 'images/products/default-product.svg';
+                // SMART SYNC: Keep DB order for existing files, add new files from disk at the end
+                $finalGallery = [];
+                // 1. Keep files that are both on disk and already in DB (preserves custom order)
+                foreach ($dbVariants as $img) {
+                    if (in_array($img, $galleryImages)) {
+                        $finalGallery[] = $img;
+                    }
+                }
+                // 2. Add files that are on disk but NOT in DB yet (newly uploaded files)
+                foreach ($galleryImages as $img) {
+                    if (!in_array($img, $finalGallery)) {
+                        $finalGallery[] = $img;
+                    }
+                }
+
+                // Ensure the imageUrl sent from frontend is the FIRST item if it's in the gallery
+                if (!empty($imageUrl) && in_array($imageUrl, $finalGallery)) {
+                    $finalGallery = array_values(array_unique(array_merge([$imageUrl], $finalGallery)));
+                }
+
+                if (empty($finalGallery) && !empty($imageUrl) && strcasecmp($imageUrl, 'images/products/default-product.svg') !== 0) {
+                     $finalGallery = [$imageUrl];
+                }
+
+                $variantsJson = json_encode($finalGallery, JSON_UNESCAPED_UNICODE);
+
+                    // Prefer the image_url from the request if it's valid, otherwise fallback to gallery first item
+                    $finalImageUrl = $imageUrl;
+                    if (!empty($finalGallery) && !in_array($imageUrl, $finalGallery)) {
+                        // If current imageUrl is not in gallery, but gallery is not empty, use gallery's first item
+                        // Note: ideally we should use the order from DB, but this prevents overwriting with a random file.
+                        if (strpos($imageUrl, 'images/products/') !== 0) {
+                             $finalImageUrl = $finalGallery[0];
+                        }
+                    }
+                    if (empty($finalImageUrl) || $finalImageUrl === 'images/products/default-product.svg') {
+                        if (!empty($finalGallery)) $finalImageUrl = $finalGallery[0];
+                        else $finalImageUrl = 'images/products/default-product.svg';
+                    }
                 
                 update_product_compatible($pdo, $id, [
                     'sku' => $sku,
@@ -3368,7 +3424,10 @@ try {
                 break;
             }
 
+            error_log("REORDER REQ SKU: " . $sku);
+            error_log("REORDER REQ IMAGES: " . json_encode($images));
             $ordered = reorder_product_gallery_images_admin_supply($pdo, $sku, $images);
+            error_log("REORDER FINAL: " . json_encode($ordered));
             $response = [
                 'success' => true,
                 'message' => 'Orden de imágenes actualizado',

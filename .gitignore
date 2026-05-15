@@ -8,3 +8,29 @@ node_modules/
 .vscode/
 .idea/
 .git/
+
+# Backups
+backups/
+
+# Product images and user content
+public/images/products/gallery/
+public/images/products/by_code/
+images/products/
+img/
+*.sha1
+
+# Test scripts and temporary files
+test_*.php
+!public/api/admin_supply.php
+migration_report_*.json
+delete_verify_report_*.txt
+smoke_images_report_*.txt
+verify_image_orphans.php
+diagnose_images*.php
+diagnostic_images_db.php
+reprovision_missing_gallery_images.php
+sync_gallery_to_db.php
+sync_images_to_db.php
+init_tickets.php
+clean_base64_images.php
+cleanup_orphaned_images.php
