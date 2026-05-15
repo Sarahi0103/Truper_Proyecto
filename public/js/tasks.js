@@ -9,6 +9,7 @@ const TASKS_IS_ADMIN = TASKS_ROLE === 'admin';
 let CURRENT_PRIORITY_FILTER = 'all';
 let SHOW_COMPLETED_TASKS = false;
 let ALL_TASKS = [];
+let CURRENT_VIEW = 'list'; // 'list' o 'kanban'
 
 // Mapeo de prioridades
 const PRIORITY_ORDER = {
@@ -35,31 +36,23 @@ async function createTask() {
         return;
     }
     
-    // Parsear horas estimadas
-    let estimatedHours = null;
-    const hoursInput = document.getElementById('estimatedHours')?.value || '';
-    const minsInput = document.getElementById('estimatedMins')?.value || '0';
-    
-    if (hoursInput) {
-        const hours = parseInt(hoursInput, 10);
-        const mins = parseInt(minsInput, 10);
+    if (hoursInput || minsInput) {
+        const hours = parseInt(hoursInput, 10) || 0;
+        const mins = parseInt(minsInput, 10) || 0;
         
-        if (isNaN(hours) || hours < 1 || hours > 12) {
-            showAlert('Hora estimada: ingresa valor 1-12', 'warning');
+        if (isNaN(hours) || hours < 0) {
+            showAlert('Horas inválidas', 'warning');
             return;
         }
         
         if (isNaN(mins) || mins < 0 || mins > 59) {
-            showAlert('Minutos estimados: ingresa valor 0-59', 'warning');
+            showAlert('Minutos inválidos (0-59)', 'warning');
             return;
         }
         
         estimatedHours = hours + (mins / 60);
         estimatedHours = Math.round(estimatedHours * 100) / 100;
     }
-    
-    const estimatedAmpmBtn = document.getElementById('estimatedAmpm');
-    const estimatedAmpm = (estimatedAmpmBtn?.textContent || 'AM').trim();
     
     const taskData = {
         title: document.getElementById('taskTitle').value,
@@ -68,7 +61,7 @@ async function createTask() {
         due_date: document.getElementById('dueDate').value,
         priority: document.getElementById('priority').value,
         estimated_hours: estimatedHours,
-        estimated_ampm: estimatedAmpm
+        estimated_ampm: 'DURATION' // Indicamos que es duración
     };
     
     const response = await apiCall('/tasks.php?action=create', 'POST', taskData);
@@ -184,31 +177,32 @@ function formatHoursDisplay(decimalHours, ampm = 'AM') {
 async function logTaskHours(taskId) {
     const hoursInput = document.getElementById(`hours_${taskId}`)?.value || '';
     const minsInput = document.getElementById(`mins_${taskId}`)?.value || '0';
-    const ampmBtn = document.getElementById(`ampm_${taskId}`);
-    const ampm = (ampmBtn?.textContent || 'AM').trim();
 
-    // Validar horas
-    const hours = parseInt(hoursInput, 10);
-    const mins = parseInt(minsInput, 10);
+    const hours = parseInt(hoursInput, 10) || 0;
+    const mins = parseInt(minsInput, 10) || 0;
 
-    if (isNaN(hours) || hours < 1 || hours > 12) {
-        showAlert('Ingresa hora válida (1-12)', 'warning');
+    if (hours === 0 && mins === 0) {
+        showAlert('Ingresa el tiempo trabajado', 'warning');
+        return;
+    }
+
+    if (isNaN(hours) || hours < 0) {
+        showAlert('Horas inválidas', 'warning');
         return;
     }
 
     if (isNaN(mins) || mins < 0 || mins > 59) {
-        showAlert('Ingresa minutos válidos (0-59)', 'warning');
+        showAlert('Minutos inválidos (0-59)', 'warning');
         return;
     }
 
-    // Convertir a horas decimales (sin considerar AM/PM en cálculo, solo duración)
     let totalHours = hours + (mins / 60);
     totalHours = Math.round(totalHours * 100) / 100;
     
     const response = await apiCall('/tasks.php?action=log-hours', 'POST', {
         task_id: taskId,
         hours: totalHours,
-        actual_ampm: ampm
+        actual_ampm: 'DURATION'
     });
     
     if (response && response.success) {
@@ -255,9 +249,6 @@ function toggleCompletedTasks() {
     renderFilteredTasks();
 }
 
-/**
- * Renderizar tareas filtradas
- */
 function renderFilteredTasks() {
     const container = document.getElementById('tasksList');
     if (!container) return;
@@ -272,6 +263,21 @@ function renderFilteredTasks() {
     // Filtrar tareas completadas
     if (!SHOW_COMPLETED_TASKS) {
         filteredTasks = filteredTasks.filter(task => task.status !== 'completed');
+    }
+
+    // Renderizar según la vista actual
+    if (CURRENT_VIEW === 'kanban') {
+        renderKanbanBoard(filteredTasks);
+        return;
+    }
+
+    // Filtro de búsqueda por texto
+    const searchTerm = document.getElementById('taskSearch')?.value.toLowerCase() || '';
+    if (searchTerm) {
+        filteredTasks = filteredTasks.filter(task => 
+            task.title.toLowerCase().includes(searchTerm) || 
+            task.description.toLowerCase().includes(searchTerm)
+        );
     }
 
     // Agrupar por prioridad
@@ -300,7 +306,6 @@ function renderFilteredTasks() {
     // Renderizar tareas agrupadas
     let html = '';
     
-    // Solo mostrar grupos que tengan tareas
     const priorityOrder = ['urgent', 'high', 'medium', 'low'];
     for (const priority of priorityOrder) {
         const tasks = groupedByPriority[priority];
@@ -308,11 +313,11 @@ function renderFilteredTasks() {
 
         html += `
             <div style="margin-bottom: 2rem;">
-                <h3 style="color: #333; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                <h3 style="color: #1e293b; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; font-size: 1.1rem;">
                     <span>${PRIORITY_LABELS[priority]}</span>
-                    <span style="background-color: #f0f0f0; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.85rem; font-weight: normal;">${tasks.length}</span>
+                    <span class="kanban-count">${tasks.length}</span>
                 </h3>
-                <div>
+                <div class="list-layout-container">
                     ${tasks.map(task => renderTaskItem(task)).join('')}
                 </div>
             </div>
@@ -437,11 +442,11 @@ function taskActionButtons(task) {
         return `
             <button class="btn btn-small btn-secondary" onclick="updateTaskStatus(${task.id}, 'in_progress')">En progreso</button>
             <button class="btn btn-small btn-success" onclick="updateTaskStatus(${task.id}, 'completed')">Completar</button>
-            <div style="display: inline-flex; gap: 0.3rem; align-items: center;">
-                <input id="hours_${task.id}" type="number" min="1" max="12" placeholder="HH" style="width: 45px; padding: 0.4rem; text-align: center;" title="Hora (1-12)">
-                <span style="font-weight: bold;">:</span>
-                <input id="mins_${task.id}" type="number" min="0" max="59" placeholder="MM" style="width: 45px; padding: 0.4rem; text-align: center;" title="Minutos (0-59)">
-                <button id="ampm_${task.id}" class="btn btn-small" style="width: 50px; padding: 0.4rem 0.6rem;" onclick="toggleAmPm(${task.id})">AM</button>
+            <div style="display: inline-flex; gap: 0.2rem; align-items: center; background: #eee; padding: 2px 5px; border-radius: 4px;">
+                <input id="hours_${task.id}" type="number" min="0" max="99" placeholder="H" style="width: 35px; border:none; background:transparent; font-size:0.8rem; text-align:center;">
+                <span style="font-size:0.7rem; font-weight:bold;">h</span>
+                <input id="mins_${task.id}" type="number" min="0" max="59" placeholder="M" style="width: 35px; border:none; background:transparent; font-size:0.8rem; text-align:center;">
+                <span style="font-size:0.7rem; font-weight:bold;">m</span>
             </div>
             <button class="btn btn-small btn-primary" onclick="logTaskHours(${task.id})">Registrar</button>
             <button class="btn btn-small btn-danger" onclick="deleteTask(${task.id})">Eliminar</button>
@@ -528,6 +533,72 @@ async function loadAssignees() {
     ).join('');
 
     select.innerHTML = '<option value="">Seleccionar empleado...</option>' + options;
+}
+
+/**
+ * Cambiar vista (Lista / Kanban)
+ */
+function toggleView(view) {
+    CURRENT_VIEW = view;
+    
+    // Actualizar botones UI
+    document.getElementById('btnListView').classList.toggle('active', view === 'list');
+    document.getElementById('btnKanbanView').classList.toggle('active', view === 'kanban');
+    
+    renderFilteredTasks();
+}
+
+/**
+ * Renderizar tablero Kanban
+ */
+function renderKanbanBoard(tasks) {
+    const container = document.getElementById('tasksList');
+    if (!container) return;
+
+    // Filtro de búsqueda por texto
+    const searchTerm = document.getElementById('taskSearch')?.value.toLowerCase() || '';
+    let filtered = tasks;
+    if (searchTerm) {
+        filtered = filtered.filter(task => 
+            task.title.toLowerCase().includes(searchTerm) || 
+            task.description.toLowerCase().includes(searchTerm)
+        );
+    }
+
+    const columns = {
+        'pending': { title: 'Pendientes', icon: '⏳', tasks: [] },
+        'in_progress': { title: 'En Progreso', icon: '⚙️', tasks: [] },
+        'completed': { title: 'Completadas', icon: '✅', tasks: [] }
+    };
+
+    filtered.forEach(task => {
+        if (columns[task.status]) {
+            columns[task.status].tasks.push(task);
+        }
+    });
+
+    let html = `<div class="kanban-board">`;
+    
+    for (const [id, col] of Object.entries(columns)) {
+        html += `
+            <div class="kanban-column" id="col_${id}">
+                <div class="kanban-column-header">
+                    <div class="kanban-column-title">
+                        <span>${col.icon}</span>
+                        <span>${col.title}</span>
+                    </div>
+                    <span class="kanban-count">${col.tasks.length}</span>
+                </div>
+                <div class="kanban-tasks-container">
+                    ${col.tasks.map(task => renderTaskItem(task)).join('')}
+                    ${col.tasks.length === 0 ? '<p style="text-align:center; color:#94a3b8; font-size:0.85rem; margin-top:2rem;">Sin tareas</p>' : ''}
+                </div>
+            </div>
+        `;
+    }
+    
+    html += `</div>`;
+    container.innerHTML = html;
 }
 
 document.addEventListener('DOMContentLoaded', function() {

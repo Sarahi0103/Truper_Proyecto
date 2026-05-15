@@ -17,6 +17,23 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
     <link rel="stylesheet" href="css/theme.css?v=2.1">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/responsive-complete.css">
+    <style>
+        .task-overdue { border-left: 5px solid #ef4444 !important; background: #fff5f5 !important; }
+        .overdue-badge { background: #ef4444; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; margin-left: 8px; }
+        .task-progress-bar { height: 6px; background: #eee; border-radius: 3px; overflow: hidden; margin-top: 8px; }
+        .task-progress-fill { height: 100%; background: #3b82f6; transition: width 0.3s; }
+        .task-progress-fill.warning { background: #f59e0b; }
+        .task-progress-fill.danger { background: #ef4444; }
+        
+        .kanban-board { display: flex; gap: 1.5rem; overflow-x: auto; padding-bottom: 1rem; align-items: flex-start; }
+        .kanban-column { flex: 1; min-width: 300px; background: #f8fafc; border-radius: 12px; padding: 1rem; border: 1px solid #e2e8f0; }
+        .kanban-column-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #e2e8f0; }
+        .kanban-column-title { font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 0.5rem; }
+        .kanban-count { background: #e2e8f0; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; }
+        
+        .btn-priority.active { box-shadow: 0 0 0 2px #3b82f6; }
+        .view-toggle .btn.active { background: #fff; color: #3b82f6; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    </style>
 </head>
 <body>
     <!-- HEADER -->
@@ -68,18 +85,29 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                 <div class="card-body">
                     <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;">
                         <div style="flex: 1; min-width: 300px;">
-                            <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Filtrar por Prioridad</label>
-                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                                <button class="btn-priority btn-priority-all active" onclick="filterByPriority('all')">Todas</button>
-                                <button class="btn-priority btn-priority-urgent" onclick="filterByPriority('urgent')">🔴 Urgente</button>
-                                <button class="btn-priority btn-priority-high" onclick="filterByPriority('high')">🟠 Alta</button>
-                                <button class="btn-priority btn-priority-medium" onclick="filterByPriority('medium')">🟡 Media</button>
-                                <button class="btn-priority btn-priority-low" onclick="filterByPriority('low')">🟢 Baja</button>
+                            <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Buscar y Filtrar</label>
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                                <input type="text" id="taskSearch" placeholder="Buscar por título o descripción..." 
+                                    style="padding: 0.5rem; border-radius: 6px; border: 1px solid #ddd; min-width: 250px;"
+                                    oninput="renderFilteredTasks()">
+                                <div style="display: flex; gap: 0.3rem;">
+                                    <button class="btn-priority btn-priority-all active" onclick="filterByPriority('all')">Todas</button>
+                                    <button class="btn-priority btn-priority-urgent" onclick="filterByPriority('urgent')">🔴</button>
+                                    <button class="btn-priority btn-priority-high" onclick="filterByPriority('high')">🟠</button>
+                                    <button class="btn-priority btn-priority-medium" onclick="filterByPriority('medium')">🟡</button>
+                                    <button class="btn-priority btn-priority-low" onclick="filterByPriority('low')">🟢</button>
+                                </div>
                             </div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" id="showCompleted" onchange="toggleCompletedTasks()" />
-                            <label for="showCompleted" style="cursor: pointer; margin: 0;">Mostrar completadas</label>
+                        <div style="display: flex; align-items: center; gap: 1.5rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="checkbox" id="showCompleted" onchange="toggleCompletedTasks()" />
+                                <label for="showCompleted" style="cursor: pointer; margin: 0; font-size: 0.9rem;">Mostrar completadas</label>
+                            </div>
+                            <div class="view-toggle" style="background: #f0f0f0; padding: 4px; border-radius: 8px; display: flex;">
+                                <button id="btnListView" class="btn btn-small active" onclick="toggleView('list')" style="margin:0; border-radius: 6px;">Lista</button>
+                                <button id="btnKanbanView" class="btn btn-small" onclick="toggleView('kanban')" style="margin:0; border-radius: 6px;">Kanban</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -135,13 +163,14 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                     </div>
 
                     <div class="form-group">
-                        <label>Horas Estimadas</label>
+                        <label>Tiempo Estimado (Duración)</label>
                         <div style="display: inline-flex; gap: 0.3rem; align-items: center;">
-                            <input type="number" id="estimatedHours" min="1" max="12" placeholder="HH" style="width: 45px; padding: 0.4rem; text-align: center;" title="Hora (1-12)">
-                            <span style="font-weight: bold;">:</span>
-                            <input type="number" id="estimatedMins" min="0" max="59" placeholder="MM" style="width: 45px; padding: 0.4rem; text-align: center;" title="Minutos (0-59)">
-                            <button type="button" id="estimatedAmpm" class="btn btn-small" style="width: 50px; padding: 0.4rem 0.6rem;" onclick="toggleEstimatedAmPm()">AM</button>
+                            <input type="number" id="estimatedHours" min="0" max="99" placeholder="H" style="width: 50px; padding: 0.4rem; text-align: center;" title="Horas">
+                            <span style="font-weight: bold;">h</span>
+                            <input type="number" id="estimatedMins" min="0" max="59" placeholder="M" style="width: 50px; padding: 0.4rem; text-align: center;" title="Minutos">
+                            <span style="font-weight: bold;">m</span>
                         </div>
+                        <small class="text-muted" style="display: block; margin-top: 4px;">Define cuánto tiempo crees que tomará esta tarea.</small>
                     </div>
                 </form>
             </div>
