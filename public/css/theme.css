@@ -19,24 +19,24 @@
 
 :root[data-theme="dark"] {
     color-scheme: dark;
-    --theme-bg: #0a0a0a;
-    --theme-surface: #1a1a1a;
-    --theme-surface-strong: #252525;
-    --theme-text: #e8e8e8;
-    --theme-text-muted: #a0a0a0;
-    --theme-border: #333333;
-    --theme-shadow: rgba(0, 0, 0, 0.4);
-    --theme-shadow-strong: rgba(0, 0, 0, 0.6);
-    --theme-accent: #ff8a1f;
-    --theme-accent-strong: #ff9a3c;
-    --theme-accent-soft: rgba(255, 138, 31, 0.15);
+    --theme-bg: #000000; /* Pure Black Background */
+    --theme-surface: #111111; /* Very Dark Charcoal */
+    --theme-surface-strong: #050505;
+    --theme-text: #ffffff;
+    --theme-text-muted: #888888;
+    --theme-border: #222222;
+    --theme-shadow: rgba(0, 0, 0, 0.8);
+    --theme-shadow-strong: rgba(0, 0, 0, 1);
+    --theme-accent: #ff7f00; /* Truper Orange */
+    --theme-accent-strong: #cc6600;
+    --theme-accent-soft: rgba(255, 127, 0, 0.1);
     
-    /* Legacy variables mapping for dark mode */
-    --color-blanco: var(--theme-surface);
-    --color-negro: var(--theme-text);
-    --color-gris-claro: var(--theme-surface-strong);
-    --color-gris: var(--theme-border);
-    --color-gris-oscuro: var(--theme-text-muted);
+    /* Legacy variables mapping */
+    --color-blanco: #ffffff;
+    --color-negro: #000000;
+    --color-gris-claro: #111111;
+    --color-gris: #222222;
+    --color-gris-oscuro: #888888;
     
     --ui-bg: var(--theme-bg);
     --ui-surface: var(--theme-surface);
@@ -58,8 +58,8 @@
 
 html,
 body {
-    background: var(--theme-bg);
-    color: var(--theme-text);
+    background: #000000 !important;
+    color: #ffffff !important;
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
@@ -300,9 +300,11 @@ textarea,
 .catalog-filters input,
 .catalog-filters select,
 .catalog-search {
-    background: var(--theme-surface);
-    color: var(--theme-text);
-    border-color: var(--theme-border);
+    background: #0f172a;
+    color: #f8fafc;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
     transition: all 0.3s ease;
 }
 

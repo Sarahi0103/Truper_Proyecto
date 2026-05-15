@@ -18,25 +18,6 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
     <link rel="stylesheet" href="css/responsive-complete.css">
     <link rel="stylesheet" href="css/dashboard.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
-        .stat-card { background: var(--theme-card); padding: 1.5rem; border-radius: 16px; border: 1px solid var(--theme-border); box-shadow: var(--theme-shadow); }
-        .stat-label { color: var(--theme-text-muted); font-size: 0.9rem; margin-bottom: 0.5rem; }
-        .stat-value { font-size: 1.8rem; font-weight: 700; color: var(--theme-text); }
-        .chart-container { position: relative; height: 350px; width: 100%; margin-top: 1rem; }
-        .calendar-container { margin-top: 2rem; }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
-        .calendar-day-head { text-align: center; font-weight: 600; padding: 10px; color: var(--theme-text-muted); }
-        .calendar-day { min-height: 80px; padding: 5px; border: 1px solid var(--theme-border); border-radius: 8px; position: relative; transition: all 0.2s; }
-        .calendar-day:hover { background: rgba(255,127,0,0.05); }
-        .calendar-day.has-activity { border-color: var(--color-naranja); }
-        .day-number { font-size: 0.8rem; color: var(--theme-text-muted); }
-        .day-content { font-size: 0.75rem; margin-top: 5px; }
-        .activity-dot { width: 6px; height: 6px; background: var(--color-naranja); border-radius: 50%; display: inline-block; margin-right: 3px; }
-        .view-toggle { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
-        .view-toggle .btn { padding: 0.4rem 1rem; font-size: 0.85rem; border-radius: 20px; }
-        .view-toggle .btn.active { background: var(--color-naranja); color: white; border-color: var(--color-naranja); }
-    </style>
 </head>
 <body>
     <!-- HEADER -->
@@ -67,17 +48,11 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
     </header>
 
     <main>
-        <div class="container-fluid">
-            <div class="d-flex justify-between align-center" style="margin-bottom: 2rem;">
-                <div>
-                    <h1 style="margin-bottom: 0.5rem;"><?php echo $is_admin ? 'Inteligencia de Negocios' : 'Mis Estadísticas'; ?></h1>
-                    <p class="text-muted">Análisis detallado impulsado por IA para la toma de decisiones.</p>
-                </div>
-                <?php if ($is_admin): ?>
-                <button class="btn btn-primary" onclick="exportStats('csv')">
-                    📥 Descargar Excel
-                </button>
-                <?php endif; ?>
+        <div class="container-fluid admin-supply-shell">
+            <div class="page-hero">
+                <div class="module-badge module-admin"><span class="module-glyph">IA</span> Inteligencia de Negocios</div>
+                <h1><?php echo $is_admin ? 'Estadísticas y Análisis' : 'Mis Estadísticas'; ?></h1>
+                <p class="text-muted">Análisis detallado impulsado por IA para la toma de decisiones estratégicas.</p>
             </div>
 
             <!-- TABS -->
@@ -212,15 +187,15 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                 <div class="card">
                     <div class="card-body">
                         <h4 style="color:var(--color-naranja); margin-bottom:1rem;">Métricas de Impacto</h4>
-                        <div class="grid grid-2" style="gap:1rem;">
-                            <div style="background:rgba(255,127,0,0.05); padding:1rem; border-radius:12px; text-align:center;">
-                                <div style="font-weight:700; font-size:1.4rem;">-15%</div>
-                                <div style="font-size:0.75rem; color:var(--theme-text-muted);">Sobre-inventario</div>
-                            </div>
-                            <div style="background:rgba(255,127,0,0.05); padding:1rem; border-radius:12px; text-align:center;">
-                                <div style="font-weight:700; font-size:1.4rem;">+22%</div>
-                                <div style="font-size:0.75rem; color:var(--theme-text-muted);">Eficiencia de Caja</div>
-                            </div>
+                        <div style="display: inline-flex; gap: 0.3rem; align-items: center;">
+                            <input type="number" id="estimatedHours" min="0" max="99" placeholder="H" style="width: 50px; padding: 0.4rem; text-align: center; background: #ffffff !important; color: #000000 !important; border: 2px solid #ff7f00 !important; font-weight: 800;" title="Horas">
+                            <span style="font-weight: bold; color: #ff7f00;">h</span>
+                            <input type="number" id="estimatedMins" min="0" max="59" placeholder="M" style="width: 50px; padding: 0.4rem; text-align: center; background: #ffffff !important; color: #000000 !important; border: 2px solid #ff7f00 !important; font-weight: 800;" title="Minutos">
+                            <span style="font-weight: bold; color: #ff7f00;">m</span>
+                        </div>
+                        <div style="background:rgba(255,127,0,0.05); padding:1rem; border-radius:12px; text-align:center;">
+                            <div style="font-weight:700; font-size:1.4rem;">+22%</div>
+                            <div style="font-size:0.75rem; color:var(--theme-text-muted);">Eficiencia de Caja</div>
                         </div>
                     </div>
                 </div>

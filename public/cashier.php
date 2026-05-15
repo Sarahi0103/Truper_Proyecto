@@ -13,11 +13,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
     <title>Cajon de Dinero - Truper Platform</title>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/theme.css">
-    <style>
-      .cash-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
-      .metric { border: 1px solid var(--ui-border); border-radius: 10px; padding: 10px; background: var(--ui-surface); }
-      .metric-label { font-size: 12px; color: var(--ui-text-muted); }
-      .metric-value { font-size: 18px; font-weight: 700; color: var(--ui-text); }
+    <link rel="stylesheet" href="css/dashboard.css">
     </style>
 </head>
 <body>

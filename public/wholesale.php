@@ -16,6 +16,7 @@ $column_count = $is_admin ? 7 : 5;
     <title>Mayoreo - Truper Platform</title>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/responsive-complete.css">
 </head>
 <body>
@@ -46,9 +47,12 @@ $column_count = $is_admin ? 7 : 5;
 </header>
 
 <main>
-    <div class="container">
-        <h1>Solicitud de Mayoreo</h1>
-        <p class="text-muted">Solicita condiciones comerciales de volumen para tu negocio.</p>
+    <div class="container admin-supply-shell">
+        <div class="page-hero">
+            <div class="module-badge module-admin"><span class="module-glyph">MY</span> Módulo de Mayoreo</div>
+            <h1>Solicitud de Mayoreo</h1>
+            <p class="text-muted">Solicita condiciones comerciales de volumen para tu negocio.</p>
+        </div>
 
         <form id="wholesaleForm" class="mt-3" onsubmit="submitWholesale(event)">
             <div class="form-group">

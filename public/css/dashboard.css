@@ -1,323 +1,361 @@
-/* Estilos específicos para Dashboard */
+/* ============================================
+   ESTILOS PREMIUM TRUE BLACK & TRUPER ORANGE
+   ============================================ */
 
-.dashboard-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-    margin-bottom: 2rem;
+/* Global Reset - Pure Black */
+body {
+    background-color: #000000 !important;
+    color: #ffffff !important;
 }
 
-.dashboard-container .card {
-    grid-column: auto;
-}
-
-.status-badge {
-    display: inline-block;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-weight: bold;
-    font-size: 0.85rem;
-}
-
-.status-pending {
-    background-color: rgba(255, 127, 0, 0.08);
-    color: var(--ui-text);
-}
-
-.status-paid {
-    background-color: rgba(17, 17, 17, 0.06);
-    color: var(--ui-text);
-}
-
-.status-partial {
-    background-color: rgba(255, 127, 0, 0.12);
-    color: var(--ui-text);
-}
-
-.status-cancelled {
-    background-color: rgba(17, 17, 17, 0.1);
-    color: var(--ui-text);
-}
-
-.order-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
-    border-bottom: 1px solid var(--ui-border);
-}
-
-.order-item:last-child {
-    border-bottom: none;
-}
-
-.order-info {
-    flex: 1;
-}
-
-.order-number {
-    font-weight: bold;
-    color: var(--color-naranja);
-}
-
-.order-date {
-    font-size: 0.85rem;
-    color: var(--ui-text-muted);
-}
-
-.order-total {
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: var(--ui-text);
-}
-
-.chart-container {
+/* Page Hero - Naranja Difuminado con Negro */
+.page-hero {
+    background: linear-gradient(135deg, #111111 0%, #000000 100%) !important;
+    border: 1px solid #222222 !important;
+    border-radius: 16px !important;
+    padding: 3rem 2.5rem !important;
+    margin-bottom: 2.5rem !important;
     position: relative;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Efecto difuminado naranja de diseño */
+.page-hero::before {
+    content: "";
+    position: absolute;
+    top: -100px;
+    left: -100px;
+    width: 300px;
     height: 300px;
-    margin: 2rem 0;
+    background: radial-gradient(circle, rgba(255, 127, 0, 0.08) 0%, transparent 70%);
+    pointer-events: none;
 }
 
-.chart-placeholder {
-    width: 100%;
-    height: 100%;
-    background-color: var(--ui-surface-soft);
-    border-radius: 4px;
+.page-hero h1 {
+    color: #ffffff !important;
+    font-size: 2.5rem !important;
+    font-weight: 900 !important;
+    margin-bottom: 0.5rem !important;
+    letter-spacing: -0.02em;
+}
+
+/* Subrayado difuminado naranja */
+.page-hero h1::after {
+    content: "";
+    display: block;
+    width: 80px;
+    height: 4px;
+    background: linear-gradient(90deg, #ff7f00, transparent);
+    margin-top: 10px;
+    border-radius: 2px;
+}
+
+.page-hero p {
+    color: #888888 !important;
+    font-size: 1.15rem !important;
+    max-width: 700px;
+}
+
+/* Module Badges - Como la imagen de Abastecimiento */
+.module-badge {
+    background: #111111 !important;
+    color: #ffffff !important;
+    border: 1.5px solid #333333 !important;
+    padding: 0.6rem 1.2rem !important;
+    border-radius: 30px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    font-size: 0.85rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 2rem !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+
+.module-glyph {
+    background: #ff7f00 !important;
+    color: #000000 !important;
+    width: 24px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--ui-text-muted);
+    border-radius: 50%;
+    font-size: 0.7rem;
+    font-weight: 900;
 }
 
-/* Estilos para formulario de pedidos */
-
-.product-selector {
-    display: grid;
-    gap: 1rem;
-    max-height: 400px;
-    overflow-y: auto;
+/* Content Cards - Pure Black / Charcoal */
+.card {
+    background: #0a0a0a !important;
+    border: 1.5px solid #222222 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4) !important;
     margin-bottom: 2rem;
+    overflow: hidden;
 }
 
-.product-card {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr auto;
-    gap: 1rem;
-    align-items: center;
-    padding: 1rem;
-    border: 1px solid var(--ui-border);
-    border-radius: 12px;
-    background-color: var(--ui-surface);
+.card-header {
+    background: #111111 !important;
+    border-bottom: 1px solid #222222 !important;
+    color: #ffffff !important;
+    font-weight: 800 !important;
+    padding: 1.5rem !important;
+    font-size: 1.1rem;
+    text-transform: none !important;
 }
 
-.product-card input {
-    width: 100%;
+.card-body {
+    padding: 2rem !important;
 }
 
-.product-price {
-    font-weight: bold;
-    color: var(--color-naranja);
+/* Metric Cards */
+.metric, .metric-card {
+    background: #111111 !important;
+    border: 1px solid #222222 !important;
+    border-radius: 14px !important;
+    padding: 1.5rem !important;
+    text-align: center;
 }
 
-.btn-remove {
-    background-color: var(--ui-text);
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 999px;
+.metric-label {
+    color: #888888 !important;
+    text-transform: uppercase;
+    font-size: 0.8rem !important;
+    font-weight: 800 !important;
+    margin-bottom: 0.6rem;
+    letter-spacing: 0.05em;
+}
+
+.metric-value {
+    color: #ff7f00 !important; /* Valor en naranja para resaltar */
+    font-size: 2.2rem !important;
+    font-weight: 900 !important;
+}
+
+/* Tabs - Diseño Píldora Difuminado */
+.admin-tabs, .tabs {
+    background: #000000 !important;
+    border: 1.5px solid #222222 !important;
+    border-radius: 14px !important;
+    padding: 0.6rem !important;
+    display: flex !important;
+    gap: 0.6rem !important;
+    margin-bottom: 2.5rem !important;
+    overflow-x: auto;
+}
+
+.tab-button {
+    background: transparent !important;
+    color: #ffffff !important;
+    border: none !important;
+    padding: 0.75rem 1.5rem !important;
+    font-weight: 600 !important;
+    border-radius: 11px !important;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.3s;
+}
+
+.tab-button.active {
+    background: linear-gradient(135deg, #ff7f00 0%, #cc6600 100%) !important;
+    color: #000000 !important;
+    box-shadow: 0 8px 20px rgba(255, 127, 0, 0.3);
+}
+
+.tab-button:not(.active):hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Form Elements */
+input, select, textarea {
+    background: #000000 !important;
+    color: #ffffff !important;
+    border: 1.5px solid #333333 !important;
+    border-radius: 10px !important;
+    padding: 1rem 1.25rem !important;
+    font-size: 1rem;
+}
+
+input:focus, select:focus {
+    border-color: #ff7f00 !important;
+    box-shadow: 0 0 10px rgba(255, 127, 0, 0.15) !important;
+    outline: none !important;
+}
+
+/* Buttons */
+/* Buttons - Forced Refinement */
+body .btn-primary, 
+body .btn-secondary, 
+body button.btn-primary {
+    background: linear-gradient(135deg, #ff7f00 0%, #e26f00 100%) !important;
+    border: none !important;
+    color: #000000 !important;
+    font-weight: 600 !important; /* Reduced from 700/800 */
+    padding: 0.6rem 1.2rem !important; /* More compact */
+    border-radius: 11px !important;
+    text-transform: uppercase;
+    font-size: 0.85rem !important;
+    letter-spacing: 0.01em;
     cursor: pointer;
 }
 
-.order-summary {
-    background-color: var(--ui-surface-soft);
-    padding: 1.5rem;
-    border-radius: 12px;
-    margin-top: 2rem;
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(255, 127, 0, 0.4);
 }
 
-.summary-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.75rem;
-    font-size: 0.95rem;
-}
-
-.summary-row.total {
-    font-size: 1.3rem;
-    font-weight: bold;
-    border-top: 2px solid var(--color-naranja);
-    padding-top: 1rem;
-    margin-top: 1rem;
-}
-
-/* Tareas */
-
-.task-item {
-    padding: 1rem;
-    border-left: 4px solid var(--color-naranja);
-    background-color: var(--ui-surface);
-    margin-bottom: 1rem;
-    border-radius: 12px;
-    box-shadow: 0 8px 18px rgba(17, 24, 39, 0.06);
-    border: 1px solid var(--ui-border);
-}
-
-.task-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem;
-}
-
-.task-title {
-    font-weight: bold;
-    color: var(--ui-text);
-}
-
-.task-priority-high {
-    border-left-color: var(--ui-text);
-}
-
-.task-priority-medium {
-    border-left-color: var(--color-naranja);
-}
-
-.task-priority-low {
-    border-left-color: var(--ui-text-muted);
-}
-
-.priority-badge {
-    font-size: 0.75rem;
-    font-weight: bold;
-    text-transform: uppercase;
-    padding: 0.25rem 0.75rem;
-    border-radius: 12px;
-}
-
-.priority-high {
-    background-color: rgba(17, 17, 17, 0.08);
-    color: var(--ui-text);
-}
-
-.priority-medium {
-    background-color: rgba(255, 127, 0, 0.12);
-    color: var(--ui-text);
-}
-
-.priority-low {
-    background-color: rgba(107, 114, 128, 0.12);
-    color: var(--ui-text);
-}
-
-.task-details {
-    font-size: 0.9rem;
-    color: var(--ui-text-muted);
-    margin-top: 0.5rem;
-}
-
-.task-actions {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 1rem;
-}
-
-/* Modal */
-
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
+/* Tables */
+table {
     width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.4);
+    border-collapse: separate;
+    border-spacing: 0 10px;
 }
 
-.modal.active {
-    display: flex;
+th {
+    text-align: left;
+    color: #888888;
+    padding: 1.25rem;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    font-weight: 800;
+}
+
+td {
+    background: #111111;
+    padding: 1.25rem;
+    color: #ffffff;
+}
+
+td:first-child { border-radius: 12px 0 0 12px; }
+td:last-child { border-radius: 0 12px 12px 0; }
+
+tr:hover td {
+    background: #1a1a1a;
+}
+
+/* Custom High-Vis Inputs */
+.time-input-container {
+    background: #ffffff !important;
+    border: 2px solid #ff7f00 !important;
+    border-radius: 10px;
+    padding: 6px 12px;
+}
+
+.time-input-container input {
+    background: transparent !important;
+    color: #000000 !important;
+    font-weight: 900 !important;
+    font-size: 1.1rem !important;
+    width: 40px !important;
+    border: none !important;
+    padding: 0 !important;
+}
+
+/* Buttons - Responsive Optimization */
+.btn-primary, .btn-secondary, .btn-danger, .btn-success {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-}
-
-.modal-content {
-    background-color: var(--ui-surface);
-    padding: 2rem;
-    border-radius: 16px;
-    width: 90%;
-    max-width: 500px;
-    box-shadow: 0 14px 32px rgba(0,0,0,0.16);
-    border: 1px solid var(--ui-border);
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    border-bottom: 1px solid var(--ui-border);
-    padding-bottom: 1rem;
-}
-
-.modal-title {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: var(--ui-text);
-}
-
-.modal-close {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: var(--ui-text-muted);
-}
-
-.modal-close:hover {
-    color: var(--ui-text);
-}
-
-.modal-body {
-    max-height: 60vh;
-    overflow-y: auto;
-}
-
-.modal-footer {
-    margin-top: 1.5rem;
-    display: flex;
-    gap: 1rem;
-    justify-content: flex-end;
-}
-
-@media (max-width: 1024px) {
-    .dashboard-container {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-    }
+    gap: 8px;
+    transition: all 0.2s;
 }
 
 @media (max-width: 768px) {
-    .order-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.55rem;
+    .btn {
+        width: 100% !important;
+        margin-bottom: 0.5rem;
+        padding: 0.85rem !important;
     }
+}
 
-    .product-card {
-        grid-template-columns: 1fr;
-        gap: 0.7rem;
-    }
+/* Modals - Fixed and Accessible */
+.modal {
+    display: none;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: rgba(0, 0, 0, 0.92) !important;
+    backdrop-filter: blur(10px);
+    z-index: 10000 !important;
+    overflow-y: auto !important;
+    padding: 2rem 1rem !important;
+}
 
-    .task-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.4rem;
-    }
+.modal.active, .modal:target {
+    display: block !important; /* Allow scroll */
+}
 
-    .task-actions {
-        flex-wrap: wrap;
-    }
+.modal-content {
+    background: #0a0a0a !important;
+    border: 1px solid #333333 !important;
+    border-radius: 16px !important;
+    max-width: 480px !important; 
+    width: 100% !important;
+    margin: 2rem auto !important; /* Ensure margin top/bottom */
+    box-shadow: 0 25px 60px rgba(0,0,0,0.9) !important;
+    position: relative;
+    animation: modalSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-    .summary-row.total {
-        font-size: 1.1rem;
-    }
+.modal-close {
+    position: absolute !important;
+    right: 20px !important;
+    top: 20px !important;
+    background: rgba(255,255,255,0.1) !important;
+    border: none !important;
+    color: #ffffff !important;
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    font-size: 1.2rem !important;
+    z-index: 10 !important;
+}
+
+.modal-close:hover {
+    background: #ff7f00 !important;
+    color: #000000 !important;
+}
+
+@keyframes modalSlideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    background: #111111 !important;
+    border-bottom: 1px solid #222222 !important;
+    padding: 1.5rem !important;
+    border-radius: 16px 16px 0 0;
+}
+
+.modal-title {
+    color: #ff7f00 !important;
+    font-weight: 800 !important;
+    font-size: 1.25rem !important;
+}
+
+/* Modal Inputs - High Visibility as requested */
+.modal-content input, 
+.modal-content select, 
+.modal-content textarea {
+    background: #111111 !important;
+    border: 1.5px solid #333333 !important;
+    color: #ffffff !important;
+    padding: 0.85rem !important;
+}
+
+.modal-content label {
+    color: #888888 !important;
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+    display: block;
+    font-size: 0.9rem;
 }
