@@ -918,6 +918,13 @@ function updateStockPreview() {
     const sku = normalizeNumericSku(document.getElementById('newProductSku')?.value || '');
     const selectedCategoryOptions = Array.from(document.getElementById('newProductCategory')?.selectedOptions || []);
     const selectedCategories = selectedCategoryOptions.map((option) => option.value).filter(Boolean);
+    const rawImg = document.getElementById('newProductImageRef')?.value || 'images/products/default-product.svg';
+    const coverImg = (rawImg && !rawImg.startsWith('/') && !rawImg.startsWith('blob:') && !rawImg.startsWith('http')) ? '/' + rawImg : rawImg;
+    // Try gallery cache cover first
+    const galleryState = getGalleryState('stock');
+    const galleryCover = (galleryState && galleryState.cover) ? galleryState.cover : '';
+    const finalImg = galleryCover && !galleryCover.includes('default-product.svg') ? galleryCover : coverImg;
+    const normFinalImg = (finalImg && !finalImg.startsWith('/') && !finalImg.startsWith('blob:') && !finalImg.startsWith('http')) ? '/' + finalImg : finalImg;
     const item = {
         id: 0,
         sku: sku || '00000',
@@ -927,7 +934,7 @@ function updateStockPreview() {
         unit_price: document.getElementById('newProductPrice')?.value || 0,
         stock_quantity: document.getElementById('newProductStock')?.value || 0,
         reorder_level: document.getElementById('newProductReorder')?.value || 10,
-        image_url: document.getElementById('newProductImageRef')?.value || 'images/products/default-product.svg',
+        image_url: normFinalImg,
         is_active: Number(document.getElementById('newProductVisible')?.value || 1)
     };
     host.innerHTML = renderAdminProductCard(item, 'stock', false);
@@ -939,6 +946,12 @@ function updateMarketplacePreview() {
     const sku = normalizeNumericSku(document.getElementById('marketplaceSku')?.value || '');
     const selectedCategoryOptions = Array.from(document.getElementById('marketplaceCategory')?.selectedOptions || []);
     const selectedCategories = selectedCategoryOptions.map((option) => option.value).filter(Boolean);
+    const rawImg = document.getElementById('marketplaceImageRef')?.value || 'images/products/default-product.svg';
+    const coverImg = (rawImg && !rawImg.startsWith('/') && !rawImg.startsWith('blob:') && !rawImg.startsWith('http')) ? '/' + rawImg : rawImg;
+    const galleryState = getGalleryState('marketplace');
+    const galleryCover = (galleryState && galleryState.cover) ? galleryState.cover : '';
+    const finalImg = galleryCover && !galleryCover.includes('default-product.svg') ? galleryCover : coverImg;
+    const normFinalImg = (finalImg && !finalImg.startsWith('/') && !finalImg.startsWith('blob:') && !finalImg.startsWith('http')) ? '/' + finalImg : finalImg;
     const item = {
         id: Number(document.getElementById('marketplaceEditId')?.value || 0),
         sku: sku || '00000',
@@ -948,7 +961,7 @@ function updateMarketplacePreview() {
         condition_label: document.getElementById('marketplaceCondition')?.value || 'Seminuevo',
         unit_price: document.getElementById('marketplacePrice')?.value || 0,
         stock_quantity: document.getElementById('marketplaceStock')?.value || 1,
-        image_url: document.getElementById('marketplaceImageRef')?.value || 'images/products/default-product.svg',
+        image_url: normFinalImg,
         is_active: Number(document.getElementById('marketplaceActive')?.value || 1)
     };
     host.innerHTML = renderAdminProductCard(item, 'marketplace', false);
@@ -3036,26 +3049,47 @@ function renderProductGallery(images, sku, mode = 'stock') {
     if (!host || !status) return;
 
     if (!Array.isArray(images) || images.length === 0) {
-        host.innerHTML = '';
-        status.textContent = `No hay imágenes cargadas para el código ${sku}.`;
+        host.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--ui-text-muted,#aaa);font-size:13px;">Sin im\u00e1genes cargadas. Sube una imagen arriba.</div>';
+        status.textContent = `Sin im\u00e1genes para ${sku}.`;
         return;
     }
 
-    status.textContent = `Galería para ${sku}: ${images.length} imagen(es). Usa Drag & Drop para reordenar.`;
-    host.innerHTML = images.map((img, idx) => `
-        <div class="gallery-item" data-index="${idx}" data-sku="${sku}" data-mode="${mode}" draggable="true" style="border:2px solid ${idx === 0 ? 'var(--theme-accent)' : 'var(--ui-border)'}; border-radius:10px; padding:0.5rem; background:var(--ui-surface-soft); position:relative; cursor:grab; transition:all 0.2s;">
-            ${idx === 0 ? '<div style="position:absolute;top:4px;left:4px;background:var(--theme-accent);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;z-index:1">★ PORTADA</div>' : ''}
-            <img src="${escapeHtml(img)}" alt="Imagen ${idx + 1}" style="width:100%; height:90px; object-fit:cover; border-radius:8px; pointer-events:none;" loading="lazy">
-            <div style="display:flex; align-items:center; gap:0.35rem; margin-top:0.45rem; flex-wrap:wrap;">
-                <label style="font-size:11px; color:var(--ui-text-muted);">Pos:</label>
-                <select id="galleryPos-${mode}-${idx}" style="max-width:65px; font-size:12px;" onchange="galleryMoveByIndex('${escapeHtml(sku)}', ${idx}, this.value, '${mode}')">
+    status.textContent = `Galer\u00eda para ${sku}: ${images.length} imagen(es). Usa Drag & Drop para reordenar.`;
+
+    // Helper: convierte ruta relativa a URL absoluta desde ra\u00edz del sitio
+    const toSrc = (img) => {
+        if (!img) return '';
+        // blob URLs or absolute URLs \u2014 usar tal cual
+        if (img.startsWith('blob:') || img.startsWith('http') || img.startsWith('//')) return img;
+        // Asegurar que empiece con /
+        const clean = img.startsWith('/') ? img : '/' + img;
+        return clean + '?t=' + Date.now();
+    };
+
+    host.innerHTML = images.map((img, idx) => {
+        const src = toSrc(img);
+        const isCover = idx === 0;
+        return `
+        <div class="gallery-item" data-index="${idx}" data-sku="${sku}" data-mode="${mode}" draggable="true"
+             style="border:2px solid ${isCover ? 'var(--theme-accent, #f80)' : 'var(--ui-border, #444)'}; border-radius:10px; padding:0.4rem; background:var(--ui-surface-soft, #1e1e2e); position:relative; cursor:grab; transition:all 0.2s; user-select:none;">
+            ${isCover ? '<div style="position:absolute;top:4px;left:4px;background:var(--theme-accent,#f80);color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:6px;z-index:2;letter-spacing:.5px;">\u2605 PORTADA</div>' : ''}
+            <div style="width:100%;height:130px;overflow:hidden;border-radius:7px;background:#111;display:flex;align-items:center;justify-content:center;">
+                <img src="${escapeHtml(src)}"
+                     alt="Imagen ${idx + 1}"
+                     style="width:100%;height:100%;object-fit:cover;border-radius:7px;pointer-events:none;display:block;"
+                     loading="lazy"
+                     onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'<div style=\\'color:#888;font-size:22px;text-align:center;padding:30px;\\\'>\uD83D\uDDBC\uFE0F</div>\';">
+            </div>
+            <div style="display:flex;align-items:center;gap:0.3rem;margin-top:0.4rem;flex-wrap:wrap;justify-content:center;">
+                <label style="font-size:10px;color:var(--ui-text-muted,#aaa);">Pos:</label>
+                <select id="galleryPos-${mode}-${idx}" style="max-width:55px;font-size:11px;padding:1px 2px;" onchange="galleryMoveByIndex('${escapeHtml(sku)}', ${idx}, this.value, '${mode}')">
                     ${images.map((_, pos) => `<option value="${pos + 1}" ${pos === idx ? 'selected' : ''}>${pos + 1}</option>`).join('')}
                 </select>
-                ${idx !== 0 ? `<button class="btn btn-small btn-secondary" type="button" style="font-size:11px;padding:2px 6px;" onclick="galleryCoverByIndex('${escapeHtml(sku)}', ${idx}, '${mode}')">★ Portada</button>` : ''}
-                <button class="btn btn-small btn-danger" type="button" style="font-size:11px;padding:2px 6px;" onclick="galleryDeleteByIndex('${escapeHtml(sku)}', ${idx}, '${mode}')">✕ Quitar</button>
+                ${!isCover ? `<button class="btn btn-small btn-secondary" type="button" style="font-size:10px;padding:2px 5px;" title="Usar como portada" onclick="galleryCoverByIndex('${escapeHtml(sku)}', ${idx}, '${mode}')">\u2605</button>` : ''}
+                <button class="btn btn-small btn-danger" type="button" style="font-size:10px;padding:2px 6px;" title="Eliminar imagen" onclick="galleryDeleteByIndex('${escapeHtml(sku)}', ${idx}, '${mode}')">&#x2715;</button>
             </div>
-        </div>
-    `).join('');
+        </div>`;
+    }).join('');
 
     // Add drag-drop listeners after rendering
     setupGalleryDragDrop(mode, sku);
