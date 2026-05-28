@@ -2,13 +2,13 @@ databases:
   - name: truper-db
     databaseName: truper_platform
     user: truper_admin
-    plan: free
+    plan: pro
 
 services:
   - type: web
     name: truper-web
     env: docker
-    plan: free
+    plan: pro
     dockerfilePath: ./Dockerfile
     autoDeploy: true
     healthCheckPath: /health.php
@@ -49,7 +49,4 @@ services:
     disks:
       - name: images-disk
         mountPath: /var/www/html/images
-
-disks:
-  - name: images-disk
-    sizeGb: 1
+        sizeGb: 10
