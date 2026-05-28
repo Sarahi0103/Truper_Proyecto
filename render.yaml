@@ -2,7 +2,7 @@ databases:
   - name: truper-db
     databaseName: truper_platform
     user: truper_admin
-    plan: pro
+    plan: pro-4gb
 
 services:
   - type: web
