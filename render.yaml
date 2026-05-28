@@ -2,13 +2,13 @@ databases:
   - name: truper-db
     databaseName: truper_platform
     user: truper_admin
-    plan: pro-4gb
+    plan: basic-1gb
 
 services:
   - type: web
     name: truper-web
     env: docker
-    plan: pro
+    plan: starter
     dockerfilePath: ./Dockerfile
     autoDeploy: true
     healthCheckPath: /health.php
