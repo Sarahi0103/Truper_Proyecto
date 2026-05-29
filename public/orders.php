@@ -225,23 +225,25 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                             </select>
                         </div>
 
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Número de Orden</th>
-                                    <th>Fecha</th>
-                                    <th>Total estimado</th>
-                                    <th>Seguimiento</th>
-                                    <th>Estado Orden</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="ordersList">
-                                <tr>
-                                    <td colspan="6" class="text-center text-muted">Cargando órdenes...</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Número de Orden</th>
+                                        <th>Fecha</th>
+                                        <th>Total estimado</th>
+                                        <th>Seguimiento</th>
+                                        <th>Estado Orden</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ordersList">
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted">Cargando ordenes...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -367,7 +369,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
         window.TRUPER_COMPANY_WHATSAPP = '<?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?>';
         window.TRUPER_ORDERS_ROLE = '<?php echo htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'); ?>';
     </script>
-    <script src="js/orders.js?v=20260424"></script>
+    <script src="js/orders.js?v=20260528_v5" charset="UTF-8"></script>
     <script src="js/barcode-scanner.js"></script>
     <script>
         function logout() {
