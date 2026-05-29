@@ -724,12 +724,12 @@ function ensure_postgresql_form_schema() {
 
 function route_by_role($role) {
     if ($role === 'admin') {
-        return '/admin_supply.php';
+        return '/dashboard.php';
     }
     if ($role === 'employee') {
-        return '/tasks.php';
+        return '/dashboard.php';
     }
-    return '/orders.php?tab=newOrder';
+    return '/dashboard.php';
 }
 
 function apply_login_engagement_rules($user_id) {
