@@ -13,37 +13,47 @@ function renderMonthlyChart(stats) {
 
     document.getElementById('chartTitle').textContent = 'Resumen mensual de actividad';
 
-    if (mainChartInstance) {
-        mainChartInstance.destroy();
-    }
+    if (mainChartInstance) mainChartInstance.destroy();
 
-    const monthLabels = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const monthLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
     const labels = stats.map((s) => s.Mes || monthLabels[(Number(s.month_num) || 1) - 1] || 'Mes');
     const totals = stats.map((s) => Number(s.Total ?? s.total_amount ?? 0));
     const orders = stats.map((s) => Number(s.Pedidos ?? s.total_orders ?? 0));
 
+    const chartDefaults = {
+        color: '#888',
+        font: { family: 'Inter, sans-serif', size: 12 }
+    };
+    Chart.defaults.color = chartDefaults.color;
+    Chart.defaults.font  = chartDefaults.font;
+
     mainChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: labels,
+            labels,
             datasets: [
                 {
                     label: 'Monto Total ($)',
                     data: totals,
-                    backgroundColor: 'rgba(255, 127, 0, 0.6)',
-                    borderColor: 'rgb(255, 127, 0)',
-                    borderWidth: 1,
+                    backgroundColor: 'rgba(255,127,0,0.65)',
+                    borderColor: '#ff7f00',
+                    borderWidth: 0,
                     yAxisID: 'y',
-                    borderRadius: 8
+                    borderRadius: 8,
+                    borderSkipped: false
                 },
                 {
-                    label: 'Cantidad de Pedidos',
+                    label: 'Pedidos',
                     data: orders,
                     type: 'line',
                     borderColor: '#3498db',
-                    backgroundColor: '#3498db',
-                    fill: false,
+                    backgroundColor: 'rgba(52,152,219,0.08)',
+                    fill: true,
                     tension: 0.4,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#3498db',
+                    pointBorderColor: '#0d0d0d',
+                    pointBorderWidth: 2,
                     yAxisID: 'y1'
                 }
             ]
@@ -51,26 +61,47 @@ function renderMonthlyChart(stats) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: { boxWidth: 12, padding: 16, color: '#888', font: { family: 'Inter' } }
+                },
+                tooltip: {
+                    backgroundColor: '#111',
+                    borderColor: '#2a2a2a',
+                    borderWidth: 1,
+                    titleColor: '#fff',
+                    bodyColor: '#aaa',
+                    padding: 12,
+                    callbacks: {
+                        label: ctx => {
+                            const label = ctx.dataset.label || '';
+                            const val   = ctx.parsed.y;
+                            return label.includes('Monto')
+                                ? ` ${label}: $${val.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
+                                : ` ${label}: ${val}`;
+                        }
+                    }
+                }
             },
             scales: {
+                x: {
+                    grid: { color: 'rgba(255,255,255,0.04)' },
+                    ticks: { color: '#666', font: { family: 'Inter', size: 11 } }
+                },
                 y: {
                     type: 'linear',
-                    display: true,
                     position: 'left',
-                    grid: { drawOnChartArea: false }
+                    grid: { color: 'rgba(255,255,255,0.05)', drawOnChartArea: true },
+                    ticks: { color: '#666', font: { family: 'Inter', size: 11 } }
                 },
                 y1: {
                     type: 'linear',
-                    display: true,
                     position: 'right',
-                    grid: { drawOnChartArea: true }
+                    grid: { drawOnChartArea: false },
+                    ticks: { color: '#3498db', font: { family: 'Inter', size: 11 } }
                 }
-            },
-            plugins: {
-                legend: { position: 'top' }
             }
         }
     });
@@ -83,39 +114,58 @@ function renderYearlyChart(stats) {
     const ctx = document.getElementById('mainChart');
     if (!ctx) return;
 
-    document.getElementById('chartTitle').textContent = 'Comparativa anual separada por año';
+    document.getElementById('chartTitle').textContent = 'Comparativa anual — Ingresos totales';
 
-    if (mainChartInstance) {
-        mainChartInstance.destroy();
-    }
+    if (mainChartInstance) mainChartInstance.destroy();
 
     const orderedStats = [...stats].sort((a, b) => Number(a.year_val) - Number(b.year_val));
     const labels = orderedStats.map((s) => s.year_val);
     const totals = orderedStats.map((s) => Number(s.total_amount ?? 0));
 
+    Chart.defaults.color = '#888';
+    Chart.defaults.font  = { family: 'Inter, sans-serif', size: 12 };
+
     mainChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: labels,
+            labels,
             datasets: [{
                 label: 'Ingresos Anuales ($)',
                 data: totals,
-                borderColor: '#FF7F00',
-                backgroundColor: 'rgba(255, 127, 0, 0.1)',
+                borderColor: '#ff7f00',
+                backgroundColor: 'rgba(255,127,0,0.08)',
                 fill: true,
-                tension: 0.3,
-                pointRadius: 6,
-                pointBackgroundColor: '#FF7F00'
+                tension: 0.4,
+                pointRadius: 7,
+                pointBackgroundColor: '#ff7f00',
+                pointBorderColor: '#0d0d0d',
+                pointBorderWidth: 3
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: false }
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#111',
+                    borderColor: '#2a2a2a',
+                    borderWidth: 1,
+                    titleColor: '#fff',
+                    bodyColor: '#aaa',
+                    padding: 12
+                }
             },
             scales: {
-                y: { beginAtZero: true }
+                x: {
+                    grid: { color: 'rgba(255,255,255,0.04)' },
+                    ticks: { color: '#666', font: { family: 'Inter', size: 11 } }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: '#666', font: { family: 'Inter', size: 11 } }
+                }
             }
         }
     });
@@ -130,38 +180,42 @@ function updateSummaryStats(stats, isYearly = false) {
 
     let totalAmount = 0;
     let totalOrders = 0;
-    
+
     if (isYearly) {
-        totalAmount = stats.reduce((acc, s) => acc + Number(s.total_amount), 0);
-        totalOrders = stats.reduce((acc, s) => acc + Number(s.total_orders), 0);
+        totalAmount = stats.reduce((acc, s) => acc + Number(s.total_amount  ?? 0), 0);
+        totalOrders = stats.reduce((acc, s) => acc + Number(s.total_orders  ?? 0), 0);
     } else {
         totalAmount = stats.reduce((acc, s) => acc + Number(s.Total ?? s.total_amount ?? 0), 0);
         totalOrders = stats.reduce((acc, s) => acc + Number(s.Pedidos ?? s.total_orders ?? 0), 0);
     }
 
-    const avgTicket = totalOrders > 0 ? (totalAmount / totalOrders) : 0;
-    const periodLabel = isYearly ? 'Lectura anual' : 'Lectura mensual';
+    const avgTicket   = totalOrders > 0 ? (totalAmount / totalOrders) : 0;
+    const periodLabel = isYearly ? 'Total Anual' : 'Total del Período';
 
     container.innerHTML = `
-        <div class="stat-card stat-card-accent">
-            <div class="stat-label">${periodLabel}</div>
-            <div class="stat-value">${formatCurrency(totalAmount)}</div>
-            <div class="stat-helper">Monto concentrado en la vista actual.</div>
+        <div class="kpi-card accent">
+            <span class="kpi-card-icon">💰</span>
+            <div class="kpi-card-label">${periodLabel}</div>
+            <div class="kpi-card-value">${formatCurrency(totalAmount)}</div>
+            <div class="kpi-card-helper">Ingresos concentrados en la vista actual.</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-label">Movimientos</div>
-            <div class="stat-value">${totalOrders}</div>
-            <div class="stat-helper">Órdenes o registros incluidos.</div>
+        <div class="kpi-card">
+            <span class="kpi-card-icon">📦</span>
+            <div class="kpi-card-label">Movimientos</div>
+            <div class="kpi-card-value">${totalOrders.toLocaleString('es-MX')}</div>
+            <div class="kpi-card-helper">Órdenes o registros incluidos.</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-label">Ticket promedio</div>
-            <div class="stat-value">${formatCurrency(avgTicket)}</div>
-            <div class="stat-helper">Valor medio por transacción.</div>
+        <div class="kpi-card">
+            <span class="kpi-card-icon">🎫</span>
+            <div class="kpi-card-label">Ticket Promedio</div>
+            <div class="kpi-card-value">${formatCurrency(avgTicket)}</div>
+            <div class="kpi-card-helper">Valor medio por transacción.</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-label">Lectura IA</div>
-            <div class="stat-value" style="color:#2ecc71;">Activa</div>
-            <div class="stat-helper">Se actualiza con datos históricos reales.</div>
+        <div class="kpi-card">
+            <span class="kpi-card-icon">🤖</span>
+            <div class="kpi-card-label">Lectura IA</div>
+            <div class="kpi-card-value" style="color:#2ecc71; font-size:1.2rem;">● Activa</div>
+            <div class="kpi-card-helper">Actualizada con datos históricos reales.</div>
         </div>
     `;
 }
@@ -173,57 +227,56 @@ function renderCalendar(days, month, year) {
     const container = document.getElementById('calendarContainer');
     if (!container) return;
 
-    const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-    const firstDay = new Date(year, month - 1, 1).getDay();
+    const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const firstDay    = new Date(year, month - 1, 1).getDay();
     const daysInMonth = new Date(year, month, 0).getDate();
+    const today       = new Date();
+    const isThisMonth = today.getFullYear() == year && (today.getMonth() + 1) == month;
 
-    const totalOrders = days.reduce((acc, day) => acc + Number(day.count || 0), 0);
-    const totalAmount = days.reduce((acc, day) => acc + Number(day.total || 0), 0);
+    const totalOrders = days.reduce((acc, d) => acc + Number(d.count || 0), 0);
+    const totalAmount = days.reduce((acc, d) => acc + Number(d.total || 0), 0);
 
     let html = `
-        <div class="calendar-summary">
-            <div>
-                <div class="calendar-summary-label">Mes seleccionado</div>
-                <div class="calendar-summary-value">${monthNames[month-1]} ${year}</div>
+        <div class="cal-summary">
+            <div class="cal-summary-item">
+                <div class="cal-summary-label">Mes</div>
+                <div class="cal-summary-value">${monthNames[month - 1]} ${year}</div>
             </div>
-            <div>
-                <div class="calendar-summary-label">Pedidos</div>
-                <div class="calendar-summary-value">${totalOrders}</div>
+            <div class="cal-summary-item">
+                <div class="cal-summary-label">Pedidos</div>
+                <div class="cal-summary-value">${totalOrders}</div>
             </div>
-            <div>
-                <div class="calendar-summary-label">Monto</div>
-                <div class="calendar-summary-value">${formatCurrency(totalAmount)}</div>
+            <div class="cal-summary-item">
+                <div class="cal-summary-label">Monto Total</div>
+                <div class="cal-summary-value">${formatCurrency(totalAmount)}</div>
             </div>
         </div>
-        <div class="calendar-grid">
-            <div class="calendar-day-head">Dom</div>
-            <div class="calendar-day-head">Lun</div>
-            <div class="calendar-day-head">Mar</div>
-            <div class="calendar-day-head">Mié</div>
-            <div class="calendar-day-head">Jue</div>
-            <div class="calendar-day-head">Vie</div>
-            <div class="calendar-day-head">Sáb</div>
+        <div class="cal-grid">
+            <div class="cal-day-head">Dom</div>
+            <div class="cal-day-head">Lun</div>
+            <div class="cal-day-head">Mar</div>
+            <div class="cal-day-head">Mié</div>
+            <div class="cal-day-head">Jue</div>
+            <div class="cal-day-head">Vie</div>
+            <div class="cal-day-head">Sáb</div>
     `;
 
-    // Padding for first week
     for (let i = 0; i < firstDay; i++) {
-        html += '<div class="calendar-day empty"></div>';
+        html += '<div class="cal-day empty"></div>';
     }
 
-    // Days
     for (let d = 1; d <= daysInMonth; d++) {
-        const activity = days.find(day => day.day == d);
-        const hasActivity = activity && activity.count > 0;
-        
+        const activity    = days.find(day => day.day == d);
+        const hasActivity = activity && Number(activity.count) > 0;
+        const isToday     = isThisMonth && d === today.getDate();
+
         html += `
-            <div class="calendar-day ${hasActivity ? 'has-activity' : ''}">
-                <div class="day-number">${d}</div>
-                <div class="day-content">
-                    ${hasActivity ? `
-                        <div style="font-weight:700; color:var(--color-naranja);">${activity.count} Ped.</div>
-                        <div style="font-size:0.7rem;">${formatCurrency(activity.total)}</div>
-                    ` : ''}
-                </div>
+            <div class="cal-day${hasActivity ? ' has-activity' : ''}" ${isToday ? 'style="box-shadow:0 0 0 2px #ff7f00;"' : ''}>
+                <div class="cal-day-num">${d}</div>
+                ${hasActivity ? `
+                    <div class="cal-day-count">${activity.count} ped.</div>
+                    <div class="cal-day-amount">${formatCurrency(activity.total)}</div>
+                ` : ''}
             </div>
         `;
     }
@@ -253,57 +306,60 @@ async function loadPredictions() {
 function displayPredictions(predictions) {
     const container = document.getElementById('predictionsContainer');
     if (!container) return;
-    
+
     if (predictions.length === 0) {
-        container.innerHTML = '<p class="text-muted" style="grid-column:1/-1; text-align:center;">No hay suficientes datos históricos para generar predicciones confiables.</p>';
+        container.innerHTML = `<div class="analytics-empty" style="grid-column:1/-1;">
+            <div class="analytics-empty-icon">📭</div>
+            <div class="analytics-empty-text">No hay suficientes datos históricos para generar predicciones confiables. Agrega órdenes para comenzar.</div>
+        </div>`;
         return;
     }
 
     let html = '';
     predictions.forEach(pred => {
-        const confidenceColor = pred.confidence > 80 ? '#2ecc71' : pred.confidence > 60 ? '#f1c40f' : '#e67e22';
+        const conf  = Number(pred.confidence || 0);
+        const confColor = conf > 80 ? '#2ecc71' : conf > 60 ? '#f1c40f' : '#e67e22';
         const factorLines = Array.isArray(pred.insights) && pred.insights.length > 0
-            ? pred.insights.map((item) => `<li>${item}</li>`).join('')
+            ? pred.insights.map(item => `<li>${item}</li>`).join('')
             : '<li>Predicción construida con promedio histórico, tendencia y estacionalidad.</li>';
-        const factorData = pred.factors || {};
+        const fd = pred.factors || {};
+
         html += `
-            <div class="card ai-card" style="border-top: 4px solid var(--color-naranja);">
-                <div class="ai-card-head">
+            <div class="ai-pred-card">
+                <div class="ai-pred-top">
                     <div>
-                        <h4 style="margin:0; font-size:1.1rem;">${pred.product_name || `SKU #${pred.product_id}`}</h4>
-                        <div class="ai-card-subtitle">${pred.sku ? `SKU ${pred.sku}` : 'Producto analizado por IA'}</div>
+                        <div class="ai-pred-name">${pred.product_name || ('SKU #' + pred.product_id)}</div>
+                        <div class="ai-pred-sku">${pred.sku ? 'SKU ' + pred.sku : 'Producto analizado por IA'}</div>
                     </div>
-                    <span class="badge badge-info" style="background:rgba(52,152,219,0.1); color:#3498db;">${pred.season}</span>
+                    <span class="ai-pred-season-badge">${pred.season}</span>
                 </div>
-                <div style="margin-bottom:1.5rem;">
-                    <div style="font-size:0.85rem; color:var(--theme-text-muted);">Demanda proyectada</div>
-                    <div style="font-size:1.6rem; font-weight:700;">${pred.predicted_demand} <span style="font-size:0.9rem; font-weight:400;">unidades</span></div>
+                <div style="margin-bottom:1.25rem;">
+                    <div class="ai-pred-demand-label">Demanda proyectada</div>
+                    <div class="ai-pred-demand-value">${pred.predicted_demand} <span class="ai-pred-demand-unit">unidades</span></div>
                 </div>
-                <div>
-                    <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:0.4rem;">
+                <div class="confidence-bar-wrap">
+                    <div class="confidence-bar-top">
                         <span>Índice de confianza</span>
-                        <span style="font-weight:700; color:${confidenceColor};">${pred.confidence}%</span>
+                        <span style="font-weight:700; color:${confColor};">${conf}%</span>
                     </div>
-                    <div class="progress" style="height: 6px; background: rgba(0,0,0,0.05); border-radius: 10px; overflow:hidden;">
-                        <div style="width: ${pred.confidence}%; height: 100%; background: ${confidenceColor};"></div>
+                    <div class="confidence-bar-track">
+                        <div class="confidence-bar-fill" style="width:${conf}%; background:${confColor};"></div>
                     </div>
                 </div>
                 <div class="ai-factor-box">
                     <div class="ai-factor-title">Por qué la IA llegó a esta estimación</div>
-                    <ul class="ai-factor-list">
-                        ${factorLines}
-                    </ul>
-                    <div class="ai-factor-grid">
-                        <div><span>Base</span><strong>${Number(factorData.base_average || 0).toFixed(2)}</strong></div>
-                        <div><span>Temporada</span><strong>${Number(factorData.season_factor || 1).toFixed(2)}x</strong></div>
-                        <div><span>Tendencia</span><strong>${Number(factorData.trend_factor || 1).toFixed(2)}x</strong></div>
-                        <div><span>Ajuste externo</span><strong>${Number(factorData.external_adjustment || 1).toFixed(2)}x</strong></div>
+                    <ul class="ai-factor-list">${factorLines}</ul>
+                    <div class="ai-factor-mini-grid">
+                        <div><span>Base</span><strong>${Number(fd.base_average || 0).toFixed(2)}</strong></div>
+                        <div><span>Temporada</span><strong>${Number(fd.season_factor || 1).toFixed(2)}x</strong></div>
+                        <div><span>Tendencia</span><strong>${Number(fd.trend_factor || 1).toFixed(2)}x</strong></div>
+                        <div><span>Ajuste ext.</span><strong>${Number(fd.external_adjustment || 1).toFixed(2)}x</strong></div>
                     </div>
                 </div>
             </div>
         `;
     });
-    
+
     container.innerHTML = html;
 }
 
@@ -344,50 +400,54 @@ async function exportStats(format = 'csv') {
 function displaySeasonalReport(report) {
     const container = document.getElementById('seasonalReport');
     if (!container) return;
-    
-    let html = '<div class="grid grid-2" style="gap:1.5rem;">';
-    
+
+    const seasonMeta = {
+        'Primavera': { icon: '🌸', color: '#2ecc71' },
+        'Verano':    { icon: '☀️', color: '#f1c40f' },
+        'Otoño':     { icon: '🍂', color: '#e67e22' },
+        'Invierno':  { icon: '❄️', color: '#3498db' }
+    };
+
+    let html = '';
     Object.entries(report).forEach(([season, data]) => {
-        const seasonColors = {
-            'Primavera': '#2ecc71',
-            'Verano': '#f1c40f',
-            'Otoño': '#e67e22',
-            'Invierno': '#3498db'
-        };
-        const color = seasonColors[season] || 'var(--color-naranja)';
+        const meta = seasonMeta[season] || { icon: '📅', color: '#ff7f00' };
         const topProducts = Array.isArray(data.top_products) ? data.top_products : [];
 
         html += `
-            <div class="card seasonal-card" style="border-left: 5px solid ${color};">
-                <div class="card-header" style="background:transparent; color:${color}; font-weight:700;">${season}</div>
-                <div class="card-body">
-                    <p style="margin-top:0; color:var(--theme-text-muted);">Concentración histórica por temporada con los productos más repetidos.</p>
-                    <div style="display:flex; gap:1rem; margin-bottom:1.5rem;">
-                        <div style="flex:1;">
-                            <div style="font-size:0.75rem; color:var(--theme-text-muted);">Monto Total</div>
-                            <div style="font-weight:700;">${formatCurrency(data.total_amount)}</div>
+            <div class="seasonal-card" style="border-top:3px solid ${meta.color};">
+                <div class="seasonal-card-header" style="color:${meta.color};">
+                    ${meta.icon} ${season}
+                </div>
+                <div class="seasonal-card-body">
+                    <div class="seasonal-stats">
+                        <div class="seasonal-stat">
+                            <div class="seasonal-stat-label">Monto Total</div>
+                            <div class="seasonal-stat-value">${formatCurrency(data.total_amount)}</div>
                         </div>
-                        <div style="flex:1;">
-                            <div style="font-size:0.75rem; color:var(--theme-text-muted);">Volumen</div>
-                            <div style="font-weight:700;">${data.total_quantity} uds.</div>
+                        <div class="seasonal-stat">
+                            <div class="seasonal-stat-label">Volumen</div>
+                            <div class="seasonal-stat-value">${data.total_quantity} uds.</div>
                         </div>
                     </div>
-                    <p style="font-size:0.85rem; font-weight:600; margin-bottom:0.5rem; border-bottom:1px solid var(--theme-border);">Top Productos</p>
-                    <div style="margin-bottom:1rem;">
-                        ${topProducts.map(p => `
-                            <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:0.2rem;">
+                    <div class="seasonal-products-title">Top Productos</div>
+                    ${topProducts.length > 0
+                        ? topProducts.map(p => `
+                            <div class="seasonal-product-row">
                                 <span>${p.name}</span>
-                                <span style="font-weight:600;">${p.quantity}</span>
+                                <span>${p.quantity} uds.</span>
                             </div>
-                        `).join('') || '<div style="font-size:0.8rem; color:var(--theme-text-muted);">Sin productos para esta temporada.</div>'}
-                    </div>
+                        `).join('')
+                        : '<div style="font-size:.8rem; color:#555; padding:.5rem 0;">Sin datos para esta temporada.</div>'
+                    }
                 </div>
             </div>
         `;
     });
-    
-    html += '</div>';
-    container.innerHTML = html;
+
+    container.innerHTML = html || `<div class="analytics-empty" style="grid-column:1/-1;">
+        <div class="analytics-empty-icon">📭</div>
+        <div class="analytics-empty-text">No se encontraron datos estacionales.</div>
+    </div>`;
 }
 
 /**
@@ -396,13 +456,18 @@ function displaySeasonalReport(report) {
 function displayClientAnalytics(clients) {
     const container = document.getElementById('clientAnalytics');
     if (!container) return;
+
     if (!Array.isArray(clients) || clients.length === 0) {
-        container.innerHTML = '<div class="empty-state" style="padding:2rem; text-align:center;">No hay clientes para analizar todavía.</div>';
+        container.innerHTML = `<div class="analytics-empty">
+            <div class="analytics-empty-icon">👥</div>
+            <div class="analytics-empty-text">No hay clientes para analizar todavía. Las métricas aparecerán cuando haya órdenes registradas.</div>
+        </div>`;
         return;
     }
 
-    const totalSpent = clients.reduce((acc, client) => acc + Number(client.total_spent || 0), 0);
-    const activeCount = clients.filter((client) => client.is_active === true || client.is_active === 't' || client.is_active === 1).length;
+    const totalSpent  = clients.reduce((acc, c) => acc + Number(c.total_spent || 0), 0);
+    const activeCount = clients.filter(c => c.is_active === true || c.is_active === 't' || c.is_active === 1).length;
+    const initials    = (name) => (name || '?').split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
 
     let html = `
         <div class="client-summary-bar">
@@ -418,17 +483,17 @@ function displayClientAnalytics(clients) {
         html += `
             <article class="client-card">
                 <div class="client-card-rank">#${index + 1}</div>
-                <div class="client-card-name">${client.name || 'Cliente sin nombre'}</div>
+                <div class="client-card-avatar">${initials(client.name)}</div>
+                <div class="client-card-name">${client.name || 'Sin nombre'}</div>
                 <div class="client-card-id">ID ${client.id}</div>
-                <div class="client-card-metric">${formatCurrency(client.total_spent || 0)}</div>
-                <div class="client-card-meta">${client.order_count || 0} órdenes · ${client.loyalty_points || 0} puntos</div>
-                <div class="badge badge-${active ? 'success' : 'danger'}">${active ? 'Activo' : 'Inactivo'}</div>
+                <div class="client-card-amount">${formatCurrency(client.total_spent || 0)}</div>
+                <div class="client-card-meta">${client.order_count || 0} órdenes &middot; ${client.loyalty_points || 0} pts</div>
+                <span class="client-badge ${active ? 'active' : 'inactive'}">${active ? '● Activo' : '● Inactivo'}</span>
             </article>
         `;
     });
-    
+
     html += '</div>';
-    
     container.innerHTML = html;
 }
 

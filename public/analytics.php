@@ -13,10 +13,13 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Estadísticas y Análisis - Truper Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/theme.css">
     <link rel="stylesheet" href="css/responsive-complete.css">
     <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/analytics.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -48,40 +51,73 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
     </header>
 
     <main>
-        <div class="container-fluid admin-supply-shell">
-            <div class="page-hero">
-                <div class="module-badge module-admin"><span class="module-glyph">IA</span> Inteligencia de Negocios</div>
-                <h1><?php echo $is_admin ? 'Estadísticas y Análisis' : 'Mis Estadísticas'; ?></h1>
-                <p class="text-muted">Análisis detallado impulsado por IA para la toma de decisiones estratégicas.</p>
+        <div class="analytics-shell">
+
+            <!-- ── Hero ── -->
+            <div class="analytics-hero">
+                <div class="analytics-hero-inner">
+                    <div class="analytics-hero-text">
+                        <div class="analytics-hero-badge">
+                            <span class="dot"></span>
+                            Inteligencia de Negocios · v2.0
+                        </div>
+                        <h1><?php echo $is_admin ? '<span>Estadísticas</span> y Análisis' : 'Mis <span>Estadísticas</span>'; ?></h1>
+                        <p>Panel de análisis avanzado en tiempo real. Visualiza el rendimiento, tendencias y predicciones basadas en IA para la toma de decisiones estratégicas.</p>
+                    </div>
+                    <?php if ($is_admin): ?>
+                    <div style="display:flex; flex-direction:column; gap:0.6rem; align-items:flex-end;">
+                        <button class="btn-analytics-primary" onclick="exportStats('csv')">
+                            📥 Exportar CSV
+                        </button>
+                    </div>
+                    <?php endif; ?>
+                </div>
             </div>
 
-            <!-- TABS -->
-            <div class="tabs">
-                <button class="tab-button active" data-tab="purchaseStats">Métricas</button>
+            <!-- ── Tab navigation ── -->
+            <div class="analytics-tabs" role="tablist" aria-label="Secciones de estadísticas">
+                <button class="analytics-tab-btn active" data-tab="metricsTab" role="tab" aria-selected="true">
+                    <span class="tab-icon">📊</span> Métricas
+                </button>
                 <?php if ($is_admin): ?>
-                <button class="tab-button" data-tab="predictionsTab">Predicciones IA</button>
-                <button class="tab-button" data-tab="seasonalTab">Análisis Temporal</button>
-                <button class="tab-button" data-tab="clientsTab">Clientes</button>
+                <button class="analytics-tab-btn" data-tab="predictionsTab" role="tab" aria-selected="false">
+                    <span class="tab-icon">🤖</span> Predicciones IA
+                </button>
+                <button class="analytics-tab-btn" data-tab="seasonalTab" role="tab" aria-selected="false">
+                    <span class="tab-icon">🍂</span> Estacionalidad
+                </button>
+                <button class="analytics-tab-btn" data-tab="clientsTab" role="tab" aria-selected="false">
+                    <span class="tab-icon">👥</span> Clientes
+                </button>
                 <?php endif; ?>
             </div>
 
-            <div id="purchaseStats" class="tab-content active">
-                <div class="view-toggle">
-                    <button class="btn btn-secondary active" id="btnMonthly" onclick="setView('monthly')">Mensual</button>
-                    <button class="btn btn-secondary" id="btnYearly" onclick="setView('yearly')">Anual</button>
-                    <button class="btn btn-secondary" id="btnCalendar" onclick="setView('calendar')">Calendario</button>
-                </div>
+            <!-- ══════════════════════════════════
+                 TAB 1: MÉTRICAS
+            ══════════════════════════════════ -->
+            <div id="metricsTab" class="analytics-tab-panel active">
 
-                <div id="filterSection" style="margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: center;">
-                    <div id="yearFilterGroup">
-                        <label style="display:block; font-size:0.8rem; color:var(--theme-text-muted); margin-bottom:0.3rem;">Año</label>
-                        <select id="yearFilter" onchange="refreshCurrentView()" style="min-width:120px;">
-                            <option value="">Cargando...</option>
+                <!-- View toggle + filters -->
+                <div style="display:flex; align-items:flex-end; gap:1.25rem; flex-wrap:wrap; margin-bottom:1.75rem;">
+                    <div>
+                        <div style="font-size:0.72rem; font-weight:700; color:#555; text-transform:uppercase; letter-spacing:.06em; margin-bottom:.4rem;">Vista</div>
+                        <div class="view-toggle-group">
+                            <button class="view-toggle-btn active" id="btnMonthly" onclick="setView('monthly')">Mensual</button>
+                            <button class="view-toggle-btn" id="btnYearly" onclick="setView('yearly')">Anual</button>
+                            <button class="view-toggle-btn" id="btnCalendar" onclick="setView('calendar')">Calendario</button>
+                        </div>
+                    </div>
+
+                    <div class="analytics-filter-group">
+                        <label for="yearFilter">Año</label>
+                        <select id="yearFilter" onchange="refreshCurrentView()">
+                            <option value="">Cargando…</option>
                         </select>
                     </div>
-                    <div id="monthFilterGroup" style="display:none;">
-                        <label style="display:block; font-size:0.8rem; color:var(--theme-text-muted); margin-bottom:0.3rem;">Mes</label>
-                        <select id="monthFilter" onchange="refreshCurrentView()" style="min-width:120px;">
+
+                    <div class="analytics-filter-group" id="monthFilterGroup" style="display:none;">
+                        <label for="monthFilter">Mes</label>
+                        <select id="monthFilter" onchange="refreshCurrentView()">
                             <option value="1">Enero</option>
                             <option value="2">Febrero</option>
                             <option value="3">Marzo</option>
@@ -98,110 +134,148 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                     </div>
                 </div>
 
-                <div id="statsSummary" class="stats-grid">
-                    <!-- Summary cards populated by JS -->
+                <!-- KPI cards (populated by JS) -->
+                <div id="statsSummary" class="kpi-grid">
+                    <!-- Skeleton placeholders while loading -->
+                    <div class="kpi-card" style="animation:pulse-skeleton 1.5s ease infinite;">
+                        <div class="kpi-card-label">Cargando…</div>
+                        <div class="kpi-card-value" style="color:#222;">—</div>
+                    </div>
+                    <div class="kpi-card" style="animation:pulse-skeleton 1.5s ease infinite .15s;">
+                        <div class="kpi-card-label">Cargando…</div>
+                        <div class="kpi-card-value" style="color:#222;">—</div>
+                    </div>
+                    <div class="kpi-card" style="animation:pulse-skeleton 1.5s ease infinite .3s;">
+                        <div class="kpi-card-label">Cargando…</div>
+                        <div class="kpi-card-value" style="color:#222;">—</div>
+                    </div>
+                    <div class="kpi-card" style="animation:pulse-skeleton 1.5s ease infinite .45s;">
+                        <div class="kpi-card-label">Cargando…</div>
+                        <div class="kpi-card-value" style="color:#222;">—</div>
+                    </div>
                 </div>
 
-                <div class="card" id="chartCard">
-                    <div class="card-header d-flex justify-between align-center">
-                        <span id="chartTitle">Rendimiento Mensual</span>
-                        <div class="chart-actions">
-                            <!-- Optional actions -->
+                <!-- Chart card (bar/line) -->
+                <div class="chart-card" id="chartCard">
+                    <div class="chart-card-header">
+                        <div class="chart-card-title">
+                            <span class="chart-icon">📈</span>
+                            <span id="chartTitle">Rendimiento Mensual</span>
+                        </div>
+                        <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
+                            <?php if ($is_admin): ?>
+                            <button class="btn-analytics-secondary" onclick="exportStats('csv')" style="font-size:.8rem; padding:.45rem .9rem;">
+                                📥 Exportar CSV
+                            </button>
+                            <?php endif; ?>
                         </div>
                     </div>
-                    <div class="card-body">
-                        <div id="chartContainer" class="chart-container">
+                    <div class="chart-card-body">
+                        <div class="chart-canvas-wrap">
                             <canvas id="mainChart"></canvas>
                         </div>
                     </div>
                 </div>
 
-                <div id="calendarCard" class="card" style="display:none;">
-                    <div class="card-header">Calendario de Actividad</div>
-                    <div class="card-body">
-                        <div id="calendarContainer" class="calendar-container"></div>
+                <!-- Calendar card -->
+                <div id="calendarCard" class="calendar-card" style="display:none;">
+                    <div class="calendar-card-header">📅 Calendario de Actividad</div>
+                    <div class="calendar-card-body">
+                        <div id="calendarContainer"></div>
                     </div>
                 </div>
-            </div>
 
-            <!-- PREDICCIONES DEL SISTEMA -->
+            </div><!-- /metricsTab -->
+
             <?php if ($is_admin): ?>
-            <div id="predictionsTab" class="tab-content">
-                <div class="card" style="background: linear-gradient(135deg, var(--theme-card) 0%, rgba(255,127,0,0.05) 100%);">
-                    <div class="card-header d-flex justify-between align-center">
-                        <span>Predicciones de Demanda con IA</span>
-                        <button class="btn btn-primary" onclick="loadPredictions()" style="background:var(--color-naranja); border:none;">
-                            ✨ Generar Análisis Inteligente
-                        </button>
+
+            <!-- ══════════════════════════════════
+                 TAB 2: PREDICCIONES IA
+            ══════════════════════════════════ -->
+            <div id="predictionsTab" class="analytics-tab-panel">
+                <div class="ai-predictions-header">
+                    <div>
+                        <h2 style="margin:0 0 .35rem; font-size:1.3rem; font-weight:900; color:#fff;">Predicciones de Demanda con IA</h2>
+                        <p style="margin:0; color:#666; font-size:.9rem;">Redes neuronales ligeras + análisis de series temporales para anticipar necesidades de inventario.</p>
                     </div>
-                    <div class="card-body">
-                        <p class="text-muted mb-3">Utilizando redes neuronales ligeras y análisis de series temporales para predecir tus necesidades de inventario.</p>
-                        <div id="predictionsContainer" class="grid grid-3" style="margin-top: 2rem; gap: 1.5rem;">
-                            <div class="empty-state" style="grid-column: 1/-1; text-align:center; padding: 3rem;">
-                                <img src="images/ai-icon.svg" alt="IA" style="width:64px; opacity:0.3; margin-bottom:1rem;">
-                                <p>Haz clic en el botón superior para procesar los datos históricos.</p>
-                            </div>
-                        </div>
+                    <button class="btn-analytics-primary" id="btnGenPredictions" onclick="loadPredictions()">
+                        ✨ Generar Análisis Inteligente
+                    </button>
+                </div>
+
+                <div id="predictionsContainer" class="ai-predictions-grid">
+                    <div class="analytics-empty" style="grid-column:1/-1;">
+                        <div class="analytics-empty-icon">🤖</div>
+                        <div class="analytics-empty-text">Haz clic en <strong>Generar Análisis Inteligente</strong> para procesar los datos históricos y obtener predicciones.</div>
                     </div>
                 </div>
             </div>
 
-            <!-- ANÁLISIS POR TEMPORADA -->
-            <div id="seasonalTab" class="tab-content">
-                <div class="card">
-                    <div class="card-header">Reporte de Estacionalidad</div>
-                    <div class="card-body">
-                        <p class="text-muted mb-3">Descubre patrones estacionales basados en el clima y eventos del calendario histórico.</p>
-                        <button class="btn btn-secondary" onclick="generateSeasonalReport()">Sincronizar Datos</button>
-                        <div id="seasonalReport" style="margin-top: 2rem;"></div>
+            <!-- ══════════════════════════════════
+                 TAB 3: ESTACIONALIDAD
+            ══════════════════════════════════ -->
+            <div id="seasonalTab" class="analytics-tab-panel">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+                    <div>
+                        <h2 style="margin:0 0 .35rem; font-size:1.3rem; font-weight:900; color:#fff;">Análisis de Estacionalidad</h2>
+                        <p style="margin:0; color:#666; font-size:.9rem;">Patrones estacionales basados en clima, eventos y datos históricos del catálogo.</p>
+                    </div>
+                    <button class="btn-analytics-primary" onclick="generateSeasonalReport()">
+                        🔄 Sincronizar Datos
+                    </button>
+                </div>
+                <div id="seasonalReport" class="seasonal-grid">
+                    <div class="analytics-empty" style="grid-column:1/-1;">
+                        <div class="analytics-empty-icon">🍂</div>
+                        <div class="analytics-empty-text">Haz clic en <strong>Sincronizar Datos</strong> para cargar el análisis estacional.</div>
                     </div>
                 </div>
             </div>
 
-            <!-- ANÁLISIS DE CLIENTES -->
-            <div id="clientsTab" class="tab-content">
-                <div class="card">
-                    <div class="card-header">Segmentación de Clientes (Top 100)</div>
-                    <div class="card-body">
-                        <div id="clientAnalytics" class="table-responsive"></div>
+            <!-- ══════════════════════════════════
+                 TAB 4: CLIENTES
+            ══════════════════════════════════ -->
+            <div id="clientsTab" class="analytics-tab-panel">
+                <div style="margin-bottom:1.5rem;">
+                    <h2 style="margin:0 0 .35rem; font-size:1.3rem; font-weight:900; color:#fff;">Segmentación de Clientes</h2>
+                    <p style="margin:0; color:#666; font-size:.9rem;">Análisis de los top 100 clientes por volumen de compras, actividad y puntos de lealtad.</p>
+                </div>
+                <div id="clientAnalytics">
+                    <div class="analytics-empty">
+                        <div class="analytics-spinner"></div>
+                        <div class="analytics-empty-text">Cargando análisis de clientes…</div>
+                    </div>
+                </div>
+            </div>
+
+            <?php endif; ?>
+
+            <!-- ── Info widgets (only admin) ── -->
+            <?php if ($is_admin): ?>
+            <div class="info-grid">
+                <div class="info-card">
+                    <div class="info-card-title">⚙️ Motor de Inteligencia Truper</div>
+                    <ul class="info-feature-list">
+                        <li><span class="feature-dot"></span>Análisis de regresión sobre 24 meses de historial</li>
+                        <li><span class="feature-dot"></span>Ponderación por factores climáticos y temporada</li>
+                        <li><span class="feature-dot"></span>Detección automática de tendencias y anomalías</li>
+                        <li><span class="feature-dot"></span>Aprendizaje continuo con datos post-venta</li>
+                    </ul>
+                </div>
+                <div class="info-card">
+                    <div class="info-card-title">📈 Métricas de Impacto</div>
+                    <div class="impact-metric">
+                        <div class="impact-metric-value">+22%</div>
+                        <div class="impact-metric-label">Eficiencia de Caja estimada</div>
+                    </div>
+                    <div style="margin-top:1rem; font-size:.82rem; color:#555; line-height:1.6;">
+                        Basado en reducción de tiempo en consultas manuales y mejora en la gestión de inventario con alertas predictivas.
                     </div>
                 </div>
             </div>
             <?php endif; ?>
 
-            <!-- WIDGETS INFORMATIVOS -->
-            <?php if ($is_admin): ?>
-            <div class="grid grid-2" style="margin-top: 2rem; gap: 1.5rem;">
-                <div class="card">
-                    <div class="card-body">
-                        <h4 style="color:var(--color-naranja); margin-bottom:1rem;">Motor de Inteligencia Truper</h4>
-                        <ul style="list-style:none; padding:0; line-height:2;">
-                            <li><span style="color:var(--color-naranja); margin-right:8px;">●</span> Análisis de regresión sobre 24 meses</li>
-                            <li><span style="color:var(--color-naranja); margin-right:8px;">●</span> Ponderación por factores climáticos (API Weather)</li>
-                            <li><span style="color:var(--color-naranja); margin-right:8px;">●</span> Detección automática de tendencias</li>
-                            <li><span style="color:var(--color-naranja); margin-right:8px;">●</span> Aprendizaje continuo post-venta</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-body">
-                        <h4 style="color:var(--color-naranja); margin-bottom:1rem;">Métricas de Impacto</h4>
-                        <div style="display: inline-flex; gap: 0.3rem; align-items: center;">
-                            <input type="number" id="estimatedHours" min="0" max="99" placeholder="H" style="width: 50px; padding: 0.4rem; text-align: center; background: #ffffff !important; color: #000000 !important; border: 2px solid #ff7f00 !important; font-weight: 800;" title="Horas">
-                            <span style="font-weight: bold; color: #ff7f00;">h</span>
-                            <input type="number" id="estimatedMins" min="0" max="59" placeholder="M" style="width: 50px; padding: 0.4rem; text-align: center; background: #ffffff !important; color: #000000 !important; border: 2px solid #ff7f00 !important; font-weight: 800;" title="Minutos">
-                            <span style="font-weight: bold; color: #ff7f00;">m</span>
-                        </div>
-                        <div style="background:rgba(255,127,0,0.05); padding:1rem; border-radius:12px; text-align:center;">
-                            <div style="font-weight:700; font-size:1.4rem;">+22%</div>
-                            <div style="font-size:0.75rem; color:var(--theme-text-muted);">Eficiencia de Caja</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
-        </div>
+        </div><!-- /analytics-shell -->
     </main>
 
     <!-- FOOTER -->
@@ -219,35 +293,65 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
 
     <script src="js/main.js"></script>
     <script src="js/analytics.js"></script>
+    <style>
+        @keyframes pulse-skeleton {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .4; }
+        }
+    </style>
     <script>
+        /* ── Logout ── */
         function logout() {
             if (confirm('¿Deseas cerrar sesión?')) {
                 window.location.href = 'api/auth.php?action=logout';
             }
         }
 
+        /* ── Tab switching ── */
+        document.querySelectorAll('.analytics-tab-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const target = this.dataset.tab;
+
+                document.querySelectorAll('.analytics-tab-btn').forEach(b => {
+                    b.classList.remove('active');
+                    b.setAttribute('aria-selected', 'false');
+                });
+                document.querySelectorAll('.analytics-tab-panel').forEach(p => p.classList.remove('active'));
+
+                this.classList.add('active');
+                this.setAttribute('aria-selected', 'true');
+                const panel = document.getElementById(target);
+                if (panel) panel.classList.add('active');
+
+                // Auto-load seasonal tab
+                if (target === 'seasonalTab') {
+                    const container = document.getElementById('seasonalReport');
+                    if (container && container.querySelector('.analytics-empty')) {
+                        generateSeasonalReport();
+                    }
+                }
+            });
+        });
+
+        /* ── View toggling ── */
         let currentView = 'monthly';
 
         function setView(view) {
             currentView = view;
-            document.querySelectorAll('.view-toggle .btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('btn' + view.charAt(0).toUpperCase() + view.slice(1)).classList.add('active');
-            
-            document.getElementById('chartCard').style.display = view === 'calendar' ? 'none' : 'block';
+
+            document.getElementById('chartCard').style.display    = view === 'calendar' ? 'none'  : 'block';
             document.getElementById('calendarCard').style.display = view === 'calendar' ? 'block' : 'none';
             document.getElementById('monthFilterGroup').style.display = view === 'calendar' ? 'block' : 'none';
-            
+
             refreshCurrentView();
         }
 
         async function refreshCurrentView() {
-            if (currentView === 'monthly') {
-                await loadPurchaseStats();
-            } else if (currentView === 'yearly') {
-                await loadYearlyStats();
-            } else if (currentView === 'calendar') {
-                await loadCalendarStats();
-            }
+            if      (currentView === 'monthly')  await loadPurchaseStats();
+            else if (currentView === 'yearly')   await loadYearlyStats();
+            else if (currentView === 'calendar') await loadCalendarStats();
         }
 
         async function loadPurchaseStats() {
@@ -269,11 +373,9 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
 
         async function loadCalendarStats() {
             const month = document.getElementById('monthFilter').value;
-            const year = document.getElementById('yearFilter').value;
+            const year  = document.getElementById('yearFilter').value;
             const response = await apiCall(`/analytics.php?action=calendar-data&month=${month}&year=${year}`);
-            if (response && response.days) {
-                renderCalendar(response.days, month, year);
-            }
+            if (response && response.days) renderCalendar(response.days, month, year);
         }
 
         async function loadAvailableYears() {
@@ -283,18 +385,15 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
             const response = await apiCall('/analytics.php?action=available-years');
             const years = Array.isArray(response?.years) ? response.years : [];
 
-            if (years.length === 0) {
-                const currentYear = new Date().getFullYear();
-                yearFilter.innerHTML = `<option value="${currentYear}">${currentYear}</option>`;
-                return;
-            }
+            const current = new Date().getFullYear();
+            const opts = years.length > 0 ? years : [current];
 
-            yearFilter.innerHTML = years
-                .map((year) => `<option value="${year}" ${year == new Date().getFullYear() ? 'selected' : ''}>${year}</option>`)
+            yearFilter.innerHTML = opts
+                .map(y => `<option value="${y}" ${y == current ? 'selected' : ''}>${y}</option>`)
                 .join('');
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const now = new Date();
             const monthFilter = document.getElementById('monthFilter');
             if (monthFilter) monthFilter.value = now.getMonth() + 1;
@@ -305,6 +404,12 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                 loadClientAnalytics();
                 <?php endif; ?>
             });
+
+            // Scroll to ticket tab if URL hash present
+            if (window.location.hash === '#ticketsTab') {
+                const btn = document.querySelector('[data-tab="ticketsTab"]');
+                if (btn) btn.click();
+            }
         });
     </script>
     <script src="js/mobile-optimize.js"></script>
