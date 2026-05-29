@@ -493,12 +493,12 @@ async function loadOrders() {
     if (!ordersList) return;
 
     if (!response || !response.success || !Array.isArray(response.orders)) {
-        ordersList.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No fue posible cargar órdenes</td></tr>';
+        ordersList.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No fue posible cargar ordenes</td></tr>';
         return;
     }
 
     if (response.orders.length === 0) {
-        ordersList.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Aún no tienes pedidos</td></tr>';
+        ordersList.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Aun no tienes pedidos</td></tr>';
         return;
     }
 

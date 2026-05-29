@@ -13,8 +13,153 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Pedidos - Truper Platform</title>
     <link rel="icon" type="image/png" href="/truper_logo2.png">
-    <link rel="stylesheet" href="css/styles.css">    <link rel="stylesheet" href="css/theme.css">    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/responsive-complete.css">
+    <style>
+    /* Order Management Premium Styles */
+    .order-layout {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+    
+    @media (min-width: 992px) {
+        .order-layout {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 1.5rem;
+            align-items: start;
+        }
+        
+        .sticky-panel {
+            position: sticky;
+            top: 2rem;
+            z-index: 10;
+        }
+    }
+    
+    .order-panel {
+        background: #1e1e1e;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    .order-panel h3 {
+        font-size: 1.25rem;
+        color: #fff;
+        margin-bottom: 1.25rem;
+        border-left: 3px solid #ff6600;
+        padding-left: 0.5rem;
+    }
+    
+    /* Scrollable areas for products list and cart */
+    .products-scroll {
+        max-height: 480px;
+        overflow-y: auto;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.2);
+        padding: 0.25rem;
+        margin-top: 1rem;
+    }
+    
+    .cart-scroll {
+        max-height: 280px;
+        overflow-y: auto;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.2);
+        padding: 0.25rem;
+        margin-top: 1rem;
+    }
+    
+    /* Scrollbar styling */
+    .products-scroll::-webkit-scrollbar, .cart-scroll::-webkit-scrollbar {
+        width: 6px;
+    }
+    .products-scroll::-webkit-scrollbar-track, .cart-scroll::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.1);
+    }
+    .products-scroll::-webkit-scrollbar-thumb, .cart-scroll::-webkit-scrollbar-thumb {
+        background: rgba(255, 102, 0, 0.3);
+        border-radius: 4px;
+    }
+    .products-scroll::-webkit-scrollbar-thumb:hover, .cart-scroll::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 102, 0, 0.6);
+    }
+    
+    /* Table inside scrolls adjustment */
+    .products-scroll table, .cart-scroll table {
+        margin-top: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+        width: 100%;
+    }
+    
+    .products-scroll th, .cart-scroll th {
+        position: sticky;
+        top: 0;
+        background: #252525;
+        z-index: 5;
+        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+    
+    /* Form elements */
+    .order-panel .form-control, 
+    .order-panel input[type="text"],
+    .order-panel select,
+    .order-panel textarea {
+        background: #121212;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+        color: #fff;
+        padding: 0.6rem 0.8rem;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .order-panel .form-control:focus, 
+    .order-panel input[type="text"]:focus,
+    .order-panel select:focus,
+    .order-panel textarea:focus {
+        outline: none;
+        border-color: #ff6600;
+        box-shadow: 0 0 0 3px rgba(255, 102, 0, 0.15);
+    }
+    
+    .order-summary {
+        background: rgba(255, 102, 0, 0.05);
+        border: 1px solid rgba(255, 102, 0, 0.15);
+        border-radius: 8px;
+        padding: 1rem;
+    }
+    
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+    
+    .summary-row.total {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px dashed rgba(255, 102, 0, 0.3);
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #ff6600;
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 0.75rem;
+    }
+    .btn-group .btn {
+        flex: 1;
+    }
+    </style>
 </head>
 <body class="orders-page">
     <!-- HEADER -->
