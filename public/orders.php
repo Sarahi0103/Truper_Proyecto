@@ -144,6 +144,18 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
     .btn-group .btn {
         flex: 1;
     }
+    
+    .btn-save-order {
+        background-color: #28a745;
+        color: #fff;
+        border: 1px solid transparent;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-save-order:hover {
+        background-color: #218838;
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+    }
     </style>
 </head>
 <body class="orders-page">
@@ -325,6 +337,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
 
                                 <div class="btn-group mt-4">
                                     <button type="button" class="btn btn-secondary" onclick="clearCart()">Limpiar Carrito</button>
+                                    <button type="button" class="btn btn-save-order" onclick="saveOrderOnly(this)">Guardar y Descargar PDF</button>
                                     <button type="button" class="btn btn-primary" onclick="createOrder()">Enviar Cotización por WhatsApp</button>
                                 </div>
                             </div>
@@ -354,7 +367,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
         window.TRUPER_COMPANY_WHATSAPP = '<?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?>';
         window.TRUPER_ORDERS_ROLE = '<?php echo htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'); ?>';
     </script>
-    <script src="js/orders.js?v=20260528_v5" charset="UTF-8"></script>
+    <script src="js/orders.js?v=20260528_v6" charset="UTF-8"></script>
     <script src="js/barcode-scanner.js"></script>
     <script>
         function logout() {

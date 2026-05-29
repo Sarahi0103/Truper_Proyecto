@@ -487,6 +487,85 @@ async function createOrder(buttonElement = null) {
     }
 }
 
+async function saveOrderOnly(buttonElement = null) {
+    if (currentCart.length === 0) {
+        showAlert('Agrega productos al pedido primero', 'warning');
+        return;
+    }
+
+    const submitButton = buttonElement || document.querySelector('.orders-page .btn-group .btn-save-order');
+    const originalButtonText = submitButton ? submitButton.textContent : '';
+
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Guardando...';
+    }
+
+    const isWholesale = document.getElementById('isWholesale')?.checked || false;
+    const specialEvent = document.getElementById('specialEvent')?.value || null;
+    const notes = document.getElementById('orderNotes')?.value || null;
+
+    const quoteItems = currentCart.map(item => ({
+        product_id: item.productId,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity
+    }));
+
+    const orderData = {
+        items: quoteItems,
+        total: currentTotal,
+        whatsapp_phone: COMPANY_WHATSAPP,
+        is_wholesale: isWholesale,
+        special_event: specialEvent,
+        notes: notes
+    };
+
+    try {
+        const response = await apiCall('/client_account.php?action=whatsapp-quote', 'POST', orderData);
+
+        if (response && response.success) {
+            showAlert(response.message || 'Pedido guardado y ticket generado con éxito', 'success');
+
+            // Iniciar la descarga del PDF de forma no intrusiva usando un iframe temporal
+            if (response.ticket_url) {
+                const downloadUrl = response.ticket_url + (response.ticket_url.includes('?') ? '&' : '?') + 'auto_pdf=1';
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = downloadUrl;
+                document.body.appendChild(iframe);
+                setTimeout(() => {
+                    if (iframe.parentNode) {
+                        document.body.removeChild(iframe);
+                    }
+                }, 5000);
+            }
+
+            // Limpiar el carrito y restablecer el formulario
+            currentCart = [];
+            updateCartUI();
+            resetOrderForm();
+
+            // Cargar y actualizar la lista de pedidos
+            await loadOrders();
+
+            // Cambiar a la pestaña "Mis Pedidos"
+            activateOrdersTab('myOrders');
+            return;
+        }
+
+        showAlert((response && response.message) ? response.message : 'No se pudo guardar el pedido', 'error');
+    } catch (error) {
+        console.error('Error al guardar el pedido:', error);
+        showAlert('Error al procesar y guardar el pedido', 'error');
+    } finally {
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = originalButtonText;
+        }
+    }
+}
+
 async function loadOrders() {
     const response = await apiCall('/orders.php?action=list');
     const ordersList = document.getElementById('ordersList');
