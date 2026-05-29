@@ -72,12 +72,52 @@ try {
         FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
     )");
 
+    $pdo->exec("CREATE TABLE IF NOT EXISTS wholesaler_products (
+        id SERIAL PRIMARY KEY,
+        wholesaler_id INTEGER NOT NULL REFERENCES wholesalers(id) ON DELETE CASCADE,
+        product_type VARCHAR(20) NOT NULL DEFAULT 'catalog', -- 'catalog' o 'marketplace'
+        product_id INTEGER NOT NULL,
+        quantity INTEGER NOT NULL DEFAULT 50,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
+
     try { $pdo->exec("ALTER TABLE wholesalers ADD COLUMN IF NOT EXISTS requested_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP"); } catch (Exception $ignored) {}
     try { $pdo->exec("ALTER TABLE wholesalers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"); } catch (Exception $ignored) {}
     try { $pdo->exec("ALTER TABLE wholesalers ADD COLUMN IF NOT EXISTS approved_date TIMESTAMP"); } catch (Exception $ignored) {}
     try { $pdo->exec("ALTER TABLE wholesalers ADD COLUMN IF NOT EXISTS approved_by INTEGER"); } catch (Exception $ignored) {}
 
     switch ($action) {
+        case 'products':
+            $catalogProds = [];
+            $mktProds = [];
+            
+            try {
+                $stmt = $pdo->query("SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price FROM products WHERE is_active = true OR active = 1 ORDER BY name LIMIT 1000");
+                $catalogProds = $stmt->fetchAll();
+            } catch (Exception $e) {
+                try {
+                    $stmt = $pdo->query("SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price FROM products ORDER BY name LIMIT 1000");
+                    $catalogProds = $stmt->fetchAll();
+                } catch (Exception $e2) {}
+            }
+            
+            try {
+                $stmt = $pdo->query("SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price FROM marketplace_ce_products WHERE is_active = true OR active = 1 ORDER BY name LIMIT 1000");
+                $mktProds = $stmt->fetchAll();
+            } catch (Exception $e) {
+                try {
+                    $stmt = $pdo->query("SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price FROM marketplace_ce_products ORDER BY name LIMIT 1000");
+                    $mktProds = $stmt->fetchAll();
+                } catch (Exception $e2) {}
+            }
+            
+            $response = [
+                'success' => true,
+                'catalog_products' => $catalogProds ?: [],
+                'marketplace_products' => $mktProds ?: []
+            ];
+            break;
+
         case 'request':
             if ($method !== 'POST') {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];
@@ -90,17 +130,39 @@ try {
                 break;
             }
 
-            $stmt = $pdo->prepare("INSERT INTO wholesalers (client_id, business_type, min_order_quantity, discount_percentage, payment_terms, is_approved)
-                                   VALUES (?, ?, ?, ?, ?, false)");
-            $stmt->execute([
-                $clientId,
-                sanitize($input['business_type'] ?? ''),
-                (int)($input['min_order_quantity'] ?? 50),
-                (float)($input['discount_percentage'] ?? 15),
-                sanitize($input['payment_terms'] ?? 'Contado')
-            ]);
-
-            $response = ['success' => true, 'message' => 'Solicitud de mayoreo enviada'];
+            $pdo->beginTransaction();
+            try {
+                $stmt = $pdo->prepare("INSERT INTO wholesalers (client_id, business_type, min_order_quantity, discount_percentage, payment_terms, is_approved)
+                                       VALUES (?, ?, ?, ?, ?, false) RETURNING id");
+                $stmt->execute([
+                    $clientId,
+                    sanitize($input['business_type'] ?? ''),
+                    (int)($input['min_order_quantity'] ?? 50),
+                    (float)($input['discount_percentage'] ?? 15),
+                    sanitize($input['payment_terms'] ?? 'Contado')
+                ]);
+                
+                $wholesalerId = (int)$stmt->fetchColumn();
+                
+                $requestedProducts = $input['products'] ?? [];
+                if (is_array($requestedProducts) && count($requestedProducts) > 0) {
+                    $prodStmt = $pdo->prepare("INSERT INTO wholesaler_products (wholesaler_id, product_type, product_id, quantity) VALUES (?, ?, ?, ?)");
+                    foreach ($requestedProducts as $p) {
+                        $pId = (int)($p['product_id'] ?? 0);
+                        $pQty = (int)($p['quantity'] ?? 50);
+                        $pType = sanitize($p['product_type'] ?? 'catalog');
+                        if ($pId > 0 && $pQty > 0) {
+                            $prodStmt->execute([$wholesalerId, $pType, $pId, $pQty]);
+                        }
+                    }
+                }
+                
+                $pdo->commit();
+                $response = ['success' => true, 'message' => 'Solicitud de mayoreo enviada con éxito'];
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
             break;
 
         case 'approve':
@@ -117,26 +179,48 @@ try {
             break;
 
         case 'list':
-            if (($_SESSION['role'] ?? '') === 'admin') {
+            $isAdmin = (($_SESSION['role'] ?? '') === 'admin');
+            if ($isAdmin) {
                 $stmt = $pdo->prepare("SELECT w.*, u.first_name, u.last_name
                                        FROM wholesalers w
                                        JOIN clients c ON c.id = w.client_id
                                        JOIN users u ON u.id = c.user_id
                                        ORDER BY w.requested_date DESC");
                 $stmt->execute();
-                $response = ['success' => true, 'items' => $stmt->fetchAll()];
-                break;
+                $items = $stmt->fetchAll();
+            } else {
+                $clientId = ensure_wholesale_client_id($pdo, (int)$_SESSION['user_id']);
+                if ($clientId <= 0) {
+                    $response = ['success' => true, 'items' => []];
+                    break;
+                }
+
+                $stmt = $pdo->prepare('SELECT * FROM wholesalers WHERE client_id = ? ORDER BY requested_date DESC');
+                $stmt->execute([$clientId]);
+                $items = $stmt->fetchAll();
             }
 
-            $clientId = ensure_wholesale_client_id($pdo, (int)$_SESSION['user_id']);
-            if ($clientId <= 0) {
-                $response = ['success' => true, 'items' => []];
-                break;
+            foreach ($items as &$item) {
+                $item['products'] = [];
+                try {
+                    $prodStmt = $pdo->prepare("
+                        SELECT wp.product_id, wp.product_type, wp.quantity, 
+                               CASE WHEN wp.product_type = 'marketplace' THEN m.name ELSE p.name END as product_name,
+                               CASE WHEN wp.product_type = 'marketplace' THEN m.sku ELSE p.sku END as product_sku,
+                               CASE WHEN wp.product_type = 'marketplace' THEN COALESCE(m.unit_price, 0) ELSE COALESCE(p.unit_price, p.sell_price, 0) END as product_price
+                        FROM wholesaler_products wp
+                        LEFT JOIN products p ON wp.product_id = p.id AND wp.product_type = 'catalog'
+                        LEFT JOIN marketplace_ce_products m ON wp.product_id = m.id AND wp.product_type = 'marketplace'
+                        WHERE wp.wholesaler_id = ?
+                    ");
+                    $prodStmt->execute([$item['id']]);
+                    $item['products'] = $prodStmt->fetchAll();
+                } catch (Exception $e) {
+                    $item['products'] = [];
+                }
             }
 
-            $stmt = $pdo->prepare('SELECT * FROM wholesalers WHERE client_id = ? ORDER BY requested_date DESC');
-            $stmt->execute([$clientId]);
-            $response = ['success' => true, 'items' => $stmt->fetchAll()];
+            $response = ['success' => true, 'items' => $items];
             break;
 
         default:
