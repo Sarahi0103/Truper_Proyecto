@@ -265,7 +265,8 @@ function addProductRow() {
   
   div.innerHTML = `
     <div class="form-group" style="margin-bottom: 0;">
-      <label>Seleccionar Producto</label>
+      <label>Buscar y Seleccionar Producto</label>
+      <input type="text" class="form-control prod-search-input" placeholder="🔍 Filtrar por nombre o SKU..." oninput="filterRowProducts(this)" style="margin-bottom: 0.5rem; font-size: 0.9rem; padding: 0.5rem 0.75rem;">
       <select class="form-control prod-select" required style="width: 100%;">
         <option value="">-- Seleccione un artículo --</option>
         ${optionsHtml}
@@ -280,6 +281,36 @@ function addProductRow() {
     </button>
   `;
   container.appendChild(div);
+}
+
+function filterRowProducts(input) {
+  const query = input.value.toLowerCase().trim();
+  const select = input.nextElementSibling;
+  if (!select || select.tagName !== 'SELECT') return;
+  
+  const currentValue = select.value;
+  
+  select.innerHTML = '<option value="">-- Seleccione un artículo --</option>';
+  
+  const filtered = allProducts.filter(p => 
+    p.name.toLowerCase().includes(query) || 
+    p.sku.toLowerCase().includes(query)
+  );
+  
+  select.innerHTML += filtered.map(p => 
+    `<option value="${p.id}" data-type="${p.type}" data-sku="${p.sku}" data-price="${p.unit_price}" data-name="${p.name}" ${p.id == currentValue ? 'selected' : ''}>
+      ${p.display_name}
+    </option>`
+  ).join('');
+  
+  if (currentValue && !filtered.some(p => p.id == currentValue)) {
+    const originalProd = allProducts.find(p => p.id == currentValue);
+    if (originalProd) {
+      select.innerHTML += `<option value="${originalProd.id}" data-type="${originalProd.type}" data-sku="${originalProd.sku}" data-price="${originalProd.unit_price}" data-name="${originalProd.name}" selected>
+        ${originalProd.display_name}
+      </option>`;
+    }
+  }
 }
 
 async function submitWholesale(e) {
