@@ -174,52 +174,7 @@ function updateCartItem(productId, quantity) {
     }
 }
 
-/**
- * Crear nuevo pedido
- */
-async function createOrder() {
-    if (currentCart.length === 0) {
-        showAlert('Agrega productos al pedido primero', 'warning');
-        return;
-    }
-    
-    const isWholesale = document.getElementById('isWholesale')?.checked || false;
-    const specialEvent = document.getElementById('specialEvent')?.value || null;
-    const notes = document.getElementById('orderNotes')?.value || null;
-    
-    const quoteItems = currentCart.map(item => ({
-        product_id: item.productId,
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity
-    }));
 
-    const orderData = {
-        items: quoteItems,
-        total: currentTotal,
-        whatsapp_phone: COMPANY_WHATSAPP,
-        is_wholesale: isWholesale,
-        special_event: specialEvent,
-        notes: notes
-    };
-    
-    const response = await apiCall('/client_account.php?action=whatsapp-quote', 'POST', orderData);
-    
-    if (response && response.success) {
-        showAlert('Cotización creada. Descargando ticket y abriendo WhatsApp...', 'success');
-        if (response.ticket_url) {
-            window.open(response.ticket_url, '_blank');
-        }
-        if (response.whatsapp_url) {
-            window.open(response.whatsapp_url, '_blank');
-        }
-        currentCart = [];
-        updateCartUI();
-        return;
-    }
-
-    showAlert((response && response.message) ? response.message : 'No se pudo crear la cotizacion', 'error');
-}
 
 /**
  * Buscar productos
@@ -235,14 +190,18 @@ function searchProducts() {
 }
 
 /**
- * Filtrar órdenes por estado
+ * Aplicar filtros combinados de estado y búsqueda de órdenes
  */
-function filterOrders() {
+function applyOrderFilters() {
     const filterValue = document.getElementById('orderFilter')?.value || '';
+    const searchTerm = document.getElementById('orderSearch')?.value.toLowerCase() || '';
     const rows = document.querySelectorAll('#ordersList tr');
-    
+
     rows.forEach(row => {
-        if (!filterValue || row.getAttribute('data-status') === filterValue) {
+        const matchesStatus = !filterValue || row.getAttribute('data-status') === filterValue;
+        const matchesSearch = !searchTerm || row.textContent.toLowerCase().includes(searchTerm);
+
+        if (matchesStatus && matchesSearch) {
             row.style.display = '';
         } else {
             row.style.display = 'none';
@@ -250,27 +209,15 @@ function filterOrders() {
     });
 }
 
+function filterOrders() {
+    applyOrderFilters();
+}
+
 function searchOrders() {
-    const searchTerm = document.getElementById('orderSearch')?.value.toLowerCase() || '';
-    const rows = document.querySelectorAll('#ordersList tr');
-
-    rows.forEach(row => {
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(searchTerm) ? '' : 'none';
-    });
+    applyOrderFilters();
 }
 
-function getStatusLabel(status) {
-    const labels = {
-        pending: 'Pendiente',
-        confirmed: 'Confirmado',
-        processing: 'En Proceso',
-        shipped: 'Enviado',
-        delivered: 'Entregado',
-        cancelled: 'Cancelado'
-    };
-    return labels[status] || status || 'N/A';
-}
+
 
 function getOrderStatusClass(status) {
     const normalized = normalizeOrderStatus(status);
@@ -402,36 +349,7 @@ function removePayButtonsFromOrders() {
     });
 }
 
-async function loadOrders() {
-    const response = await apiCall('/orders.php?action=list');
-    const ordersList = document.getElementById('ordersList');
-    if (!ordersList) return;
 
-    if (!response || !response.success || !Array.isArray(response.orders)) {
-        ordersList.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No fue posible cargar órdenes</td></tr>';
-        return;
-    }
-
-    if (response.orders.length === 0) {
-        ordersList.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Aún no tienes pedidos</td></tr>';
-        return;
-    }
-
-    ordersList.innerHTML = response.orders.map(order => `
-        <tr data-status="${order.status}">
-            <td>${order.order_number}</td>
-            <td>${formatDate(order.created_at)}</td>
-            <td>${formatCurrency(order.total_amount)}</td>
-            <td>WhatsApp</td>
-            <td>${getStatusLabel(order.status)}</td>
-            <td>
-                <a class="btn btn-small btn-primary" href="/ticket_client.php?id=${order.id}" target="_blank">Ticket</a>
-            </td>
-        </tr>
-    `).join('');
-
-    removePayButtonsFromOrders();
-}
 
 async function loadProducts() {
     const response = await apiCall('/products.php?action=list');
@@ -517,27 +435,50 @@ async function createOrder(buttonElement = null) {
         notes: notes
     };
 
+    // Pre-open blank tab for WhatsApp to bypass popup blockers
+    let whatsappWindow = null;
+    try {
+        whatsappWindow = window.open('', '_blank');
+    } catch (err) {
+        console.error('Failed to pre-open WhatsApp window:', err);
+    }
+
     try {
         const response = await apiCall('/client_account.php?action=whatsapp-quote', 'POST', orderData);
 
         if (response && response.success) {
-            showAlert(response.message || 'Pedido registrado. Abriendo ticket y WhatsApp...', 'success');
-            if (response.ticket_url) {
-                window.open(response.ticket_url, '_blank');
+            showAlert(response.message || 'Pedido registrado. Abriendo WhatsApp y descargando ticket...', 'success');
+
+            // Redirect the pre-opened tab to the WhatsApp URL
+            if (response.whatsapp_url && whatsappWindow) {
+                whatsappWindow.location.href = response.whatsapp_url;
+            } else if (whatsappWindow) {
+                whatsappWindow.close();
             }
-            if (response.whatsapp_url) {
-                window.open(response.whatsapp_url, '_blank');
+
+            // Redirect current tab to ticket with auto_pdf parameter to download it automatically
+            if (response.ticket_url) {
+                const downloadUrl = response.ticket_url + (response.ticket_url.includes('?') ? '&' : '?') + 'auto_pdf=1';
+                setTimeout(() => {
+                    window.location.href = downloadUrl;
+                }, 1000);
             }
 
             currentCart = [];
             updateCartUI();
             resetOrderForm();
-            await loadOrders();
-            activateOrdersTab('myOrders');
             return;
         }
 
+        if (whatsappWindow) {
+            whatsappWindow.close();
+        }
         showAlert((response && response.message) ? response.message : 'No se pudo crear la cotizacion', 'error');
+    } catch (error) {
+        if (whatsappWindow) {
+            whatsappWindow.close();
+        }
+        showAlert('Error al procesar la cotización', 'error');
     } finally {
         if (submitButton) {
             submitButton.disabled = false;
@@ -552,12 +493,12 @@ async function loadOrders() {
     if (!ordersList) return;
 
     if (!response || !response.success || !Array.isArray(response.orders)) {
-        ordersList.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No fue posible cargar Ã³rdenes</td></tr>';
+        ordersList.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No fue posible cargar órdenes</td></tr>';
         return;
     }
 
     if (response.orders.length === 0) {
-        ordersList.innerHTML = '<tr><td colspan="6" class="text-center text-muted">AÃºn no tienes pedidos</td></tr>';
+        ordersList.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Aún no tienes pedidos</td></tr>';
         return;
     }
 
@@ -579,8 +520,7 @@ async function loadOrders() {
     }).join('');
 
     removePayButtonsFromOrders();
-    filterOrders();
-    searchOrders();
+    applyOrderFilters();
 }
 
 document.addEventListener('DOMContentLoaded', function() {

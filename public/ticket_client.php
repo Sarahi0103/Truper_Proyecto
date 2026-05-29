@@ -4,6 +4,7 @@ require_login();
 
 $id = (int)($_GET['id'] ?? 0);
 $format = ($_GET['format'] ?? 'thermal') === 'a4' ? 'a4' : 'thermal';
+$autoPdf = isset($_GET['auto_pdf']) && $_GET['auto_pdf'] === '1';
 if ($id <= 0) {
     http_response_code(400);
     echo 'ID de ticket invalido';
@@ -43,6 +44,7 @@ function display_product_code($sku) {
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <script src="/js/jspdf.umd.min.js"></script>
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -65,11 +67,13 @@ function display_product_code($sku) {
         }
     </style>
 </head>
-<body onload="window.print()">
+<body <?php echo !$autoPdf ? 'onload="window.print()"' : ''; ?>>
 <div class="ticket">
     <div class="format-switch">
         <a href="/ticket_client.php?id=<?php echo $id; ?>&format=thermal">Térmico</a> |
-        <a href="/ticket_client.php?id=<?php echo $id; ?>&format=a4">A4</a>
+        <a href="/ticket_client.php?id=<?php echo $id; ?>&format=a4">A4</a> |
+        <a href="#" onclick="window.print(); return false;">Imprimir</a> |
+        <a href="#" onclick="downloadClientTicketPdf(); return false;">Descargar PDF</a>
     </div>
     <h1>TICKET CLIENTE</h1>
     <div class="row"><strong>Folio:</strong> <?php echo htmlspecialchars($order['order_number'], ENT_QUOTES, 'UTF-8'); ?></div>
@@ -86,5 +90,105 @@ function display_product_code($sku) {
     <div class="row"><strong>Total: $<?php echo number_format((float)$order['total_amount'], 2, '.', ''); ?></strong></div>
 </div>
 <script src="js/main.js"></script>
+<script>
+const ticketData = {
+    folio: <?php echo json_encode($order['order_number']); ?>,
+    issuedAt: <?php echo json_encode($order['created_at'] ?? $order['order_date']); ?>,
+    client: <?php echo json_encode(($order['first_name'] ?? '') . ' ' . ($order['last_name'] ?? '')); ?>,
+    clientCode: <?php echo json_encode(($order['user_code'] ?? '') !== '' ? $order['user_code'] : 'N/A'); ?>,
+    total: <?php echo json_encode((float)$order['total_amount']); ?>,
+    items: <?php echo json_encode(array_map(function($it) {
+        return [
+            'name' => $it['name'],
+            'sku' => display_product_code($it['sku']),
+            'quantity' => (int)$it['quantity'],
+            'price' => (float)$it['unit_price'],
+            'line_total' => (float)$it['line_total']
+        ];
+    }, $items), JSON_UNESCAPED_UNICODE); ?>
+};
+
+function money(value) {
+    return '$' + Number(value || 0).toFixed(2);
+}
+
+function downloadClientTicketPdf() {
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: [80, 180] });
+    let y = 8;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('TRUPER - TICKET CLIENTE', 6, y);
+    y += 7;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text('Folio: ' + ticketData.folio, 6, y);
+    y += 5;
+    doc.text('Fecha: ' + ticketData.issuedAt, 6, y);
+    y += 5;
+    doc.text('Cliente: ' + ticketData.client, 6, y);
+    y += 5;
+    doc.text('Codigo cliente: ' + ticketData.clientCode, 6, y);
+    y += 4;
+    doc.line(6, y, 74, y);
+    y += 5;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('Detalle de productos', 6, y);
+    y += 5;
+    doc.setFont('helvetica', 'normal');
+
+    const items = Array.isArray(ticketData.items) ? ticketData.items : [];
+    if (items.length > 0) {
+        items.forEach((item, idx) => {
+            const qty = Number(item.quantity || 0);
+            const name = String(item.name || 'Producto');
+            const code = String(item.sku || 'N/A');
+            const unitPrice = Number(item.price ?? 0);
+            const lineTotal = qty * unitPrice;
+
+            const productLine = name.length > 36 ? name.slice(0, 36) + '...' : name;
+            doc.text(productLine, 6, y);
+            y += 4;
+            doc.setFontSize(9);
+            doc.text('Codigo: ' + code.replace(/^XLS-/i, ''), 6, y);
+            y += 4;
+            doc.setFontSize(10);
+            doc.text(qty + ' x ' + money(unitPrice), 6, y);
+            doc.text(money(lineTotal), 74, y, { align: 'right' });
+            y += 5;
+
+            if (idx < (items.length - 1)) {
+                doc.setDrawColor(220);
+                doc.line(6, y - 1, 74, y - 1);
+                y += 2;
+            }
+        });
+    }
+
+    doc.line(6, y, 74, y);
+    y += 6;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('TOTAL: ' + money(ticketData.total), 74, y, { align: 'right' });
+    y += 7;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text('Gracias por su compra', 6, y);
+
+    doc.save('ticket-' + ticketData.folio + '.pdf');
+}
+
+<?php if ($autoPdf): ?>
+document.addEventListener('DOMContentLoaded', function () {
+    setTimeout(downloadClientTicketPdf, 300);
+});
+<?php endif; ?>
+</script>
 </body>
 </html>

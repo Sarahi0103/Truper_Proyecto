@@ -15,7 +15,6 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <link rel="stylesheet" href="css/styles.css">    <link rel="stylesheet" href="css/theme.css">    <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/responsive-complete.css">
-    </style>
 </head>
 <body class="orders-page">
     <!-- HEADER -->
