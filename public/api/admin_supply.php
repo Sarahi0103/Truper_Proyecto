@@ -539,7 +539,7 @@ function insert_category_and_get_id_admin_supply($pdo, string $name, int $sortOr
     // PostgreSQL supports RETURNING; MySQL/MariaDB may not.
     try {
         $stmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order, is_active, context) VALUES (?, ?, ?, ?) RETURNING id");
-        $stmt->execute([$name, $sortOrder, $isActive, $context]);
+        $stmt->execute([$name, $sortOrder, $isActive ? 1 : 0, $context]);
         $createdId = (int)$stmt->fetchColumn();
         if ($createdId > 0) {
             return $createdId;
@@ -548,7 +548,7 @@ function insert_category_and_get_id_admin_supply($pdo, string $name, int $sortOr
         // Generic insert
     try {
         $stmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order, is_active, context) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$name, $sortOrder, $isActive, $context]);
+        $stmt->execute([$name, $sortOrder, $isActive ? 1 : 0, $context]);
         return (int)$pdo->lastInsertId();
     } catch (Exception $e) {
         // Final attempt: lookup just in case it was created concurrently
@@ -3681,7 +3681,7 @@ try {
                 // Full update path (newest schema)
                 try {
                     $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, sort_order = ?, is_active = ?, context = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-                    $stmt->execute([$name, $sortOrder, $isActive, $context, $id]);
+                    $stmt->execute([$name, $sortOrder, $isActive ? 1 : 0, $context, $id]);
                     $updated = true;
                 } catch (Exception $ignored) {
                 }
@@ -3690,7 +3690,7 @@ try {
                 if (!$updated) {
                     try {
                         $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, sort_order = ?, is_active = ?, context = ? WHERE id = ?");
-                        $stmt->execute([$name, $sortOrder, $isActive, $context, $id]);
+                        $stmt->execute([$name, $sortOrder, $isActive ? 1 : 0, $context, $id]);
                         $updated = true;
                     } catch (Exception $ignored) {
                     }

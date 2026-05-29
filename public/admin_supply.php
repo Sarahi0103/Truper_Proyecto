@@ -15,6 +15,167 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
     <link rel="stylesheet" href="css/theme.css">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/responsive-complete.css">
+    <style>
+        /* Estilos para el selector de exclusión de productos */
+        .exclude-chips-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            min-height: 42px;
+            padding: 0.5rem 0.75rem;
+            background: #121212;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 8px;
+            align-items: center;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .exclude-chips-container:focus-within {
+            border-color: var(--color-naranja, #ff6600);
+            box-shadow: 0 0 0 2px rgba(255, 102, 0, 0.2);
+        }
+        .exclude-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 102, 0, 0.08);
+            border: 1px solid rgba(255, 102, 0, 0.25);
+            border-radius: 6px;
+            padding: 0.3rem 0.6rem;
+            font-size: 0.85rem;
+            color: #ff6600;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            animation: chipFadeIn 0.2s ease-out;
+        }
+        .exclude-chip:hover {
+            background: rgba(255, 102, 0, 0.15);
+            border-color: rgba(255, 102, 0, 0.4);
+            transform: translateY(-1px);
+        }
+        .exclude-chip-sku {
+            font-weight: bold;
+            background: rgba(255, 102, 0, 0.2);
+            color: #ff8833;
+            padding: 0.1rem 0.35rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+        .exclude-chip-name {
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #eee;
+        }
+        .exclude-chip-remove {
+            background: none;
+            border: none;
+            color: #ff6600;
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 0;
+            margin-left: 0.15rem;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            font-weight: bold;
+            transition: color 0.2s, transform 0.2s;
+        }
+        .exclude-chip-remove:hover {
+            color: #ff3300;
+            transform: scale(1.2);
+        }
+        @keyframes chipFadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        .exclude-search-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: #1a1a1a;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.95rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .exclude-search-input:focus {
+            outline: none;
+            border-color: var(--color-naranja, #ff6600);
+            box-shadow: 0 0 0 2px rgba(255, 102, 0, 0.25);
+            background: #1f1f1f;
+        }
+        
+        .exclude-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            background: #1a1a1a;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            max-height: 280px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+            padding: 0.35rem;
+            animation: dropdownFadeIn 0.15s ease-out;
+        }
+        @keyframes dropdownFadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .exclude-dropdown-item {
+            padding: 0.6rem 0.8rem;
+            cursor: pointer;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            transition: all 0.15s ease;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+        .exclude-dropdown-item:last-child {
+            border-bottom: none;
+        }
+        .exclude-dropdown-item:hover {
+            background: rgba(255, 102, 0, 0.12);
+        }
+        .exclude-item-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+            min-width: 0;
+        }
+        .exclude-item-name {
+            color: #fff;
+            font-weight: 500;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .exclude-item-meta {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.4);
+        }
+        .exclude-item-action-indicator {
+            font-size: 0.8rem;
+            color: var(--color-naranja, #ff6600);
+            font-weight: bold;
+            opacity: 0;
+            transform: translateX(5px);
+            transition: all 0.2s ease;
+        }
+        .exclude-dropdown-item:hover .exclude-item-action-indicator {
+            opacity: 1;
+            transform: translateX(0);
+        }
     </style>
 </head>
 <body>
@@ -371,9 +532,25 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     </div>
                 </div>
 
-                <div class="form-group mt-2">
-                    <label>Excluir productos (separados por coma)</label>
-                    <input id="priceExcludeSkus" type="text" placeholder="TRUP-001, TRUP-002...">
+                <div class="form-group mt-2" style="position: relative;">
+                    <label>Excluir productos</label>
+                    <input id="priceExcludeSkus" type="hidden" value="">
+                    
+                    <!-- Selected product chips container -->
+                    <div id="excludeProductChips" class="exclude-chips-container">
+                        <span class="text-muted" style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.4); padding-left: 0.25rem;">Ningún producto excluido</span>
+                    </div>
+
+                    <!-- Product search input -->
+                    <div style="position: relative;">
+                        <input id="excludeProductSearch" type="text" class="exclude-search-input" placeholder="🔍 Buscar producto por nombre o SKU para excluir..." oninput="filterExcludeProducts(this.value)" onfocus="showExcludeProductDropdown()">
+                        
+                        <!-- Floating dropdown list of matching products -->
+                        <div id="excludeProductDropdown" class="exclude-dropdown">
+                            <!-- Products will be dynamically populated here -->
+                            <div class="text-muted text-center" style="padding: 0.5rem; color: rgba(255, 255, 255, 0.4);">Cargando productos...</div>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="pricePreview" class="mt-3 p-2" style="background: var(--ui-surface-soft); border-radius: 8px; display: none;">
@@ -1127,6 +1304,8 @@ function cancelPriceAdjustment() {
     document.getElementById('pricePreview').style.display = 'none';
     document.getElementById('priceAdjustValue').value = '';
     pricePreviewData = null;
+    excludedProductsMap.clear();
+    updateExcludedChips();
 }
 
 async function confirmPriceAdjustment() {
@@ -1153,6 +1332,191 @@ async function confirmPriceAdjustment() {
         console.error('Error applying price adjustment:', e);
         document.getElementById('priceResult').innerHTML = '<div class="alert alert-error">Error de conexión</div>';
     }
+}
+
+// Bulk Price Adjustment - Product Exclusion Search and Selection Logic
+let excludedProductsMap = new Map();
+let activeSearchTimeout = null;
+
+function showExcludeProductDropdown() {
+    const dropdown = document.getElementById('excludeProductDropdown');
+    if (dropdown) {
+        dropdown.style.display = 'block';
+        const val = document.getElementById('excludeProductSearch').value;
+        filterExcludeProducts(val);
+    }
+}
+
+// Close dropdown on click outside or escape key
+document.addEventListener('click', function(e) {
+    const container = document.getElementById('excludeProductSearch')?.closest('.form-group');
+    if (container && !container.contains(e.target)) {
+        const dropdown = document.getElementById('excludeProductDropdown');
+        if (dropdown) dropdown.style.display = 'none';
+    }
+});
+
+const excludeSearchEl = document.getElementById('excludeProductSearch');
+if (excludeSearchEl) {
+    excludeSearchEl.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const dropdown = document.getElementById('excludeProductDropdown');
+            if (dropdown) dropdown.style.display = 'none';
+            this.blur();
+        }
+    });
+}
+
+// Event delegation for selecting products to exclude from the dropdown list
+const excludeDropdownEl = document.getElementById('excludeProductDropdown');
+if (excludeDropdownEl) {
+    excludeDropdownEl.addEventListener('click', function(e) {
+        const item = e.target.closest('.exclude-dropdown-item');
+        if (item) {
+            const sku = item.getAttribute('data-sku');
+            const name = item.getAttribute('data-name');
+            if (sku) {
+                addExcludedSku(sku, name || sku);
+            }
+        }
+    });
+}
+
+// Event delegation for removing excluded products from the chips container
+const excludeChipsEl = document.getElementById('excludeProductChips');
+if (excludeChipsEl) {
+    excludeChipsEl.addEventListener('click', function(e) {
+        const btn = e.target.closest('.exclude-chip-remove');
+        if (btn) {
+            const chip = btn.closest('.exclude-chip');
+            if (chip) {
+                const sku = chip.getAttribute('data-sku');
+                if (sku) {
+                    removeExcludedSku(sku);
+                }
+            }
+        }
+    });
+}
+
+async function filterExcludeProducts(query) {
+    const dropdown = document.getElementById('excludeProductDropdown');
+    if (!dropdown) return;
+
+    const cleanQuery = query.trim().toLowerCase();
+    
+    // If query is empty, we show default active products list (up to 200 items)
+    if (cleanQuery.length < 2) {
+        try {
+            const res = await apiCall('/products.php?action=list');
+            if (res && res.success && Array.isArray(res.products)) {
+                renderExcludeDropdownItems(res.products);
+            } else {
+                dropdown.innerHTML = '<div class="text-muted text-center" style="padding: 0.5rem; color: rgba(255, 255, 255, 0.4);">Escribe al menos 2 letras para buscar...</div>';
+            }
+        } catch (e) {
+            dropdown.innerHTML = '<div class="text-muted text-center" style="padding: 0.5rem; color: rgba(255, 255, 255, 0.4);">Escribe al menos 2 letras para buscar...</div>';
+        }
+        return;
+    }
+
+    dropdown.innerHTML = '<div class="text-muted text-center" style="padding: 0.5rem; color: rgba(255, 255, 255, 0.4);">⏳ Buscando...</div>';
+
+    if (activeSearchTimeout) clearTimeout(activeSearchTimeout);
+    activeSearchTimeout = setTimeout(async () => {
+        try {
+            const res = await apiCall(`/products.php?action=search&q=${encodeURIComponent(cleanQuery)}`);
+            if (res && res.success && Array.isArray(res.products)) {
+                renderExcludeDropdownItems(res.products);
+            } else {
+                dropdown.innerHTML = '<div class="text-muted text-center" style="padding: 0.5rem; color: rgba(255, 255, 255, 0.4);">No se encontraron productos.</div>';
+            }
+        } catch (e) {
+            console.error('Error searching products for exclusion:', e);
+            dropdown.innerHTML = '<div class="text-muted text-center" style="padding: 0.5rem; color: rgba(255, 255, 255, 0.4);">Error al buscar.</div>';
+        }
+    }, 300);
+}
+
+function renderExcludeDropdownItems(products) {
+    const dropdown = document.getElementById('excludeProductDropdown');
+    if (!dropdown) return;
+
+    if (products.length === 0) {
+        dropdown.innerHTML = '<div class="text-muted text-center" style="padding: 0.5rem; color: rgba(255, 255, 255, 0.4);">No se encontraron productos.</div>';
+        return;
+    }
+
+    // Filter out products that are already excluded
+    const availableProducts = products.filter(p => !excludedProductsMap.has(p.sku));
+
+    if (availableProducts.length === 0) {
+        dropdown.innerHTML = '<div class="text-muted text-center" style="padding: 0.5rem; color: rgba(255, 255, 255, 0.4);">Todos los productos ya están excluidos.</div>';
+        return;
+    }
+
+    dropdown.innerHTML = availableProducts.map(p => `
+        <div class="exclude-dropdown-item" data-sku="${escapeHtml(p.sku)}" data-name="${escapeHtml(p.name)}">
+            <div class="exclude-item-details">
+                <span class="exclude-item-name" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</span>
+                <span class="exclude-item-meta">SKU: ${escapeHtml(p.sku)} | Precio: ${formatAdminMoney(p.unit_price || p.sell_price || 0)}</span>
+            </div>
+            <span class="exclude-item-action-indicator">Excluir +</span>
+        </div>
+    `).join('');
+}
+
+function addExcludedSku(sku, name) {
+    if (!sku) return;
+    excludedProductsMap.set(sku, name);
+    updateExcludedChips();
+    
+    const searchInput = document.getElementById('excludeProductSearch');
+    if (searchInput) {
+        searchInput.value = '';
+        searchInput.focus();
+    }
+    
+    filterExcludeProducts('');
+}
+
+function removeExcludedSku(sku) {
+    excludedProductsMap.delete(sku);
+    updateExcludedChips();
+    
+    const dropdown = document.getElementById('excludeProductDropdown');
+    if (dropdown && dropdown.style.display === 'block') {
+        const val = document.getElementById('excludeProductSearch').value;
+        filterExcludeProducts(val);
+    }
+}
+
+function updateExcludedChips() {
+    const container = document.getElementById('excludeProductChips');
+    const hiddenInput = document.getElementById('priceExcludeSkus');
+    if (!container) return;
+
+    const skusArray = Array.from(excludedProductsMap.keys());
+    
+    if (hiddenInput) {
+        hiddenInput.value = skusArray.join(', ');
+        // Trigger change event to update the price preview recalculation automatically
+        const event = new Event('change');
+        hiddenInput.dispatchEvent(event);
+    }
+
+    if (skusArray.length === 0) {
+        container.innerHTML = '<span class="text-muted" style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.4); padding-left: 0.25rem;">Ningún producto excluido</span>';
+        return;
+    }
+
+    container.innerHTML = Array.from(excludedProductsMap.entries()).map(([sku, name]) => `
+        <div class="exclude-chip" data-sku="${escapeHtml(sku)}">
+            <span class="exclude-chip-sku">${escapeHtml(sku)}</span>
+            <span class="exclude-chip-name" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
+            <button type="button" class="exclude-chip-remove" title="Eliminar exclusión">&times;</button>
+        </div>
+    `).join('');
 }
 
 function resetUpdateForm() {
@@ -2620,7 +2984,7 @@ async function loadProductCategories(onlyActive = true) {
                         <tr>
                             <td>${escapeHtml(cat.name || '')}</td>
                             <td>${Number(cat.sort_order || 0)}</td>
-                            <td>${Number(cat.is_active) ? '<span class="badge badge-success">Sí</span>' : '<span class="badge badge-danger">No</span>'}</td>
+                            <td>${(cat.is_active === true || cat.is_active === 't' || cat.is_active === '1' || Number(cat.is_active) === 1) ? '<span class="badge badge-success">Sí</span>' : '<span class="badge badge-danger">No</span>'}</td>
                             <td>
                                 <button class="btn btn-small btn-secondary" type="button" data-action="edit-category">Editar</button>
                                 <button class="btn btn-small btn-danger" type="button" onclick="deleteCategoryByAdminId(${Number(cat.id || 0)})">Eliminar</button>
@@ -2673,7 +3037,7 @@ function fillCategoryForm(category) {
     document.getElementById('categoryEditId').value = category.id || '';
     document.getElementById('categoryName').value = category.name || '';
     document.getElementById('categoryOrder').value = String(category.sort_order || 0);
-    document.getElementById('categoryActive').value = Number(category.is_active) ? '1' : '0';
+    document.getElementById('categoryActive').value = (category.is_active === true || category.is_active === 't' || category.is_active === '1' || Number(category.is_active) === 1) ? '1' : '0';
     if (saveBtn) saveBtn.textContent = 'Actualizar categoría';
 }
 

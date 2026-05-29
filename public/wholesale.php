@@ -325,16 +325,16 @@ function addProductRow() {
 
 function filterRowProducts(input) {
   const query = input.value.toLowerCase().trim();
-  const select = input.nextElementSibling;
-  if (!select || select.tagName !== 'SELECT') return;
+  const select = input.closest('.form-group')?.querySelector('.prod-select');
+  if (!select) return;
   
   const currentValue = select.value;
   
   select.innerHTML = '<option value="">-- Seleccione un artículo --</option>';
   
   const filtered = allProducts.filter(p => 
-    p.name.toLowerCase().includes(query) || 
-    p.sku.toLowerCase().includes(query)
+    String(p.name || '').toLowerCase().includes(query) || 
+    String(p.sku || '').toLowerCase().includes(query)
   );
   
   select.innerHTML += filtered.map(p => 
