@@ -254,22 +254,30 @@ header {
 .nav-menu {
     display: flex;
     list-style: none;
-    gap: 0.75rem;
-    flex-wrap: wrap;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
     align-items: center;
     flex: 1;
     min-width: 0;
+    padding-bottom: 2px;
+}
+
+.nav-menu::-webkit-scrollbar {
+    display: none;
 }
 
 .nav-menu a {
     color: var(--ui-text-muted);
     text-decoration: none;
-    padding: 0.45rem 0.75rem;
+    padding: 0.35rem 0.65rem;
     border-radius: 999px;
     transition: var(--transition);
     font-weight: 600;
     white-space: nowrap;
-    font-size: 0.95rem;
+    font-size: 0.88rem;
 }
 
 .nav-menu a:hover,

@@ -2,6 +2,7 @@
 require_once '../config/config.php';
 
 $isLogged = isset($_SESSION['user_id']);
+$isAdmin = $isLogged && (($_SESSION['role'] ?? '') === 'admin');
 $orderId = isset($_GET['order_id']) ? intval($_GET['order_id']) : 0;
 $order = null;
 $orderItems = null;
@@ -194,9 +195,17 @@ if ($orderId && $isLogged) {
         <div class="header-content">
             <a href="index.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
             <nav class="nav-menu">
-                <a href="index.php">Productos</a>
-                <a href="orders.php">Pedidos</a>
-                <a href="dashboard.php">Dashboard</a>
+                <a href="index.php">Catálogo</a>
+                <a href="marketplace_ce.php">Marketplace CE</a>
+                <a href="cart.php">Carrito</a>
+                <?php if ($isAdmin): ?><a href="admin_supply.php">Abastecimiento</a><?php endif; ?>
+                <?php if ($isAdmin): ?><a href="tickets.php">Tickets</a><?php endif; ?>
+                <?php if ($isLogged): ?>
+                    <a href="orders.php">Pedidos</a>
+                    <a href="wholesale.php">Mayoreo</a>
+                    <?php if ($isAdmin): ?><a href="cashier.php">Caja</a><?php endif; ?>
+                    <a href="dashboard.php">Dashboard</a>
+                <?php endif; ?>
             </nav>
             <div class="header-actions">
 
@@ -341,5 +350,6 @@ if ($orderId && $isLogged) {
     </footer>
 
     <script src="js/main.js"></script>
+    <script src="js/mobile-optimize.js"></script>
 </body>
 </html>

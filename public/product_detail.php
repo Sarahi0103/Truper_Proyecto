@@ -1,6 +1,9 @@
 <?php
 require_once '../config/config.php';
 
+$isLogged = isset($_SESSION['user_id']);
+$isAdmin = $isLogged && (($_SESSION['role'] ?? '') === 'admin');
+
 $product_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $source = strtolower(trim((string)($_GET['source'] ?? '')));
 $product = null;
@@ -545,6 +548,14 @@ $stock = (int)($product['stock_quantity'] ?? 0);
             <a href="index.php">Catálogo</a>
             <a href="marketplace_ce.php">Marketplace CE</a>
             <a href="cart.php">Carrito</a>
+            <?php if ($isAdmin): ?><a href="admin_supply.php">Abastecimiento</a><?php endif; ?>
+            <?php if ($isAdmin): ?><a href="tickets.php">Tickets</a><?php endif; ?>
+            <?php if ($isLogged): ?>
+                <a href="orders.php">Pedidos</a>
+                <a href="wholesale.php">Mayoreo</a>
+                <?php if ($isAdmin): ?><a href="cashier.php">Caja</a><?php endif; ?>
+                <a href="dashboard.php">Dashboard</a>
+            <?php endif; ?>
         </nav>
     </div>
     <div class="user-menu">

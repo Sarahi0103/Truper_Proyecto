@@ -29,6 +29,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
             <a href="wholesale.php">Mayoreo</a>
             <a href="cashier.php" class="active">Caja</a>
             <a href="admin_supply.php">Abastecimiento</a>
+            <?php if (($_SESSION['role'] ?? '') === 'admin'): ?><a href="tickets.php">Tickets</a><?php endif; ?>
             <a href="tasks.php">Tareas</a>
             <a href="analytics.php">Estadisticas</a>
             <a href="profile.php">Perfil</a>

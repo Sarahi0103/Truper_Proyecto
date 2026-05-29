@@ -36,6 +36,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                 <a href="wholesale.php">Mayoreo</a>
                 <?php if ($is_admin): ?><a href="cashier.php">Caja</a><?php endif; ?>
                 <?php if ($is_admin): ?><a href="admin_supply.php">Abastecimiento</a><?php endif; ?>
+                <?php if ($is_admin): ?><a href="tickets.php">Tickets</a><?php endif; ?>
                 <a href="tasks.php">Tareas</a>
                 <a href="analytics.php" class="active">Estadísticas</a>
                 <a href="profile.php">Perfil</a>
