@@ -7,11 +7,7 @@ $user_role  = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8
 $is_admin   = (($_SESSION['role'] ?? '') === 'admin');
 $first_name = explode(' ', $user_name)[0];
 
-// Greeting based on hour
-$hour = (int) date('H');
-if ($hour < 12)       $greeting = 'Buenos días';
-elseif ($hour < 18)   $greeting = 'Buenas tardes';
-else                  $greeting = 'Buenas noches';
+// Greeting is rendered client-side (JS) to use the user's local timezone
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -354,48 +350,67 @@ else                  $greeting = 'Buenas noches';
 
         /* Admin shortcut bar */
         .db-admin-bar {
-            display: flex;
-            gap: .75rem;
-            background: #0d0d0d;
-            border: 1.5px solid rgba(255,127,0,.15);
-            border-radius: 14px;
-            padding: 1rem 1.25rem;
+            background: #0a0a0a;
+            border: 1px solid #1f1f1f;
+            border-left: 3px solid #ff7f00;
+            border-radius: 12px;
+            padding: .85rem 1.25rem;
             margin-bottom: 1.25rem;
-            flex-wrap: wrap;
+        }
+
+        .db-admin-bar-section {
+            display: flex;
             align-items: center;
+            gap: 1.25rem;
+            flex-wrap: wrap;
         }
 
         .db-admin-bar-label {
-            font-size: .72rem;
+            font-size: .68rem;
             font-weight: 800;
             color: #ff7f00;
             text-transform: uppercase;
-            letter-spacing: .06em;
-            margin-right: .25rem;
+            letter-spacing: .1em;
             white-space: nowrap;
+            flex-shrink: 0;
+            padding-right: .75rem;
+            border-right: 1px solid #2a2a2a;
+        }
+
+        .db-admin-links {
+            display: flex;
+            gap: .5rem;
+            flex-wrap: wrap;
+            align-items: center;
         }
 
         .db-admin-link {
             display: inline-flex;
             align-items: center;
-            gap: .4rem;
-            background: #111;
-            border: 1px solid #2a2a2a;
-            border-radius: 8px;
-            padding: .4rem .85rem;
+            background: transparent;
+            border: 1px solid #242424;
+            border-radius: 7px;
+            padding: .35rem .85rem;
             text-decoration: none;
-            color: #ccc;
-            font-size: .8rem;
+            color: #888;
+            font-size: .78rem;
             font-weight: 600;
-            transition: all .2s;
+            letter-spacing: .01em;
+            transition: all .18s;
             white-space: nowrap;
         }
 
         .db-admin-link:hover {
-            background: #1a1a1a;
+            background: #161616;
             border-color: #ff7f00;
             color: #fff;
             text-decoration: none;
+        }
+
+        .db-admin-link.active-route {
+            background: rgba(255,127,0,.08);
+            border-color: rgba(255,127,0,.3);
+            color: #ff9a33;
         }
 
         /* Activity indicator */
@@ -483,13 +498,13 @@ else                  $greeting = 'Buenas noches';
                         <span class="live-dot"></span>
                         Sistema en línea
                     </div>
-                    <h1><?php echo $greeting; ?>, <span><?php echo $first_name; ?></span></h1>
+                    <h1 id="dbGreeting">Bienvenido, <span><?php echo $first_name; ?></span></h1>
                     <p class="db-hero-sub">Bienvenido de vuelta a Truper Platform. Aquí está el resumen de hoy.</p>
                 </div>
                 <div class="db-hero-right">
                     <div class="db-date-chip" id="dbLiveClock">—</div>
                     <div class="db-role-chip">
-                        <?php echo $is_admin ? '⚙️ Administrador' : '👤 ' . ucfirst($user_role); ?>
+                        <?php echo $is_admin ? 'Administrador' : ucfirst($user_role); ?>
                     </div>
                 </div>
             </div>
@@ -497,12 +512,17 @@ else                  $greeting = 'Buenas noches';
             <!-- ── Admin Quick-access bar ── -->
             <?php if ($is_admin): ?>
             <div class="db-admin-bar">
-                <span class="db-admin-bar-label">⚡ Acceso rápido admin:</span>
-                <a href="admin_supply.php" class="db-admin-link">📦 Abastecimiento</a>
-                <a href="cashier.php" class="db-admin-link">🧾 Caja</a>
-                <a href="analytics.php" class="db-admin-link">📊 Estadísticas</a>
-                <a href="tickets.php" class="db-admin-link">🎫 Tickets</a>
-                <a href="wholesale.php" class="db-admin-link">🏷️ Mayoreo</a>
+                <div class="db-admin-bar-section">
+                    <span class="db-admin-bar-label">Acceso Rápido</span>
+                    <div class="db-admin-links">
+                        <a href="admin_supply.php" class="db-admin-link">Abastecimiento</a>
+                        <a href="cashier.php" class="db-admin-link">Caja</a>
+                        <a href="analytics.php" class="db-admin-link">Estadísticas</a>
+                        <a href="tickets.php" class="db-admin-link">Tickets</a>
+                        <a href="wholesale.php" class="db-admin-link">Mayoreo</a>
+                        <a href="tasks.php" class="db-admin-link">Tareas</a>
+                    </div>
+                </div>
             </div>
             <?php endif; ?>
 
@@ -699,16 +719,34 @@ else                  $greeting = 'Buenas noches';
         }
     </style>
     <script>
-        /* ── Clock ── */
+        /* ── Clock + Greeting (uses browser local time, NOT server UTC) ── */
         function updateClock() {
-            const el = document.getElementById('dbLiveClock');
-            if (!el) return;
-            const now = new Date();
-            const days = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+            const now  = new Date();
+            const days   = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
             const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
             const h = String(now.getHours()).padStart(2,'0');
             const m = String(now.getMinutes()).padStart(2,'0');
-            el.textContent = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} · ${h}:${m}`;
+
+            // Update clock chip
+            const clockEl = document.getElementById('dbLiveClock');
+            if (clockEl) {
+                clockEl.textContent = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} · ${h}:${m}`;
+            }
+
+            // Update greeting based on local hour
+            const hour = now.getHours();
+            let greet;
+            if      (hour >= 0  && hour < 12) greet = 'Buenos días';
+            else if (hour >= 12 && hour < 19) greet = 'Buenas tardes';
+            else                              greet = 'Buenas noches';
+
+            const greetEl = document.getElementById('dbGreeting');
+            if (greetEl) {
+                // Preserve the orange <span> with the name
+                const nameSpan = greetEl.querySelector('span');
+                const nameHTML = nameSpan ? nameSpan.outerHTML : '';
+                greetEl.innerHTML = `${greet}, ${nameHTML}`;
+            }
         }
         updateClock();
         setInterval(updateClock, 30000);
