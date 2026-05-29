@@ -25,21 +25,6 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
         gap: 1.5rem;
     }
     
-    @media (min-width: 992px) {
-        .order-layout {
-            display: grid;
-            grid-template-columns: 1.2fr 1fr;
-            gap: 1.5rem;
-            align-items: start;
-        }
-        
-        .sticky-panel {
-            position: sticky;
-            top: 2rem;
-            z-index: 10;
-        }
-    }
-    
     .order-panel {
         background: #1e1e1e;
         border: 1px solid rgba(255, 255, 255, 0.08);
