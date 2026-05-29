@@ -112,6 +112,23 @@ $column_count = $is_admin ? 7 : 6;
         background: rgba(16, 185, 129, 0.15);
         color: #10b981;
     }
+    
+    /* Badge count for notifications */
+    .badge-count {
+        background: #ff6600;
+        color: #fff;
+        border-radius: 50%;
+        padding: 0.15rem 0.4rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        margin-left: 0.5rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 18px;
+        height: 18px;
+        line-height: 1;
+    }
     </style>
 </head>
 <body>
@@ -150,7 +167,18 @@ $column_count = $is_admin ? 7 : 6;
             <p class="text-muted">Solicita condiciones comerciales de volumen para tu negocio y cotiza productos específicos.</p>
         </div>
 
-        <form id="wholesaleForm" class="mt-3" onsubmit="submitWholesale(event)">
+        <!-- TABS -->
+        <div class="tabs" style="margin-bottom: 1.5rem;">
+            <button class="tab-button active" data-tab="newWholesaleTab">Crear Solicitud</button>
+            <button class="tab-button" data-tab="wholesaleRequestsTab">
+                <?php echo $is_admin ? 'Solicitudes Recibidas' : 'Mis Solicitudes'; ?>
+                <span id="wholesaleBadge" class="badge-count" style="display: none;">0</span>
+            </button>
+        </div>
+
+        <!-- TAB CONTENT: CREAR SOLICITUD -->
+        <div id="newWholesaleTab" class="tab-content active">
+            <form id="wholesaleForm" class="mt-3" onsubmit="submitWholesale(event)">
             <div class="grid grid-2">
                 <div class="form-group">
                     <label>Tipo de negocio</label>
@@ -192,27 +220,33 @@ $column_count = $is_admin ? 7 : 6;
             <button class="btn btn-primary mt-3" type="submit" style="width: 100%; max-width: 300px;">
                 Enviar solicitud de mayoreo
             </button>
-        </form>
+            </form>
+        </div>
 
-        <div class="mt-4">
-            <h2><?php echo $is_admin ? 'Solicitudes de Mayoreo Recibidas' : 'Mis Solicitudes de Mayoreo'; ?></h2>
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                    <tr>
-                        <?php if ($is_admin): ?><th>Cliente</th><?php endif; ?>
-                        <th>Negocio</th>
-                        <th>Descuento</th>
-                        <th>Términos</th>
-                        <th>Productos Detalle</th>
-                        <th>Estatus</th>
-                        <th>Cotización y Acciones</th>
-                    </tr>
-                    </thead>
-                    <tbody id="wholesaleRows">
-                        <tr><td colspan="<?php echo $column_count; ?>">Cargando solicitudes...</td></tr>
-                    </tbody>
-                </table>
+        <!-- TAB CONTENT: SOLICITUDES RECIBIDAS -->
+        <div id="wholesaleRequestsTab" class="tab-content">
+            <div class="card mt-4">
+                <div class="card-header"><?php echo $is_admin ? 'Solicitudes de Mayoreo Recibidas' : 'Mis Solicitudes de Mayoreo'; ?></div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                            <tr>
+                                <?php if ($is_admin): ?><th>Cliente</th><?php endif; ?>
+                                <th>Negocio</th>
+                                <th>Descuento</th>
+                                <th>Términos</th>
+                                <th>Productos Detalle</th>
+                                <th>Estatus</th>
+                                <th>Cotización y Acciones</th>
+                            </tr>
+                            </thead>
+                            <tbody id="wholesaleRows">
+                                <tr><td colspan="<?php echo $column_count; ?>">Cargando solicitudes...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -220,6 +254,12 @@ $column_count = $is_admin ? 7 : 6;
 
 <script>
 window.companyWhatsapp = '<?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, "UTF-8"); ?>';
+function activateWholesaleTab(tabName) {
+  const tabButton = document.querySelector(`.tab-button[data-tab="${tabName}"]`);
+  if (tabButton) {
+    tabButton.click();
+  }
+}
 </script>
 <script src="js/main.js"></script>
 <script>
@@ -349,12 +389,13 @@ async function submitWholesale(e) {
     handleSuccessResponse(res, {
       scrollTarget: '#wholesaleForm',
       successMessage: res.message || 'Solicitud enviada correctamente',
-      onSuccess: () => {
+      onSuccess: async () => {
         document.getElementById('wholesaleForm').reset();
         const container = document.getElementById('productsListContainer');
         if (container) container.innerHTML = '';
         addProductRow();
-        loadWholesale();
+        await loadWholesale();
+        activateWholesaleTab('wholesaleRequestsTab');
       }
     });
   } else if (res) {
@@ -379,6 +420,22 @@ async function loadWholesale() {
   const res = await apiCall('/wholesale.php?action=list');
   const tb = document.getElementById('wholesaleRows');
   const colCount = <?php echo $column_count; ?>;
+  
+  // Update badge count
+  const badge = document.getElementById('wholesaleBadge');
+  if (badge) {
+    const isAdmin = <?php echo $is_admin ? 'true' : 'false'; ?>;
+    const items = (res && res.success && Array.isArray(res.items)) ? res.items : [];
+    // If admin, show pending requests. If client, show all requests.
+    const displayCount = isAdmin ? items.filter(i => !i.is_approved).length : items.length;
+    if (displayCount > 0) {
+      badge.textContent = displayCount;
+      badge.style.display = 'inline-flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
   if (!res || !res.success || !Array.isArray(res.items) || res.items.length === 0) {
     tb.innerHTML = `<tr><td colspan="${colCount}">Sin registros</td></tr>`;
     loadedWholesaleRequests = [];
