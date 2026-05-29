@@ -90,6 +90,9 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                 <button class="analytics-tab-btn" data-tab="clientsTab" role="tab" aria-selected="false">
                     <span class="tab-icon">👥</span> Clientes
                 </button>
+                <button class="analytics-tab-btn" data-tab="goalsTab" role="tab" aria-selected="false">
+                    <span class="tab-icon">🎯</span> Objetivos Mensuales
+                </button>
                 <?php endif; ?>
             </div>
 
@@ -248,6 +251,40 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                     </div>
                 </div>
             </div>
+            
+            <!-- ══════════════════════════════════
+                 TAB 5: OBJETIVOS MENSUALES
+            ══════════════════════════════════ -->
+            <div id="goalsTab" class="analytics-tab-panel">
+                <div class="card" style="margin-bottom:2rem;">
+                    <div class="card-body" style="padding:2rem;">
+                        <h2 style="margin:0 0 .35rem; font-size:1.3rem; font-weight:900; color:#fff;">Objetivos Mensuales y Desglose Semanal</h2>
+                        <p style="margin:0 0 1.5rem; color:#666; font-size:.9rem;">Establece el objetivo acumulado del mes para visualizar la progresión y desglose por semanas.</p>
+                        
+                        <div class="grid grid-3" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1.25rem; margin-bottom:1.5rem;">
+                            <div class="form-group">
+                                <label for="goalMonth" style="display:block; margin-bottom:0.5rem; font-weight:600; font-size:0.85rem; color:#aaa;">Mes (YYYY-MM)</label>
+                                <input id="goalMonth" type="text" placeholder="2026-05" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid var(--theme-border); background:var(--theme-surface-strong); color:#fff; box-sizing:border-box;">
+                            </div>
+                            <div class="form-group">
+                                <label for="goalAmount" style="display:block; margin-bottom:0.5rem; font-weight:600; font-size:0.85rem; color:#aaa;">Meta ($)</label>
+                                <input id="goalAmount" type="number" step="0.01" min="0" placeholder="0.00" style="width:100%; padding:0.6rem; border-radius:6px; border:1px solid var(--theme-border); background:var(--theme-surface-strong); color:#fff; box-sizing:border-box;">
+                            </div>
+                            <div class="form-group d-flex align-center" style="display:flex; align-items:flex-end;">
+                                <button class="btn-analytics-primary" onclick="saveMonthlyGoal()" style="width:100%; border:none; padding:0.75rem 1.25rem; border-radius:6px; cursor:pointer; font-weight:700;">Guardar Meta</button>
+                            </div>
+                        </div>
+                        
+                        <div id="goalSummary" class="text-muted" style="margin-top:1.5rem; padding:1rem; background:var(--theme-surface-strong); border-radius:8px; line-height:1.6;">
+                            Sin resumen de meta
+                        </div>
+                        
+                        <div id="goalWeekly" class="text-muted" style="margin-top:1.5rem; overflow-x:auto;">
+                            Sin desglose semanal
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <?php endif; ?>
 
@@ -331,6 +368,11 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                         generateSeasonalReport();
                     }
                 }
+
+                // Auto-load goals tab
+                if (target === 'goalsTab') {
+                    loadGoalSummary();
+                }
             });
         });
 
@@ -403,6 +445,11 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                 setView('monthly');
                 <?php if ($is_admin): ?>
                 loadClientAnalytics();
+                const goalMonth = document.getElementById('goalMonth');
+                if (goalMonth && !goalMonth.value) {
+                    goalMonth.value = new Date().toISOString().slice(0, 7);
+                }
+                loadGoalSummary();
                 <?php endif; ?>
             });
 
@@ -412,6 +459,75 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                 if (btn) btn.click();
             }
         });
+
+        /* ── Objetivos Mensuales (Lógica Reubicada) ── */
+        async function saveMonthlyGoal() {
+            const monthKey = document.getElementById('goalMonth').value || new Date().toISOString().slice(0, 7);
+            const targetAmount = document.getElementById('goalAmount').value || 0;
+            const res = await apiCall('/cashier.php?action=goal-save', 'POST', {
+                month_key: monthKey,
+                target_amount: targetAmount
+            });
+            if (res && res.success) {
+                showAlert(res.message, 'success');
+                loadGoalSummary();
+            } else if (res) {
+                showAlert(res.message, 'error');
+            }
+        }
+
+        async function loadGoalSummary() {
+            const monthKey = document.getElementById('goalMonth').value || new Date().toISOString().slice(0, 7);
+            const res = await apiCall(`/cashier.php?action=goal-summary&month_key=${encodeURIComponent(monthKey)}`);
+            const summary = document.getElementById('goalSummary');
+            const weekly = document.getElementById('goalWeekly');
+
+            if (!res || !res.success) {
+                if (summary) summary.textContent = 'No se pudo consultar la meta mensual';
+                if (weekly) weekly.textContent = 'Sin desglose semanal';
+                return;
+            }
+
+            const g = res.goal || {};
+            const formatMoney = (val) => '$' + Number(val || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            if (summary) {
+                summary.innerHTML = `
+                    <div><strong>Meta mensual:</strong> ${formatMoney(g.target_amount)}</div>
+                    <div><strong>Acumulado logrado:</strong> ${formatMoney(g.achieved_amount)}</div>
+                    <div><strong>Monto restante:</strong> ${formatMoney(g.remaining_amount)}</div>
+                    <div><strong>Avance del mes:</strong> ${Number(g.progress_pct || 0).toFixed(2)}%</div>
+                `;
+            }
+
+            const rows = Array.isArray(res.weekly) ? res.weekly : [];
+            if (rows.length === 0) {
+                if (weekly) weekly.innerHTML = '<p class="text-muted">Sin ventas semanales para este mes.</p>';
+                return;
+            }
+
+            if (weekly) {
+                weekly.innerHTML = `
+                    <table style="width:100%; border-collapse:collapse; margin-top:1rem;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--theme-border);">
+                                <th style="padding:0.75rem; text-align:left; background:var(--theme-surface-strong); color:var(--theme-text);">Semana</th>
+                                <th style="padding:0.75rem; text-align:right; background:var(--theme-surface-strong); color:var(--theme-text);">Objetivo semanal</th>
+                                <th style="padding:0.75rem; text-align:right; background:var(--theme-surface-strong); color:var(--theme-text);">Acumulado logrado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows.map((r) => `
+                                <tr style="border-bottom: 1px solid var(--theme-border);">
+                                    <td style="padding:0.75rem; color:var(--theme-text);">${r.week_start}</td>
+                                    <td style="padding:0.75rem; text-align:right; color:var(--theme-text);">${formatMoney(r.week_target)}</td>
+                                    <td style="padding:0.75rem; text-align:right; color:var(--theme-text);">${formatMoney(r.week_total)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
+        }
     </script>
     <script src="js/mobile-optimize.js"></script>
 </body>

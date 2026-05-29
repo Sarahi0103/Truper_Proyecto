@@ -76,6 +76,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             <button class="tab-button" data-tab="historyTab">Historico</button>
             <button class="tab-button" data-tab="pricesTab">Precios</button>
             <button class="tab-button" data-tab="marketplaceTab">Marketplace CE</button>
+            <button class="tab-button" data-tab="categoriesTab">Categorías</button>
         </div>
 
         <section id="stockTab" class="tab-content active admin-tab-panel">
@@ -95,21 +96,15 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <div class="form-group">
                     <label>Categorías (selección múltiple)</label>
                     <div class="category-panel">
-                        <div class="category-panel-title">Administrar categorías</div>
+                        <div class="category-panel-title">Categorías de catálogo</div>
                         <select id="newProductCategory" multiple size="6">
                             <option value="Material eléctrico">Material eléctrico</option>
                             <option value="Fontanería">Fontanería</option>
                             <option value="Cerrajería">Cerrajería</option>
                             <option value="Herrería">Herrería</option>
                         </select>
-                        <small class="text-muted">Usa Ctrl/Cmd para seleccionar múltiples categorías.</small>
-                        <div class="category-quick-tools">
-                            <input id="newCategoryQuickName" class="category-quick-input" type="text" placeholder="Nueva categoría" maxlength="120">
-                            <button class="btn btn-small btn-secondary category-action-btn" type="button" onclick="addCategoryFromStockForm()" title="Agregar categoría">Agregar</button>
-                            <button class="btn btn-small btn-secondary category-action-btn category-action-btn-remove" type="button" onclick="deleteCategoryQuick()" title="Eliminar categoría seleccionada">Eliminar</button>
-                        </div>
+                        <small class="text-muted">Usa Ctrl/Cmd para seleccionar múltiples categorías. Gestión en la pestaña Categorías.</small>
                     </div>
-                    <div id="quickCategoryResult" class="text-muted" style="font-size:12px; margin-top:6px;"></div>
                 </div>
 
                 <div class="grid grid-3">
@@ -122,16 +117,19 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     <div class="form-group"><label>Nivel reorden</label><input id="newProductReorder" type="number" min="0" step="1" value="10"></div>
                 </div>
 
-                <input id="newProductImageRef" type="hidden" value="images/products/default-product.svg">
-
                 <div class="grid grid-2 mt-2">
                     <div class="form-group">
-                        <label>Subir imagen o varias imágenes</label>
-                        <input id="newProductImages" type="file" accept="image/*" multiple>
-                        <small class="text-muted">Al seleccionar archivos se subirán automáticamente. El botón manual queda como respaldo.</small>
+                        <label>Subir nuevas imágenes</label>
+                        <input id="newProductImages" type="file" accept="image/*" multiple style="margin-bottom: 0.5rem;">
+                        <button class="btn btn-secondary btn-small" type="button" onclick="uploadProductImages()">Cargar e integrar a galería</button>
+                        <small class="text-muted">Al seleccionar archivos se subirán automáticamente.</small>
                     </div>
-                    <div class="form-group d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap;">
-                        <button class="btn btn-secondary" type="button" onclick="uploadProductImages()">Cargar imágenes</button>
+                    <div class="form-group">
+                        <label>Imagen de referencia existente (Evita duplicidad)</label>
+                        <select id="newProductImageRef" onchange="updateStockPreview()">
+                            <option value="images/products/default-product.svg">Por defecto (Logo Truper)</option>
+                        </select>
+                        <small class="text-muted">Usa una imagen compartida que ya esté en el servidor para optimizar espacio.</small>
                     </div>
                 </div>
 
@@ -414,14 +412,8 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     <div class="category-panel">
                         <div class="category-panel-title">Categorías para Marketplace</div>
                         <select id="marketplaceCategory" multiple size="6"></select>
-                        <small class="text-muted">Las categorías se comparten con Stock.</small>
-                        <div class="category-quick-tools">
-                            <input id="marketplaceCategoryQuickName" class="category-quick-input" type="text" placeholder="Nueva categoría" maxlength="120">
-                            <button class="btn btn-small btn-secondary category-action-btn" type="button" onclick="addCategoryFromMarketplaceForm()">Agregar</button>
-                            <button class="btn btn-small btn-secondary category-action-btn category-action-btn-remove" type="button" onclick="deleteMarketplaceCategoryQuick()">Eliminar</button>
-                        </div>
+                        <small class="text-muted">Las categorías se comparten con Stock. Gestión en la pestaña Categorías.</small>
                     </div>
-                    <div id="marketplaceQuickCategoryResult" class="text-muted" style="font-size:12px; margin-top:6px;"></div>
                 </div>
 
                 <div class="grid grid-3">
@@ -432,16 +424,19 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
 
                 <div class="form-group"><label>Descripción</label><textarea id="marketplaceDescription" rows="4" maxlength="1800"></textarea></div>
 
-                <input id="marketplaceImageRef" type="hidden" value="images/products/default-product.svg">
-
                 <div class="grid grid-2 mt-2">
                     <div class="form-group">
-                        <label>Subir imagen o varias imágenes</label>
-                        <input id="marketplaceImages" type="file" accept="image/*" multiple>
-                        <small class="text-muted">Al seleccionar archivos se subirán automáticamente. El botón manual queda como respaldo.</small>
+                        <label>Subir nuevas imágenes</label>
+                        <input id="marketplaceImages" type="file" accept="image/*" multiple style="margin-bottom: 0.5rem;">
+                        <button class="btn btn-secondary btn-small" type="button" onclick="uploadMarketplaceImages()">Cargar e integrar a galería</button>
+                        <small class="text-muted">Al seleccionar archivos se subirán automáticamente.</small>
                     </div>
-                    <div class="form-group d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap;">
-                        <button class="btn btn-secondary" type="button" onclick="uploadMarketplaceImages()">Cargar imágenes</button>
+                    <div class="form-group">
+                        <label>Imagen de referencia existente (Evita duplicidad)</label>
+                        <select id="marketplaceImageRef" onchange="updateMarketplacePreview()">
+                            <option value="images/products/default-product.svg">Por defecto (Logo Truper)</option>
+                        </select>
+                        <small class="text-muted">Usa una imagen compartida que ya esté en el servidor para optimizar espacio.</small>
                     </div>
                 </div>
 
@@ -496,7 +491,46 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <div id="marketplacePagination" class="mt-3"></div>
                 <div id="marketplaceListCaption" class="admin-list-caption">Cargando artículos CE...</div>
                 <div id="marketplaceList" class="text-muted">Cargando artículos CE...</div>
-            </div></div>
+        </section>
+
+        <section id="categoriesTab" class="tab-content admin-tab-panel">
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-body">
+                        <h3>Administrar Categorías</h3>
+                        <p class="text-muted">Crea o edita las categorías generales del catálogo.</p>
+                        <input type="hidden" id="categoryEditId" value="">
+                        <div class="form-group">
+                            <label>Nombre de la Categoría</label>
+                            <input id="categoryName" type="text" placeholder="Ej. Material eléctrico" maxlength="120">
+                        </div>
+                        <div class="grid grid-2">
+                            <div class="form-group">
+                                <label>Orden de clasificación</label>
+                                <input id="categoryOrder" type="number" min="0" max="999" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Estado</label>
+                                <select id="categoryActive">
+                                    <option value="1">Activo</option>
+                                    <option value="0">Inactivo</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap; margin-top: 1.5rem;">
+                            <button class="btn btn-primary" id="categorySaveButton" onclick="saveCategoryByAdmin()">Guardar categoría</button>
+                            <button class="btn btn-secondary" type="button" onclick="resetCategoryForm()">Cancelar</button>
+                        </div>
+                        <div id="categoryResult" class="mt-2"></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <h3>Categorías Registradas</h3>
+                        <div id="categoriesList" class="text-muted">Cargando categorías...</div>
+                    </div>
+                </div>
+            </div>
         </section>
     </div>
 </main>
@@ -2468,14 +2502,55 @@ async function loadProductImageReferences() {
     const marketplaceSelect = document.getElementById('marketplaceImageRef');
     if (!stockSelect && !marketplaceSelect) return;
 
+    // Cargar imágenes únicas desde el servidor/base de datos
+    const res = await apiCall('/admin_supply.php?action=product-images', 'GET', null, { silent: true });
+    if (res && res.success && Array.isArray(res.images)) {
+        const populateSelect = (selectEl, defaultVal) => {
+            if (!selectEl) return;
+            const currentSelected = selectEl.value || defaultVal;
+            selectEl.innerHTML = '<option value="images/products/default-product.svg">Por defecto (Logo Truper)</option>';
+            res.images.forEach(img => {
+                if (img === 'images/products/default-product.svg') return;
+                const opt = document.createElement('option');
+                opt.value = img;
+                opt.textContent = img.replace(/^images\/products\//, '');
+                selectEl.appendChild(opt);
+            });
+            selectEl.value = currentSelected;
+        };
+
+        populateSelect(stockSelect, 'images/products/default-product.svg');
+        populateSelect(marketplaceSelect, 'images/products/default-product.svg');
+    }
+
     const stockState = getGalleryState('stock');
     const marketplaceState = getGalleryState('marketplace');
 
     if (stockSelect && stockState && stockState.cover) {
+        let exists = false;
+        for (let i = 0; i < stockSelect.options.length; i++) {
+            if (stockSelect.options[i].value === stockState.cover) exists = true;
+        }
+        if (!exists) {
+            const opt = document.createElement('option');
+            opt.value = stockState.cover;
+            opt.textContent = stockState.cover.replace(/^images\/products\//, '');
+            stockSelect.appendChild(opt);
+        }
         stockSelect.value = stockState.cover;
     }
 
     if (marketplaceSelect && marketplaceState && marketplaceState.cover) {
+        let exists = false;
+        for (let i = 0; i < marketplaceSelect.options.length; i++) {
+            if (marketplaceSelect.options[i].value === marketplaceState.cover) exists = true;
+        }
+        if (!exists) {
+            const opt = document.createElement('option');
+            opt.value = marketplaceState.cover;
+            opt.textContent = marketplaceState.cover.replace(/^images\/products\//, '');
+            marketplaceSelect.appendChild(opt);
+        }
         marketplaceSelect.value = marketplaceState.cover;
     }
 
@@ -4371,6 +4446,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var historyBtn = document.querySelector('[data-tab="historyTab"]');
     if (historyBtn) { var _hisLoaded = false; historyBtn.addEventListener('click', function () { if (!_hisLoaded) { _hisLoaded = true; loadHistory(); } }); }
+
+    var categoriesBtn = document.querySelector('[data-tab="categoriesTab"]');
+    if (categoriesBtn) {
+        var _catLoaded = false;
+        categoriesBtn.addEventListener('click', function () {
+            if (!_catLoaded) {
+                _catLoaded = true;
+                refreshCategoriesUi();
+            }
+        });
+    }
 
     const supplierInput = document.getElementById('poSupplier');
     if (supplierInput) {

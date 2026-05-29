@@ -71,7 +71,6 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
 
             <div class="tabs mt-3">
               <button class="tab-button active" data-tab="cashMovementsTab">Movimientos</button>
-              <button class="tab-button" data-tab="cashGoalsTab">Objetivo mensual</button>
               <button class="tab-button" data-tab="cashNotesTab">Notas y plazos</button>
               <button class="tab-button" data-tab="cashWeeklyTab">Flujo semanal</button>
             </div>
@@ -87,19 +86,6 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                 <input id="moveAmount" type="number" step="0.01" placeholder="Monto" class="mt-1">
                 <input id="moveDesc" type="text" placeholder="Descripcion" class="mt-1">
                 <button class="btn btn-primary mt-2" onclick="addMovement()">Registrar movimiento</button>
-              </div></div>
-            </section>
-
-            <section id="cashGoalsTab" class="tab-content">
-              <div class="card mt-3"><div class="card-body">
-                <h3>Objetivo mensual</h3>
-                <div class="grid grid-3">
-                  <div class="form-group"><label>Mes (YYYY-MM)</label><input id="goalMonth" type="text" placeholder="2026-04"></div>
-                  <div class="form-group"><label>Meta ($)</label><input id="goalAmount" type="number" step="0.01" min="0" placeholder="0.00"></div>
-                  <div class="form-group d-flex align-center"><button class="btn btn-primary" onclick="saveMonthlyGoal()">Guardar meta</button></div>
-                </div>
-                <div id="goalSummary" class="mt-2 text-muted">Sin resumen de meta</div>
-                <div id="goalWeekly" class="mt-2 text-muted">Sin desglose semanal</div>
               </div></div>
             </section>
 
