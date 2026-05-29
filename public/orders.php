@@ -367,7 +367,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
         window.TRUPER_COMPANY_WHATSAPP = '<?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?>';
         window.TRUPER_ORDERS_ROLE = '<?php echo htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'); ?>';
     </script>
-    <script src="js/orders.js?v=20260528_v6" charset="UTF-8"></script>
+    <script src="js/orders.js?v=20260528_v7" charset="UTF-8"></script>
     <script src="js/barcode-scanner.js"></script>
     <script>
         function logout() {

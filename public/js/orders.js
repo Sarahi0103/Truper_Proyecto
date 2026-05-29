@@ -3,6 +3,7 @@
  */
 
 let currentCart = [];
+let loadedProducts = [];
 let currentTotal = 0;
 const COMPANY_WHATSAPP = String(window.TRUPER_COMPANY_WHATSAPP || '3317915887');
 const ORDERS_ROLE = String(window.TRUPER_ORDERS_ROLE || 'client').toLowerCase();
@@ -351,6 +352,14 @@ function removePayButtonsFromOrders() {
 
 
 
+function addToCartFromList(productId) {
+    const product = loadedProducts.find(p => p.id == productId);
+    if (!product) return;
+    const qtyInput = document.getElementById(`qty_${productId}`);
+    const quantity = qtyInput ? parseInt(qtyInput.value) : 1;
+    addToCart(product.id, product.name, product.unit_price, quantity);
+}
+
 async function loadProducts() {
     const response = await apiCall('/products.php?action=list');
     const productsList = document.getElementById('productsList');
@@ -362,6 +371,8 @@ async function loadProducts() {
         productsList.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No fue posible cargar productos</td></tr>';
         return;
     }
+
+    loadedProducts = response.products;
 
     updateCategoryFilter(response.products);
 
@@ -380,7 +391,7 @@ async function loadProducts() {
             <td><input id="qty_${product.id}" type="number" min="1" value="1" style="width: 80px;"></td>
             <td>
                 <button class="btn btn-primary btn-small"
-                    onclick="addToCart(${product.id}, '${String(product.name).replace(/'/g, "\\'")}', ${product.unit_price}, document.getElementById('qty_${product.id}').value)">
+                    onclick="addToCartFromList(${product.id})">
                     Agregar
                 </button>
             </td>
