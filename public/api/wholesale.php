@@ -92,7 +92,7 @@ try {
             $mktProds = [];
             
             try {
-                $stmt = $pdo->query("SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price FROM products WHERE is_active = true OR active = 1 ORDER BY name LIMIT 1000");
+                $stmt = $pdo->query("SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price FROM products WHERE is_active = true OR active = true ORDER BY name LIMIT 1000");
                 $catalogProds = $stmt->fetchAll();
             } catch (Exception $e) {
                 try {
@@ -102,11 +102,11 @@ try {
             }
             
             try {
-                $stmt = $pdo->query("SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price FROM marketplace_ce_products WHERE is_active = true OR active = 1 ORDER BY name LIMIT 1000");
+                $stmt = $pdo->query("SELECT id, name, sku, COALESCE(unit_price, 0) AS unit_price FROM marketplace_ce_products WHERE is_active = true ORDER BY name LIMIT 1000");
                 $mktProds = $stmt->fetchAll();
             } catch (Exception $e) {
                 try {
-                    $stmt = $pdo->query("SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price FROM marketplace_ce_products ORDER BY name LIMIT 1000");
+                    $stmt = $pdo->query("SELECT id, name, sku, COALESCE(unit_price, 0) AS unit_price FROM marketplace_ce_products ORDER BY name LIMIT 1000");
                     $mktProds = $stmt->fetchAll();
                 } catch (Exception $e2) {}
             }

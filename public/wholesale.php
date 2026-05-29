@@ -298,7 +298,7 @@ function addProductRow() {
   div.style.marginBottom = '0.75rem';
   
   const optionsHtml = allProducts.map(p => 
-    `<option value="${p.id}" data-type="${p.type}" data-sku="${p.sku}" data-price="${p.unit_price}" data-name="${p.name}">
+    `<option value="${p.id}">
       ${p.display_name}
     </option>`
   ).join('');
@@ -338,7 +338,7 @@ function filterRowProducts(input) {
   );
   
   select.innerHTML += filtered.map(p => 
-    `<option value="${p.id}" data-type="${p.type}" data-sku="${p.sku}" data-price="${p.unit_price}" data-name="${p.name}" ${p.id == currentValue ? 'selected' : ''}>
+    `<option value="${p.id}" ${p.id == currentValue ? 'selected' : ''}>
       ${p.display_name}
     </option>`
   ).join('');
@@ -346,7 +346,7 @@ function filterRowProducts(input) {
   if (currentValue && !filtered.some(p => p.id == currentValue)) {
     const originalProd = allProducts.find(p => p.id == currentValue);
     if (originalProd) {
-      select.innerHTML += `<option value="${originalProd.id}" data-type="${originalProd.type}" data-sku="${originalProd.sku}" data-price="${originalProd.unit_price}" data-name="${originalProd.name}" selected>
+      select.innerHTML += `<option value="${originalProd.id}" selected>
         ${originalProd.display_name}
       </option>`;
     }
@@ -362,12 +362,15 @@ async function submitWholesale(e) {
     const select = row.querySelector('.prod-select');
     const qtyInput = row.querySelector('.prod-qty');
     if (select && select.value) {
-      const selectedOption = select.options[select.selectedIndex];
-      products.push({
-        product_id: parseInt(select.value, 10),
-        product_type: selectedOption.getAttribute('data-type'),
-        quantity: parseInt(qtyInput.value, 10)
-      });
+      const pId = parseInt(select.value, 10);
+      const product = allProducts.find(p => p.id == pId);
+      if (product) {
+        products.push({
+          product_id: pId,
+          product_type: product.type,
+          quantity: parseInt(qtyInput.value, 10)
+        });
+      }
     }
   });
   
