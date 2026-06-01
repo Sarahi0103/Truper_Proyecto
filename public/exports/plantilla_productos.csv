@@ -1,9 +1,9 @@
-sku,name,category,description,unit_price,stock_quantity,reorder_level
-23031,PAEL-1CP Parrilla electrica 1 quemador cuadrada Volteck Basic,Material eléctrico,Parrilla eléctrica de 1 quemador cuadrada modelo Volteck Basic ideal para uso doméstico,135.00,50,10
-23032,LAMP-LED Lámpara LED 10W luz blanca,Material eléctrico,Lámpara LED de 10 watts con luz blanca fría duración estimada 25000 horas,45.50,120,20
-23033,TUBO-PVC 1/2 Tubo PVC hidráulico 6 metros,Fontanería,Tubo de PVC para instalación hidráulica de 1/2 pulgada longitud 6 metros,98.00,80,15
-23034,LLAV-MET Llave de paso metálica 3/4,Fontanería,Llave de paso de metal cromado 3/4 de pulgada para instalaciones de agua,67.00,60,10
-23035,CAND-40 Candado de arco corto 40mm,Cerrajería,Candado de seguridad con arco corto de 40mm material acero endurecido,89.00,45,8
-23036,BISAG-3P Bisagra de 3 pulgadas galvanizada,Herrería,Bisagra galvanizada de 3 pulgadas resistente a la corrosión para puertas y ventanas,25.00,200,30
-23037,CABLE-10 Cable eléctrico calibre 10 rollo 100m,Material eléctrico,Cable eléctrico de cobre calibre 10 AWG en rollo de 100 metros para instalaciones,580.00,15,5
-23038,CEMEN-25 Cemento gris 25kg costal,Construcción,Costal de cemento gris de 25 kilogramos para trabajos de albañilería y construcción,145.00,200,40
+﻿sku,name,category,description,unit_price,stock_quantity,reorder_level
+23031,Parrilla Eléctrica de 1 Quemador Volteck,Material eléctrico,"Parrilla eléctrica de 1 quemador, cuadrada, Volteck Basic.",135.00,50,10
+23032,Lámpara LED de 10W Luz Blanca Volteck,Material eléctrico,Lámpara LED de 10 watts con luz blanca fría,45.50,120,20
+23033,Tubo de PVC Hidráulico de 1/2 pulgada,Fontanería,Tubo de PVC para instalación hidráulica de 1/2 pulgada (6m),98.00,80,15
+23034,Llave de Paso Metálica de 3/4 pulgada,Fontanería,Llave de paso de metal cromado de 3/4 de pulgada,67.00,60,10
+23035,Candado de Seguridad de Latón de 40mm,Cerrajería,Candado de seguridad con arco corto de 40mm,89.00,45,8
+23036,Bisagra de Acero Galvanizado de 3 pulgadas,Herrería,Bisagra galvanizada de 3 pulgadas para puertas y ventanas,25.00,200,30
+23037,Cable Eléctrico Calibre 10 AWG (Rollo 100m),Material eléctrico,Cable de cobre calibre 10 AWG en rollo de 100 metros,580.00,15,5
+23038,Costal de Cemento Gris de 25 kg,Construcción,Costal de cemento gris de 25 kg para trabajos de albañilería,145.00,200,40
