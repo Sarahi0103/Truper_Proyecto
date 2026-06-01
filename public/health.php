@@ -2,6 +2,20 @@
 require_once __DIR__ . '/../config/config.php';
 header('Content-Type: text/plain; charset=utf-8');
 
+function normalize_sku_admin_supply($value): string {
+    $raw = trim((string)$value);
+    $digits = preg_replace('/\D+/', '', $raw);
+    if ($digits === '') return '';
+    // Ensure at least 5 digits by left-padding with zeros, and limit to 6 digits.
+    if (strlen($digits) < 5) {
+        $digits = str_pad($digits, 5, '0', STR_PAD_LEFT);
+    }
+    if (strlen($digits) > 6) {
+        $digits = substr($digits, 0, 6);
+    }
+    return $digits;
+}
+
 $products = [
     ['sku' => '23031', 'name' => 'Parrilla Eléctrica de 1 Quemador Volteck', 'category' => 'Material eléctrico', 'description' => 'Parrilla eléctrica de 1 quemador, cuadrada, Volteck Basic.', 'unit_price' => '135.00', 'stock_quantity' => '50', 'reorder_level' => '10'],
     ['sku' => '23032', 'name' => 'Lámpara LED de 10W Luz Blanca Volteck', 'category' => 'Material eléctrico', 'description' => 'Lámpara LED de 10 watts con luz blanca fría', 'unit_price' => '45.50', 'stock_quantity' => '120', 'reorder_level' => '20'],
