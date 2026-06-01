@@ -176,6 +176,149 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             opacity: 1;
             transform: translateX(0);
         }
+
+        /* ===== CARGA MASIVA CSV ===== */
+        .csv-upload-panel {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-top: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Grilla de campos requeridos */
+        .csv-fields-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .csv-field-badge {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            min-width: 90px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .csv-field-badge.required {
+            border-color: rgba(255,102,0,0.35);
+            background: rgba(255,102,0,0.06);
+        }
+        .csv-field-badge.required::after {
+            content: "Requerido";
+            font-size: 9px;
+            color: #ff6600;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            margin-top: 2px;
+        }
+        .csv-field-icon { font-size: 1.15rem; line-height: 1; }
+        .csv-field-name {
+            font-family: 'Courier New', monospace;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #eee;
+        }
+        .csv-field-badge small {
+            font-size: 0.68rem;
+            color: rgba(255,255,255,0.4);
+            line-height: 1.2;
+        }
+
+        /* Zona de drag & drop */
+        .csv-drop-zone {
+            border: 2px dashed rgba(255,255,255,0.15);
+            border-radius: 10px;
+            padding: 1.8rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: rgba(255,255,255,0.02);
+            user-select: none;
+        }
+        .csv-drop-zone:hover, .csv-drop-zone.drag-over {
+            border-color: #ff6600;
+            background: rgba(255,102,0,0.06);
+            transform: scale(1.01);
+        }
+        .csv-drop-zone.file-selected {
+            border-color: #22c55e;
+            background: rgba(34,197,94,0.06);
+        }
+        .csv-drop-icon { font-size: 2.2rem; margin-bottom: 0.4rem; display: block; }
+        .csv-drop-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #ddd;
+            margin: 0 0 0.25rem;
+        }
+        .csv-drop-sub {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.4);
+            margin: 0;
+            word-break: break-all;
+        }
+        .csv-drop-zone.file-selected .csv-drop-sub {
+            color: #22c55e;
+            font-weight: 600;
+        }
+
+        /* Fila de acciones */
+        .csv-actions-row {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+        .btn-ghost {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: transparent;
+            color: rgba(255,255,255,0.6);
+            font-size: 0.85rem;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-ghost:hover {
+            border-color: rgba(255,255,255,0.35);
+            color: #fff;
+            background: rgba(255,255,255,0.05);
+        }
+
+        /* Barra de progreso */
+        .csv-progress-bar-bg {
+            background: rgba(255,255,255,0.08);
+            border-radius: 99px;
+            height: 8px;
+            overflow: hidden;
+            margin-bottom: 0.4rem;
+        }
+        .csv-progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6600, #ff9500);
+            border-radius: 99px;
+            transition: width 0.4s ease;
+        }
+        .csv-progress-label {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.55);
+            text-align: center;
+        }
+        .csv-progress-label.success { color: #22c55e; font-weight: 600; }
+        .csv-progress-label.error { color: #ef4444; }
     </style>
 </head>
 <body>
@@ -320,14 +463,35 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <div class="admin-search-row">
                     <input id="stockSearch" type="text" placeholder="Buscar por código, nombre o categoría...">
                 </div>
-                <div class="admin-section-subtitle mt-3">Carga Masiva (CSV)</div>
-                <div class="card mb-3" style="background:var(--ui-surface-soft); padding:1rem; border-radius:8px;">
-                    <p class="text-muted" style="margin-bottom:0.5rem; font-size:13px;">Sube un archivo CSV con las columnas: <code>sku, name, category, description, unit_price, stock_quantity, reorder_level</code>. Soporta +10,000 productos dividiéndolos en lotes para evitar que se congele el servidor.</p>
-                    <div style="display:flex; gap:10px; align-items:center;">
-                        <input type="file" id="csvFileInput" accept=".csv">
-                        <button class="btn btn-secondary" onclick="processCsvUpload()">Cargar CSV en Lotes</button>
+                <div class="admin-section-subtitle mt-3">📤 Carga Masiva (CSV)</div>
+                <div class="csv-upload-panel" id="stockCsvPanel">
+                    <!-- Columnas requeridas -->
+                    <div class="csv-fields-grid">
+                        <div class="csv-field-badge required"><span class="csv-field-icon">🔑</span><span class="csv-field-name">sku</span><small>Código 5-6 dígitos</small></div>
+                        <div class="csv-field-badge required"><span class="csv-field-icon">📝</span><span class="csv-field-name">name</span><small>Nombre del producto</small></div>
+                        <div class="csv-field-badge required"><span class="csv-field-icon">🏷️</span><span class="csv-field-name">category</span><small>Categoría</small></div>
+                        <div class="csv-field-badge"><span class="csv-field-icon">📄</span><span class="csv-field-name">description</span><small>Descripción</small></div>
+                        <div class="csv-field-badge required"><span class="csv-field-icon">💲</span><span class="csv-field-name">unit_price</span><small>Precio unitario</small></div>
+                        <div class="csv-field-badge required"><span class="csv-field-icon">📦</span><span class="csv-field-name">stock_quantity</span><small>Cantidad en stock</small></div>
+                        <div class="csv-field-badge"><span class="csv-field-icon">🔄</span><span class="csv-field-name">reorder_level</span><small>Nivel reorden (def: 10)</small></div>
                     </div>
-                    <div id="csvProgress" class="mt-2 text-muted" style="font-size:12px;"></div>
+                    <!-- Zona drag & drop -->
+                    <div class="csv-drop-zone" id="stockCsvDropZone" onclick="document.getElementById('csvFileInput').click()" ondragover="handleCsvDragOver(event,'stockCsvDropZone')" ondragleave="handleCsvDragLeave(event,'stockCsvDropZone')" ondrop="handleCsvDrop(event,'csvFileInput','stockCsvDropZone')">
+                        <input type="file" id="csvFileInput" accept=".csv,.xls,.xlsx" style="display:none" onchange="onCsvFileSelected(this,'stockCsvDropZone','csvSelectedName')">
+                        <div class="csv-drop-icon">📁</div>
+                        <p class="csv-drop-title">Arrastra tu archivo CSV aquí</p>
+                        <p class="csv-drop-sub" id="csvSelectedName">o haz clic para seleccionar (.csv)</p>
+                    </div>
+                    <!-- Acciones -->
+                    <div class="csv-actions-row">
+                        <button class="btn btn-primary" onclick="processCsvUpload()">⬆️ Cargar productos</button>
+                        <a class="btn btn-ghost" href="/exports/plantilla_productos.csv" download="plantilla_productos.csv">⬇️ Descargar plantilla</a>
+                    </div>
+                    <!-- Barra de progreso -->
+                    <div id="csvProgressWrap" style="display:none; margin-top:0.75rem;">
+                        <div class="csv-progress-bar-bg"><div class="csv-progress-bar-fill" id="csvProgressFill" style="width:0%"></div></div>
+                        <div id="csvProgress" class="csv-progress-label">Preparando...</div>
+                    </div>
                 </div>
                 <div class="admin-section-subtitle">Gestión rápida (selección múltiple)</div>
                 <div class="admin-quick-panel">
@@ -658,12 +822,36 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 </div>
                 
                 <div class="admin-quick-panel mt-3">
-                    <div class="admin-section-subtitle">Carga Masiva (CSV)</div>
-                    <div style="display:flex; gap:10px; align-items:center;">
-                        <input type="file" id="marketplaceCsvFileInput" accept=".csv">
-                        <button class="btn btn-secondary" onclick="processMarketplaceCsvUpload()">Cargar CSV en Lotes</button>
+                    <div class="admin-section-subtitle">📤 Carga Masiva CE (CSV)</div>
+                    <div class="csv-upload-panel" id="mktCsvPanel">
+                        <!-- Columnas requeridas Marketplace -->
+                        <div class="csv-fields-grid">
+                            <div class="csv-field-badge required"><span class="csv-field-icon">🔑</span><span class="csv-field-name">sku</span><small>Código 5-6 dígitos</small></div>
+                            <div class="csv-field-badge required"><span class="csv-field-icon">📝</span><span class="csv-field-name">name</span><small>Nombre artículo</small></div>
+                            <div class="csv-field-badge"><span class="csv-field-icon">🏷️</span><span class="csv-field-name">category</span><small>Categoría</small></div>
+                            <div class="csv-field-badge"><span class="csv-field-icon">📄</span><span class="csv-field-name">description</span><small>Descripción</small></div>
+                            <div class="csv-field-badge required"><span class="csv-field-icon">🔍</span><span class="csv-field-name">condition_label</span><small>Seminuevo/Usado/Reacond.</small></div>
+                            <div class="csv-field-badge required"><span class="csv-field-icon">💲</span><span class="csv-field-name">unit_price</span><small>Precio</small></div>
+                            <div class="csv-field-badge"><span class="csv-field-icon">📦</span><span class="csv-field-name">stock_quantity</span><small>Cantidad (def: 1)</small></div>
+                        </div>
+                        <!-- Zona drag & drop -->
+                        <div class="csv-drop-zone" id="mktCsvDropZone" onclick="document.getElementById('marketplaceCsvFileInput').click()" ondragover="handleCsvDragOver(event,'mktCsvDropZone')" ondragleave="handleCsvDragLeave(event,'mktCsvDropZone')" ondrop="handleCsvDrop(event,'marketplaceCsvFileInput','mktCsvDropZone')">
+                            <input type="file" id="marketplaceCsvFileInput" accept=".csv,.xls,.xlsx" style="display:none" onchange="onCsvFileSelected(this,'mktCsvDropZone','mktCsvSelectedName')">
+                            <div class="csv-drop-icon">📁</div>
+                            <p class="csv-drop-title">Arrastra tu archivo CSV aquí</p>
+                            <p class="csv-drop-sub" id="mktCsvSelectedName">o haz clic para seleccionar (.csv)</p>
+                        </div>
+                        <!-- Acciones -->
+                        <div class="csv-actions-row">
+                            <button class="btn btn-primary" onclick="processMarketplaceCsvUpload()">⬆️ Cargar artículos CE</button>
+                            <a class="btn btn-ghost" href="/exports/plantilla_marketplace_ce.csv" download="plantilla_marketplace_ce.csv">⬇️ Descargar plantilla CE</a>
+                        </div>
+                        <!-- Barra de progreso -->
+                        <div id="mktCsvProgressWrap" style="display:none; margin-top:0.75rem;">
+                            <div class="csv-progress-bar-bg"><div class="csv-progress-bar-fill" id="mktCsvProgressFill" style="width:0%"></div></div>
+                            <div id="marketplaceCsvProgress" class="csv-progress-label">Preparando...</div>
+                        </div>
                     </div>
-                    <div id="marketplaceCsvProgress" class="mt-2 text-muted" style="font-size:12px;"></div>
                 </div>
                 <div id="marketplacePagination" class="mt-3"></div>
                 <div id="marketplaceListCaption" class="admin-list-caption">Cargando artículos CE...</div>
@@ -4653,11 +4841,78 @@ async function deleteMarketplaceCeByAdmin(id) {
     void loadMarketplaceCeAdmin(marketplaceCurrentPage);
 }
 
+// ===== HELPERS DRAG & DROP CSV =====
+function handleCsvDragOver(e, zoneId) {
+    e.preventDefault();
+    document.getElementById(zoneId).classList.add('drag-over');
+}
+function handleCsvDragLeave(e, zoneId) {
+    document.getElementById(zoneId).classList.remove('drag-over');
+}
+function handleCsvDrop(e, inputId, zoneId) {
+    e.preventDefault();
+    const zone = document.getElementById(zoneId);
+    zone.classList.remove('drag-over');
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+        const input = document.getElementById(inputId);
+        // Transfer files to the hidden input
+        const dt = new DataTransfer();
+        dt.items.add(files[0]);
+        input.files = dt.files;
+        // Determine label element
+        const labelId = inputId === 'csvFileInput' ? 'csvSelectedName' : 'mktCsvSelectedName';
+        onCsvFileSelected(input, zoneId, labelId);
+    }
+}
+function onCsvFileSelected(input, zoneId, labelId) {
+    const zone = document.getElementById(zoneId);
+    const label = document.getElementById(labelId);
+    if (input.files && input.files.length > 0) {
+        const name = input.files[0].name;
+        zone.classList.add('file-selected');
+        zone.classList.remove('drag-over');
+        if (label) label.textContent = '✅ ' + name;
+    } else {
+        zone.classList.remove('file-selected');
+        if (label) label.textContent = 'o haz clic para seleccionar (.csv)';
+    }
+}
+
+// Parser CSV robusto (soporta campos con comas dentro de comillas)
+function parseCsvText(text) {
+    const rows = [];
+    const lines = text.split(/\r?\n/);
+    for (const line of lines) {
+        if (line.trim() === '') continue;
+        const cols = [];
+        let inQuotes = false, current = '';
+        for (let ci = 0; ci < line.length; ci++) {
+            const ch = line[ci];
+            if (ch === '"') {
+                if (inQuotes && line[ci + 1] === '"') { current += '"'; ci++; }
+                else inQuotes = !inQuotes;
+            } else if (ch === ',' && !inQuotes) {
+                cols.push(current.trim()); current = '';
+            } else {
+                current += ch;
+            }
+        }
+        cols.push(current.trim());
+        rows.push(cols);
+    }
+    return rows;
+}
+
+// ===== CARGA MASIVA STOCK =====
 async function processCsvUpload() {
     const fileInput = document.getElementById('csvFileInput');
     const progressBox = document.getElementById('csvProgress');
+    const progressWrap = document.getElementById('csvProgressWrap');
+    const progressFill = document.getElementById('csvProgressFill');
+
     if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-        showAlert('Selecciona un archivo CSV', 'warning');
+        showAlert('Selecciona un archivo CSV primero', 'warning');
         return;
     }
 
@@ -4666,27 +4921,36 @@ async function processCsvUpload() {
 
     reader.onload = async function(e) {
         const text = e.target.result;
-        const rows = text.split(/\r?\n/).filter(r => r.trim() !== '');
-        if (rows.length < 2) {
-            progressBox.innerHTML = '<span class="text-error">El archivo está vacío o no tiene encabezados.</span>';
+        const allRows = parseCsvText(text);
+        if (allRows.length < 2) {
+            progressBox.textContent = 'El archivo está vacío o no tiene encabezados.';
+            progressBox.className = 'csv-progress-label error';
+            if (progressWrap) progressWrap.style.display = 'block';
             return;
         }
 
-        const headers = rows[0].split(',').map(h => h.trim().toLowerCase());
+        const headers = allRows[0].map(h => h.toLowerCase().replace(/^\ufeff/, '')); // strip BOM
         const data = [];
-        for (let i = 1; i < rows.length; i++) {
-            // Very basic CSV parsing
-            const cols = rows[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+        for (let i = 1; i < allRows.length; i++) {
+            const cols = allRows[i];
+            if (cols.every(c => c === '')) continue;
             const rowData = {};
             headers.forEach((h, idx) => { rowData[h] = cols[idx] || ''; });
             data.push(rowData);
         }
 
-        const batchSize = 250;
-        let successCount = 0;
-        let errorCount = 0;
+        if (data.length === 0) {
+            progressBox.textContent = 'No se encontraron productos en el archivo.';
+            progressBox.className = 'csv-progress-label error';
+            if (progressWrap) progressWrap.style.display = 'block';
+            return;
+        }
 
-        progressBox.innerHTML = `Procesando ${data.length} productos en lotes de ${batchSize}...`;
+        const batchSize = 250;
+        let successCount = 0, errorCount = 0;
+        if (progressWrap) progressWrap.style.display = 'block';
+        progressBox.className = 'csv-progress-label';
+        progressBox.textContent = `Procesando ${data.length} productos en lotes de ${batchSize}...`;
 
         for (let i = 0; i < data.length; i += batchSize) {
             const batch = data.slice(i, i + batchSize);
@@ -4700,22 +4964,40 @@ async function processCsvUpload() {
             } catch (err) {
                 errorCount += batch.length;
             }
-            progressBox.innerHTML = `Progreso: ${Math.min(i + batchSize, data.length)} / ${data.length}...`;
+            const done = Math.min(i + batchSize, data.length);
+            const pct = Math.round((done / data.length) * 100);
+            if (progressFill) progressFill.style.width = pct + '%';
+            progressBox.textContent = `Progreso: ${done} / ${data.length} (${pct}%)`;
         }
 
-        progressBox.innerHTML = `<strong class="text-success">Carga completa. Exitosos: ${successCount}, Fallidos: ${errorCount}</strong>`;
+        if (progressFill) progressFill.style.width = '100%';
+        progressBox.className = 'csv-progress-label' + (errorCount === 0 ? ' success' : '');
+        progressBox.textContent = `✅ Carga completa — ${successCount} exitosos, ${errorCount} fallidos`;
+
+        // Reset drop zone
+        const zone = document.getElementById('stockCsvDropZone');
+        const label = document.getElementById('csvSelectedName');
+        if (zone) zone.classList.remove('file-selected');
+        if (label) label.textContent = 'o haz clic para seleccionar (.csv)';
         fileInput.value = '';
-        loadStock(stockCurrentPage); // reload list
+
+        loadStock(stockCurrentPage);
     };
     reader.onerror = function() {
-        progressBox.innerHTML = '<span class="text-error">Error al leer el archivo.</span>';
+        if (progressWrap) progressWrap.style.display = 'block';
+        progressBox.textContent = 'Error al leer el archivo.';
+        progressBox.className = 'csv-progress-label error';
     };
-    reader.readAsText(file);
+    reader.readAsText(file, 'UTF-8');
 }
 
+// ===== CARGA MASIVA MARKETPLACE CE =====
 async function processMarketplaceCsvUpload() {
     const fileInput = document.getElementById('marketplaceCsvFileInput');
     const progressBox = document.getElementById('marketplaceCsvProgress');
+    const progressWrap = document.getElementById('mktCsvProgressWrap');
+    const progressFill = document.getElementById('mktCsvProgressFill');
+
     if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
         showAlert('Selecciona un archivo CSV para Marketplace CE', 'warning');
         return;
@@ -4726,26 +5008,36 @@ async function processMarketplaceCsvUpload() {
 
     reader.onload = async function(e) {
         const text = e.target.result;
-        const rows = text.split(/\r?\n/).filter(r => r.trim() !== '');
-        if (rows.length < 2) {
-            progressBox.innerHTML = '<span class="text-error">El archivo está vacío o no tiene encabezados.</span>';
+        const allRows = parseCsvText(text);
+        if (allRows.length < 2) {
+            progressBox.textContent = 'El archivo está vacío o no tiene encabezados.';
+            progressBox.className = 'csv-progress-label error';
+            if (progressWrap) progressWrap.style.display = 'block';
             return;
         }
 
-        const headers = rows[0].split(',').map(h => h.trim().toLowerCase());
+        const headers = allRows[0].map(h => h.toLowerCase().replace(/^\ufeff/, ''));
         const data = [];
-        for (let i = 1; i < rows.length; i++) {
-            const cols = rows[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+        for (let i = 1; i < allRows.length; i++) {
+            const cols = allRows[i];
+            if (cols.every(c => c === '')) continue;
             const rowData = {};
             headers.forEach((h, idx) => { rowData[h] = cols[idx] || ''; });
             data.push(rowData);
         }
 
-        const batchSize = 250;
-        let successCount = 0;
-        let errorCount = 0;
+        if (data.length === 0) {
+            progressBox.textContent = 'No se encontraron artículos en el archivo.';
+            progressBox.className = 'csv-progress-label error';
+            if (progressWrap) progressWrap.style.display = 'block';
+            return;
+        }
 
-        progressBox.innerHTML = `Procesando ${data.length} artículos CE en lotes de ${batchSize}...`;
+        const batchSize = 250;
+        let successCount = 0, errorCount = 0;
+        if (progressWrap) progressWrap.style.display = 'block';
+        progressBox.className = 'csv-progress-label';
+        progressBox.textContent = `Procesando ${data.length} artículos CE en lotes de ${batchSize}...`;
 
         for (let i = 0; i < data.length; i += batchSize) {
             const batch = data.slice(i, i + batchSize);
@@ -4759,17 +5051,31 @@ async function processMarketplaceCsvUpload() {
             } catch (err) {
                 errorCount += batch.length;
             }
-            progressBox.innerHTML = `Progreso: ${Math.min(i + batchSize, data.length)} / ${data.length}...`;
+            const done = Math.min(i + batchSize, data.length);
+            const pct = Math.round((done / data.length) * 100);
+            if (progressFill) progressFill.style.width = pct + '%';
+            progressBox.textContent = `Progreso: ${done} / ${data.length} (${pct}%)`;
         }
 
-        progressBox.innerHTML = `<strong class="text-success">Carga CE completa. Exitosos: ${successCount}, Fallidos: ${errorCount}</strong>`;
+        if (progressFill) progressFill.style.width = '100%';
+        progressBox.className = 'csv-progress-label' + (errorCount === 0 ? ' success' : '');
+        progressBox.textContent = `✅ Carga CE completa — ${successCount} exitosos, ${errorCount} fallidos`;
+
+        // Reset drop zone
+        const zone = document.getElementById('mktCsvDropZone');
+        const label = document.getElementById('mktCsvSelectedName');
+        if (zone) zone.classList.remove('file-selected');
+        if (label) label.textContent = 'o haz clic para seleccionar (.csv)';
         fileInput.value = '';
-        loadMarketplaceCeAdmin(marketplaceCurrentPage); // reload list
+
+        loadMarketplaceCeAdmin(marketplaceCurrentPage);
     };
     reader.onerror = function() {
-        progressBox.innerHTML = '<span class="text-error">Error al leer el archivo.</span>';
+        if (progressWrap) progressWrap.style.display = 'block';
+        progressBox.textContent = 'Error al leer el archivo.';
+        progressBox.className = 'csv-progress-label error';
     };
-    reader.readAsText(file);
+    reader.readAsText(file, 'UTF-8');
 }
 
 // (uploadMarketplaceImages is defined above — duplicate removed)
