@@ -4981,7 +4981,13 @@ async function processCsvUpload() {
         if (label) label.textContent = 'o haz clic para seleccionar (.csv)';
         fileInput.value = '';
 
-        loadStock(stockCurrentPage);
+        // Reset a página 1 y refresca la lista completa
+        stockItemsCache = [];
+        stockCurrentPage = 1;
+        await loadStock(1);
+        // Scroll suave a la lista de productos
+        const listEl = document.getElementById('stockRows');
+        if (listEl) listEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
     reader.onerror = function() {
         if (progressWrap) progressWrap.style.display = 'block';
@@ -5068,7 +5074,13 @@ async function processMarketplaceCsvUpload() {
         if (label) label.textContent = 'o haz clic para seleccionar (.csv)';
         fileInput.value = '';
 
-        loadMarketplaceCeAdmin(marketplaceCurrentPage);
+        // Reset a p\u00e1gina 1 y refresca la lista completa
+        marketplaceItemsCache = [];
+        marketplaceCurrentPage = 1;
+        await loadMarketplaceCeAdmin(1);
+        // Scroll suave a la lista de art\u00edculos
+        const mktListEl = document.getElementById('marketplaceList');
+        if (mktListEl) mktListEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
     reader.onerror = function() {
         if (progressWrap) progressWrap.style.display = 'block';
