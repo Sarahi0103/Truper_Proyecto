@@ -3861,7 +3861,7 @@ try {
                         $upd = $pdo->prepare("UPDATE products SET name=?, category=?, description=?, unit_price=?, stock_quantity=?, reorder_level=? WHERE sku = ? OR sku LIKE ?");
                         $upd->execute([$name, $category, $desc, $price, $stock, $reorder, $sku, "%{$sku}%"]);
                     } else {
-                        $ins = $pdo->prepare("INSERT INTO products (sku, name, category, description, unit_price, stock_quantity, reorder_level, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 1)");
+                        $ins = $pdo->prepare("INSERT INTO products (sku, name, category, description, unit_price, stock_quantity, reorder_level, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, true)");
                         $ins->execute([$sku, $name, $category, $desc, $price, $stock, $reorder]);
                     }
                     $processed++;
@@ -3912,7 +3912,7 @@ try {
                         $upd = $pdo->prepare("UPDATE marketplace_ce_products SET name=?, category=?, description=?, condition_label=?, unit_price=?, stock_quantity=? WHERE sku = ? OR sku LIKE ?");
                         $upd->execute([$name, $category, $desc, $condition, $price, $stock, $sku, "%{$sku}%"]);
                     } else {
-                        $ins = $pdo->prepare("INSERT INTO marketplace_ce_products (sku, name, category, description, condition_label, unit_price, stock_quantity, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 1)");
+                        $ins = $pdo->prepare("INSERT INTO marketplace_ce_products (sku, name, category, description, condition_label, unit_price, stock_quantity, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, true)");
                         $ins->execute([$sku, $name, $category, $desc, $condition, $price, $stock]);
                     }
                     $processed++;
