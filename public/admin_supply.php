@@ -318,7 +318,8 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             text-align: center;
         }
         .csv-progress-label.success { color: #22c55e; font-weight: 600; }
-        .csv-progress-label.error { color: #ef4444; }
+        .csv-progress-label.warning { color: #f59e0b; font-weight: 600; }
+        .csv-progress-label.error { color: #ef4444; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -4971,8 +4972,16 @@ async function processCsvUpload() {
         }
 
         if (progressFill) progressFill.style.width = '100%';
-        progressBox.className = 'csv-progress-label' + (errorCount === 0 ? ' success' : '');
-        progressBox.textContent = `✅ Carga completa — ${successCount} exitosos, ${errorCount} fallidos`;
+        if (successCount === 0) {
+            progressBox.className = 'csv-progress-label error';
+            progressBox.textContent = `❌ Carga fallida — 0 exitosos, ${errorCount} fallidos`;
+        } else if (errorCount > 0) {
+            progressBox.className = 'csv-progress-label warning';
+            progressBox.textContent = `⚠️ Carga parcial — ${successCount} exitosos, ${errorCount} fallidos`;
+        } else {
+            progressBox.className = 'csv-progress-label success';
+            progressBox.textContent = `✅ Carga exitosa — ${successCount} exitosos, 0 fallidos`;
+        }
 
         // Reset drop zone
         const zone = document.getElementById('stockCsvDropZone');
@@ -5064,8 +5073,16 @@ async function processMarketplaceCsvUpload() {
         }
 
         if (progressFill) progressFill.style.width = '100%';
-        progressBox.className = 'csv-progress-label' + (errorCount === 0 ? ' success' : '');
-        progressBox.textContent = `✅ Carga CE completa — ${successCount} exitosos, ${errorCount} fallidos`;
+        if (successCount === 0) {
+            progressBox.className = 'csv-progress-label error';
+            progressBox.textContent = `❌ Carga CE fallida — 0 exitosos, ${errorCount} fallidos`;
+        } else if (errorCount > 0) {
+            progressBox.className = 'csv-progress-label warning';
+            progressBox.textContent = `⚠️ Carga CE parcial — ${successCount} exitosos, ${errorCount} fallidos`;
+        } else {
+            progressBox.className = 'csv-progress-label success';
+            progressBox.textContent = `✅ Carga CE exitosa — ${successCount} exitosos, 0 fallidos`;
+        }
 
         // Reset drop zone
         const zone = document.getElementById('mktCsvDropZone');
