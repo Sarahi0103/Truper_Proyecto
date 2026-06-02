@@ -1181,3 +1181,185 @@ header .nav-dropdown:hover .arrow {
     }
 }
 
+/* ===== Beautiful Calendar Grid Styles ===== */
+.calendar-weekdays {
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr) !important;
+    text-align: center !important;
+    font-weight: 700 !important;
+    margin-bottom: 0.75rem !important;
+    color: var(--theme-text-muted) !important;
+    font-size: 0.85rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+}
+
+.calendar-weekday {
+    padding: 0.5rem 0 !important;
+}
+
+.calendar-days {
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr) !important;
+    gap: 0.5rem !important;
+}
+
+.calendar-day {
+    position: relative !important;
+    background: var(--theme-surface) !important;
+    border: 1px solid var(--theme-border) !important;
+    border-radius: 10px !important;
+    padding: 0.5rem !important;
+    min-height: 70px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    cursor: pointer !important;
+    box-sizing: border-box !important;
+}
+
+.calendar-day:hover:not(.calendar-day-empty) {
+    transform: translateY(-2px) !important;
+    border-color: var(--theme-accent) !important;
+    box-shadow: 0 6px 16px rgba(255, 127, 0, 0.15) !important;
+}
+
+.calendar-day-empty {
+    background: transparent !important;
+    border: none !important;
+    cursor: default !important;
+    pointer-events: none !important;
+}
+
+.calendar-day-number {
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    color: var(--theme-text) !important;
+    align-self: flex-start !important;
+}
+
+.calendar-day-has-visits {
+    border-color: var(--theme-accent) !important;
+    background: var(--theme-accent-soft) !important;
+}
+
+.calendar-day-visits {
+    font-size: 0.68rem !important;
+    font-weight: 600 !important;
+    background: var(--theme-accent) !important;
+    color: #ffffff !important;
+    padding: 2px 6px !important;
+    border-radius: 6px !important;
+    text-align: center !important;
+    margin-top: 0.4rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    box-shadow: 0 2px 6px rgba(255, 127, 0, 0.2) !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* ===== Visit List Premium Styles ===== */
+#calendarList {
+    max-height: 380px !important;
+    overflow-y: auto !important;
+    padding-right: 0.25rem !important;
+    margin-top: 1.5rem !important;
+}
+
+#calendarList::-webkit-scrollbar {
+    width: 6px !important;
+}
+#calendarList::-webkit-scrollbar-thumb {
+    background: var(--theme-border) !important;
+    border-radius: 99px !important;
+}
+
+.visit-item {
+    background: var(--theme-surface) !important;
+    border: 1px solid var(--theme-border) !important;
+    border-radius: 12px !important;
+    padding: 0.85rem 1rem !important;
+    margin-bottom: 0.75rem !important;
+    transition: all 0.25s ease !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.4rem !important;
+    position: relative !important;
+    overflow: hidden !important;
+    text-align: left !important;
+    box-sizing: border-box !important;
+}
+
+.visit-item::before {
+    content: "" !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: 4px !important;
+    background: var(--theme-accent) !important;
+    opacity: 0.8 !important;
+}
+
+.visit-item:hover {
+    transform: translateX(4px) !important;
+    border-color: var(--theme-accent) !important;
+    box-shadow: 0 4px 12px var(--theme-shadow) !important;
+}
+
+.visit-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+}
+
+.visit-supplier {
+    font-weight: 700 !important;
+    color: var(--theme-text) !important;
+    font-size: 0.95rem !important;
+}
+
+.visit-time {
+    font-size: 0.78rem !important;
+    color: var(--theme-accent) !important;
+    background: var(--theme-accent-soft) !important;
+    padding: 2px 8px !important;
+    border-radius: 99px !important;
+    font-weight: 600 !important;
+}
+
+.visit-notes {
+    font-size: 0.85rem !important;
+    color: var(--theme-text-muted) !important;
+    line-height: 1.4 !important;
+    background: var(--theme-surface-strong) !important;
+    padding: 0.5rem 0.75rem !important;
+    border-radius: 8px !important;
+    border: 1px solid var(--theme-border) !important;
+    margin-top: 0.25rem !important;
+}
+
+@media (max-width: 576px) {
+    .calendar-day {
+        min-height: 50px !important;
+        padding: 0.25rem !important;
+    }
+    .calendar-day-number {
+        font-size: 0.8rem !important;
+    }
+    .calendar-day-visits {
+        font-size: 0.6rem !important;
+        padding: 1px 3px !important;
+        margin-top: 0.2rem !important;
+    }
+    .calendar-weekdays {
+        font-size: 0.75rem !important;
+    }
+}
+
+

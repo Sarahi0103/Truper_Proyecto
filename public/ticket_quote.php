@@ -110,7 +110,7 @@ function ticket_quote_product_code($item) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Ticket de cotización <?php echo htmlspecialchars($folio, ENT_QUOTES, 'UTF-8'); ?></title>
-    <link rel="stylesheet" href="css/theme.css?v=2.3">
+    <link rel="stylesheet" href="css/theme.css?v=2.4">
     <link rel="stylesheet" href="css/responsive-complete.css?v=2.2">
     <style>
         body {
