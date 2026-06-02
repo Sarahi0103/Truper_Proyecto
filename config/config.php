@@ -31,7 +31,7 @@ header("X-XSS-Protection: 1; mode=block");
 if ($is_https) {
     header("Strict-Transport-Security: max-age=31536000; includeSubDomains");
 }
-header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:;");
+// header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:;");
 
 // ===== OPTIMIZACIONES DE PERFORMANCE =====
 // Compresión gzip automática
@@ -73,7 +73,7 @@ if ($has_authenticated_session || $is_auth_context || $is_dynamic_catalog_page |
 }
 
 // Caché de servidor persistente (file-based) con primer nivel en memoria
-define('CACHE_ENABLED', true);
+define('CACHE_ENABLED', false);
 define('CACHE_TTL', 300); // 5 minutos
 $_CACHE = []; // Memoria (primer nivel)
 

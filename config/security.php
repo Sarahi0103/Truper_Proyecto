@@ -279,7 +279,7 @@ function setSecurityHeaders() {
     header("X-XSS-Protection: 1; mode=block");
     
     // Content Security Policy
-    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'");
+    // header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'");
     
     // Referrer Policy
     header("Referrer-Policy: strict-origin-when-cross-origin");
