@@ -3,6 +3,7 @@ require_once '../config/config.php';
 
 $isLogged = isset($_SESSION['user_id']);
 $isAdmin = $isLogged && (($_SESSION['role'] ?? '') === 'admin');
+$is_admin = $isAdmin;
 ?>
 <!DOCTYPE html>
 <html lang="es">

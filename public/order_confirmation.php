@@ -3,6 +3,7 @@ require_once '../config/config.php';
 
 $isLogged = isset($_SESSION['user_id']);
 $isAdmin = $isLogged && (($_SESSION['role'] ?? '') === 'admin');
+$is_admin = $isAdmin;
 $orderId = isset($_GET['order_id']) ? intval($_GET['order_id']) : 0;
 $order = null;
 $orderItems = null;
