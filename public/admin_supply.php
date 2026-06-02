@@ -3138,6 +3138,11 @@ async function loadProductCategories(onlyActive = true) {
         const seenCategories = new Set();
         selectEl.innerHTML = '';
         res.items.forEach((cat) => {
+            const isCatActive = cat.is_active === true || cat.is_active === 't' || cat.is_active === '1' || Number(cat.is_active) === 1;
+            if (!isCatActive) {
+                return;
+            }
+
             const categoryName = String(cat.name || '').trim();
             const categoryNameNormalized = normalizeCategoryValue(categoryName);
 

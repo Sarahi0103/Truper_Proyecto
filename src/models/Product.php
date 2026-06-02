@@ -15,6 +15,11 @@ class Product {
         $stmt = $this->pdo->prepare("
             SELECT * FROM {$this->table} 
             WHERE is_active = true 
+            AND NOT EXISTS (
+                SELECT 1 FROM product_categories pc 
+                WHERE LOWER(pc.name) = LOWER({$this->table}.category) 
+                AND pc.is_active = false
+            )
             ORDER BY name 
             LIMIT ?
         ");
@@ -23,19 +28,43 @@ class Product {
     }
 
     public function getById($id) {
-        $stmt = $this->pdo->prepare("SELECT * FROM {$this->table} WHERE id = ? AND is_active = true");
+        $stmt = $this->pdo->prepare("
+            SELECT * FROM {$this->table} 
+            WHERE id = ? AND is_active = true
+            AND NOT EXISTS (
+                SELECT 1 FROM product_categories pc 
+                WHERE LOWER(pc.name) = LOWER({$this->table}.category) 
+                AND pc.is_active = false
+            )
+        ");
         $stmt->execute([$id]);
         return $stmt->fetch();
     }
 
     public function getByBarcode($barcode) {
-        $stmt = $this->pdo->prepare("SELECT * FROM {$this->table} WHERE barcode = ? AND is_active = true");
+        $stmt = $this->pdo->prepare("
+            SELECT * FROM {$this->table} 
+            WHERE barcode = ? AND is_active = true
+            AND NOT EXISTS (
+                SELECT 1 FROM product_categories pc 
+                WHERE LOWER(pc.name) = LOWER({$this->table}.category) 
+                AND pc.is_active = false
+            )
+        ");
         $stmt->execute([$barcode]);
         return $stmt->fetch();
     }
 
     public function getBySku($sku) {
-        $stmt = $this->pdo->prepare("SELECT * FROM {$this->table} WHERE sku = ? AND is_active = true");
+        $stmt = $this->pdo->prepare("
+            SELECT * FROM {$this->table} 
+            WHERE sku = ? AND is_active = true
+            AND NOT EXISTS (
+                SELECT 1 FROM product_categories pc 
+                WHERE LOWER(pc.name) = LOWER({$this->table}.category) 
+                AND pc.is_active = false
+            )
+        ");
         $stmt->execute([$sku]);
         return $stmt->fetch();
     }
@@ -45,6 +74,11 @@ class Product {
         $stmt = $this->pdo->prepare("
             SELECT * FROM {$this->table} 
             WHERE is_active = true 
+            AND NOT EXISTS (
+                SELECT 1 FROM product_categories pc 
+                WHERE LOWER(pc.name) = LOWER({$this->table}.category) 
+                AND pc.is_active = false
+            )
             AND (name ILIKE ? OR sku ILIKE ? OR barcode ILIKE ?)
             ORDER BY name
         ");
@@ -91,6 +125,11 @@ class Product {
         $stmt = $this->pdo->prepare("
             SELECT * FROM {$this->table} 
             WHERE category = ? AND is_active = true 
+            AND NOT EXISTS (
+                SELECT 1 FROM product_categories pc 
+                WHERE LOWER(pc.name) = LOWER({$this->table}.category) 
+                AND pc.is_active = false
+            )
             ORDER BY name
         ");
         $stmt->execute([$category]);

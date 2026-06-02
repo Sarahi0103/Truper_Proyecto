@@ -48,8 +48,13 @@ try {
     } elseif (db_column_exists('marketplace_ce_products', 'active')) {
         $productsVisibilityWhere = " WHERE active = 1";
     } else {
-        $productsVisibilityWhere = '';
+        $productsVisibilityWhere = " WHERE 1 = 1";
     }
+    $productsVisibilityWhere .= " AND NOT EXISTS (
+        SELECT 1 FROM product_categories pc 
+        WHERE LOWER(pc.name) = LOWER(marketplace_ce_products.category) 
+        AND pc.is_active = false
+    )";
 
     $sqlCe = "SELECT id, {$nameExpr} AS name, {$skuExpr} AS sku, {$priceExpr} AS unit_price, {$categoryExpr} AS category, {$descriptionExpr} AS description, {$conditionExpr} AS condition_label, {$stockExpr} AS stock_quantity, {$imageExpr} AS image_url, {$variantsExpr} AS variants_json FROM marketplace_ce_products" . $productsVisibilityWhere . " ORDER BY name LIMIT 300";
     $stmtCe = $pdo->prepare($sqlCe);

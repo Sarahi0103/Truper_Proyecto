@@ -92,21 +92,21 @@ try {
             $mktProds = [];
             
             try {
-                $stmt = $pdo->query("SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price FROM products WHERE is_active = true OR active = true ORDER BY name LIMIT 1000");
+                $stmt = $pdo->query("SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price FROM products WHERE (is_active = true OR active = true) AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(products.category) AND pc.is_active = false) ORDER BY name LIMIT 1000");
                 $catalogProds = $stmt->fetchAll();
             } catch (Exception $e) {
                 try {
-                    $stmt = $pdo->query("SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price FROM products ORDER BY name LIMIT 1000");
+                    $stmt = $pdo->query("SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price FROM products WHERE NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(products.category) AND pc.is_active = false) ORDER BY name LIMIT 1000");
                     $catalogProds = $stmt->fetchAll();
                 } catch (Exception $e2) {}
             }
             
             try {
-                $stmt = $pdo->query("SELECT id, name, sku, COALESCE(unit_price, 0) AS unit_price FROM marketplace_ce_products WHERE is_active = true ORDER BY name LIMIT 1000");
+                $stmt = $pdo->query("SELECT id, name, sku, COALESCE(unit_price, 0) AS unit_price FROM marketplace_ce_products WHERE is_active = true AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(marketplace_ce_products.category) AND pc.is_active = false) ORDER BY name LIMIT 1000");
                 $mktProds = $stmt->fetchAll();
             } catch (Exception $e) {
                 try {
-                    $stmt = $pdo->query("SELECT id, name, sku, COALESCE(unit_price, 0) AS unit_price FROM marketplace_ce_products ORDER BY name LIMIT 1000");
+                    $stmt = $pdo->query("SELECT id, name, sku, COALESCE(unit_price, 0) AS unit_price FROM marketplace_ce_products WHERE NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(marketplace_ce_products.category) AND pc.is_active = false) ORDER BY name LIMIT 1000");
                     $mktProds = $stmt->fetchAll();
                 } catch (Exception $e2) {}
             }

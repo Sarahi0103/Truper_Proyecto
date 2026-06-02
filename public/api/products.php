@@ -186,20 +186,20 @@ try {
             $queries = [];
             if ($category !== '') {
                 $queries[] = [
-                    "SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE is_active = true AND category = ? ORDER BY name LIMIT 200",
+                    "SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE is_active = true AND category = ? AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(products.category) AND pc.is_active = false) ORDER BY name LIMIT 200",
                     [$category]
                 ];
                 $queries[] = [
-                    "SELECT id, name, sku, COALESCE(sell_price, unit_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE active = 1 AND category = ? ORDER BY name LIMIT 200",
+                    "SELECT id, name, sku, COALESCE(sell_price, unit_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE active = 1 AND category = ? AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(products.category) AND pc.is_active = false) ORDER BY name LIMIT 200",
                     [$category]
                 ];
             } else {
                 $queries[] = [
-                    "SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE is_active = true ORDER BY name LIMIT 200",
+                    "SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE is_active = true AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(products.category) AND pc.is_active = false) ORDER BY name LIMIT 200",
                     []
                 ];
                 $queries[] = [
-                    "SELECT id, name, sku, COALESCE(sell_price, unit_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE active = 1 ORDER BY name LIMIT 200",
+                    "SELECT id, name, sku, COALESCE(sell_price, unit_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE active = 1 AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(products.category) AND pc.is_active = false) ORDER BY name LIMIT 200",
                     []
                 ];
             }
