@@ -353,6 +353,9 @@ function can_role_access_path($role, $path) {
 }
 
 function resolve_post_login_redirect($requested, $role) {
+    if ((string)$role === 'admin') {
+        return '/dashboard.php';
+    }
     $fallback = route_by_role($role);
     $requested = trim((string)$requested);
     if ($requested === '') {
