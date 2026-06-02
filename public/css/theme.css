@@ -1009,6 +1009,17 @@ header .nav-dropdown-content {
     transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s ease;
 }
 
+/* Invisible bridge to prevent mouseout when hovering between button and dropdown */
+header .nav-dropdown-content::before {
+    content: "";
+    position: absolute;
+    top: -0.6rem;
+    left: 0;
+    right: 0;
+    height: 0.6rem;
+    background: transparent;
+}
+
 header .nav-dropdown:hover .nav-dropdown-content {
     opacity: 1 !important;
     visibility: visible !important;

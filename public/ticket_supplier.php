@@ -47,7 +47,7 @@ function display_product_code($sku) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ticket proveedor <?php echo htmlspecialchars($order['folio'], ENT_QUOTES, 'UTF-8'); ?></title>
-    <link rel="stylesheet" href="css/theme.css?v=2.2">
+    <link rel="stylesheet" href="css/theme.css?v=2.3">
     <link rel="stylesheet" href="css/responsive-complete.css?v=2.2">
     <style>
         body { font-family: monospace; margin: 0; padding: 10px; background: var(--ui-bg); color: var(--ui-text); }
