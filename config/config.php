@@ -126,6 +126,22 @@ function cache_set($key, $data, $ttl = null) {
     }
 }
 
+function cache_clear() {
+    global $_CACHE;
+    $_CACHE = [];
+    $cache_dir = __DIR__ . '/../cache';
+    if (is_dir($cache_dir)) {
+        $files = glob($cache_dir . '/*.cache');
+        if (is_array($files)) {
+            foreach ($files as $file) {
+                if (is_file($file)) {
+                    @unlink($file);
+                }
+            }
+        }
+    }
+}
+
 // Incluir base de datos
 $pdo = include __DIR__ . '/database.php';
 

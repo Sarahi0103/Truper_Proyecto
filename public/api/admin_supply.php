@@ -341,42 +341,74 @@ function set_marketplace_visibility_compatible($pdo, int $id, bool $isVisible): 
     // Try 'is_active' column first
     try {
         $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET is_active = ? WHERE id = ?');
-        $stmt->execute([$isVisible ? 1 : 0, $id]);
+        $stmt->execute([$isVisible, $id]);
         if ($stmt->rowCount() > 0) {
             return;
         }
     } catch (Exception $e) {
-        // Column may not exist, try next
+        try {
+            $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET is_active = ? WHERE id = ?');
+            $stmt->execute([$isVisible ? 1 : 0, $id]);
+            if ($stmt->rowCount() > 0) {
+                return;
+            }
+        } catch (Exception $e2) {
+            // Column may not exist or error, try next candidate
+        }
     }
 
     // Try 'active' column second
     try {
         $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET active = ? WHERE id = ?');
-        $stmt->execute([$isVisible ? 1 : 0, $id]);
+        $stmt->execute([$isVisible, $id]);
         if ($stmt->rowCount() > 0) {
             return;
         }
     } catch (Exception $e) {
-        // Column may not exist, try next
+        try {
+            $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET active = ? WHERE id = ?');
+            $stmt->execute([$isVisible ? 1 : 0, $id]);
+            if ($stmt->rowCount() > 0) {
+                return;
+            }
+        } catch (Exception $e2) {
+            // Column may not exist, try next candidate
+        }
     }
 
     // Legacy schemas may use visible/is_visible columns.
     try {
         $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET is_visible = ? WHERE id = ?');
-        $stmt->execute([$isVisible ? 1 : 0, $id]);
+        $stmt->execute([$isVisible, $id]);
         if ($stmt->rowCount() > 0) {
             return;
         }
     } catch (Exception $e) {
+        try {
+            $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET is_visible = ? WHERE id = ?');
+            $stmt->execute([$isVisible ? 1 : 0, $id]);
+            if ($stmt->rowCount() > 0) {
+                return;
+            }
+        } catch (Exception $e2) {
+        }
     }
 
     try {
         $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET visible = ? WHERE id = ?');
-        $stmt->execute([$isVisible ? 1 : 0, $id]);
+        $stmt->execute([$isVisible, $id]);
         if ($stmt->rowCount() > 0) {
             return;
         }
     } catch (Exception $e) {
+        try {
+            $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET visible = ? WHERE id = ?');
+            $stmt->execute([$isVisible ? 1 : 0, $id]);
+            if ($stmt->rowCount() > 0) {
+                return;
+            }
+        } catch (Exception $e2) {
+        }
     }
 
     throw new Exception('No existe columna de visibilidad (is_active o active) en marketplace_ce_products');
@@ -389,38 +421,70 @@ function set_product_visibility_compatible($pdo, int $id, bool $isVisible): void
 
     try {
         $stmt = $pdo->prepare('UPDATE products SET is_active = ? WHERE id = ?');
-        $stmt->execute([$isVisible ? 1 : 0, $id]);
+        $stmt->execute([$isVisible, $id]);
         if ($stmt->rowCount() > 0) {
             return;
         }
     } catch (Exception $e) {
+        try {
+            $stmt = $pdo->prepare('UPDATE products SET is_active = ? WHERE id = ?');
+            $stmt->execute([$isVisible ? 1 : 0, $id]);
+            if ($stmt->rowCount() > 0) {
+                return;
+            }
+        } catch (Exception $e2) {
+        }
     }
 
     try {
         $stmt = $pdo->prepare('UPDATE products SET active = ? WHERE id = ?');
-        $stmt->execute([$isVisible ? 1 : 0, $id]);
+        $stmt->execute([$isVisible, $id]);
         if ($stmt->rowCount() > 0) {
             return;
         }
     } catch (Exception $e) {
+        try {
+            $stmt = $pdo->prepare('UPDATE products SET active = ? WHERE id = ?');
+            $stmt->execute([$isVisible ? 1 : 0, $id]);
+            if ($stmt->rowCount() > 0) {
+                return;
+            }
+        } catch (Exception $e2) {
+        }
     }
 
     try {
         $stmt = $pdo->prepare('UPDATE products SET is_visible = ? WHERE id = ?');
-        $stmt->execute([$isVisible ? 1 : 0, $id]);
+        $stmt->execute([$isVisible, $id]);
         if ($stmt->rowCount() > 0) {
             return;
         }
     } catch (Exception $e) {
+        try {
+            $stmt = $pdo->prepare('UPDATE products SET is_visible = ? WHERE id = ?');
+            $stmt->execute([$isVisible ? 1 : 0, $id]);
+            if ($stmt->rowCount() > 0) {
+                return;
+            }
+        } catch (Exception $e2) {
+        }
     }
 
     try {
         $stmt = $pdo->prepare('UPDATE products SET visible = ? WHERE id = ?');
-        $stmt->execute([$isVisible ? 1 : 0, $id]);
+        $stmt->execute([$isVisible, $id]);
         if ($stmt->rowCount() > 0) {
             return;
         }
     } catch (Exception $e) {
+        try {
+            $stmt = $pdo->prepare('UPDATE products SET visible = ? WHERE id = ?');
+            $stmt->execute([$isVisible ? 1 : 0, $id]);
+            if ($stmt->rowCount() > 0) {
+                return;
+            }
+        } catch (Exception $e2) {
+        }
     }
 
     throw new Exception('No existe columna de visibilidad compatible en products');
@@ -537,28 +601,49 @@ function insert_category_and_get_id_admin_supply($pdo, string $name, int $sortOr
     }
     
     // PostgreSQL supports RETURNING; MySQL/MariaDB may not.
+    // Try binding is_active as boolean first.
     try {
         $stmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order, is_active, context) VALUES (?, ?, ?, ?) RETURNING id");
-        $stmt->execute([$name, $sortOrder, $isActive ? 1 : 0, $context]);
+        $stmt->execute([$name, $sortOrder, $isActive, $context]);
         $createdId = (int)$stmt->fetchColumn();
         if ($createdId > 0) {
             return $createdId;
         }
     } catch (Exception $ignored) {
-        // Generic insert
+        // Fallback 1: try binding is_active as integer
+        try {
+            $stmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order, is_active, context) VALUES (?, ?, ?, ?) RETURNING id");
+            $stmt->execute([$name, $sortOrder, $isActive ? 1 : 0, $context]);
+            $createdId = (int)$stmt->fetchColumn();
+            if ($createdId > 0) {
+                return $createdId;
+            }
+        } catch (Exception $ignored2) {
+            // Fallback 2: Generic insert without RETURNING (try boolean first)
+            try {
+                $stmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order, is_active, context) VALUES (?, ?, ?, ?)");
+                $stmt->execute([$name, $sortOrder, $isActive, $context]);
+                return (int)$pdo->lastInsertId();
+            } catch (Exception $e) {
+                // Fallback 3: Generic insert with integer
+                try {
+                    $stmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order, is_active, context) VALUES (?, ?, ?, ?)");
+                    $stmt->execute([$name, $sortOrder, $isActive ? 1 : 0, $context]);
+                    return (int)$pdo->lastInsertId();
+                } catch (Exception $e2) {
+                    // Final attempt: lookup just in case it was created concurrently
+                }
+            }
+        }
+    }
+    
     try {
-        $stmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order, is_active, context) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$name, $sortOrder, $isActive ? 1 : 0, $context]);
-        return (int)$pdo->lastInsertId();
-    } catch (Exception $e) {
-        // Final attempt: lookup just in case it was created concurrently
         $findStmt = $pdo->prepare("SELECT id FROM product_categories WHERE LOWER(name) = LOWER(?) ORDER BY id DESC LIMIT 1");
         $findStmt->execute([$name]);
         return (int)$findStmt->fetchColumn();
+    } catch (Exception $finalEx) {
+        return 0;
     }
-}
-    $findStmt->execute([$name]);
-    return (int)$findStmt->fetchColumn();
 }
 
 function ensure_product_categories_runtime_admin_supply($pdo): void {
@@ -3681,18 +3766,30 @@ try {
                 // Full update path (newest schema)
                 try {
                     $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, sort_order = ?, is_active = ?, context = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-                    $stmt->execute([$name, $sortOrder, $isActive ? 1 : 0, $context, $id]);
+                    $stmt->execute([$name, $sortOrder, $isActive, $context, $id]);
                     $updated = true;
                 } catch (Exception $ignored) {
+                    try {
+                        $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, sort_order = ?, is_active = ?, context = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+                        $stmt->execute([$name, $sortOrder, $isActive ? 1 : 0, $context, $id]);
+                        $updated = true;
+                    } catch (Exception $ignored2) {
+                    }
                 }
 
                 // Legacy fallback: without updated_at
                 if (!$updated) {
                     try {
                         $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, sort_order = ?, is_active = ?, context = ? WHERE id = ?");
-                        $stmt->execute([$name, $sortOrder, $isActive ? 1 : 0, $context, $id]);
+                        $stmt->execute([$name, $sortOrder, $isActive, $context, $id]);
                         $updated = true;
                     } catch (Exception $ignored) {
+                        try {
+                            $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, sort_order = ?, is_active = ?, context = ? WHERE id = ?");
+                            $stmt->execute([$name, $sortOrder, $isActive ? 1 : 0, $context, $id]);
+                            $updated = true;
+                        } catch (Exception $ignored2) {
+                        }
                     }
                 }
 
@@ -4775,6 +4872,13 @@ try {
 }
 
 restore_error_handler();
+
+// Clear persistent cache on successful POST operations (writes)
+if ($method === 'POST' && isset($response) && is_array($response) && ($response['success'] ?? false) === true) {
+    if (function_exists('cache_clear')) {
+        cache_clear();
+    }
+}
 
 $buffer = ob_get_clean();
 if (!empty($buffer)) {
