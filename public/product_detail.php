@@ -217,9 +217,9 @@ $stock = (int)($product['stock_quantity'] ?? 0);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title><?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?> - Truper Platform</title>
-    <link rel="stylesheet" href="css/styles.css?v=2.1">
-    <link rel="stylesheet" href="css/theme.css?v=2.1">
-    <link rel="stylesheet" href="css/responsive-complete.css">
+    <link rel="stylesheet" href="css/styles.css?v=2.2">
+    <link rel="stylesheet" href="css/theme.css?v=2.2">
+    <link rel="stylesheet" href="css/responsive-complete.css?v=2.2">
     <style>
         .product-detail-hero {
             display: grid;

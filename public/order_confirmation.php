@@ -32,8 +32,8 @@ if ($orderId && $isLogged) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title><?php echo $order ? 'Orden ' . $order['order_number'] : 'Confirmación'; ?> - Truper Platform</title>
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/styles.css?v=2.2">
+    <link rel="stylesheet" href="css/theme.css?v=2.2">
     <style>
         .confirmation-page { padding: 2rem 1rem; }
         .confirmation-container { max-width: 800px; margin: 0 auto; }

@@ -14,10 +14,10 @@ $column_count = $is_admin ? 7 : 6;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Mayoreo - Truper Platform</title>
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/styles.css?v=2.2">
+    <link rel="stylesheet" href="css/theme.css?v=2.2">
     <link rel="stylesheet" href="css/dashboard.css">
-    <link rel="stylesheet" href="css/responsive-complete.css">
+    <link rel="stylesheet" href="css/responsive-complete.css?v=2.2">
     <!-- jsPDF Library for PDF Generation -->
     <script src="js/jspdf.umd.min.js"></script>
     <style>

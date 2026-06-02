@@ -19,9 +19,9 @@ if (is_logged_in() && !$force_login_screen) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Iniciar Sesión Cliente - Truper Platform</title>
     <link rel="icon" type="image/png" href="/truper_logo2.png">
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="css/theme.css">
-    <link rel="stylesheet" href="css/responsive-complete.css">
+    <link rel="stylesheet" href="css/styles.css?v=2.2">
+    <link rel="stylesheet" href="css/theme.css?v=2.2">
+    <link rel="stylesheet" href="css/responsive-complete.css?v=2.2">
 </head>
 <body class="auth-page">
     <div class="login-container">

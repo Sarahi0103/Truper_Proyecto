@@ -49,8 +49,8 @@ function display_product_code($sku) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ticket cliente <?php echo htmlspecialchars($order['order_number'], ENT_QUOTES, 'UTF-8'); ?></title>
-    <link rel="stylesheet" href="css/theme.css?v=2.1">
-    <link rel="stylesheet" href="css/responsive-complete.css">
+    <link rel="stylesheet" href="css/theme.css?v=2.2">
+    <link rel="stylesheet" href="css/responsive-complete.css?v=2.2">
     <style>
         body { font-family: monospace; margin: 0; padding: 10px; background: var(--ui-bg); color: var(--ui-text); }
         .ticket { width: min(100%, <?php echo $format === 'a4' ? '760px' : '300px'; ?>); margin: 0 auto; background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: 6px; padding: 10px; box-sizing: border-box; }
