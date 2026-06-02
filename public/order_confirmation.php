@@ -198,15 +198,17 @@ if ($orderId && $isLogged) {
                         <nav class="nav-menu">
                 <a href="index.php">Catálogo</a>
                 <a href="marketplace_ce.php">Marketplace CE</a>
-                <div class="nav-dropdown">
-                    <button class="nav-dropdown-btn">Mi Cuenta <span class="arrow">▼</span></button>
-                    <div class="nav-dropdown-content">
-                        <a href="dashboard.php">Dashboard</a>
-                        <a href="orders.php" class="active">Pedidos</a>
-                        <a href="wholesale.php">Mayoreo</a>
-                        <a href="profile.php">Perfil</a>
+                <?php if ($isLogged): ?>
+                    <div class="nav-dropdown">
+                        <button class="nav-dropdown-btn">Mi Cuenta <span class="arrow">▼</span></button>
+                        <div class="nav-dropdown-content">
+                            <a href="dashboard.php">Dashboard</a>
+                            <a href="orders.php" class="active">Pedidos</a>
+                            <a href="wholesale.php">Mayoreo</a>
+                            <a href="profile.php">Perfil</a>
+                        </div>
                     </div>
-                </div>
+                <?php endif; ?>
                 <?php if ($is_admin): ?>
                     <div class="nav-dropdown">
                         <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>

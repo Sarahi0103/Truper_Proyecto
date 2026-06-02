@@ -938,6 +938,10 @@ tbody td,
 }
 
 /* ===== Sleek & Modern Navigation Dropdowns ===== */
+header .nav-menu {
+    overflow: visible !important;
+}
+
 :root {
     --theme-dropdown-bg: rgba(255, 255, 255, 0.88);
     --theme-dropdown-border: rgba(229, 231, 235, 0.8);
