@@ -936,3 +936,233 @@ tbody td,
         width: 100%;
     }
 }
+
+/* ===== Sleek & Modern Navigation Dropdowns ===== */
+:root {
+    --theme-dropdown-bg: rgba(255, 255, 255, 0.88);
+    --theme-dropdown-border: rgba(229, 231, 235, 0.8);
+}
+:root[data-theme="dark"] {
+    --theme-dropdown-bg: rgba(17, 17, 17, 0.88);
+    --theme-dropdown-border: rgba(51, 65, 85, 0.5);
+}
+
+/* Parent Dropdown active state when child links are active */
+header .nav-menu .nav-dropdown:has(.nav-dropdown-content a.active) .nav-dropdown-btn {
+    background-color: var(--theme-accent-soft) !important;
+    color: var(--theme-accent) !important;
+    font-weight: 700;
+}
+
+header .nav-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+header .nav-dropdown-btn {
+    background: transparent;
+    color: var(--theme-text-muted);
+    border: none;
+    padding: 0.4rem 0.85rem;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.88rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: inherit;
+    transition: all 0.25s ease;
+}
+
+header .nav-dropdown-btn:hover,
+header .nav-dropdown:hover .nav-dropdown-btn {
+    background-color: var(--theme-accent-soft) !important;
+    color: var(--theme-accent) !important;
+}
+
+header .nav-dropdown-content {
+    display: block !important;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: var(--theme-dropdown-bg) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    min-width: 200px;
+    box-shadow: 0 12px 36px var(--theme-shadow-strong);
+    border: 1px solid var(--theme-dropdown-border);
+    border-radius: 14px;
+    padding: 0.6rem 0;
+    z-index: 100;
+    margin-top: 0.5rem;
+    
+    /* Smooth Slide-in & Fade Transition */
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(8px);
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s ease;
+}
+
+header .nav-dropdown:hover .nav-dropdown-content {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    transform: translateY(0) !important;
+}
+
+header .nav-dropdown-content a {
+    color: var(--theme-text) !important;
+    padding: 0.55rem 1rem !important;
+    text-decoration: none;
+    display: block !important;
+    font-size: 0.85rem !important;
+    font-weight: 500 !important;
+    border-radius: 8px !important;
+    margin: 0.2rem 0.5rem !important;
+    text-align: left !important;
+    transition: all 0.2s ease;
+    background-color: transparent !important;
+}
+
+header .nav-dropdown-content a:hover,
+header .nav-dropdown-content a.active {
+    background-color: var(--theme-accent-soft) !important;
+    color: var(--theme-accent) !important;
+}
+
+header .nav-dropdown-btn .arrow {
+    font-size: 0.65rem;
+    opacity: 0.7;
+    transition: transform 0.2s ease;
+}
+
+header .nav-dropdown:hover .arrow {
+    transform: rotate(180deg) !important;
+}
+
+/* ===== Responsive Header Navigation ===== */
+@media (max-width: 768px) {
+    /* Main wrapper container */
+    body header {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        padding: 0.5rem 0.75rem !important;
+        gap: 0.4rem !important;
+    }
+
+    /* display: contents removes the wrapper to let children align in the header's flexbox */
+    body header .header-content {
+        display: contents !important;
+    }
+
+    /* Row 1, Left: Brand Logo */
+    body header .logo {
+        order: 1 !important;
+        flex: 0 0 auto !important;
+        margin: 0 !important;
+    }
+
+    /* Row 1, Right: Actions & User Info / Logout buttons */
+    body header .user-menu,
+    body header .header-actions {
+        order: 2 !important;
+        flex: 0 0 auto !important;
+        margin-left: auto !important;
+        margin-right: 0 !important;
+        width: auto !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.4rem !important;
+    }
+
+    body header .user-info {
+        display: none !important; /* Hide details to save space on mobile, or make compact */
+    }
+
+    /* Row 2: Full Width scrollable pill-based navigation */
+    body header .nav-menu {
+        order: 3 !important;
+        width: calc(100% + 1.5rem) !important; /* edge to edge bleed */
+        margin-left: -0.75rem !important;
+        margin-right: -0.75rem !important;
+        padding: 0.25rem 0.75rem 0.35rem 0.75rem !important;
+        flex: 0 0 100% !important;
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        scrollbar-width: none !important;
+        -webkit-overflow-scrolling: touch !important;
+        gap: 0.35rem !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    body header .nav-menu::-webkit-scrollbar {
+        display: none !important;
+    }
+
+    body header .nav-dropdown {
+        display: flex !important;
+        gap: 0.35rem !important;
+    }
+
+    body header .nav-dropdown-btn {
+        display: none !important;
+    }
+
+    body header .nav-dropdown-content {
+        position: static !important;
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 0.35rem !important;
+        margin-top: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+        background: transparent !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+        transform: none !important;
+        min-width: 0 !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+
+    /* Style the horizontal pills */
+    body header .nav-dropdown-content a,
+    body header .nav-menu a {
+        padding: 0.35rem 0.7rem !important;
+        border-radius: 999px !important;
+        font-size: 0.78rem !important;
+        margin: 0 !important;
+        background-color: var(--theme-surface-strong) !important;
+        border: 1px solid var(--theme-border) !important;
+        color: var(--theme-text-muted) !important;
+        white-space: nowrap !important;
+        font-weight: 600 !important;
+        display: inline-block !important;
+        transition: all 0.2s ease !important;
+    }
+
+    body header .nav-dropdown-content a:hover,
+    body header .nav-menu a:hover {
+        background-color: var(--theme-border) !important;
+        color: var(--theme-text) !important;
+    }
+
+    body header .nav-dropdown-content a.active,
+    body header .nav-menu a.active {
+        background-color: var(--theme-accent) !important;
+        border-color: var(--theme-accent) !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 10px var(--theme-accent-soft) !important;
+    }
+}
+

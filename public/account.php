@@ -49,24 +49,31 @@ $company_whatsapp = htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8
 <header>
     <div class="header-content">
         <a href="index.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
-        <nav class="nav-menu">
+                <nav class="nav-menu">
             <a href="index.php">Catálogo</a>
             <a href="marketplace_ce.php">Marketplace CE</a>
-            <a href="cart.php">Carrito</a>
+            <div class="nav-dropdown">
+                <button class="nav-dropdown-btn">Mi Cuenta <span class="arrow">▼</span></button>
+                <div class="nav-dropdown-content">
+                    <a href="dashboard.php">Dashboard</a>
+                    <a href="orders.php">Pedidos</a>
+                    <a href="wholesale.php">Mayoreo</a>
+                    <a href="account.php" class="active">Mi Cuenta</a>
+                    <a href="profile.php">Perfil</a>
+                </div>
+            </div>
             <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
-                <a href="dashboard.php">Dashboard</a>
-                <a href="admin_supply.php?nocache=true">Abastecimiento</a>
-                <a href="tickets.php">Tickets</a>
-                <a href="cashier.php">Caja</a>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content">
+                        <a href="cashier.php">Caja</a>
+                        <a href="admin_supply.php?nocache=true">Abastecimiento</a>
+                        <a href="tickets.php">Tickets</a>
+                        <a href="tasks.php">Tareas</a>
+                        <a href="analytics.php">Estadísticas</a>
+                    </div>
+                </div>
             <?php endif; ?>
-            <a href="orders.php">Pedidos</a>
-            <a href="wholesale.php">Mayoreo</a>
-            <a href="tasks.php">Tareas</a>
-            <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
-                <a href="analytics.php">Estadísticas</a>
-            <?php endif; ?>
-            <a href="account.php" class="active">Mi Cuenta</a>
-            <a href="profile.php">Perfil</a>
         </nav>
     </div>
     <div class="user-menu">

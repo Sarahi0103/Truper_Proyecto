@@ -56,19 +56,28 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
     <header>
         <div class="header-content">
             <a href="dashboard.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
-            <nav class="nav-menu">
+                        <nav class="nav-menu">
                 <a href="index.php">Catálogo</a>
                 <a href="marketplace_ce.php">Marketplace CE</a>
-                <a href="cart.php">Carrito</a>
-                <a href="dashboard.php">Dashboard</a>
-                <a href="orders.php">Pedidos</a>
-                <a href="wholesale.php">Mayoreo</a>
-                <?php if (($_SESSION['role'] ?? '') === 'admin'): ?><a href="cashier.php">Caja</a><?php endif; ?>
-                <?php if (($_SESSION['role'] ?? '') === 'admin'): ?><a href="admin_supply.php?nocache=true">Abastecimiento</a><?php endif; ?>
-                <?php if (($_SESSION['role'] ?? '') === 'admin'): ?><a href="tickets.php" class="active">Tickets</a><?php endif; ?>
-                <a href="tasks.php">Tareas</a>
-                <a href="analytics.php">Estadísticas</a>
-                <a href="profile.php">Perfil</a>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Mi Cuenta <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content">
+                        <a href="dashboard.php">Dashboard</a>
+                        <a href="orders.php">Pedidos</a>
+                        <a href="wholesale.php">Mayoreo</a>
+                        <a href="profile.php">Perfil</a>
+                    </div>
+                </div>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content">
+                        <a href="cashier.php">Caja</a>
+                        <a href="admin_supply.php?nocache=true">Abastecimiento</a>
+                        <a href="tickets.php" class="active">Tickets</a>
+                        <a href="tasks.php">Tareas</a>
+                        <a href="analytics.php">Estadísticas</a>
+                    </div>
+                </div>
             </nav>
         </div>
         <div class="user-menu">
