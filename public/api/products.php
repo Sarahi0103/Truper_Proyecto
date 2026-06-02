@@ -218,7 +218,7 @@ try {
             }
 
             if (empty($products)) {
-                $seed = get_xlsx_seed_products();
+                $seed = function_exists('get_xlsx_seed_products') ? get_xlsx_seed_products() : [];
                 if (!empty($seed)) {
                     if ($category !== '') {
                         $products = array_values(array_filter($seed, function ($item) use ($category) {
