@@ -473,7 +473,7 @@ $first_name = explode(' ', $user_name)[0];
                 <a href="orders.php">Pedidos</a>
                 <a href="wholesale.php">Mayoreo</a>
                 <?php if ($is_admin): ?><a href="cashier.php">Caja</a><?php endif; ?>
-                <?php if ($is_admin): ?><a href="admin_supply.php">Abastecimiento</a><?php endif; ?>
+                <?php if ($is_admin): ?><a href="admin_supply.php?nocache=true">Abastecimiento</a><?php endif; ?>
                 <?php if ($is_admin): ?><a href="tickets.php">Tickets</a><?php endif; ?>
                 <a href="tasks.php">Tareas</a>
                 <a href="analytics.php">Estadísticas</a>
@@ -516,7 +516,7 @@ $first_name = explode(' ', $user_name)[0];
                 <div class="db-admin-bar-section">
                     <span class="db-admin-bar-label">Acceso Rápido</span>
                     <div class="db-admin-links">
-                        <a href="admin_supply.php" class="db-admin-link">Abastecimiento</a>
+                        <a href="admin_supply.php?nocache=true" class="db-admin-link">Abastecimiento</a>
                         <a href="cashier.php" class="db-admin-link">Caja</a>
                         <a href="analytics.php" class="db-admin-link">Estadísticas</a>
                         <a href="tickets.php" class="db-admin-link">Tickets</a>
@@ -624,7 +624,7 @@ $first_name = explode(' ', $user_name)[0];
                         <a href="cashier.php" class="db-action-btn" id="qa-cashier">
                             <span class="db-action-icon">🧾</span>Caja
                         </a>
-                        <a href="admin_supply.php" class="db-action-btn" id="qa-supply">
+                        <a href="admin_supply.php?nocache=true" class="db-action-btn" id="qa-supply">
                             <span class="db-action-icon">📦</span>Abastecimiento
                         </a>
                         <?php endif; ?>

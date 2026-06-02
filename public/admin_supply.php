@@ -334,7 +334,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             <a href="orders.php">Pedidos</a>
             <a href="wholesale.php">Mayoreo</a>
             <a href="cashier.php">Caja</a>
-            <a href="admin_supply.php" class="active">Abastecimiento</a>
+            <a href="admin_supply.php?nocache=true" class="active">Abastecimiento</a>
             <?php if (($_SESSION['role'] ?? '') === 'admin'): ?><a href="tickets.php">Tickets</a><?php endif; ?>
             <a href="tasks.php">Tareas</a>
             <a href="analytics.php">Estadisticas</a>

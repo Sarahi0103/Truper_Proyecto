@@ -55,7 +55,7 @@ $company_whatsapp = htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8
             <a href="cart.php">Carrito</a>
             <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
                 <a href="dashboard.php">Dashboard</a>
-                <a href="admin_supply.php">Abastecimiento</a>
+                <a href="admin_supply.php?nocache=true">Abastecimiento</a>
                 <a href="tickets.php">Tickets</a>
                 <a href="cashier.php">Caja</a>
             <?php endif; ?>

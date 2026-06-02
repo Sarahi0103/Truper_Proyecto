@@ -210,7 +210,7 @@ if ($isLogged) {
                 <a href="index.php">Catálogo</a>
                 <a href="marketplace_ce.php">Marketplace CE</a>
                 <a href="cart.php">Carrito</a>
-                <?php if ($isAdmin): ?><a href="admin_supply.php">Abastecimiento</a><?php endif; ?>
+                <?php if ($isAdmin): ?><a href="admin_supply.php?nocache=true">Abastecimiento</a><?php endif; ?>
                 <?php if ($isAdmin): ?><a href="tickets.php">Tickets</a><?php endif; ?>
                 <?php if ($isLogged): ?>
                     <a href="orders.php">Pedidos</a>
