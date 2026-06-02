@@ -90,6 +90,10 @@ try {
 
                 $pdo->commit();
 
+                if (function_exists('cache_clear')) {
+                    cache_clear();
+                }
+
                 echo json_encode([
                     'success' => true,
                     'message' => "Sincronización completada: {$synced} registros actualizados",
@@ -174,6 +178,10 @@ try {
                 }
 
                 $pdo->commit();
+
+                if (function_exists('cache_clear')) {
+                    cache_clear();
+                }
 
                 echo json_encode([
                     'success' => true,
@@ -271,6 +279,10 @@ try {
                 }
 
                 $pdo->commit();
+
+                if (function_exists('cache_clear')) {
+                    cache_clear();
+                }
 
                 echo json_encode([
                     'success' => true,

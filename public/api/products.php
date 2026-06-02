@@ -419,5 +419,12 @@ try {
     }
 }
 
+// Clear persistent cache on successful POST operations (writes)
+if ($method === 'POST' && isset($response) && is_array($response) && ($response['success'] ?? false) === true) {
+    if (function_exists('cache_clear')) {
+        cache_clear();
+    }
+}
+
 echo json_encode($response, JSON_UNESCAPED_UNICODE);
 ?>
