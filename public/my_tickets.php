@@ -13,7 +13,7 @@ $userName = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8'
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Mis Tickets - Truper Platform</title>
     <link rel="stylesheet" href="css/styles.css?v=2.2">
-    <link rel="stylesheet" href="css/theme.css?v=2.4">
+    <link rel="stylesheet" href="css/theme.css?v=2.5">
     <link rel="stylesheet" href="css/responsive-complete.css?v=2.2">
     <style>
         .tickets-wrapper { display: grid; grid-template-columns: 1fr 3fr; gap: 2rem; margin: 2rem 0; }

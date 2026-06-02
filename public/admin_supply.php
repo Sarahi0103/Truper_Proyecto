@@ -12,7 +12,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Abastecimiento - Truper Platform</title>
     <link rel="stylesheet" href="css/styles.css?v=2.2">
-    <link rel="stylesheet" href="css/theme.css?v=2.4">
+    <link rel="stylesheet" href="css/theme.css?v=2.5">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/responsive-complete.css?v=2.2">
     <style>
@@ -578,22 +578,38 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             <div class="grid grid-2">
                 <div class="card"><div class="card-body">
                     <h3>Registrar visita de proveedor</h3>
-                    <div class="form-group"><label>Proveedor</label><input id="supplierName" type="text"></div>
-                    <div class="form-group"><label>Fecha y hora</label><input id="visitDate" type="datetime-local"></div>
-                    <div class="form-group"><label>Notas</label><textarea id="visitNotes"></textarea></div>
+                    <div class="form-group">
+                        <label for="supplierName">Proveedor <span style="color: var(--theme-accent);">*</span></label>
+                        <input id="supplierName" type="text" placeholder="Ej. Proveedor Truper Centro" required minlength="2" maxlength="100" oninput="clearValidationError('supplierName')">
+                        <span class="validation-error" id="errSupplierName" style="color: #ef4444; font-size: 0.78rem; display: none; margin-top: 0.35rem; font-weight: 500;"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="visitDate">Fecha y hora <span style="color: var(--theme-accent);">*</span></label>
+                        <input id="visitDate" type="datetime-local" required oninput="clearValidationError('visitDate')">
+                        <span class="validation-error" id="errVisitDate" style="color: #ef4444; font-size: 0.78rem; display: none; margin-top: 0.35rem; font-weight: 500;"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="visitNotes">Notas (opcional)</label>
+                        <textarea id="visitNotes" placeholder="Detalles u objetivos de la visita (máx. 500 caracteres)..." maxlength="500" oninput="clearValidationError('visitNotes')"></textarea>
+                        <span class="validation-error" id="errVisitNotes" style="color: #ef4444; font-size: 0.78rem; display: none; margin-top: 0.35rem; font-weight: 500;"></span>
+                    </div>
                     <button class="btn btn-primary" onclick="createVisit()">Guardar visita</button>
                 </div></div>
                 <div class="card"><div class="card-body">
                     <h3>Calendario mensual</h3>
-                    <div class="d-flex justify-between align-center">
+                    <div class="d-flex justify-between align-center" style="margin-bottom: 1rem;">
                         <button class="btn btn-small btn-ghost" onclick="changeCalendarMonth(-1)">Mes anterior</button>
                         <strong id="calendarMonthLabel">Mes</strong>
                         <button class="btn btn-small btn-ghost" onclick="changeCalendarMonth(1)">Mes siguiente</button>
                     </div>
                     <div id="calendarGrid" class="mt-2"></div>
-                    <div id="calendarList" class="text-muted mt-2">Cargando...</div>
                 </div></div>
             </div>
+
+            <!-- Visitas agendadas a lo ancho abajo de las dos columnas -->
+            <div class="card mt-3"><div class="card-body">
+                <div id="calendarList" class="text-muted mt-2">Cargando...</div>
+            </div></div>
         </section>
 
         <section id="supplierOrderTab" class="tab-content admin-tab-panel">
@@ -2599,13 +2615,71 @@ async function createVisit() {
     const visitDate = document.getElementById('visitDate')?.value || '';
     const notes = document.getElementById('visitNotes')?.value?.trim() || '';
 
-    // Validation
+    // Form validations
+    let isValid = true;
+    
+    // Validate supplierName
+    const errSupplierName = document.getElementById('errSupplierName');
+    const inputSupplierName = document.getElementById('supplierName');
     if (!supplierName) {
-        showAlert('El nombre del proveedor es requerido', 'warning');
-        return;
+        if (errSupplierName) {
+            errSupplierName.textContent = 'El nombre del proveedor es obligatorio';
+            errSupplierName.style.display = 'block';
+        }
+        if (inputSupplierName) {
+            inputSupplierName.style.borderColor = '#ef4444';
+        }
+        isValid = false;
+    } else if (supplierName.length < 2) {
+        if (errSupplierName) {
+            errSupplierName.textContent = 'El nombre debe tener al menos 2 caracteres';
+            errSupplierName.style.display = 'block';
+        }
+        if (inputSupplierName) {
+            inputSupplierName.style.borderColor = '#ef4444';
+        }
+        isValid = false;
+    } else {
+        if (errSupplierName) errSupplierName.style.display = 'none';
+        if (inputSupplierName) inputSupplierName.style.borderColor = '';
     }
+
+    // Validate visitDate
+    const errVisitDate = document.getElementById('errVisitDate');
+    const inputVisitDate = document.getElementById('visitDate');
     if (!visitDate) {
-        showAlert('La fecha y hora son requeridas', 'warning');
+        if (errVisitDate) {
+            errVisitDate.textContent = 'La fecha y hora son obligatorias';
+            errVisitDate.style.display = 'block';
+        }
+        if (inputVisitDate) {
+            inputVisitDate.style.borderColor = '#ef4444';
+        }
+        isValid = false;
+    } else {
+        if (errVisitDate) errVisitDate.style.display = 'none';
+        if (inputVisitDate) inputVisitDate.style.borderColor = '';
+    }
+
+    // Validate visitNotes (max length 500)
+    const errVisitNotes = document.getElementById('errVisitNotes');
+    const inputVisitNotes = document.getElementById('visitNotes');
+    if (notes.length > 500) {
+        if (errVisitNotes) {
+            errVisitNotes.textContent = 'Las notas no pueden superar los 500 caracteres';
+            errVisitNotes.style.display = 'block';
+        }
+        if (inputVisitNotes) {
+            inputVisitNotes.style.borderColor = '#ef4444';
+        }
+        isValid = false;
+    } else {
+        if (errVisitNotes) errVisitNotes.style.display = 'none';
+        if (inputVisitNotes) inputVisitNotes.style.borderColor = '';
+    }
+
+    if (!isValid) {
+        showAlert('Por favor, corrige los errores en el formulario', 'warning');
         return;
     }
 
@@ -2620,14 +2694,30 @@ async function createVisit() {
         document.getElementById('supplierName').value = '';
         document.getElementById('visitDate').value = '';
         document.getElementById('visitNotes').value = '';
+        
+        // Reset borders
+        if (inputSupplierName) inputSupplierName.style.borderColor = '';
+        if (inputVisitDate) inputVisitDate.style.borderColor = '';
+        if (inputVisitNotes) inputVisitNotes.style.borderColor = '';
+        
+        // Reset selected filter
+        selectedCalendarDay = null;
     } else if (res) {
         showAlert(res.message || 'No fue posible guardar la visita', 'error');
     }
     loadCalendar();
 }
 
+function clearValidationError(id) {
+    const errorEl = document.getElementById('err' + id.charAt(0).toUpperCase() + id.slice(1));
+    const inputEl = document.getElementById(id);
+    if (errorEl) errorEl.style.display = 'none';
+    if (inputEl) inputEl.style.borderColor = '';
+}
+
 let calendarVisits = [];
 let calendarMonthCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+let selectedCalendarDay = null; // Filter visits by day
 
 function formatDateTimeLocal(dateValue) {
     const d = new Date(dateValue);
@@ -2639,6 +2729,15 @@ function formatDateTimeLocal(dateValue) {
         hour: '2-digit',
         minute: '2-digit'
     });
+}
+
+function selectCalendarDay(day) {
+    if (selectedCalendarDay === day) {
+        selectedCalendarDay = null;
+    } else {
+        selectedCalendarDay = day;
+    }
+    renderCalendarMonth();
 }
 
 function renderCalendarMonth() {
@@ -2675,7 +2774,9 @@ function renderCalendarMonth() {
 
     for (let day = 1; day <= daysInMonth; day += 1) {
         const count = (visitMap[day] || []).length;
-        html += `<div class="calendar-day ${count > 0 ? 'calendar-day-has-visits' : ''}">`;
+        const hasVisitsClass = count > 0 ? 'calendar-day-has-visits' : '';
+        const activeClass = selectedCalendarDay === day ? 'calendar-day-selected' : '';
+        html += `<div class="calendar-day ${hasVisitsClass} ${activeClass}" onclick="selectCalendarDay(${day})">`;
         html += `<div class="calendar-day-number">${day}</div>`;
         if (count > 0) {
             html += `<div class="calendar-day-visits">${count} visita${count > 1 ? 's' : ''}</div>`;
@@ -2691,24 +2792,58 @@ function renderCalendarMonth() {
         return !Number.isNaN(d.getTime()) && d.getFullYear() === year && d.getMonth() === month;
     }).sort((a, b) => new Date(a.visit_datetime) - new Date(b.visit_datetime));
 
-    if (monthVisits.length === 0) {
-        list.innerHTML = '<p class="text-muted">Sin visitas para este mes.</p>';
+    let listTitleHtml = '';
+    const formattedMonthName = calendarMonthCursor.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+    if (selectedCalendarDay !== null) {
+        listTitleHtml = `
+            <div class="d-flex justify-between align-center mb-3" style="border-bottom: 1px solid var(--theme-border); padding-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+                <span style="font-weight: 700; font-size: 1.05rem; color: var(--theme-accent); display: flex; align-items: center; gap: 0.5rem;">
+                    📅 Visitas del día ${selectedCalendarDay} de ${formattedMonthName}
+                </span>
+                <button class="btn btn-small btn-secondary" onclick="selectCalendarDay(null)">Ver todas las del mes</button>
+            </div>
+        `;
+    } else {
+        listTitleHtml = `
+            <div class="mb-3" style="border-bottom: 1px solid var(--theme-border); padding-bottom: 0.5rem;">
+                <span style="font-weight: 700; font-size: 1.05rem; color: var(--theme-text);">
+                    📅 Todas las visitas de ${formattedMonthName}
+                </span>
+            </div>
+        `;
+    }
+
+    let filteredVisits = monthVisits;
+    if (selectedCalendarDay !== null) {
+        filteredVisits = monthVisits.filter((visit) => {
+            const d = new Date(visit.visit_datetime);
+            return !Number.isNaN(d.getTime()) && d.getDate() === selectedCalendarDay;
+        });
+    }
+
+    if (filteredVisits.length === 0) {
+        list.innerHTML = listTitleHtml + '<p class="text-muted" style="padding: 1.5rem; text-align: center; background: var(--theme-surface-strong); border-radius: 8px; border: 1px solid var(--theme-border);">No hay visitas agendadas para la selección.</p>';
         return;
     }
 
-    list.innerHTML = monthVisits.map(i => `
-        <div class="visit-item">
-            <div class="visit-header">
-                <span class="visit-supplier">${escapeHtml(i.supplier_name)}</span>
-                <span class="visit-time">${escapeHtml(formatDateTimeLocal(i.visit_datetime))}</span>
-            </div>
-            ${i.notes ? `<div class="visit-notes">${escapeHtml(i.notes)}</div>` : ''}
+    list.innerHTML = listTitleHtml + `
+        <div class="visit-list-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;">
+            ${filteredVisits.map(i => `
+                <div class="visit-item">
+                    <div class="visit-header">
+                        <span class="visit-supplier">${escapeHtml(i.supplier_name)}</span>
+                        <span class="visit-time">${escapeHtml(formatDateTimeLocal(i.visit_datetime))}</span>
+                    </div>
+                    ${i.notes ? `<div class="visit-notes">${escapeHtml(i.notes)}</div>` : ''}
+                </div>
+            `).join('')}
         </div>
-    `).join('');
+    `;
 }
 
 function changeCalendarMonth(offset) {
     calendarMonthCursor = new Date(calendarMonthCursor.getFullYear(), calendarMonthCursor.getMonth() + offset, 1);
+    selectedCalendarDay = null;
     renderCalendarMonth();
 }
 
