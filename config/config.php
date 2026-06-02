@@ -60,29 +60,70 @@ if ($has_authenticated_session || $is_auth_context || $is_dynamic_catalog_page) 
     header('Pragma: cache');
 }
 
-// Caché de servidor en memoria para queries frecuentes
+// Caché de servidor persistente (file-based) con primer nivel en memoria
 define('CACHE_ENABLED', true);
 define('CACHE_TTL', 300); // 5 minutos
-$_CACHE = [];
+$_CACHE = []; // Memoria (primer nivel)
 
 function cache_get($key) {
     global $_CACHE;
-    if (!CACHE_ENABLED || empty($_CACHE[$key])) return null;
-    $entry = $_CACHE[$key];
-    if ($entry['expires'] < time()) {
+    if (!CACHE_ENABLED) return null;
+    
+    // Nivel 1: Memoria (rápido para la misma petición, evita I/O redundante)
+    if (isset($_CACHE[$key])) {
+        $entry = $_CACHE[$key];
+        if ($entry['expires'] >= time()) {
+            return $entry['data'];
+        }
         unset($_CACHE[$key]);
-        return null;
     }
-    return $entry['data'];
+    
+    // Nivel 2: Archivos (para persistencia entre peticiones)
+    $cache_dir = __DIR__ . '/../cache';
+    $cache_file = $cache_dir . '/' . md5($key) . '.cache';
+    
+    if (file_exists($cache_file)) {
+        $content = @file_get_contents($cache_file);
+        if ($content !== false) {
+            $entry = json_decode($content, true);
+            if (is_array($entry) && isset($entry['expires']) && array_key_exists('data', $entry)) {
+                if ($entry['expires'] >= time()) {
+                    // Guardar en Nivel 1 para accesos futuros en esta petición
+                    $_CACHE[$key] = $entry;
+                    return $entry['data'];
+                }
+            }
+        }
+        // Expirado o corrupto, lo eliminamos
+        @unlink($cache_file);
+    }
+    
+    return null;
 }
 
 function cache_set($key, $data, $ttl = null) {
     global $_CACHE;
     if (!CACHE_ENABLED) return;
-    $_CACHE[$key] = [
+    
+    $expires = time() + ($ttl ?? CACHE_TTL);
+    $entry = [
         'data' => $data,
-        'expires' => time() + ($ttl ?? CACHE_TTL)
+        'expires' => $expires
     ];
+    
+    // Guardar en Nivel 1 (Memoria)
+    $_CACHE[$key] = $entry;
+    
+    // Guardar en Nivel 2 (Archivo)
+    $cache_dir = __DIR__ . '/../cache';
+    if (!is_dir($cache_dir)) {
+        @mkdir($cache_dir, 0775, true);
+    }
+    
+    if (is_dir($cache_dir) && is_writable($cache_dir)) {
+        $cache_file = $cache_dir . '/' . md5($key) . '.cache';
+        @file_put_contents($cache_file, json_encode($entry), LOCK_EX);
+    }
 }
 
 // Incluir base de datos

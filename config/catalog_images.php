@@ -1,5 +1,9 @@
 <?php
 
+if (!function_exists('cache_get') && file_exists(__DIR__ . '/config.php')) {
+    require_once __DIR__ . '/config.php';
+}
+
 if (!function_exists('catalog_normalize_image_path')) {
     function catalog_normalize_image_path(string $path): string {
         $path = trim($path);
@@ -62,6 +66,53 @@ if (!function_exists('catalog_gallery_image_priority_score')) {
 
 if (!function_exists('catalog_resolve_gallery_images_by_sku')) {
     function catalog_resolve_gallery_images_by_sku(string $sku, array $itemRow = [], ?PDO $pdo = null): array {
+        $sku = trim((string)$sku);
+        $normalizedSku = preg_replace('/[^a-zA-Z0-9_\-]/', '', $sku);
+
+        // 1. Detectar si el producto ya tiene la imagen por defecto y no tiene variantes de imágenes
+        $rowImage = catalog_normalize_image_path((string)($itemRow['image_url'] ?? ''));
+        $hasRowDefaultImage = ($rowImage === '' || strpos($rowImage, 'default-product.svg') !== false);
+        $hasRowVariants = false;
+        if (!empty($itemRow['variants_json'])) {
+            $decoded = json_decode((string)$itemRow['variants_json'], true);
+            if (is_array($decoded)) {
+                foreach ($decoded as $item) {
+                    $item = trim((string)$item);
+                    if (catalog_is_gallery_image_reference($item)) {
+                        $hasRowVariants = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!empty($itemRow) && $hasRowDefaultImage && !$hasRowVariants) {
+            return ['images/products/default-product.svg'];
+        }
+
+        // 2. Caché persistente
+        $cacheKey = 'res_gal_img_' . $normalizedSku . '_' . md5(json_encode($itemRow));
+        if (function_exists('cache_get')) {
+            $cached = cache_get($cacheKey);
+            if ($cached !== null) {
+                return $cached;
+            }
+        }
+
+        // 3. Resolver usando la función original renombrada
+        $images = _catalog_resolve_gallery_images_by_sku_raw($sku, $itemRow, $pdo);
+
+        // 4. Guardar en caché
+        if (function_exists('cache_set')) {
+            cache_set($cacheKey, $images);
+        }
+
+        return $images;
+    }
+}
+
+if (!function_exists('_catalog_resolve_gallery_images_by_sku_raw')) {
+    function _catalog_resolve_gallery_images_by_sku_raw(string $sku, array $itemRow = [], ?PDO $pdo = null): array {
         static $diskCache = null;
 
         $sku = trim((string)$sku);

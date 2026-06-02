@@ -97,7 +97,8 @@ for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
             [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_TIMEOUT => 5
+                PDO::ATTR_TIMEOUT => 5,
+                PDO::ATTR_PERSISTENT => true
             ]
         );
 

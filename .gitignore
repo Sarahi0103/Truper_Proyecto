@@ -34,3 +34,5 @@ sync_images_to_db.php
 init_tickets.php
 clean_base64_images.php
 cleanup_orphaned_images.php
+cache/
+
