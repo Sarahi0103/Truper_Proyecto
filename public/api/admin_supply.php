@@ -802,9 +802,12 @@ function ensure_admin_supply_tables($pdo): void {
         CHECK (update_type IN ('noticia', 'promocion', 'evento'))
     )");
     
-    // Add image_url column if it doesn't exist (migration for existing tables)
+    // Add image_url and update_type columns if they don't exist (migration for existing tables)
     try {
         $pdo->exec("ALTER TABLE homepage_updates ADD COLUMN IF NOT EXISTS image_url TEXT");
+    } catch (Exception $ignored) {}
+    try {
+        $pdo->exec("ALTER TABLE homepage_updates ADD COLUMN IF NOT EXISTS update_type VARCHAR(20) NOT NULL DEFAULT 'noticia'");
     } catch (Exception $ignored) {}
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS product_categories (

@@ -246,7 +246,7 @@ html {
     }
 
     .promo-image {
-        max-height: 150px;
+        height: auto;
         margin-bottom: 0.5rem;
     }
 
@@ -472,7 +472,7 @@ html {
     }
 
     .promo-image {
-        max-height: 200px;
+        height: auto;
     }
 
     .catalog-filters {

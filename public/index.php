@@ -324,6 +324,13 @@ try {
         CHECK (update_type IN ('noticia', 'promocion', 'evento'))
     )");
 
+    try {
+        $pdo->exec("ALTER TABLE homepage_updates ADD COLUMN IF NOT EXISTS image_url TEXT");
+    } catch (Exception $ignored) {}
+    try {
+        $pdo->exec("ALTER TABLE homepage_updates ADD COLUMN IF NOT EXISTS update_type VARCHAR(20) NOT NULL DEFAULT 'noticia'");
+    } catch (Exception $ignored) {}
+
     $activeColumn = null;
     if (db_column_exists('homepage_updates', 'is_active')) {
         $activeColumn = 'is_active';
