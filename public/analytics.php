@@ -36,7 +36,6 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                         <a href="dashboard.php">Dashboard</a>
                         <a href="orders.php">Pedidos</a>
                         <a href="wholesale.php">Mayoreo</a>
-                        <a href="account.php">Mi Cuenta</a>
                         <a href="account.php#historyTab">Historial</a>
                         <a href="profile.php">Perfil</a>
                     </div>

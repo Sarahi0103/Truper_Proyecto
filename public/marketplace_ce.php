@@ -284,7 +284,6 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
                             <a href="/dashboard.php">Dashboard</a>
                             <a href="/orders.php">Pedidos</a>
                             <a href="/wholesale.php">Mayoreo</a>
-                            <a href="/account.php">Mi Cuenta</a>
                             <a href="/account.php#historyTab">Historial</a>
                             <a href="/profile.php">Perfil</a>
                         </div>
