@@ -238,13 +238,6 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
         .ce-cats { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
         .ce-count { color: var(--theme-text-muted); font-size: 0.88rem; margin-bottom: 0.75rem; }
 
-        .ce-empty {
-            text-align: center;
-            padding: 3rem 1rem;
-            color: var(--theme-text-muted);
-        }
-        .ce-empty svg { width: 56px; height: 56px; opacity: 0.3; margin-bottom: 0.75rem; }
-
         /* condition badge */
         .condition-tag {
             display: inline-block;
@@ -252,13 +245,10 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
             border-radius: 999px;
             font-size: 0.75rem;
             font-weight: 600;
-            background: var(--theme-accent-soft);
-            color: var(--theme-accent);
+            background: rgba(255,127,0,0.12);
+            color: var(--theme-accent, #ff7f00);
             border: 1px solid rgba(255,127,0,0.3);
-        }
-        .product-card-min .ce-add-btn {
-            width: 100%;
-            margin-top: 0.5rem;
+            margin-bottom: 0.3rem;
         }
     </style>
 </head>
@@ -297,7 +287,6 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
                 <?php endif; ?>
             </nav>
             <div class="header-actions">
-
                 <?php if ($whatsappPhone): ?>
                 <a href="https://wa.me/<?php echo htmlspecialchars($whatsappPhone,ENT_QUOTES,'UTF-8'); ?>?text=Hola%2C+me+interesa+un+art%C3%ADculo+del+Marketplace+CE"
                    target="_blank" rel="noopener" class="btn btn-secondary btn-small">Dudas por WhatsApp</a>
@@ -311,125 +300,128 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
 
     <main>
         <!-- HERO -->
-        <section class="ce-hero">
-            <div class="module-badge" style="background:rgba(255,127,0,0.18);border:1px solid rgba(255,127,0,0.4);color:#ffd0a0;display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;font-size:0.82rem;margin-bottom:8px;">
-                <span style="background:rgba(255,127,0,0.4);border-radius:4px;padding:1px 6px;font-weight:700;">CE</span> Segunda mano
-            </div>
+        <section class="catalog-hero">
+            <div class="module-badge module-main"><span class="module-glyph">CE</span> Segunda mano</div>
             <h1>Marketplace CE</h1>
             <p>Artículos de medio uso en buen estado: herramientas eléctricas, escaleras y más. Opciones accesibles con verificación del establecimiento.</p>
-            <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
+            <div style="margin-top: 12px;">
                 <a href="/" class="btn btn-secondary btn-small">← Catálogo principal</a>
             </div>
         </section>
 
-        <!-- FILTROS + BÚSQUEDA -->
-        <div class="ce-bar">
-            <input id="ceSearch" class="ce-search" type="text" placeholder="Buscar por nombre, código o condición...">
-        </div>
-
-        <?php if (!empty($allCategories)): ?>
-        <div class="ce-cats">
-            <button type="button" class="btn btn-ghost btn-small active" data-ce-cat="">Todos</button>
-            <?php foreach ($allCategories as $cat): ?>
-                <button type="button" class="btn btn-ghost btn-small" data-ce-cat="<?php echo htmlspecialchars($cat, ENT_QUOTES, 'UTF-8'); ?>">
-                    <?php echo htmlspecialchars($cat, ENT_QUOTES, 'UTF-8'); ?>
-                </button>
-            <?php endforeach; ?>
-        </div>
-        <?php endif; ?>
-
-        <div class="ce-count" id="ceCount"></div>
-
-        <!-- GRID -->
-        <?php if (empty($marketplaceItems)): ?>
-            <div class="ce-empty">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 3h-8v4h8V3z"/></svg>
-                <p>Todavía no hay artículos CE publicados.</p>
-                <?php if ($isAdmin): ?>
-                <p><a href="/admin_supply.php" class="btn btn-primary btn-small">Agregar desde Abastecimiento › Marketplace CE</a></p>
-                <?php endif; ?>
+        <section class="catalog-shell">
+            <!-- CATEGORÍAS -->
+            <?php if (!empty($allCategories)): ?>
+            <div class="catalog-categories-top">
+                <div class="catalog-categories-title">Categorías</div>
+                <div class="catalog-categories-actions">
+                    <button type="button" class="btn btn-ghost btn-small active" data-ce-cat="">Todos</button>
+                    <?php foreach ($allCategories as $cat): ?>
+                        <button type="button" class="btn btn-ghost btn-small" data-ce-cat="<?php echo htmlspecialchars($cat, ENT_QUOTES, 'UTF-8'); ?>">
+                            <?php echo htmlspecialchars($cat, ENT_QUOTES, 'UTF-8'); ?>
+                        </button>
+                    <?php endforeach; ?>
+                </div>
             </div>
-        <?php else: ?>
-            <div class="catalog-grid-min" id="ceGrid">
-                <?php foreach ($marketplaceItems as $item):
-                    $itemSku   = htmlspecialchars((string)$item['sku'], ENT_QUOTES, 'UTF-8');
-                    $itemName  = htmlspecialchars((string)$item['name'], ENT_QUOTES, 'UTF-8');
-                    $itemDesc  = htmlspecialchars((string)$item['description'], ENT_QUOTES, 'UTF-8');
-                    $itemCond  = htmlspecialchars((string)($item['condition_label'] ?? 'Seminuevo'), ENT_QUOTES, 'UTF-8');
-                    $itemCat   = htmlspecialchars((string)($item['category'] ?? 'Marketplace CE'), ENT_QUOTES, 'UTF-8');
-                    $itemImg   = htmlspecialchars((string)($item['image_url'] ?: 'images/products/default-product.svg'), ENT_QUOTES, 'UTF-8');
-                    $itemPrice = (float)($item['unit_price'] ?? 0);
-                    $itemStock = (int)($item['stock_quantity'] ?? 0);
-                    $stockClass = $itemStock <= 2 ? 'stock-low' : 'stock-ok';
-                    $stockLabel = $itemStock <= 2 ? 'Pocas piezas: ' : 'Disponibles: ';
-                    
-                    $images = marketplace_ce_gallery_images_by_sku((string)($item['sku'] ?? ''), $item);
-                    // 2) Fallback: variants_json (puede ser base64 o rutas)
-                    if (empty($images) && !empty($item['variants_json'])) {
-                        $parsed = json_decode($item['variants_json'], true);
-                        if (is_array($parsed) && count($parsed) > 0) {
-                            // Filtrar base64 para no mandarlos al HTML si hay alternativa de disco
-                            $nonBase64 = array_filter($parsed, fn($v) => strpos((string)$v, 'data:') !== 0);
-                            $images = !empty($nonBase64) ? array_values($nonBase64) : $parsed;
+            <?php endif; ?>
+
+            <!-- BÚSQUEDA -->
+            <div class="catalog-toolbar">
+                <input id="ceSearch" class="catalog-search" type="text" placeholder="Buscar por nombre, código o condición...">
+            </div>
+
+            <div class="ce-count" id="ceCount" style="color:var(--theme-text-muted,#888);font-size:0.88rem;margin-bottom:0.75rem;"></div>
+
+            <!-- GRID -->
+            <?php if (empty($marketplaceItems)): ?>
+                <div style="text-align:center;padding:3rem 1rem;color:var(--theme-text-muted,#888);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:56px;height:56px;opacity:0.3;margin-bottom:0.75rem;display:block;margin-left:auto;margin-right:auto;"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 3h-8v4h8V3z"/></svg>
+                    <p>Todavía no hay artículos CE publicados.</p>
+                    <?php if ($isAdmin): ?>
+                    <p><a href="/admin_supply.php" class="btn btn-primary btn-small">Agregar desde Abastecimiento › Marketplace CE</a></p>
+                    <?php endif; ?>
+                </div>
+            <?php else: ?>
+                <div class="catalog-grid-min" id="ceGrid">
+                    <?php foreach ($marketplaceItems as $item):
+                        $itemSku   = htmlspecialchars((string)$item['sku'], ENT_QUOTES, 'UTF-8');
+                        $itemName  = htmlspecialchars((string)$item['name'], ENT_QUOTES, 'UTF-8');
+                        $itemDesc  = htmlspecialchars((string)$item['description'], ENT_QUOTES, 'UTF-8');
+                        $itemCond  = htmlspecialchars((string)($item['condition_label'] ?? 'Seminuevo'), ENT_QUOTES, 'UTF-8');
+                        $itemCat   = htmlspecialchars((string)($item['category'] ?? 'Marketplace CE'), ENT_QUOTES, 'UTF-8');
+                        $itemImg   = htmlspecialchars((string)($item['image_url'] ?: 'images/products/default-product.svg'), ENT_QUOTES, 'UTF-8');
+                        $itemPrice = (float)($item['unit_price'] ?? 0);
+                        $itemStock = (int)($item['stock_quantity'] ?? 0);
+                        $stockClass = $itemStock <= 2 ? 'stock-low' : 'stock-ok';
+                        $stockLabel = $itemStock <= 2 ? 'Pocas piezas: ' : 'Disponibles: ';
+
+                        $images = marketplace_ce_gallery_images_by_sku((string)($item['sku'] ?? ''), $item);
+                        if (empty($images) && !empty($item['variants_json'])) {
+                            $parsed = json_decode($item['variants_json'], true);
+                            if (is_array($parsed) && count($parsed) > 0) {
+                                $nonBase64 = array_filter($parsed, fn($v) => strpos((string)$v, 'data:') !== 0);
+                                $images = !empty($nonBase64) ? array_values($nonBase64) : $parsed;
+                            }
                         }
-                    }
-                    // 3) Fallback final: image_url del producto
-                    if (empty($images)) {
-                        $fallbackImg = (string)($item['image_url'] ?? 'images/products/default-product.svg');
-                        $images = [$fallbackImg];
-                    }
-                ?>
-                <article class="product-card-min"
-                    data-ce-item
-                    data-id="<?php echo (int)$item['id']; ?>"
-                    data-name="<?php echo $itemName; ?>"
-                    data-sku="<?php echo $itemSku; ?>"
-                    data-category="<?php echo $itemCat; ?>"
-                    data-condition="<?php echo $itemCond; ?>">
-                    <div class="product-media" style="position:relative; overflow:hidden;">
-                        <a href="product_detail.php?id=<?php echo (int)$item['id']; ?>&source=ce" class="product-media-link" aria-label="Ver detalle de <?php echo $itemName; ?>"></a>
-                        <div class="gallery-track" style="display:flex; transition:transform 0.3s; width:100%; height:100%;">
+                        if (empty($images)) {
+                            $fallbackImg = (string)($item['image_url'] ?? 'images/products/default-product.svg');
+                            $images = [$fallbackImg];
+                        }
+                    ?>
+                    <article class="product-card-min"
+                        data-ce-item
+                        data-id="<?php echo (int)$item['id']; ?>"
+                        data-name="<?php echo $itemName; ?>"
+                        data-sku="<?php echo $itemSku; ?>"
+                        data-category="<?php echo $itemCat; ?>"
+                        data-condition="<?php echo $itemCond; ?>">
+                        <div class="product-media" data-product-gallery>
+                            <a href="product_detail.php?id=<?php echo (int)$item['id']; ?>&source=ce" class="product-media-link" aria-label="Ver detalle de <?php echo $itemName; ?>"></a>
                             <?php foreach ($images as $idx => $imgSrc): ?>
-                                <img src="<?php echo htmlspecialchars($imgSrc, ENT_QUOTES, 'UTF-8'); ?>"
-                                     style="min-width:100%; object-fit:contain; border-radius:12px; pointer-events:none;"
-                                     alt="<?php echo $itemName; ?>" loading="lazy">
+                                <img
+                                    class="product-gallery-image <?php echo $idx === 0 ? 'active' : ''; ?>"
+                                    src="<?php echo htmlspecialchars($imgSrc, ENT_QUOTES, 'UTF-8'); ?>"
+                                    alt="<?php echo $itemName; ?>"
+                                    loading="lazy">
                             <?php endforeach; ?>
+                            <?php if (count($images) > 1): ?>
+                                <button type="button" class="gallery-nav gallery-prev" data-gallery-prev aria-label="Imagen anterior">&#10094;</button>
+                                <button type="button" class="gallery-nav gallery-next" data-gallery-next aria-label="Imagen siguiente">&#10095;</button>
+                                <div class="gallery-counter"><span data-gallery-current>1</span>/<?php echo count($images); ?></div>
+                            <?php endif; ?>
                         </div>
-                        <?php if (count($images) > 1): ?>
-                            <button type="button" class="gallery-btn btn-prev" onclick="moveGallery(this, -1)" style="position:absolute; left:5px; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.6); color:white; border:none; border-radius:50%; width:30px; height:30px; cursor:pointer; z-index:10; font-size:1.2rem; display:flex; align-items:center; justify-content:center;">&#8249;</button>
-                            <button type="button" class="gallery-btn btn-next" onclick="moveGallery(this, 1)" style="position:absolute; right:5px; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.6); color:white; border:none; border-radius:50%; width:30px; height:30px; cursor:pointer; z-index:10; font-size:1.2rem; display:flex; align-items:center; justify-content:center;">&#8250;</button>
-                        <?php endif; ?>
-                    </div>
-                    <div class="product-content">
-                        <div class="catalog-tag">Abastecimiento</div>
-                        <div class="product-code-label"><strong>Código:</strong> <strong><?php echo $itemSku; ?></strong></div>
-                        <h3 class="product-title"><?php echo $itemName; ?></h3>
-                        <p class="product-spec"><?php echo $itemDesc; ?></p>
-                        <div style="margin-top:0.35rem;">
-                            <span class="condition-tag"><?php echo $itemCond; ?></span>
+                        <div class="product-content">
+                            <div class="catalog-tag"><?php echo $itemCat; ?></div>
+                            <div class="product-code-label"><strong>Código:</strong> <strong><?php echo $itemSku; ?></strong></div>
+                            <h3 class="product-title"><?php echo $itemName; ?></h3>
+                            <p class="product-spec"><?php echo $itemDesc ?: 'Artículo de segunda mano verificado'; ?></p>
+                            <div>
+                                <span class="condition-tag"><?php echo $itemCond; ?></span>
+                            </div>
+                            <span class="stock-badge <?php echo $stockClass; ?>">
+                                <?php echo $stockLabel . $itemStock; ?>
+                            </span>
+                            <div class="catalog-price">$<?php echo number_format($itemPrice, 2, '.', ','); ?></div>
+                            <div class="product-actions">
+                                <button
+                                    type="button"
+                                    class="btn btn-primary btn-small"
+                                    data-add-product
+                                    data-id="<?php echo (int)$item['id']; ?>"
+                                    data-sku="<?php echo $itemSku; ?>"
+                                    data-name="[CE] <?php echo $itemName; ?>"
+                                    data-image="<?php echo htmlspecialchars($images[0] ?? $itemImg, ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-price="<?php echo $itemPrice; ?>">Agregar al carrito</button>
+                            </div>
                         </div>
-                        <span class="stock-badge <?php echo $stockClass; ?>">
-                            <?php echo $stockLabel . $itemStock; ?>
-                        </span>
-                        <div class="catalog-price">$<?php echo number_format($itemPrice, 2, '.', ','); ?></div>
-                        <div class="product-actions">
-                            <button
-                                type="button"
-                                class="btn btn-primary btn-small ce-add-btn"
-                                data-add-product
-                                data-id="<?php echo (int)$item['id']; ?>"
-                                data-sku="<?php echo $itemSku; ?>"
-                                data-name="[CE] <?php echo $itemName; ?>"
-                                data-price="<?php echo $itemPrice; ?>">Agregar al carrito</button>
-                        </div>
-                    </div>
-                </article>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
+                    </article>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </section>
     </main>
 
-    <!-- CARRITO (mismo del catálogo principal) -->
+    <!-- CARRITO -->
     <button id="openCart" class="cart-fab">Carrito (<span id="cartCount">0</span>)</button>
     <aside id="cartDrawer" class="cart-drawer">
         <div class="d-flex justify-between align-center">
@@ -462,22 +454,22 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
         const companyWhatsApp = '<?php echo htmlspecialchars($whatsappPhone, ENT_QUOTES, 'UTF-8'); ?>';
 
         /* ===== Filtrado CE ===== */
-        const ceItems  = Array.from(document.querySelectorAll('[data-ce-item]'));
-        const ceSearch = document.getElementById('ceSearch');
+        const ceItems   = Array.from(document.querySelectorAll('[data-ce-item]'));
+        const ceSearch  = document.getElementById('ceSearch');
         const ceCatBtns = Array.from(document.querySelectorAll('[data-ce-cat]'));
-        const ceCount  = document.getElementById('ceCount');
+        const ceCount   = document.getElementById('ceCount');
 
-        let activeCat  = '';
-        let searchQ    = '';
+        let activeCat = '';
+        let searchQ   = '';
 
         function filterCe() {
             const q   = searchQ.toLowerCase().trim();
             const cat = activeCat.toLowerCase().trim();
             let visible = 0;
             ceItems.forEach(card => {
-                const name  = (card.dataset.name || '').toLowerCase();
-                const sku   = (card.dataset.sku  || '').toLowerCase();
-                const cond  = (card.dataset.condition || '').toLowerCase();
+                const name    = (card.dataset.name || '').toLowerCase();
+                const sku     = (card.dataset.sku  || '').toLowerCase();
+                const cond    = (card.dataset.condition || '').toLowerCase();
                 const cardCat = (card.dataset.category || '').toLowerCase();
 
                 const matchSearch = !q || name.includes(q) || sku.includes(q) || cond.includes(q);
@@ -490,14 +482,10 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
                     card.style.display = 'none';
                 }
             });
-            if (ceCount) {
-                ceCount.textContent = `Mostrando ${visible} de ${ceItems.length} artículos`;
-            }
+            if (ceCount) ceCount.textContent = `Mostrando ${visible} de ${ceItems.length} artículos`;
         }
 
-        if (ceSearch) {
-            ceSearch.addEventListener('input', () => { searchQ = ceSearch.value; filterCe(); });
-        }
+        if (ceSearch) ceSearch.addEventListener('input', () => { searchQ = ceSearch.value; filterCe(); });
 
         ceCatBtns.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -508,7 +496,7 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
             });
         });
 
-        filterCe(); // initial count
+        filterCe();
 
         /* ===== WhatsApp share ===== */
         const shareBtn = document.getElementById('shareWhatsApp');
@@ -548,22 +536,7 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
             });
         }
     })();
-        // Gallery Navigation
-        function moveGallery(btn, dir) {
-            const track = btn.parentElement.querySelector('.gallery-track');
-            if (!track) return;
-            const images = track.querySelectorAll('img');
-            const total = images.length;
-            if (total <= 1) return;
-
-            let currentIdx = parseInt(track.dataset.currentIndex || '0');
-            currentIdx += dir;
-            if (currentIdx < 0) currentIdx = total - 1;
-            if (currentIdx >= total) currentIdx = 0;
-
-            track.dataset.currentIndex = currentIdx;
-            track.style.transform = `translateX(-${currentIdx * 100}%)`;
-        }
     </script>
+    <script src="js/mobile-optimize.js"></script>
 </body>
 </html>
