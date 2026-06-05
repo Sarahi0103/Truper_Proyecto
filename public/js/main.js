@@ -40,21 +40,112 @@ function initThemeSystem() {
  * Mostrar alerta
  */
 function showAlert(message, type = 'info') {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type}`;
-    alertDiv.innerHTML = `
-        ${message}
-        <span class="close-alert" onclick="this.parentElement.remove()">×</span>
+    // 1. Obtener o crear el contenedor de Toasts flotantes
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.style.cssText = `
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 100000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 360px;
+            width: calc(100% - 48px);
+            pointer-events: none;
+        `;
+        document.body.appendChild(toastContainer);
+    }
+
+    // 2. Crear el Toast
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type} toast-item`;
+    toast.style.cssText = `
+        pointer-events: auto;
+        margin: 0 !important;
+        animation: toast-slide-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        background: #111111;
+        color: #ffffff;
+        padding: 1.1rem 1.4rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        position: relative;
     `;
+
+    // Asignar colores e íconos según el tipo
+    let icon = 'ℹ️';
+    let borderColor = 'rgba(255,255,255,0.15)';
+    let accentColor = '#94a3b8';
     
-    const container = document.querySelector('main') || document.body;
-    container.insertBefore(alertDiv, container.firstChild);
+    if (type === 'success') {
+        icon = '🛒';
+        borderColor = 'rgba(34, 197, 94, 0.4)';
+        accentColor = '#22c55e';
+        toast.style.background = '#0d1612'; // Verde oscuro sutil
+    } else if (type === 'error') {
+        icon = '❌';
+        borderColor = 'rgba(239, 68, 68, 0.4)';
+        accentColor = '#ef4444';
+        toast.style.background = '#180e0e'; // Rojo oscuro sutil
+    } else if (type === 'warning') {
+        icon = '⚠️';
+        borderColor = 'rgba(245, 158, 11, 0.4)';
+        accentColor = '#f59e0b';
+        toast.style.background = '#18120d'; // Amarillo/Naranja oscuro sutil
+    }
+
+    toast.style.borderColor = borderColor;
     
+    toast.innerHTML = `
+        <div style="display:flex; align-items:center; gap:12px; flex:1;">
+            <span style="font-size:1.3rem; color:${accentColor}; display:flex; align-items:center; justify-content:center;">${icon}</span>
+            <span style="font-weight:600; font-size:0.92rem; line-height:1.4; color:#ffffff;">${message}</span>
+        </div>
+        <span class="close-alert" onclick="this.parentElement.remove()" style="cursor:pointer; font-size:1.25rem; opacity:0.5; transition:opacity 0.2s; padding:2px; display:flex; align-items:center; justify-content:center; color:#ffffff;">×</span>
+    `;
+
+    // Inyectar animación keyframes al documento si no está agregada
+    if (!document.getElementById('toast-animation-styles')) {
+        const styles = document.createElement('style');
+        styles.id = 'toast-animation-styles';
+        styles.innerHTML = `
+            @keyframes toast-slide-in {
+                from { transform: translateX(50px) scale(0.95); opacity: 0; }
+                to { transform: translateX(0) scale(1); opacity: 1; }
+            }
+            @keyframes toast-fade-out {
+                to { transform: translateY(-10px) scale(0.95); opacity: 0; }
+            }
+            .toast-item-fadeout {
+                animation: toast-fade-out 0.25s ease forwards !important;
+            }
+            .close-alert:hover {
+                opacity: 1 !important;
+                color: #ff7f00 !important;
+            }
+        `;
+        document.head.appendChild(styles);
+    }
+
+    toastContainer.appendChild(toast);
+
+    // Auto eliminar después de 4 segundos
     setTimeout(() => {
-        if (alertDiv.parentNode) {
-            alertDiv.remove();
+        if (toast.parentNode) {
+            toast.classList.add('toast-item-fadeout');
+            setTimeout(() => {
+                if (toast.parentNode) toast.remove();
+            }, 250);
         }
-    }, 5000);
+    }, 4000);
 }
 
 /**
