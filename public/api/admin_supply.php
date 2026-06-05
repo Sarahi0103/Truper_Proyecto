@@ -4467,12 +4467,14 @@ try {
 
             // Handle image upload if present
             $imageUrl = null;
+            $imageWarning = null;
             if (isset($_FILES['image']) && $_FILES['image']['error'] !== UPLOAD_ERR_NO_FILE) {
                 try {
                     $imageUrl = store_product_image($_FILES['image']);
                 } catch (Exception $e) {
-                    $response = ['success' => false, 'message' => 'Error al cargar imagen: ' . $e->getMessage()];
-                    break;
+                    // Non-fatal: record saved without image, warn admin
+                    $imageWarning = 'Imagen no pudo guardarse: ' . $e->getMessage();
+                    error_log('homepage_update image upload error: ' . $e->getMessage());
                 }
             }
 
@@ -4503,7 +4505,8 @@ try {
                 $values[] = $id;
                 $stmt = $pdo->prepare('UPDATE homepage_updates SET ' . implode(', ', $sets) . ' WHERE id = ?');
                 $stmt->execute($values);
-                $response = ['success' => true, 'message' => 'Publicacion actualizada'];
+                $msg = $imageWarning ? ('Publicacion actualizada (sin imagen: ' . $imageWarning . ')') : 'Publicacion actualizada';
+                $response = ['success' => true, 'message' => $msg];
             } else {
                 $columns = ['update_type', 'title', 'body'];
                 $placeholders = ['?', '?', '?'];
@@ -4537,7 +4540,8 @@ try {
 
                 $stmt = $pdo->prepare('INSERT INTO homepage_updates (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ')');
                 $stmt->execute($values);
-                $response = ['success' => true, 'message' => 'Publicacion creada'];
+                $msg = $imageWarning ? ('Publicacion creada (sin imagen: ' . $imageWarning . ')') : 'Publicacion creada';
+                $response = ['success' => true, 'message' => $msg];
             }
             break;
 

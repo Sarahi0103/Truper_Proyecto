@@ -561,52 +561,77 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
         </section>
 
         <section id="updatesTab" class="tab-content admin-tab-panel">
-            <div class="card mb-3 admin-editor-card"><div class="card-body">
-                <h3>Noticias y promociones de portada</h3>
-                <p class="text-muted">Administra el carrusel automático que se muestra en la página principal.</p>
+            <div class="card mb-3 admin-editor-card">
+                <div class="card-body">
+                    <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.25rem;">
+                        <span style="background:var(--theme-accent);color:#fff;border-radius:8px;padding:5px 12px;font-weight:700;font-size:0.85rem;letter-spacing:.03em;">📢 PORTADA</span>
+                        <div>
+                            <h3 style="margin:0;">Noticias y promociones de portada</h3>
+                            <p class="text-muted" style="margin:0;font-size:0.85rem;">Administra el carrusel automático que se muestra en la página principal.</p>
+                        </div>
+                    </div>
+                    <hr style="border:none;border-top:1px solid var(--theme-border);margin:1rem 0;">
 
-                <input type="hidden" id="updateEditId" value="">
+                    <input type="hidden" id="updateEditId" value="">
+                    <div id="updateFormMode" style="display:none;background:rgba(255,127,0,0.08);border:1px solid rgba(255,127,0,0.25);border-radius:8px;padding:0.6rem 1rem;margin-bottom:1rem;font-size:0.88rem;color:var(--theme-accent);">
+                        ✏️ Editando publicación existente — <button type="button" class="btn btn-ghost btn-small" onclick="resetUpdateForm()" style="font-size:0.8rem;padding:2px 8px;">Cancelar edición</button>
+                    </div>
 
-                <div class="grid grid-3">
+                    <div class="grid grid-3" style="gap:1rem;">
+                        <div class="form-group">
+                            <label>Tipo de publicación</label>
+                            <select id="updateType">
+                                <option value="noticia">📰 Noticia</option>
+                                <option value="promocion">🏷️ Promoción</option>
+                                <option value="evento">📅 Evento</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Orden de aparición</label>
+                            <input id="updateOrder" type="number" min="0" step="1" value="0" placeholder="1, 2, 3...">
+                        </div>
+                        <div class="form-group">
+                            <label>¿Visible en portada?</label>
+                            <select id="updateActive">
+                                <option value="1">✅ Sí — visible</option>
+                                <option value="0">🚫 No — oculta</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div class="form-group">
-                        <label>Tipo</label>
-                        <select id="updateType">
-                            <option value="noticia">Noticia</option>
-                            <option value="promocion">Promoción</option>
-                            <option value="evento">Evento</option>
-                        </select>
+                        <label>Título <span style="color:var(--theme-accent);">*</span></label>
+                        <input id="updateTitle" type="text" maxlength="220" placeholder="Ej: ¡Nueva llegada de escaleras industriales!">
                     </div>
                     <div class="form-group">
-                        <label>Orden</label>
-                        <input id="updateOrder" type="number" min="0" step="1" value="0">
+                        <label>Contenido <span style="color:var(--theme-accent);">*</span></label>
+                        <textarea id="updateBody" rows="4" maxlength="1200" placeholder="Describe la noticia, promoción o evento..."></textarea>
+                        <small class="text-muted">Máximo 1200 caracteres.</small>
                     </div>
+
                     <div class="form-group">
-                        <label>Visible en portada</label>
-                        <select id="updateActive">
-                            <option value="1">Sí</option>
-                            <option value="0">No</option>
-                        </select>
+                        <label>Imagen de portada <span class="text-muted">(opcional, JPG/PNG/WebP)</span></label>
+                        <input id="updateImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
                     </div>
-                </div>
+                    <div id="updateImagePreview" style="display:none;margin-top:0.75rem;background:var(--theme-surface);border:1px solid var(--theme-border);border-radius:10px;padding:0.75rem;max-width:340px;">
+                        <p class="text-muted" style="margin:0 0 0.5rem;font-size:0.82rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Imagen previa:</p>
+                        <img id="updateImagePreviewImg" src="" alt="Vista previa" style="max-width:100%;border-radius:8px;display:block;">
+                    </div>
 
-                <div class="form-group"><label>Título</label><input id="updateTitle" type="text" maxlength="220"></div>
-                <div class="form-group"><label>Contenido</label><textarea id="updateBody" rows="4" maxlength="1200"></textarea></div>
-                <div class="form-group"><label>Imagen (opcional)</label><input id="updateImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></div>
-                <div id="updateImagePreview" style="display: none; margin-top: 1rem;">
-                    <p class="text-muted">Imagen previa:</p>
-                    <img id="updateImagePreviewImg" src="" alt="Vista previa" style="max-width: 300px; border-radius: 8px; margin-top: 0.5rem;">
-                </div>
+                    <div class="d-flex align-center" style="gap:0.75rem;flex-wrap:wrap;margin-top:1.25rem;">
+                        <button class="btn btn-primary" type="button" onclick="saveHomepageUpdate()" id="updateSaveButton">💾 Guardar publicación</button>
+                        <button class="btn btn-secondary" type="button" onclick="resetUpdateForm()">✕ Cancelar</button>
+                    </div>
 
-                <div class="d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap;">
-                    <button class="btn btn-primary" type="button" onclick="saveHomepageUpdate()" id="updateSaveButton">Guardar publicación</button>
-                    <button class="btn btn-secondary" type="button" onclick="resetUpdateForm()">Cancelar</button>
+                    <div id="updateResult" class="mt-3"></div>
                 </div>
-
-                <div id="updateResult" class="mt-3"></div>
-            </div></div>
+            </div>
 
             <div class="card"><div class="card-body">
-                <h3>Publicaciones registradas</h3>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+                    <h3 style="margin:0;">Publicaciones registradas</h3>
+                    <button type="button" class="btn btn-ghost btn-small" onclick="loadHomepageUpdatesAdmin()">🔄 Recargar</button>
+                </div>
                 <div id="updatesList" class="text-muted">Cargando publicaciones...</div>
             </div></div>
         </section>
@@ -1794,15 +1819,14 @@ function resetUpdateForm() {
         preview.style.display = 'none';
     }
 
+    const banner = document.getElementById('updateFormMode');
+    if (banner) banner.style.display = 'none';
+
     const button = document.getElementById('updateSaveButton');
-    if (button) {
-        button.textContent = 'Guardar publicación';
-    }
+    if (button) button.innerHTML = '💾 Guardar publicación';
 
     const box = document.getElementById('updateResult');
-    if (box) {
-        box.innerHTML = '';
-    }
+    if (box) box.innerHTML = '';
 }
 
 function fillUpdateForm(update) {
@@ -1813,6 +1837,11 @@ function fillUpdateForm(update) {
     document.getElementById('updateActive').value = Number(update.is_active) ? '1' : '0';
     document.getElementById('updateTitle').value = update.title || '';
     document.getElementById('updateBody').value = update.body || '';
+
+    const banner = document.getElementById('updateFormMode');
+    if (banner) banner.style.display = 'block';
+    const btn = document.getElementById('updateSaveButton');
+    if (btn) btn.innerHTML = '💾 Actualizar publicación';
     document.getElementById('updateImage').value = '';
 
     const preview = document.getElementById('updateImagePreview');
@@ -1959,7 +1988,8 @@ async function saveHomepageUpdate() {
         const res = await response.json();
         
         if (!res || !res.success) {
-            if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible guardar')}</div>`;
+            const detail = (res && res.debug && res.debug.detail) ? ' — ' + res.debug.detail : '';
+            if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible guardar')}${escapeHtml(detail)}</div>`;
             return;
         }
         
