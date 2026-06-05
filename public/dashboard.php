@@ -474,6 +474,8 @@ $first_name = explode(' ', $user_name)[0];
                         <a href="dashboard.php" class="active">Dashboard</a>
                         <a href="orders.php">Pedidos</a>
                         <a href="wholesale.php">Mayoreo</a>
+                        <a href="account.php">Mi Cuenta</a>
+                        <a href="account.php#historyTab">Historial</a>
                         <a href="profile.php">Perfil</a>
                     </div>
                 </div>
@@ -628,6 +630,9 @@ $first_name = explode(' ', $user_name)[0];
                         <a href="wholesale.php" class="db-action-btn" id="qa-wholesale">
                             <span class="db-action-icon">🏷️</span>Mayoreo
                         </a>
+                        <a href="account.php#historyTab" class="db-action-btn" id="qa-history">
+                            <span class="db-action-icon">📜</span>Historial
+                        </a>
                         <a href="index.php" class="db-action-btn" id="qa-catalog">
                             <span class="db-action-icon">🛍️</span>Catálogo
                         </a>
@@ -700,6 +705,25 @@ $first_name = explode(' ', $user_name)[0];
                 </div>
             </div>
             <?php endif; ?>
+
+            <!-- ── Historial Reciente ── -->
+            <div class="db-card" style="margin-bottom:1.25rem;">
+                <div class="db-card-header">
+                    <div class="db-card-title">📜 Historial de Transacciones</div>
+                    <a href="account.php#historyTab" class="db-view-all">Ver todo →</a>
+                </div>
+                <div class="db-card-body">
+                    <div id="dashHistoryRows">
+                        <div class="db-activity-empty">
+                            <div style="width:28px;height:28px;border:3px solid #1f1f1f;border-top-color:#ff7f00;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto;"></div>
+                            <div class="db-activity-empty-text">Cargando historial…</div>
+                        </div>
+                    </div>
+                    <a href="account.php#historyTab" style="display:block; margin-top:1rem; background:linear-gradient(135deg,#ff7f00,#e06b00); color:#000; font-weight:800; text-align:center; padding:.7rem; border-radius:10px; text-decoration:none; font-size:.85rem; transition:all .2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
+                        Ver Historial Completo en Mi Cuenta
+                    </a>
+                </div>
+            </div>
 
         </div><!-- /db-shell -->
     </main>
@@ -909,11 +933,63 @@ $first_name = explode(' ', $user_name)[0];
             }
         }
 
+        /* ── Recent History ── */
+        async function loadDashboardHistory() {
+            const box = document.getElementById('dashHistoryRows');
+            if (!box) return;
+
+            try {
+                const res = await apiCall('/client_account.php?action=history');
+                if (!res || !res.success || !res.items || res.items.length === 0) {
+                    box.innerHTML = `<div class="db-activity-empty">
+                        <div class="db-activity-empty-icon">📭</div>
+                        <div class="db-activity-empty-text">Sin transacciones registradas.</div>
+                    </div>`;
+                    return;
+                }
+
+                const items = res.items.slice(0, 6);
+                const badgeMap = {
+                    client_order:   { label: 'Pedido',       color: '#ff7f00', bg: 'rgba(255,127,0,.12)' },
+                    payment:        { label: 'Pago',          color: '#2ecc71', bg: 'rgba(46,204,113,.12)' },
+                    supplier_order: { label: 'Orden Prov.',   color: '#a78bfa', bg: 'rgba(167,139,250,.12)' },
+                };
+
+                box.innerHTML = items.map(i => {
+                    const bm = badgeMap[i.transaction_type] || { label: i.transaction_type, color: '#888', bg: 'rgba(136,136,136,.1)' };
+                    let parsed = {};
+                    try { parsed = JSON.parse(i.data_json || '{}'); } catch(e) {}
+                    const detail = i.transaction_type === 'client_order'
+                        ? `Total: <strong style="color:#ff7f00;">$${Number(parsed.total||0).toFixed(2)}</strong>`
+                        : i.transaction_type === 'payment'
+                            ? `Abono: <strong style="color:#2ecc71;">$${Number(parsed.amount||0).toFixed(2)}</strong>`
+                            : (i.reference_folio || '—');
+                    const dateStr = i.created_at ? new Date(i.created_at).toLocaleDateString('es-MX') : '—';
+                    return `<div class="db-order-row">
+                        <div>
+                            <span style="display:inline-block;padding:.15rem .6rem;border-radius:999px;font-size:.67rem;font-weight:700;background:${bm.bg};color:${bm.color};">${bm.label}</span>
+                            <div style="font-size:.72rem; color:#555; margin-top:.2rem;">${dateStr}</div>
+                        </div>
+                        <div class="db-order-info">
+                            <div class="db-order-folio" style="font-size:.8rem;">${i.reference_folio || '—'}</div>
+                            <div style="font-size:.78rem; color:#888;">${detail}</div>
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch(e) {
+                box.innerHTML = `<div class="db-activity-empty">
+                    <div class="db-activity-empty-icon">⚠️</div>
+                    <div class="db-activity-empty-text">Error al cargar historial.</div>
+                </div>`;
+            }
+        }
+
         /* ── Init ── */
         document.addEventListener('DOMContentLoaded', function () {
             loadDashboardMetrics();
             loadRecentOrders();
             loadTopProducts();
+            loadDashboardHistory();
         });
     </script>
     <script src="js/mobile-optimize.js"></script>

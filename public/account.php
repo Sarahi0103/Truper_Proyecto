@@ -820,6 +820,20 @@ document.addEventListener('DOMContentLoaded', function() {
     renderCart();
     loadPreviousQuotes();
     loadHistory();
+
+    // Activar pestaña según el hash de la URL (ej: account.php#historyTab)
+    const hash = window.location.hash.replace('#', '');
+    if (hash) {
+        const targetBtn = document.querySelector(`.tab-button[data-tab="${hash}"]`);
+        const targetSection = document.getElementById(hash);
+        if (targetBtn && targetSection) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            targetSection.classList.add('active');
+            targetBtn.classList.add('active');
+            targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
 });
 </script>
 <script src="js/mobile-optimize.js"></script>
