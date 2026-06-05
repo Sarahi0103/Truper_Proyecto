@@ -107,9 +107,9 @@ if (!empty($profile['birthdate'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Perfil - Truper Platform</title>
-    <link rel="stylesheet" href="css/styles.css?v=2.2">
-    <link rel="stylesheet" href="css/theme.css?v=2.5">
-    <link rel="stylesheet" href="css/responsive-complete.css?v=2.2">
+    <link rel="stylesheet" href="css/styles.css?v=3.0">
+    <link rel="stylesheet" href="css/theme.css?v=3.0">
+    <link rel="stylesheet" href="css/responsive-complete.css?v=3.0">
     <style>
         .loyalty-wrap {
             text-align: center;
@@ -224,7 +224,9 @@ if (!empty($profile['birthdate'])) {
 
             <div class="tabs">
                 <button class="tab-button active" data-tab="profileInfo">Información Personal</button>
+                <?php if (!$is_admin): ?>
                 <button class="tab-button" data-tab="loyaltyInfo">Puntos de Lealtad</button>
+                <?php endif; ?>
                 <?php if (!$is_client): ?>
                 <button class="tab-button" data-tab="passwordChange">Cambiar Contraseña</button>
                 <?php endif; ?>
@@ -286,6 +288,7 @@ if (!empty($profile['birthdate'])) {
             </div>
 
             <!-- PUNTOS DE LEALTAD -->
+            <?php if (!$is_admin): ?>
             <div id="loyaltyInfo" class="tab-content">
                 <div class="card">
                     <div class="card-header">Programa de Lealtad</div>
@@ -325,6 +328,7 @@ if (!empty($profile['birthdate'])) {
                     </div>
                 </div>
             </div>
+            <?php endif; ?>
 
             <!-- CAMBIAR CONTRASEÑA -->
             <?php if (!$is_client): ?>
@@ -372,7 +376,7 @@ if (!empty($profile['birthdate'])) {
         </div>
     </footer>
 
-    <script src="js/main.js?v=2.6"></script>
+    <script src="js/main.js?v=3.0"></script>
     <script>
         function goToOrdersWithDiscount() {
             window.location.href = 'orders.php?tab=newOrder';
@@ -384,6 +388,6 @@ if (!empty($profile['birthdate'])) {
             }
         }
     </script>
-    <script src="js/mobile-optimize.js"></script>
+    <script src="js/mobile-optimize.js?v=3.0"></script>
 </body>
 </html>
