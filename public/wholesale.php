@@ -147,7 +147,7 @@ $column_count = $is_admin ? 7 : 6;
                     <a href="profile.php">Perfil</a>
                 </div>
             </div>
-            <?php if ($isAdmin): ?>
+            <?php if ($is_admin): ?>
                 <div class="nav-dropdown">
                     <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>
                     <div class="nav-dropdown-content">
