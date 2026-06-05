@@ -16,6 +16,36 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/responsive-complete.css?v=2.2">
     <style>
+        /* Estilos para badges de estatus de visitas */
+        .visit-status-badge {
+            font-size: 0.72rem;
+            font-weight: bold;
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+        }
+        .visit-status-badge.badge-upcoming {
+            background: rgba(255, 102, 0, 0.15);
+            color: var(--color-naranja, #ff6600);
+            border: 1px solid rgba(255, 102, 0, 0.25);
+        }
+        .visit-status-badge.badge-past {
+            background: rgba(255, 255, 255, 0.05);
+            color: #888888;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .visit-item.visit-past {
+            opacity: 0.65;
+            transition: opacity 0.2s, transform 0.2s, border-color 0.2s;
+        }
+        .visit-item.visit-past:hover {
+            opacity: 1;
+        }
+        .visit-item.visit-past::before {
+            background: #555555 !important;
+        }
+
         /* Estilos para el selector de exclusión de productos */
         .exclude-chips-container {
             display: flex;
@@ -2826,19 +2856,69 @@ function renderCalendarMonth() {
         return;
     }
 
-    list.innerHTML = listTitleHtml + `
-        <div class="visit-list-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;">
-            ${filteredVisits.map(i => `
-                <div class="visit-item">
-                    <div class="visit-header">
-                        <span class="visit-supplier">${escapeHtml(i.supplier_name)}</span>
-                        <span class="visit-time">${escapeHtml(formatDateTimeLocal(i.visit_datetime))}</span>
-                    </div>
-                    ${i.notes ? `<div class="visit-notes">${escapeHtml(i.notes)}</div>` : ''}
+    const now = new Date();
+    const upcomingVisits = [];
+    const pastVisits = [];
+
+    filteredVisits.forEach((visit) => {
+        const d = new Date(visit.visit_datetime);
+        if (Number.isNaN(d.getTime())) return;
+        if (d >= now) {
+            upcomingVisits.push(visit);
+        } else {
+            pastVisits.push(visit);
+        }
+    });
+
+    // Sort past visits by date descending (latest past first)
+    pastVisits.sort((a, b) => new Date(b.visit_datetime) - new Date(a.visit_datetime));
+
+    const renderVisitCard = (i, isUpcoming) => `
+        <div class="visit-item ${isUpcoming ? 'visit-upcoming' : 'visit-past'}">
+            <div class="visit-header">
+                <span class="visit-supplier">${escapeHtml(i.supplier_name)}</span>
+                <div class="d-flex align-center" style="gap: 0.5rem; flex-wrap: wrap;">
+                    <span class="visit-status-badge ${isUpcoming ? 'badge-upcoming' : 'badge-past'}">
+                        ${isUpcoming ? '⏰ Próxima' : '✅ Pasada'}
+                    </span>
+                    <span class="visit-time" style="font-size: 0.78rem;">${escapeHtml(formatDateTimeLocal(i.visit_datetime))}</span>
                 </div>
-            `).join('')}
+            </div>
+            ${i.notes ? `<div class="visit-notes">${escapeHtml(i.notes)}</div>` : ''}
         </div>
     `;
+
+    let splitHtml = `
+        <div class="visits-split-container" style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <!-- Próximas Visitas -->
+            <div class="visits-section-upcoming">
+                <h4 style="color: var(--color-naranja, #ff6600); border-bottom: 2px solid rgba(255, 102, 0, 0.15); padding-bottom: 0.4rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; margin-top: 0; margin-bottom: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                    🚀 Próximas Visitas (${upcomingVisits.length})
+                </h4>
+                ${upcomingVisits.length === 0 
+                    ? '<p class="text-muted" style="font-size:0.85rem; padding: 1rem; text-align: center; background: rgba(255,255,255,0.01); border: 1px dashed rgba(255,255,255,0.06); border-radius: 8px;">No hay visitas próximas agendadas.</p>'
+                    : `<div class="visit-list-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;">
+                        ${upcomingVisits.map(i => renderVisitCard(i, true)).join('')}
+                       </div>`
+                }
+            </div>
+
+            <!-- Visitas Pasadas -->
+            <div class="visits-section-past">
+                <h4 style="color: #888888; border-bottom: 2px solid rgba(255, 255, 255, 0.08); padding-bottom: 0.4rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; margin-top: 0; margin-bottom: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                    ✓ Historial / Visitas Pasadas (${pastVisits.length})
+                </h4>
+                ${pastVisits.length === 0 
+                    ? '<p class="text-muted" style="font-size:0.85rem; padding: 1rem; text-align: center; background: rgba(255,255,255,0.01); border: 1px dashed rgba(255,255,255,0.06); border-radius: 8px;">No hay registro de visitas pasadas.</p>'
+                    : `<div class="visit-list-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;">
+                        ${pastVisits.map(i => renderVisitCard(i, false)).join('')}
+                       </div>`
+                }
+            </div>
+        </div>
+    `;
+
+    list.innerHTML = listTitleHtml + splitHtml;
 }
 
 function changeCalendarMonth(offset) {
