@@ -21,10 +21,16 @@ sed -ri "s#^[[:space:]]*<Directory .*#    <Directory ${APP_ROOT}/>#" /etc/apache
 
 # Initialize image directories
 echo "Initializing image directories..."
-PERSIST_DIR="/var/www/data/images"
+PERSIST_DIR="/var/www/html/images"
 
-# If a persistent host-mounted directory is available, use it for images
-if [ -d "${PERSIST_DIR}" ]; then
+# If a persistent host-mounted directory is available, use it for images.
+# We check if running on Render/production to avoid deleting/replacing local bind mounts.
+IS_RENDER=false
+if [ "${RENDER:-}" = "true" ] || [ "${APP_ENV:-}" = "production" ]; then
+  IS_RENDER=true
+fi
+
+if [ "$IS_RENDER" = "true" ] && [ -d "${PERSIST_DIR}" ]; then
   echo "Using persistent images dir: ${PERSIST_DIR}"
   mkdir -p "${PERSIST_DIR}/products/gallery"
 
@@ -41,6 +47,7 @@ if [ -d "${PERSIST_DIR}" ]; then
   rm -rf /var/www/html/public/images || true
   ln -s "${PERSIST_DIR}" /var/www/html/public/images
 else
+  echo "Using local ephemeral or bind-mounted image directories"
   mkdir -p /var/www/html/public/images/products/gallery
   mkdir -p /var/www/html/public/images/products/by_code
   chown -R www-data:www-data /var/www/html/public/images 2>/dev/null || true
