@@ -1622,7 +1622,7 @@ async function filterExcludeProducts(query) {
     // If query is empty, we show default active products list (up to 200 items)
     if (cleanQuery.length < 2) {
         try {
-            const res = await apiCall('/products.php?action=list');
+            const res = await apiCall('/products.php?action=list&all=1');
             if (res && res.success && Array.isArray(res.products)) {
                 renderExcludeDropdownItems(res.products);
             } else {
@@ -1639,7 +1639,7 @@ async function filterExcludeProducts(query) {
     if (activeSearchTimeout) clearTimeout(activeSearchTimeout);
     activeSearchTimeout = setTimeout(async () => {
         try {
-            const res = await apiCall(`/products.php?action=search&q=${encodeURIComponent(cleanQuery)}`);
+            const res = await apiCall(`/products.php?action=search&all=1&q=${encodeURIComponent(cleanQuery)}`);
             if (res && res.success && Array.isArray(res.products)) {
                 renderExcludeDropdownItems(res.products);
             } else {

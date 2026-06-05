@@ -167,7 +167,28 @@ try {
                 break;
             }
 
-            $products = $productModel->search($term);
+            $include_inactive_categories = isset($_GET['include_inactive_categories']) || isset($_GET['all']);
+            if ($include_inactive_categories) {
+                $search = "%$term%";
+                $queries = [
+                    ["SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE is_active = true AND (name ILIKE ? OR sku ILIKE ? OR barcode ILIKE ?) ORDER BY name LIMIT 200", [$search, $search, $search]],
+                    ["SELECT id, name, sku, COALESCE(sell_price, unit_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE CAST(active AS text) IN ('1', 'true', 't') AND (name ILIKE ? OR sku ILIKE ? OR barcode ILIKE ?) ORDER BY name LIMIT 200", [$search, $search, $search]]
+                ];
+                $products = [];
+                foreach ($queries as $qSpec) {
+                    try {
+                        $stmt = $pdo->prepare($qSpec[0]);
+                        $stmt->execute($qSpec[1]);
+                        $products = $stmt->fetchAll();
+                        if (is_array($products)) {
+                            break;
+                        }
+                    } catch (Exception $e) {}
+                }
+            } else {
+                $products = $productModel->search($term);
+            }
+
             if (is_array($products)) {
                 $products = array_map('normalize_product_sku_for_response', $products);
             }
@@ -181,25 +202,34 @@ try {
             }
 
             $category = sanitize($_GET['category'] ?? '');
+            $include_inactive_categories = isset($_GET['include_inactive_categories']) || isset($_GET['all']);
 
             $products = [];
             $queries = [];
             if ($category !== '') {
+                $categoryCond = "";
+                if (!$include_inactive_categories) {
+                    $categoryCond = "AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(products.category) AND pc.is_active = false)";
+                }
                 $queries[] = [
-                    "SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE is_active = true AND category = ? AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(products.category) AND pc.is_active = false) ORDER BY name LIMIT 200",
+                    "SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE is_active = true AND category = ? {$categoryCond} ORDER BY name LIMIT 200",
                     [$category]
                 ];
                 $queries[] = [
-                    "SELECT id, name, sku, COALESCE(sell_price, unit_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE active = 1 AND category = ? AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(products.category) AND pc.is_active = false) ORDER BY name LIMIT 200",
+                    "SELECT id, name, sku, COALESCE(sell_price, unit_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE CAST(active AS text) IN ('1', 'true', 't') AND category = ? {$categoryCond} ORDER BY name LIMIT 200",
                     [$category]
                 ];
             } else {
+                $categoryCond = "";
+                if (!$include_inactive_categories) {
+                    $categoryCond = "AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(products.category) AND pc.is_active = false)";
+                }
                 $queries[] = [
-                    "SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE is_active = true AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(products.category) AND pc.is_active = false) ORDER BY name LIMIT 200",
+                    "SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE is_active = true {$categoryCond} ORDER BY name LIMIT 200",
                     []
                 ];
                 $queries[] = [
-                    "SELECT id, name, sku, COALESCE(sell_price, unit_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE active = 1 AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(products.category) AND pc.is_active = false) ORDER BY name LIMIT 200",
+                    "SELECT id, name, sku, COALESCE(sell_price, unit_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE CAST(active AS text) IN ('1', 'true', 't') {$categoryCond} ORDER BY name LIMIT 200",
                     []
                 ];
             }
