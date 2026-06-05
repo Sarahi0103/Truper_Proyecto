@@ -2902,6 +2902,11 @@ function renderCalendarMonth() {
                 </div>
             </div>
             ${i.notes ? `<div class="visit-notes">${escapeHtml(i.notes)}</div>` : ''}
+            ${!isUpcoming ? `
+            <div style="display:flex; justify-content:flex-end; margin-top:0.6rem; padding-top:0.4rem; border-top:1px solid rgba(255,255,255,0.04);">
+                <button class="btn btn-small btn-danger" type="button" style="font-size:10px; padding:2px 8px; font-weight:600; border-radius:4px; opacity:0.85; transition:all 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.85" onclick="deleteCalendarVisit(${i.id})">Eliminar</button>
+            </div>
+            ` : ''}
         </div>
     `;
 
@@ -2953,6 +2958,17 @@ async function loadCalendar() {
     }
     calendarVisits = res.items;
     renderCalendarMonth();
+}
+
+async function deleteCalendarVisit(id) {
+    if (!confirm('¿Eliminar este registro de visita del historial?')) return;
+    const res = await apiCall('/admin_supply.php?action=calendar-delete', 'POST', { id: id });
+    if (res && res.success) {
+        showAlert(res.message || 'Visita eliminada correctamente', 'success');
+        await loadCalendar();
+    } else {
+        showAlert(res && res.message ? res.message : 'No se pudo eliminar la visita', 'error');
+    }
 }
 
 function addMappedProductToOrder() {

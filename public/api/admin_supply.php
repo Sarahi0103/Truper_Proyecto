@@ -4662,6 +4662,21 @@ try {
             $response = ['success' => true, 'message' => 'Visita registrada'];
             break;
 
+        case 'calendar-delete':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+            $id = (int)($input['id'] ?? 0);
+            if ($id <= 0) {
+                $response = ['success' => false, 'message' => 'ID de visita inválido'];
+                break;
+            }
+            $stmt = $pdo->prepare("DELETE FROM supplier_calendar WHERE id = ?");
+            $stmt->execute([$id]);
+            $response = ['success' => true, 'message' => 'Visita eliminada'];
+            break;
+
         case 'supplier-order-create':
             if ($method !== 'POST') {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];
