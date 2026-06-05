@@ -249,19 +249,22 @@
 }
 
 .kpi-card {
-    background: #0d0d0d;
-    border: 1.5px solid #1f1f1f;
-    border-radius: 16px;
-    padding: 1.5rem;
-    position: relative;
-    overflow: hidden;
-    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    background: rgba(22, 22, 22, 0.75) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 16px !important;
+    padding: 1.5rem !important;
+    position: relative !important;
+    overflow: hidden !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .kpi-card:hover {
-    transform: translateY(-3px);
-    border-color: #2e2e2e;
-    box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+    transform: translateY(-5px) !important;
+    border-color: rgba(255, 127, 0, 0.35) !important;
+    box-shadow: 0 15px 35px rgba(255, 127, 0, 0.15) !important;
 }
 
 .kpi-card::before {
@@ -332,11 +335,14 @@
 
 /* ── Chart card ── */
 .chart-card {
-    background: #0d0d0d;
-    border: 1.5px solid #1f1f1f;
-    border-radius: 16px;
-    overflow: hidden;
-    margin-bottom: 1.5rem;
+    background: rgba(18, 18, 18, 0.75) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+    margin-bottom: 1.5rem !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
 }
 
 .chart-card-header {
@@ -374,11 +380,14 @@
 
 /* ── Calendar card ── */
 .calendar-card {
-    background: #0d0d0d;
-    border: 1.5px solid #1f1f1f;
-    border-radius: 16px;
-    overflow: hidden;
-    margin-bottom: 1.5rem;
+    background: rgba(18, 18, 18, 0.75) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+    margin-bottom: 1.5rem !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
 }
 
 .calendar-card-header {
@@ -409,28 +418,30 @@
 .cal-summary-value { font-size: 1.4rem; font-weight: 900; color: #fff; }
 
 .cal-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr) !important;
+    gap: 6px !important;
+    width: 100% !important;
 }
 
 .cal-day-head {
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: #888;
-    text-align: center;
-    padding: 0.4rem 0;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    color: #ff7f00 !important;
+    text-align: center !important;
+    padding: 0.6rem 0 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.06em !important;
 }
 
 .cal-day {
-    background: #111;
-    border: 1px solid #1a1a1a;
-    border-radius: 8px;
-    padding: 0.5rem;
-    min-height: 68px;
-    transition: background 0.2s;
+    background: #111 !important;
+    border: 1px solid #2d2d2d !important;
+    border-radius: 8px !important;
+    padding: 0.6rem !important;
+    min-height: 72px !important;
+    transition: all 0.25s ease !important;
+    box-sizing: border-box !important;
 }
 
 .cal-day.empty { background: transparent; border-color: transparent; }
@@ -440,13 +451,18 @@
     border-color: rgba(255,127,0,0.2);
 }
 
-.cal-day:not(.empty):hover { background: #1a1a1a; }
+.cal-day:not(.empty):hover {
+    background: rgba(255, 127, 0, 0.08) !important;
+    border-color: rgba(255, 127, 0, 0.35) !important;
+    transform: translateY(-3px) !important;
+    box-shadow: 0 4px 15px rgba(255, 127, 0, 0.15) !important;
+}
 
 .cal-day-num {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #888;
-    margin-bottom: 0.3rem;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    color: #aaa !important;
+    margin-bottom: 0.3rem !important;
 }
 
 .cal-day.has-activity .cal-day-num { color: #ff7f00; }
@@ -481,21 +497,25 @@
 }
 
 .ai-pred-card {
-    background: #0d0d0d;
-    border: 1.5px solid #1f1f1f;
-    border-top: 3px solid #ff7f00;
-    border-radius: 16px;
-    padding: 1.5rem;
-    transition: transform 0.2s, box-shadow 0.2s;
-    width: 100%;
-    max-width: 420px;
-    margin: 0 auto;
-    box-sizing: border-box;
+    background: rgba(22, 22, 22, 0.75) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-top: 3px solid #ff7f00 !important;
+    border-radius: 16px !important;
+    padding: 1.5rem !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    width: 100% !important;
+    max-width: 420px !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
 }
 
 .ai-pred-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+    transform: translateY(-5px) !important;
+    border-color: rgba(255, 127, 0, 0.35) !important;
+    box-shadow: 0 15px 35px rgba(255, 127, 0, 0.15) !important;
 }
 
 .ai-pred-top {
@@ -604,18 +624,25 @@
 }
 
 .seasonal-card {
-    background: #0d0d0d;
-    border: 1.5px solid #1f1f1f;
-    border-radius: 16px;
-    overflow: hidden;
-    transition: transform 0.2s;
-    width: 100%;
-    max-width: 420px;
-    margin: 0 auto;
-    box-sizing: border-box;
+    background: rgba(22, 22, 22, 0.75) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    width: 100% !important;
+    max-width: 420px !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
 }
 
-.seasonal-card:hover { transform: translateY(-2px); }
+.seasonal-card:hover {
+    transform: translateY(-4px) !important;
+    border-color: rgba(255, 127, 0, 0.25) !important;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6) !important;
+}
 
 .seasonal-card-header {
     padding: 1rem 1.25rem;
@@ -710,15 +737,22 @@
 }
 
 .client-card {
-    background: #0d0d0d;
-    border: 1.5px solid #1f1f1f;
-    border-radius: 14px;
-    padding: 1.25rem;
-    transition: transform 0.2s, border-color 0.2s;
-    position: relative;
+    background: rgba(22, 22, 22, 0.75) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 14px !important;
+    padding: 1.25rem !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    position: relative !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
 }
 
-.client-card:hover { transform: translateY(-2px); border-color: #2e2e2e; }
+.client-card:hover {
+    transform: translateY(-4px) !important;
+    border-color: rgba(255, 127, 0, 0.3) !important;
+    box-shadow: 0 15px 30px rgba(255, 127, 0, 0.1) !important;
+}
 
 .client-card-rank {
     position: absolute;
@@ -772,10 +806,13 @@
 }
 
 .info-card {
-    background: #0d0d0d;
-    border: 1.5px solid #1f1f1f;
-    border-radius: 16px;
-    padding: 1.75rem;
+    background: rgba(22, 22, 22, 0.75) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 16px !important;
+    padding: 1.75rem !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
 }
 
 .info-card-title {
@@ -924,21 +961,24 @@
 }
 
 .goal-metric-card {
-    background: #0d0d0d;
-    border: 1.5px solid #1f1f1f;
-    border-radius: 14px;
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
-    box-sizing: border-box;
+    background: rgba(22, 22, 22, 0.75) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 14px !important;
+    padding: 1.5rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-sizing: border-box !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
 }
 
 .goal-metric-card:hover {
-    transform: translateY(-2px);
-    border-color: #2e2e2e;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+    transform: translateY(-4px) !important;
+    border-color: rgba(255, 127, 0, 0.3) !important;
+    box-shadow: 0 15px 30px rgba(255, 127, 0, 0.1) !important;
 }
 
 .goal-metric-card-label {

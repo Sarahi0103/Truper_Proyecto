@@ -15,11 +15,11 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
     <title>Estadísticas y Análisis - Truper Platform</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css?v=2.6">
-    <link rel="stylesheet" href="css/theme.css?v=2.6">
-    <link rel="stylesheet" href="css/responsive-complete.css?v=2.6">
-    <link rel="stylesheet" href="css/dashboard.css?v=2.6">
-    <link rel="stylesheet" href="css/analytics.css?v=2.6">
+    <link rel="stylesheet" href="css/styles.css?v=3.0">
+    <link rel="stylesheet" href="css/theme.css?v=3.0">
+    <link rel="stylesheet" href="css/responsive-complete.css?v=3.0">
+    <link rel="stylesheet" href="css/dashboard.css?v=3.0">
+    <link rel="stylesheet" href="css/analytics.css?v=3.0">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -338,8 +338,8 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
         </div>
     </footer>
 
-    <script src="js/main.js?v=2.6"></script>
-    <script src="js/analytics.js"></script>
+    <script src="js/main.js?v=3.0"></script>
+    <script src="js/analytics.js?v=3.0"></script>
     <style>
         @keyframes pulse-skeleton {
             0%, 100% { opacity: 1; }
@@ -572,6 +572,6 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
             }
         }
     </script>
-    <script src="js/mobile-optimize.js"></script>
+    <script src="js/mobile-optimize.js?v=3.0"></script>
 </body>
 </html>
