@@ -4517,7 +4517,7 @@ try {
                 }
                 if ($activeCol !== null) {
                     $sets[] = $activeCol . ' = ?';
-                    $values[] = ($activeCol === 'active') ? ($isActive ? 1 : 0) : $isActive;
+                    $values[] = $isActive ? 1 : 0;
                 }
                 if ($updatedByCol !== null) {
                     $sets[] = $updatedByCol . ' = ?';
@@ -4550,7 +4550,7 @@ try {
                 if ($activeCol !== null) {
                     $columns[] = $activeCol;
                     $placeholders[] = '?';
-                    $values[] = ($activeCol === 'active') ? ($isActive ? 1 : 0) : $isActive;
+                    $values[] = $isActive ? 1 : 0;
                 }
                 if ($createdByCol !== null) {
                     $columns[] = $createdByCol;
