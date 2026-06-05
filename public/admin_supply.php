@@ -737,7 +737,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
         </section>
 
         <section id="pricesTab" class="tab-content admin-tab-panel">
-            <div class="card mb-3"><div class="card-body">
+            <div class="card mb-3" style="overflow: visible;"><div class="card-body">
                 <h3>Ajuste de Precios Masivo</h3>
                 <p class="text-muted">Aplica un cambio de precio a múltiples productos. Usa % para porcentaje o $ para monto fijo.</p>
                 
