@@ -131,8 +131,8 @@ function renderTaskCard(task) {
 function renderActions(task) {
     if (TASKS_IS_ADMIN) {
         return `
-            ${task.status !== 'in_progress' ? `<button class="btn btn-small btn-secondary" onclick="updateStatus(${task.id}, 'in_progress')">Iniciar</button>` : ''}
-            ${task.status !== 'completed' ? `<button class="btn btn-small btn-success" onclick="updateStatus(${task.id}, 'completed')">Completar</button>` : ''}
+            ${task.status !== 'in_progress' ? `<button class="task-btn task-btn-iniciar" onclick="updateStatus(${task.id}, 'in_progress')">Iniciar</button>` : ''}
+            ${task.status !== 'completed' ? `<button class="task-btn task-btn-completar" onclick="updateStatus(${task.id}, 'completed')">Completar</button>` : ''}
             
             <div class="time-input-container">
                 <input id="h_${task.id}" type="number" placeholder="0">
@@ -141,13 +141,13 @@ function renderActions(task) {
                 <span>m</span>
             </div>
             
-            <button class="btn btn-small btn-primary" style="background:#ff7f00; border-color:#ff7f00; color:white; font-weight:700;" onclick="logTime(${task.id})">Registrar</button>
-            <button class="btn btn-small btn-danger" onclick="deleteT(${task.id})">Eliminar</button>
+            <button class="task-btn task-btn-registrar" onclick="logTime(${task.id})">Registrar</button>
+            <button class="task-btn task-btn-eliminar" onclick="deleteT(${task.id})">Eliminar</button>
         `;
     }
     
     if (task.status === 'completed') return '<span style="color: #22c55e; font-size: 0.8rem; font-weight: 700;">✓ Tarea Finalizada</span>';
-    return `<button class="btn btn-small ${task.status === 'in_progress' ? 'btn-success' : 'btn-secondary'}" 
+    return `<button class="task-btn ${task.status === 'in_progress' ? 'task-btn-completar' : 'task-btn-iniciar'}" 
         onclick="updateStatus(${task.id}, '${task.status === 'in_progress' ? 'completed' : 'in_progress'}')">
         ${task.status === 'in_progress' ? 'Completar' : 'Iniciar'}
     </button>`;

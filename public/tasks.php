@@ -19,59 +19,57 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
     <link rel="stylesheet" href="css/responsive-complete.css?v=2.2">
     <style>
         /* Task Cards */
+        .task-item {
+            background: #111111;
+            border: 1.5px solid #222222;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
             transition: transform 0.2s, box-shadow 0.2s;
             position: relative;
             overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
         }
-        .task-item:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3); }
+        .task-item:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5); 
+        }
         
         .task-title { color: #f8fafc; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
-        .task-details-box { background: #0f172a; border-radius: 8px; padding: 1rem; margin: 1rem 0; border: 1px solid #334155; }
+        .task-details-box { background: #0a0a0a; border-radius: 12px; padding: 1.25rem; margin: 1rem 0; border: 1px solid #222222; }
         .task-details-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; font-size: 0.85rem; }
-        .task-label { color: #94a3b8; margin-bottom: 2px; display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .task-label { color: #888888; margin-bottom: 4px; display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
         .task-value { color: #f8fafc; font-weight: 600; }
         
         .task-overdue { border-left: 6px solid #ef4444 !important; }
         .overdue-badge { background: #ef4444; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; }
         
         /* Stats Cards Dark Mode */
-        .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; }
+        .card { background: #0a0a0a; border: 1.5px solid #222222; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4); }
         .card-body { padding: 1.25rem; }
-        .text-muted { color: #94a3b8 !important; }
+        .text-muted { color: #888888 !important; }
         
         /* Buttons and Inputs */
         .btn-priority { 
-            padding: 0.6rem 1.2rem; border-radius: 8px; border: 1px solid #334155; 
+            padding: 0.6rem 1.2rem; border-radius: 8px; border: 1px solid #222222; 
             cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;
-            background: #1e293b; color: #94a3b8; font-size: 0.75rem; font-weight: 700; min-width: 90px;
+            background: #111111; color: #888888; font-size: 0.75rem; font-weight: 700; min-width: 90px;
         }
         .btn-priority.active { border-color: #ff7f00; color: #ff7f00; background: rgba(255, 127, 0, 0.1); }
         
-        /* Time Input Box - HIGH VISIBILITY */
-        .time-input-container {
-            display: flex; align-items: center; background: white; border: 2px solid #ff7f00; 
-            border-radius: 6px; padding: 2px 6px; gap: 2px;
-        }
-        .time-input-container input {
-            background: transparent; border: none; color: #1e293b; width: 35px; 
-            text-align: center; font-weight: 800; font-size: 1rem; padding: 2px 0;
-        }
-        .time-input-container input:focus { outline: none; }
-        .time-input-container span { color: #64748b; font-size: 0.75rem; font-weight: 800; }
-        
         .btn-toggle-completed {
-            background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 0.6rem 1rem;
+            background: #111111; color: #888888; border: 1px solid #222222; padding: 0.6rem 1rem;
             border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
         }
         .btn-toggle-completed.active {
-            background: #ff7f00; color: white; border-color: #ff7f00;
+            background: #ff7f00; color: #000000; border-color: #ff7f00; font-weight: 700;
         }
         
         #taskSearch { 
-            background: #1e293b; border: 1px solid #334155; color: white; 
+            background: #000000; border: 1.5px solid #333333; color: white; 
             padding: 0.75rem 1rem; border-radius: 8px; width: 100%; max-width: 400px;
         }
-        #taskSearch:focus { outline: none; border-color: #ff7f00; box-shadow: 0 0 0 2px rgba(255, 127, 0, 0.2); }
+        #taskSearch:focus { outline: none; border-color: #ff7f00; box-shadow: 0 0 0 2px rgba(255, 127, 0, 0.15); }
         
         .task-priority-urgent { border-left: 6px solid #ef4444; }
         .task-priority-high { border-left: 6px solid #f97316; }
@@ -83,6 +81,117 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
         .priority-high { background: rgba(249, 115, 22, 0.15); color: #f97316; }
         .priority-medium { background: rgba(234, 179, 8, 0.15); color: #eab308; }
         .priority-low { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+
+        /* Time Input Box - Premium Dark Mode */
+        .time-input-container {
+            display: inline-flex; 
+            align-items: center; 
+            background: rgba(255, 255, 255, 0.04) !important; 
+            border: 1px solid #334155 !important; 
+            border-radius: 8px; 
+            padding: 4px 10px; 
+            gap: 4px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            height: 34px;
+            box-sizing: border-box;
+            vertical-align: middle;
+        }
+        .time-input-container:focus-within {
+            border-color: #ff7f00 !important;
+            box-shadow: 0 0 8px rgba(255, 127, 0, 0.2);
+        }
+        .time-input-container input {
+            background: transparent !important; 
+            border: none !important; 
+            color: #ffffff !important; 
+            width: 30px !important; 
+            text-align: center; 
+            font-weight: 700 !important; 
+            font-size: 0.95rem !important; 
+            padding: 0 !important;
+            margin: 0 !important;
+            height: auto !important;
+        }
+        .time-input-container input:focus { 
+            outline: none !important; 
+        }
+        .time-input-container span { 
+            color: #94a3b8 !important; 
+            font-size: 0.8rem !important; 
+            font-weight: 700; 
+        }
+        /* Ocultar spinners nativos de tipo number */
+        .time-input-container input::-webkit-outer-spin-button,
+        .time-input-container input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .time-input-container input[type=number] {
+            -moz-appearance: textfield;
+        }
+        
+        /* Botones de acción premium de tareas */
+        .task-btn {
+            padding: 0.5rem 1rem !important;
+            font-size: 0.8rem !important;
+            font-weight: 700 !important;
+            border-radius: 8px !important;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            border: 1px solid transparent !important;
+            min-height: 34px;
+            box-sizing: border-box;
+            vertical-align: middle;
+        }
+        .task-btn:hover {
+            transform: translateY(-1px);
+        }
+        .task-btn-iniciar {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border-color: rgba(255, 255, 255, 0.15) !important;
+            color: #f8fafc !important;
+        }
+        .task-btn-iniciar:hover {
+            background: rgba(255, 127, 0, 0.15) !important;
+            border-color: #ff7f00 !important;
+            color: #ff7f00 !important;
+            box-shadow: 0 4px 12px rgba(255, 127, 0, 0.15);
+        }
+        .task-btn-completar {
+            background: rgba(34, 197, 94, 0.1) !important;
+            border-color: rgba(34, 197, 94, 0.3) !important;
+            color: #22c55e !important;
+        }
+        .task-btn-completar:hover {
+            background: #22c55e !important;
+            color: #000000 !important;
+            border-color: #22c55e !important;
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+        }
+        .task-btn-registrar {
+            background: linear-gradient(135deg, #ff7f00 0%, #e26f00 100%) !important;
+            color: #000000 !important;
+            font-weight: 800 !important;
+        }
+        .task-btn-registrar:hover {
+            box-shadow: 0 4px 12px rgba(255, 127, 0, 0.35);
+        }
+        .task-btn-eliminar {
+            background: rgba(239, 68, 68, 0.1) !important;
+            border-color: rgba(239, 68, 68, 0.3) !important;
+            color: #ef4444 !important;
+        }
+        .task-btn-eliminar:hover {
+            background: #ef4444 !important;
+            color: #ffffff !important;
+            border-color: #ef4444 !important;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
     </style>
 </head>
 <body>
