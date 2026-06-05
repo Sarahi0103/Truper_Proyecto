@@ -85,6 +85,17 @@ $company_whatsapp = htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8
 
 <main>
     <div class="container">
+        </nav>
+    </div>
+    <div class="user-menu">
+
+        <div class="user-info"><div class="user-name"><?php echo $user_name; ?></div></div>
+        <button class="btn-logout" onclick="window.location.href='api/auth.php?action=logout'">Cerrar Sesion</button>
+    </div>
+</header>
+
+<main>
+    <div class="container">
         <div class="page-hero">
             <div class="module-badge module-client"><span class="module-glyph">CL</span> Portal de cliente</div>
             <h1>Mi Cuenta</h1>
@@ -96,6 +107,7 @@ $company_whatsapp = htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8
             <button class="tab-button" data-tab="weeklyTab">Control Semanal</button>
             <button class="tab-button" data-tab="paymentsTab">Pagos</button>
             <button class="tab-button" data-tab="quotesTab">Compartir Cotización</button>
+            <button class="tab-button" data-tab="historyTab">Historial de Transacciones</button>
         </div>
 
         <!-- Estado de Crédito -->
@@ -191,6 +203,39 @@ $company_whatsapp = htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8
                 </div></div>
             </div>
         </section>
+
+        <!-- Historial de Transacciones -->
+        <section id="historyTab" class="tab-content">
+            <div class="card"><div class="card-body">
+                <div class="section-header"><span class="section-dot"></span><h2>Historial General de Transacciones</h2></div>
+                <p class="text-muted" style="margin-bottom: 20px;">Revisa las compras y abonos registrados en tu cuenta.</p>
+                
+                <div class="metrics-grid" style="margin-bottom: 20px;">
+                    <div class="metric-box">
+                        <div class="metric-label">Total Pedidos</div>
+                        <div class="metric-value" id="historyOrdersCount">0</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">Total Pagos</div>
+                        <div class="metric-value" id="historyPaymentsCount">0</div>
+                    </div>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Folio/Ref</th>
+                            <th>Fecha</th>
+                            <th>Detalles</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyList">
+                        <tr><td colspan="4" class="text-muted">Cargando historial...</td></tr>
+                    </tbody>
+                </table>
+            </div></div>
+        </section>
     </div>
 </main>
 
@@ -217,6 +262,12 @@ function setupTabs() {
 
 function formatMoney(value) {
     return `$${Number(value || 0).toFixed(2)}`;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 async function loadCreditSummary() {
@@ -441,6 +492,75 @@ async function loadPreviousQuotes() {
     document.getElementById('previousQuotes').innerHTML = html;
 }
 
+async function loadHistory() {
+    const res = await apiCall('/client_account.php?action=history');
+    const body = document.getElementById('historyList');
+    if (!res || !res.success || !res.items) {
+        body.innerHTML = '<tr><td colspan="4" class="text-muted">Sin registros de historial</td></tr>';
+        return;
+    }
+
+    const items = res.items;
+    if (items.length === 0) {
+        body.innerHTML = '<tr><td colspan="4" class="text-muted">Sin registros de historial</td></tr>';
+        return;
+    }
+
+    // Update metrics count
+    let ordersCount = 0;
+    let paymentsCount = 0;
+    items.forEach(i => {
+        if (i.transaction_type === 'client_order') ordersCount++;
+        if (i.transaction_type === 'payment') paymentsCount++;
+    });
+    
+    const ordersCountEl = document.getElementById('historyOrdersCount');
+    if (ordersCountEl) ordersCountEl.textContent = ordersCount;
+    const paymentsCountEl = document.getElementById('historyPaymentsCount');
+    if (paymentsCountEl) paymentsCountEl.textContent = paymentsCount;
+
+    const html = items.map(i => {
+        let badgeClass = 'badge-info';
+        let typeLabel = 'Pedido';
+        if (i.transaction_type === 'payment') {
+            badgeClass = 'badge-success';
+            typeLabel = 'Pago';
+        } else if (i.transaction_type === 'supplier_order') {
+            badgeClass = 'badge-warning';
+            typeLabel = 'Orden Prov.';
+        }
+
+        let parsedData = {};
+        if (i.data_json) {
+            try {
+                parsedData = JSON.parse(i.data_json);
+            } catch (e) {
+                parsedData = {};
+            }
+        }
+
+        let detailHtml = '';
+        if (i.transaction_type === 'client_order') {
+            detailHtml = `Monto total: <strong>${formatMoney(parsedData.total || 0)}</strong>`;
+        } else if (i.transaction_type === 'payment') {
+            detailHtml = `Monto abonado: <strong>${formatMoney(parsedData.amount || 0)}</strong> (${escapeHtml(parsedData.method || 'efectivo')})`;
+        } else {
+            detailHtml = `<small>${escapeHtml(i.data_json || '')}</small>`;
+        }
+
+        return `
+            <tr>
+                <td><span class="badge ${badgeClass}">${typeLabel}</span></td>
+                <td><strong>${escapeHtml(i.reference_folio)}</strong></td>
+                <td>${escapeHtml(i.created_at)}</td>
+                <td>${detailHtml}</td>
+            </tr>
+        `;
+    }).join('');
+    
+    body.innerHTML = html;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     setupTabs();
     loadCreditSummary();
@@ -448,6 +568,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadPaymentHistory();
     renderCart();
     loadPreviousQuotes();
+    loadHistory();
 });
 </script>
     <script src="js/mobile-optimize.js"></script>

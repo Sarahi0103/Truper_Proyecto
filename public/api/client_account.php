@@ -558,6 +558,25 @@ try {
             $response = ['success' => true, 'payments' => $payments];
             break;
 
+        case 'history':
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $stmt = $pdo->prepare("
+                SELECT id, transaction_type, reference_folio, data_json, created_at
+                FROM transaction_history
+                WHERE created_by = ?
+                ORDER BY created_at DESC
+                LIMIT 100
+            ");
+            $stmt->execute([$user_id]);
+            $items = $stmt->fetchAll();
+
+            $response = ['success' => true, 'items' => $items];
+            break;
+
         default:
             $response = ['success' => false, 'message' => 'Accion no reconocida'];
     }
