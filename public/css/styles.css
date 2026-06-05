@@ -1676,9 +1676,35 @@ footer {
 
 .promo-slide {
     min-width: 100%;
-    padding: 1rem 1rem 1.1rem;
+    padding: 1.25rem;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
+}
+
+.promo-slide-content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 1.25rem;
+    text-align: left;
+}
+
+.promo-slide-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.promo-slide-media {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .promo-image {
@@ -1687,10 +1713,17 @@ footer {
     height: auto;
     aspect-ratio: 16 / 9;
     object-fit: contain;
-    background-color: rgba(0, 0, 0, 0.25);
-    border-radius: 8px;
-    margin-bottom: 0.75rem;
     display: block;
+    margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+    .promo-slide-content.has-image {
+        display: grid;
+        grid-template-columns: 1.3fr 0.7fr;
+        align-items: center;
+        gap: 1.5rem;
+    }
 }
 
 .promo-kicker {
@@ -1855,18 +1888,7 @@ footer {
     max-height: 360px;
 }
 
-/* Promo / hero images: keep modest size so they don't overflow the layout */
-.promo-image {
-    max-width: 600px;
-    width: 100%;
-    height: auto;
-    aspect-ratio: 16 / 9;
-    object-fit: contain;
-    background-color: rgba(0, 0, 0, 0.25);
-    border-radius: 8px;
-    display: block;
-    margin: 0 auto 0.75rem auto;
-}
+
 
 .product-media {
     cursor: default;
