@@ -627,7 +627,7 @@ function homepage_update_label($type) {
         <div class="footer-bottom">&copy; 2026 Truper Platform</div>
     </footer>
     <script src="js/jspdf.umd.min.js"></script>
-    <script src="js/main.js"></script>
+    <script src="js/main.js?v=2.6"></script>
     <script src="js/catalog.js"></script>
     <script>
         // Compartir por WhatsApp

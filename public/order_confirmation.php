@@ -364,7 +364,7 @@ if ($orderId && $isLogged) {
         <p>&copy; 2026 Truper Platform</p>
     </footer>
 
-    <script src="js/main.js"></script>
+    <script src="js/main.js?v=2.6"></script>
     <script src="js/mobile-optimize.js"></script>
 </body>
 </html>

@@ -86,7 +86,8 @@ function showAlert(message, type = 'info') {
     let accentColor = '#94a3b8';
     
     if (type === 'success') {
-        icon = '🛒';
+        const isCartMsg = String(message).toLowerCase().includes('carrito') || String(message).toLowerCase().includes('carro');
+        icon = isCartMsg ? '🛒' : '✅';
         borderColor = 'rgba(34, 197, 94, 0.4)';
         accentColor = '#22c55e';
         toast.style.background = '#0d1612'; // Verde oscuro sutil

@@ -447,7 +447,7 @@ if ($isLogged) {
         <p>&copy; 2026 Truper Platform</p>
     </footer>
 
-    <script src="js/main.js"></script>
+    <script src="js/main.js?v=2.6"></script>
     <script>
         // Load cart and populate summary
         function loadCartSummary() {

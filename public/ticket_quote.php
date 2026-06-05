@@ -211,7 +211,7 @@ function ticket_quote_product_code($item) {
     <div class="total-row">Total: $<?php echo ticket_quote_number($total); ?></div>
     <div class="thanks">Gracias por su compra</div>
 </div>
-<script src="js/main.js"></script>
+<script src="js/main.js?v=2.6"></script>
 <script>
 const ticketData = {
     folio: <?php echo json_encode($folio); ?>,

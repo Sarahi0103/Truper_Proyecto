@@ -84,6 +84,6 @@ function display_product_code($sku) {
     <?php endforeach; ?>
     <div class="row"><strong>Total estimado: $<?php echo number_format((float)$order['total_estimated'], 2, '.', ''); ?></strong></div>
 </div>
-<script src="js/main.js"></script>
+<script src="js/main.js?v=2.6"></script>
 </body>
 </html>

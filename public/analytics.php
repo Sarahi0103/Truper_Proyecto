@@ -338,7 +338,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
         </div>
     </footer>
 
-    <script src="js/main.js"></script>
+    <script src="js/main.js?v=2.6"></script>
     <script src="js/analytics.js"></script>
     <style>
         @keyframes pulse-skeleton {

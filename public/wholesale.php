@@ -272,7 +272,7 @@ function activateWholesaleTab(tabName) {
   }
 }
 </script>
-<script src="js/main.js"></script>
+<script src="js/main.js?v=2.6"></script>
 <script>
 let allProducts = [];
 let loadedWholesaleRequests = [];

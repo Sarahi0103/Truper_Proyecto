@@ -152,7 +152,7 @@ $userName = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8'
 <script>
 window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>';
 </script>
-<script src="js/main.js"></script>
+<script src="js/main.js?v=2.6"></script>
 <script>
 const apiBase = '/api/client_tickets.php';
 let currentTicketId = null;

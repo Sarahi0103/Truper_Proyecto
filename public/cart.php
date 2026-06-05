@@ -303,7 +303,7 @@ $is_admin = $isAdmin;
     </footer>
 
     <script src="js/jspdf.umd.min.js"></script>
-    <script src="js/main.js"></script>
+    <script src="js/main.js?v=2.6"></script>
     <script src="js/catalog.js"></script>
     <script>
         function decodeCartText(value) {

@@ -372,7 +372,7 @@ if (!empty($profile['birthdate'])) {
         </div>
     </footer>
 
-    <script src="js/main.js"></script>
+    <script src="js/main.js?v=2.6"></script>
     <script>
         function goToOrdersWithDiscount() {
             window.location.href = 'orders.php?tab=newOrder';

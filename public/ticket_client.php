@@ -89,7 +89,7 @@ function display_product_code($sku) {
     <?php endforeach; ?>
     <div class="row"><strong>Total: $<?php echo number_format((float)$order['total_amount'], 2, '.', ''); ?></strong></div>
 </div>
-<script src="js/main.js"></script>
+<script src="js/main.js?v=2.6"></script>
 <script>
 const ticketData = {
     folio: <?php echo json_encode($order['order_number']); ?>,

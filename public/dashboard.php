@@ -722,7 +722,7 @@ $first_name = explode(' ', $user_name)[0];
         </div>
     </footer>
 
-    <script src="js/main.js"></script>
+    <script src="js/main.js?v=2.6"></script>
     <style>
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes countUp {
