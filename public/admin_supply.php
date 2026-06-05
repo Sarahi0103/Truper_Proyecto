@@ -424,7 +424,6 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             <button class="tab-button" data-tab="supplierOrderTab">Orden Proveedor</button>
             <button class="tab-button" data-tab="updatesTab">Portada</button>
             <button class="tab-button" data-tab="clientsTab">Clientes</button>
-            <button class="tab-button" data-tab="historyTab">Historico</button>
             <button class="tab-button" data-tab="pricesTab">Precios</button>
             <button class="tab-button" data-tab="marketplaceTab">Marketplace CE</button>
             <button class="tab-button" data-tab="categoriesTab">Categorías</button>
@@ -760,15 +759,6 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             </div></div>
         </section>
 
-        <section id="historyTab" class="tab-content admin-tab-panel">
-            <div class="card"><div class="card-body">
-                <h3>Historico de Transacciones</h3>
-                <table>
-                    <thead><tr><th>Tipo</th><th>Folio/Ref</th><th>Fecha</th><th>Datos</th></tr></thead>
-                    <tbody id="historyRows"><tr><td colspan="4">Cargando...</td></tr></tbody>
-                </table>
-            </div></div>
-        </section>
 
         <section id="pricesTab" class="tab-content admin-tab-panel">
             <div class="card mb-3" style="overflow: visible;"><div class="card-body">
