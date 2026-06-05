@@ -15,11 +15,11 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
     <title>Estadísticas y Análisis - Truper Platform</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css?v=2.2">
-    <link rel="stylesheet" href="css/theme.css?v=2.5">
-    <link rel="stylesheet" href="css/responsive-complete.css?v=2.2">
-    <link rel="stylesheet" href="css/dashboard.css">
-    <link rel="stylesheet" href="css/analytics.css">
+    <link rel="stylesheet" href="css/styles.css?v=2.6">
+    <link rel="stylesheet" href="css/theme.css?v=2.6">
+    <link rel="stylesheet" href="css/responsive-complete.css?v=2.6">
+    <link rel="stylesheet" href="css/dashboard.css?v=2.6">
+    <link rel="stylesheet" href="css/analytics.css?v=2.6">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
