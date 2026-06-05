@@ -524,7 +524,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     </div>
                     <!-- Zona drag & drop -->
                     <div class="csv-drop-zone" id="stockCsvDropZone" onclick="document.getElementById('csvFileInput').click()" ondragover="handleCsvDragOver(event,'stockCsvDropZone')" ondragleave="handleCsvDragLeave(event,'stockCsvDropZone')" ondrop="handleCsvDrop(event,'csvFileInput','stockCsvDropZone')">
-                        <input type="file" id="csvFileInput" accept=".csv,.xls,.xlsx" style="display:none" onchange="onCsvFileSelected(this,'stockCsvDropZone','csvSelectedName')">
+                        <input type="file" id="csvFileInput" accept=".csv" style="display:none" onchange="onCsvFileSelected(this,'stockCsvDropZone','csvSelectedName')">
                         <div class="csv-drop-icon">📁</div>
                         <p class="csv-drop-title">Arrastra tu archivo CSV aquí</p>
                         <p class="csv-drop-sub" id="csvSelectedName">o haz clic para seleccionar (.csv)</p>
@@ -923,7 +923,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                         </div>
                         <!-- Zona drag & drop -->
                         <div class="csv-drop-zone" id="mktCsvDropZone" onclick="document.getElementById('marketplaceCsvFileInput').click()" ondragover="handleCsvDragOver(event,'mktCsvDropZone')" ondragleave="handleCsvDragLeave(event,'mktCsvDropZone')" ondrop="handleCsvDrop(event,'marketplaceCsvFileInput','mktCsvDropZone')">
-                            <input type="file" id="marketplaceCsvFileInput" accept=".csv,.xls,.xlsx" style="display:none" onchange="onCsvFileSelected(this,'mktCsvDropZone','mktCsvSelectedName')">
+                            <input type="file" id="marketplaceCsvFileInput" accept=".csv" style="display:none" onchange="onCsvFileSelected(this,'mktCsvDropZone','mktCsvSelectedName')">
                             <div class="csv-drop-icon">📁</div>
                             <p class="csv-drop-title">Arrastra tu archivo CSV aquí</p>
                             <p class="csv-drop-sub" id="mktCsvSelectedName">o haz clic para seleccionar (.csv)</p>
@@ -5187,7 +5187,16 @@ function onCsvFileSelected(input, zoneId, labelId) {
     const zone = document.getElementById(zoneId);
     const label = document.getElementById(labelId);
     if (input.files && input.files.length > 0) {
-        const name = input.files[0].name;
+        const file = input.files[0];
+        const name = file.name;
+        const ext = name.split('.').pop().toLowerCase();
+        if (ext !== 'csv') {
+            showAlert('El formato debe ser .csv. Si usas Excel, guarda tu hoja con formato "CSV (delimitado por comas) (*.csv)" antes de subirlo.', 'warning');
+            input.value = '';
+            zone.classList.remove('file-selected');
+            if (label) label.textContent = 'o haz clic para seleccionar (.csv)';
+            return;
+        }
         zone.classList.add('file-selected');
         zone.classList.remove('drag-over');
         if (label) label.textContent = '✅ ' + name;

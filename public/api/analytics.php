@@ -401,6 +401,11 @@ try {
             $monthNames = [1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril', 5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto', 9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'];
             $filename = 'historial_tickets_' . $year . '_' . str_pad((string)$month, 2, '0', STR_PAD_LEFT) . '.xls';
 
+            // Clean and disable any output buffer to ensure clean file download
+            while (ob_get_level()) {
+                ob_end_clean();
+            }
+
             header('Content-Type: application/vnd.ms-excel; charset=utf-8');
             header('Content-Disposition: attachment; filename="' . $filename . '"');
             header('Pragma: no-cache');
