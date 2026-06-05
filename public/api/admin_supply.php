@@ -505,11 +505,26 @@ function normalized_sku_exists_in_table_admin_supply($pdo, string $table, string
     }
 
     try {
+        // 1. Fast direct lookup using database index (0ms)
         if ($excludeId > 0) {
-            $stmt = $pdo->prepare("SELECT id, {$skuColumn} AS sku FROM {$table} WHERE id <> ?");
-            $stmt->execute([max(0, $excludeId)]);
+            $stmt = $pdo->prepare("SELECT id, {$skuColumn} AS sku FROM {$table} WHERE {$skuColumn} = ? AND id <> ? LIMIT 1");
+            $stmt->execute([$sku, $excludeId]);
         } else {
-            $stmt = $pdo->query("SELECT id, {$skuColumn} AS sku FROM {$table}");
+            $stmt = $pdo->prepare("SELECT id, {$skuColumn} AS sku FROM {$table} WHERE {$skuColumn} = ? LIMIT 1");
+            $stmt->execute([$sku]);
+        }
+        if ($stmt->fetch()) {
+            return true;
+        }
+
+        // 2. Fallback lookup with LIKE to fetch potential prefix/suffix variations (max 100 rows)
+        $likePattern = '%' . $sku . '%';
+        if ($excludeId > 0) {
+            $stmt = $pdo->prepare("SELECT id, {$skuColumn} AS sku FROM {$table} WHERE {$skuColumn} LIKE ? AND id <> ? LIMIT 100");
+            $stmt->execute([$likePattern, $excludeId]);
+        } else {
+            $stmt = $pdo->prepare("SELECT id, {$skuColumn} AS sku FROM {$table} WHERE {$skuColumn} LIKE ? LIMIT 100");
+            $stmt->execute([$likePattern]);
         }
 
         $rows = $stmt ? $stmt->fetchAll() : [];
