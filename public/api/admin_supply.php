@@ -2421,12 +2421,18 @@ function resolve_admin_supply_image_by_sku($rawSku): ?string {
         return null;
     }
 
+    // Optimization: check first-class disk cache by SKU folder to avoid heavy DB queries
+    if (isset($cache[$sku])) {
+        return $cache[$sku];
+    }
+
+    // Fallback to database/gallery lookup only if not in first-class cache
     $galleryImages = list_product_gallery_images_admin_supply($sku);
     if (!empty($galleryImages) && is_array($galleryImages)) {
         return (string)$galleryImages[0];
     }
 
-    return $cache[$sku] ?? null;
+    return null;
 }
 
 function admin_supply_local_image_exists(string $path): bool {
@@ -2435,7 +2441,8 @@ function admin_supply_local_image_exists(string $path): bool {
         return $path !== '';
     }
 
-    return is_file(__DIR__ . '/' . ltrim($path, '/'));
+    // Point to public/ directory instead of public/api/ to correctly verify if local image exists
+    return is_file(dirname(__DIR__) . '/' . ltrim($path, '/'));
 }
 
 function apply_catalog_image_fallback_admin_supply(array $item): array {

@@ -5286,14 +5286,40 @@ document.addEventListener('DOMContentLoaded', function () {
     loadProductImageReferences();
     refreshCategoriesUi();
 
-    // Carga diferida: resto de secciones no visibles inicialmente
-    setTimeout(function () {
-        loadMarketplaceCeAdmin(marketplaceCurrentPage);
-        loadClients();
-        loadHomepageUpdatesAdmin();
-    }, 400);
+    // Carga bajo demanda al abrir cada pestaña para acelerar la carga inicial
+    var updatesBtn = document.querySelector('[data-tab="updatesTab"]');
+    if (updatesBtn) {
+        var _updLoaded = false;
+        updatesBtn.addEventListener('click', function () {
+            if (!_updLoaded) {
+                _updLoaded = true;
+                loadHomepageUpdatesAdmin();
+            }
+        });
+    }
 
-    // Carga bajo demanda al abrir cada pestaña
+    var clientsBtn = document.querySelector('[data-tab="clientsTab"]');
+    if (clientsBtn) {
+        var _cliLoaded = false;
+        clientsBtn.addEventListener('click', function () {
+            if (!_cliLoaded) {
+                _cliLoaded = true;
+                loadClients();
+            }
+        });
+    }
+
+    var marketplaceBtn = document.querySelector('[data-tab="marketplaceTab"]');
+    if (marketplaceBtn) {
+        var _mktLoaded = false;
+        marketplaceBtn.addEventListener('click', function () {
+            if (!_mktLoaded) {
+                _mktLoaded = true;
+                loadMarketplaceCeAdmin(marketplaceCurrentPage);
+            }
+        });
+    }
+
     var calendarBtn = document.querySelector('[data-tab="calendarTab"]');
     if (calendarBtn) { var _calLoaded = false; calendarBtn.addEventListener('click', function () { if (!_calLoaded) { _calLoaded = true; loadCalendar(); } }); }
 
