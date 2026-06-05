@@ -204,39 +204,37 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
     <link rel="stylesheet" href="css/theme.css?v=2.5">
     <link rel="stylesheet" href="css/responsive-complete.css?v=2.2">
     <style>
-        /* ===== Marketplace CE extras ===== */
-        .ce-hero {
-            background: linear-gradient(135deg,rgba(0,0,0,0.94),rgba(20,20,20,0.98));
-            border-radius: 16px;
-            padding: 2rem 2rem 1.5rem;
-            margin-bottom: 1.5rem;
-            color: #fff;
-            border: 1px solid #1f1f1f;
-        }
-        .ce-hero h1 { color: var(--theme-accent); margin: 0.25rem 0 0.5rem; font-size: 2rem; }
-        .ce-hero p  { color: rgba(255,255,255,0.82); margin: 0 0 0.75rem; }
+        /* ===== Marketplace CE — Mejoras de diseño ===== */
 
-        .ce-bar {
-            display: flex;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-            align-items: center;
-            margin-bottom: 1.25rem;
+        /* Hero: alineado a la izquierda como el catálogo de Productos */
+        .catalog-hero {
+            text-align: left !important;
         }
-        .ce-search {
-            flex: 1 1 220px;
-            padding: 0.65rem 1rem;
-            border: 1px solid var(--theme-border);
+        .catalog-hero .module-badge {
+            display: inline-flex;
+        }
+
+        /* Barra de búsqueda: pill elegante, sin borde azul */
+        #ceSearch {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 0.75rem 1.25rem;
             border-radius: 999px;
-            font-size: 0.96rem;
-            background: var(--theme-surface);
-            color: var(--theme-text);
-            min-width: 180px;
+            border: 1.5px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.04);
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
         }
-        .ce-search:focus { outline: none; border-color: var(--theme-accent); box-shadow: 0 0 0 3px var(--theme-accent-soft); }
-
-        .ce-cats { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
-        .ce-count { color: var(--theme-text-muted); font-size: 0.88rem; margin-bottom: 0.75rem; }
+        #ceSearch::placeholder {
+            color: rgba(255,255,255,0.38);
+        }
+        #ceSearch:focus {
+            border-color: var(--theme-accent, #ff7f00);
+            box-shadow: 0 0 0 3px rgba(255,127,0,0.15);
+            background: rgba(255,255,255,0.06);
+        }
 
         /* condition badge */
         .condition-tag {
@@ -249,6 +247,23 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
             color: var(--theme-accent, #ff7f00);
             border: 1px solid rgba(255,127,0,0.3);
             margin-bottom: 0.3rem;
+        }
+
+        /* Animación de entrada en cards */
+        #ceGrid .product-card-min {
+            animation: ce-fade-in 0.35s ease both;
+        }
+        @keyframes ce-fade-in {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Contador de artículos */
+        #ceCount {
+            color: rgba(255,255,255,0.45);
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+            letter-spacing: 0.02em;
         }
     </style>
 </head>
@@ -310,6 +325,11 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
         </section>
 
         <section class="catalog-shell">
+            <!-- BÚSQUEDA (encima de categorías) -->
+            <div class="catalog-toolbar">
+                <input id="ceSearch" type="text" placeholder="Buscar por nombre, código o condición...">
+            </div>
+
             <!-- CATEGORÍAS -->
             <?php if (!empty($allCategories)): ?>
             <div class="catalog-categories-top">
@@ -325,12 +345,7 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
             </div>
             <?php endif; ?>
 
-            <!-- BÚSQUEDA -->
-            <div class="catalog-toolbar">
-                <input id="ceSearch" class="catalog-search" type="text" placeholder="Buscar por nombre, código o condición...">
-            </div>
-
-            <div class="ce-count" id="ceCount" style="color:var(--theme-text-muted,#888);font-size:0.88rem;margin-bottom:0.75rem;"></div>
+            <div id="ceCount"></div>
 
             <!-- GRID -->
             <?php if (empty($marketplaceItems)): ?>
