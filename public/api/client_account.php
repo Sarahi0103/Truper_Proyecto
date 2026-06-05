@@ -564,14 +564,25 @@ try {
                 break;
             }
 
+            // Fetch records created directly by this user
+            // OR client_order records linked to an order owned by this user
             $stmt = $pdo->prepare("
-                SELECT id, transaction_type, reference_folio, data_json, created_at
-                FROM transaction_history
-                WHERE created_by = ?
+                SELECT th.id, th.transaction_type, th.reference_folio, th.data_json,
+                       th.created_at
+                FROM transaction_history th
+                WHERE th.created_by = ?
+                UNION
+                SELECT th.id, th.transaction_type, th.reference_folio, th.data_json,
+                       th.created_at
+                FROM transaction_history th
+                INNER JOIN orders o ON o.order_number = th.reference_folio
+                INNER JOIN clients c ON c.id = o.client_id
+                WHERE c.user_id = ?
+                  AND th.transaction_type = 'client_order'
                 ORDER BY created_at DESC
-                LIMIT 100
+                LIMIT 200
             ");
-            $stmt->execute([$user_id]);
+            $stmt->execute([$user_id, $user_id]);
             $items = $stmt->fetchAll();
 
             $response = ['success' => true, 'items' => $items];
