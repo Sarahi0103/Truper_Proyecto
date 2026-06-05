@@ -2414,6 +2414,12 @@ async function deleteStockSelectedItems() {
 }
 
 function resetProductForm() {
+    setGalleryState('stock', '', [], '');
+    
+    // Reset file input if exists
+    const fileInput = document.getElementById('newProductImages');
+    if (fileInput) fileInput.value = '';
+
     document.getElementById('newProductEditId').value = '';
     document.getElementById('newProductSeedMode').value = '0';
     document.getElementById('newProductSku').value = '';
@@ -4645,6 +4651,7 @@ async function createProductByAdmin() {
 }
 
 function resetMarketplaceForm() {
+    setGalleryState('marketplace', '', [], '');
     document.getElementById('marketplaceEditId').value = '';
     document.getElementById('marketplaceSku').value = '';
     document.getElementById('marketplaceName').value = '';
