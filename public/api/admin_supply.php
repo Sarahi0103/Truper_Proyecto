@@ -48,6 +48,28 @@ function normalize_date_value($value): ?string {
     return null;
 }
 
+function normalize_datetime_value($value): ?string {
+    $raw = trim((string)$value);
+    if ($raw === '') {
+        return null;
+    }
+    
+    $raw = str_replace('T', ' ', $raw);
+    
+    // Check if format is DD/MM/YYYY HH:MM(:SS)
+    if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?$/', $raw, $matches)) {
+        $sec = isset($matches[6]) ? $matches[6] : '00';
+        return "{$matches[3]}-{$matches[2]}-{$matches[1]} {$matches[4]}:{$matches[5]}:{$sec}";
+    }
+    
+    $ts = strtotime($raw);
+    if ($ts !== false) {
+        return date('Y-m-d H:i:s', $ts);
+    }
+    
+    return null;
+}
+
 function normalize_bool_admin_supply($value, bool $default = false): bool {
     if ($value === null) {
         return $default;
@@ -4658,14 +4680,14 @@ try {
                 break;
             }
             $supplier_name = sanitize($input['supplier_name'] ?? '');
-            $visit_datetime = $input['visit_datetime'] ?? '';
+            $visit_datetime = normalize_datetime_value($input['visit_datetime'] ?? '');
             $notes = sanitize($input['notes'] ?? '');
-            if ($supplier_name === '' || $visit_datetime === '') {
-                $response = ['success' => false, 'message' => 'Proveedor y fecha son obligatorios'];
+            if ($supplier_name === '' || !$visit_datetime) {
+                $response = ['success' => false, 'message' => 'Proveedor y fecha válidos son obligatorios'];
                 break;
             }
             $stmt = $pdo->prepare("INSERT INTO supplier_calendar (supplier_name, visit_datetime, notes, created_by) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$supplier_name, $visit_datetime, $notes, $_SESSION['user_id']]);
+            $stmt->execute([$supplier_name, $visit_datetime, $notes, $_SESSION['user_id'] ?? null]);
             $response = ['success' => true, 'message' => 'Visita registrada'];
             break;
 

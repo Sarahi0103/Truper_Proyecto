@@ -2802,8 +2802,18 @@ let calendarVisits = [];
 let calendarMonthCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let selectedCalendarDay = null; // Filter visits by day
 
+function parseDateTimeCompat(dateStr) {
+    if (!dateStr) return new Date(NaN);
+    if (dateStr instanceof Date) return dateStr;
+    let s = String(dateStr).trim();
+    if (s.includes(' ') && !s.includes('T')) {
+        s = s.replace(' ', 'T');
+    }
+    return new Date(s);
+}
+
 function formatDateTimeLocal(dateValue) {
-    const d = new Date(dateValue);
+    const d = parseDateTimeCompat(dateValue);
     if (Number.isNaN(d.getTime())) return '';
     return d.toLocaleString('es-MX', {
         year: 'numeric',
@@ -2839,7 +2849,7 @@ function renderCalendarMonth() {
 
     const visitMap = {};
     calendarVisits.forEach((visit) => {
-        const d = new Date(visit.visit_datetime);
+        const d = parseDateTimeCompat(visit.visit_datetime);
         if (Number.isNaN(d.getTime())) return;
         if (d.getFullYear() !== year || d.getMonth() !== month) return;
         const key = d.getDate();
@@ -2871,9 +2881,9 @@ function renderCalendarMonth() {
     grid.innerHTML = html;
 
     const monthVisits = calendarVisits.filter((visit) => {
-        const d = new Date(visit.visit_datetime);
+        const d = parseDateTimeCompat(visit.visit_datetime);
         return !Number.isNaN(d.getTime()) && d.getFullYear() === year && d.getMonth() === month;
-    }).sort((a, b) => new Date(a.visit_datetime) - new Date(b.visit_datetime));
+    }).sort((a, b) => parseDateTimeCompat(a.visit_datetime) - parseDateTimeCompat(b.visit_datetime));
 
     let listTitleHtml = '';
     const formattedMonthName = calendarMonthCursor.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
@@ -2899,7 +2909,7 @@ function renderCalendarMonth() {
     let filteredVisits = monthVisits;
     if (selectedCalendarDay !== null) {
         filteredVisits = monthVisits.filter((visit) => {
-            const d = new Date(visit.visit_datetime);
+            const d = parseDateTimeCompat(visit.visit_datetime);
             return !Number.isNaN(d.getTime()) && d.getDate() === selectedCalendarDay;
         });
     }
@@ -2914,7 +2924,7 @@ function renderCalendarMonth() {
     const pastVisits = [];
 
     filteredVisits.forEach((visit) => {
-        const d = new Date(visit.visit_datetime);
+        const d = parseDateTimeCompat(visit.visit_datetime);
         if (Number.isNaN(d.getTime())) return;
         if (d >= now) {
             upcomingVisits.push(visit);
@@ -2924,7 +2934,7 @@ function renderCalendarMonth() {
     });
 
     // Sort past visits by date descending (latest past first)
-    pastVisits.sort((a, b) => new Date(b.visit_datetime) - new Date(a.visit_datetime));
+    pastVisits.sort((a, b) => parseDateTimeCompat(b.visit_datetime) - parseDateTimeCompat(a.visit_datetime));
 
     const renderVisitCard = (i, isUpcoming) => `
         <div class="visit-item ${isUpcoming ? 'visit-upcoming' : 'visit-past'}">
