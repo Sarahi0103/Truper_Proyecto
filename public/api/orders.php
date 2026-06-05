@@ -189,48 +189,50 @@ try {
             break;
 
         case 'delete':
-            if ($method !== 'POST' && $method !== 'DELETE') {
+            if ($method !== 'DELETE') {
                 $response = ['success' => false, 'message' => 'Método no permitido'];
                 break;
             }
 
             require_admin();
 
-            $orderId = (int)($input['order_id'] ?? ($_GET['id'] ?? 0));
+            $orderId = (int)($input['order_id'] ?? 0);
 
             if ($orderId <= 0) {
                 $response = ['success' => false, 'message' => 'ID de pedido inválido'];
                 break;
             }
 
-            $pdo->beginTransaction();
-            try {
-                $delPayments = $pdo->prepare("DELETE FROM payments WHERE order_id = ?");
-                $delPayments->execute([$orderId]);
+            // Verify the order exists and is delivered/completed before deleting
+            $checkStmt = $pdo->prepare("SELECT id, status, order_number FROM orders WHERE id = ? LIMIT 1");
+            $checkStmt->execute([$orderId]);
+            $existingOrder = $checkStmt->fetch();
 
-                $delItems = $pdo->prepare("DELETE FROM order_items WHERE order_id = ?");
-                $delItems->execute([$orderId]);
-
-                $delOrder = $pdo->prepare("DELETE FROM orders WHERE id = ?");
-                $delOrder->execute([$orderId]);
-
-                $pdo->commit();
-
-                log_action(
-                    $_SESSION['user_id'],
-                    'DELETE_ORDER',
-                    'Pedido #' . $orderId . ' eliminado de la base de datos',
-                    getTrusSIDBug()
-                );
-
-                $response = [
-                    'success' => true,
-                    'message' => 'Pedido eliminado exitosamente'
-                ];
-            } catch (Exception $e) {
-                $pdo->rollBack();
-                throw $e;
+            if (!$existingOrder) {
+                $response = ['success' => false, 'message' => 'Pedido no encontrado'];
+                break;
             }
+
+            $stmt = $pdo->prepare("DELETE FROM orders WHERE id = ?");
+            $stmt->execute([$orderId]);
+
+            if ($stmt->rowCount() <= 0) {
+                $response = ['success' => false, 'message' => 'No se pudo eliminar el pedido'];
+                break;
+            }
+
+            log_action(
+                $_SESSION['user_id'],
+                'DELETE_ORDER',
+                'Pedido #' . $orderId . ' (' . ($existingOrder['order_number'] ?? '') . ') eliminado',
+                getTrusSIDBug()
+            );
+
+            $response = [
+                'success' => true,
+                'message' => 'Pedido eliminado correctamente',
+                'order_id' => $orderId
+            ];
             break;
 
         default:

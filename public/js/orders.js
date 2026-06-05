@@ -282,6 +282,25 @@ async function updateOrderStatus(orderId, newStatus) {
     showAlert((response && response.message) ? response.message : 'No se pudo actualizar el estado del pedido', 'error');
 }
 
+async function deleteOrder(orderId, orderNumber) {
+    if (!ORDERS_IS_ADMIN) return;
+
+    const confirmed = confirm(`¿Estás seguro de que deseas eliminar el pedido ${orderNumber}? Esta acción no se puede deshacer.`);
+    if (!confirmed) return;
+
+    const response = await apiCall('/orders.php?action=delete', 'DELETE', {
+        order_id: Number(orderId)
+    });
+
+    if (response && response.success) {
+        showAlert(response.message || 'Pedido eliminado correctamente', 'success');
+        await loadOrders();
+        return;
+    }
+
+    showAlert((response && response.message) ? response.message : 'No se pudo eliminar el pedido', 'error');
+}
+
 function normalizeCategoryText(value) {
     return String(value || '')
         .normalize('NFD')
@@ -594,22 +613,23 @@ async function loadOrders() {
 
     ordersList.innerHTML = response.orders.map(order => {
         const normalizedStatus = normalizeOrderStatus(order.status);
-        const deleteBtn = (ORDERS_IS_ADMIN && normalizedStatus === 'delivered')
-            ? `<button class="btn btn-small btn-danger" onclick="deleteOrder(${order.id})">Eliminar</button>`
+        const isCompleted = normalizedStatus === 'delivered';
+        const deleteBtn = (ORDERS_IS_ADMIN && isCompleted)
+            ? `<button class="btn btn-small btn-danger order-delete-btn" style="margin-left:6px;" onclick="deleteOrder(${Number(order.id)}, '${String(order.order_number || '').replace(/'/g, '')}')">
+                🗑 Eliminar
+               </button>`
             : '';
 
         return `
-        <tr data-status="${normalizedStatus}">
+        <tr data-status="${normalizedStatus}" data-order-id="${order.id}">
             <td>${order.order_number}</td>
             <td>${formatDate(order.created_at)}</td>
             <td>${formatCurrency(order.total_amount)}</td>
             <td>WhatsApp</td>
             <td>${renderOrderStatusCell(normalizedStatus, order.id)}</td>
             <td>
-                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    <a class="btn btn-small btn-primary" href="/ticket_client.php?id=${order.id}" target="_blank">Ticket</a>
-                    ${deleteBtn}
-                </div>
+                <a class="btn btn-small btn-primary" href="/ticket_client.php?id=${order.id}" target="_blank">Ticket</a>
+                ${deleteBtn}
             </td>
         </tr>
     `;
@@ -617,22 +637,6 @@ async function loadOrders() {
 
     removePayButtonsFromOrders();
     applyOrderFilters();
-}
-
-async function deleteOrder(orderId) {
-    if (!orderId) return;
-    if (!confirm('¿Deseas eliminar este pedido definitivamente? Esta acción no se puede deshacer.')) {
-        return;
-    }
-
-    const response = await apiCall('/orders.php?action=delete', 'POST', { order_id: Number(orderId) });
-    if (response && response.success) {
-        showAlert(response.message || 'Pedido eliminado exitosamente', 'success');
-        await loadOrders();
-        return;
-    }
-
-    showAlert((response && response.message) ? response.message : 'No se pudo eliminar el pedido', 'error');
 }
 
 document.addEventListener('DOMContentLoaded', function() {
