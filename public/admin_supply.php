@@ -1290,11 +1290,22 @@ async function validateSkuAvailability(kind, options = {}) {
         return false;
     }
 
-    setSkuStatus(statusId, 'Verificando en la base de datos...', 'muted');
-    const version = ++skuCheckVersion[kind];
     const currentId = isMarketplace
         ? Number(document.getElementById('marketplaceEditId').value || 0)
         : Number(document.getElementById('newProductEditId').value || 0);
+
+    // Evitar consultar API si el SKU ingresado coincide exactamente con el original del registro que editamos
+    if (currentId > 0) {
+        const cache = isMarketplace ? marketplaceItemsCache : stockItemsCache;
+        const item = cache.find((row) => Number(row.id) === currentId);
+        if (item && normalizeNumericSku(item.sku || '') === sku) {
+            setSkuStatus(statusId, isMarketplace ? 'Editando artículo CE existente.' : 'Editando producto existente.', 'muted');
+            return true;
+        }
+    }
+
+    setSkuStatus(statusId, 'Verificando en la base de datos...', 'muted');
+    const version = ++skuCheckVersion[kind];
     const allowSeedSku = !isMarketplace && Number(document.getElementById('newProductSeedMode')?.value || 0) === 1;
     const endpoint = isMarketplace
         ? `/admin_supply.php?action=marketplace-sku-check&sku=${encodeURIComponent(sku)}&id=${encodeURIComponent(currentId)}`
