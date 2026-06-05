@@ -267,51 +267,19 @@ $company_whatsapp = htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8
         <div class="page-hero">
             <div class="module-badge module-client"><span class="module-glyph">CL</span> Portal de Cliente</div>
             <h1>Mi Cuenta</h1>
-            <p class="text-muted">Administra tu crédito, control semanal, pagos, cotizaciones e historial completo.</p>
+            <p class="text-muted">Administra tu consumo semanal, cotizaciones e historial completo.</p>
         </div>
 
-        <!-- TABS -->
         <div class="tabs mt-3">
-            <button class="tab-button active" data-tab="creditTab">Estado de Crédito</button>
-            <button class="tab-button" data-tab="weeklyTab">Control Semanal</button>
-            <button class="tab-button" data-tab="paymentsTab">Pagos</button>
+            <button class="tab-button active" data-tab="weeklyTab">Control Semanal</button>
             <button class="tab-button" data-tab="quotesTab">Cotizaciones</button>
             <button class="tab-button" data-tab="historyTab">Historial</button>
         </div>
 
         <!-- ================================================
-             PESTAÑA: Estado de Crédito
-        ================================================ -->
-        <section id="creditTab" class="tab-content active">
-            <div class="card"><div class="card-body">
-                <div class="section-header"><span class="section-dot"></span><h2>Estado de Tu Crédito</h2></div>
-                <div id="creditStatus" class="text-muted">Cargando...</div>
-                <div class="metrics-grid">
-                    <div class="metric-box">
-                        <div class="metric-label">Límite de Crédito</div>
-                        <div class="metric-value" id="creditLimit">$0.00</div>
-                    </div>
-                    <div class="metric-box">
-                        <div class="metric-label">Crédito Disponible</div>
-                        <div class="metric-value" id="creditAvailable">$0.00</div>
-                    </div>
-                    <div class="metric-box">
-                        <div class="metric-label">Crédito Utilizado</div>
-                        <div class="metric-value" id="creditUsed">$0.00</div>
-                    </div>
-                    <div class="metric-box">
-                        <div class="metric-label">Total Adeudado</div>
-                        <div class="metric-value" id="totalOwed">$0.00</div>
-                    </div>
-                </div>
-                <div id="creditAlert"></div>
-            </div></div>
-        </section>
-
-        <!-- ================================================
              PESTAÑA: Control Semanal
         ================================================ -->
-        <section id="weeklyTab" class="tab-content">
+        <section id="weeklyTab" class="tab-content active">
             <div class="card"><div class="card-body">
                 <div class="section-header"><span class="section-dot"></span><h2>Control Semanal de Consumo</h2></div>
                 <div class="alert alert-info">
@@ -320,29 +288,6 @@ $company_whatsapp = htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8
                 <div id="weeklySummary" class="text-muted">Cargando...</div>
                 <h3 class="mt-4">Historial de Últimas 12 Semanas</h3>
                 <div id="weeklyHistory" class="text-muted">Cargando...</div>
-            </div></div>
-        </section>
-
-        <!-- ================================================
-             PESTAÑA: Pagos
-        ================================================ -->
-        <section id="paymentsTab" class="tab-content">
-            <div class="card mb-3"><div class="card-body">
-                <div class="section-header"><span class="section-dot"></span><h2>Historial de Pagos</h2></div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Monto</th>
-                            <th>Método</th>
-                            <th>Referencia</th>
-                            <th>Notas</th>
-                        </tr>
-                    </thead>
-                    <tbody id="paymentsList">
-                        <tr><td colspan="5" class="text-muted">Cargando...</td></tr>
-                    </tbody>
-                </table>
             </div></div>
         </section>
 
