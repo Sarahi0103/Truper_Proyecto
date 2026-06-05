@@ -681,7 +681,10 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <div class="grid grid-4">
                     <div class="form-group">
                         <label>Producto</label>
-                        <select id="spProduct"></select>
+                        <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                            <input id="spProductSearch" type="text" class="exclude-search-input" placeholder="🔍 Buscar producto..." style="padding: 0.55rem 0.75rem; font-size: 0.88rem;">
+                            <select id="spProduct"></select>
+                        </div>
                     </div>
                     <div class="form-group"><label>Proveedor</label><input id="spSupplier" type="text" placeholder="Proveedor A"></div>
                     <div class="form-group"><label>SKU proveedor (opcional)</label><input id="spSupplierSku" type="text"></div>
@@ -699,7 +702,13 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     <div class="form-group"><label>Fecha recepcion</label><input id="poDate" type="date"></div>
                 </div>
                 <div class="grid grid-4">
-                    <div class="form-group"><label>Producto proveedor</label><select id="poMappedProduct"></select></div>
+                    <div class="form-group">
+                        <label>Producto proveedor</label>
+                        <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                            <input id="poMappedProductSearch" type="text" class="exclude-search-input" placeholder="🔍 Buscar producto..." style="padding: 0.55rem 0.75rem; font-size: 0.88rem;">
+                            <select id="poMappedProduct"></select>
+                        </div>
+                    </div>
                     <div class="form-group"><label>Cantidad</label><input id="poQty" type="number" min="1" value="1"></div>
                     <div class="form-group"><label>Costo estimado</label><input id="poCost" type="number" min="0" step="0.01" value="0"></div>
                     <div class="form-group"><label>&nbsp;</label><button class="btn btn-secondary" onclick="addMappedProductToOrder()">Agregar item</button></div>
@@ -3047,6 +3056,17 @@ function addMappedProductToOrder() {
     quantityInput.value = '1';
     costInput.value = '0';
     select.selectedIndex = 0;
+    
+    const poSearchInput = document.getElementById('poMappedProductSearch');
+    if (poSearchInput) {
+        poSearchInput.value = '';
+        if (window.allMappedProducts && window.allMappedProducts.length > 0) {
+            select.innerHTML = '<option value="">Selecciona producto...</option>' + window.allMappedProducts.map((i) => {
+                const label = `${displayProductLabel(i.sku, i.product_name)} | ${i.supplier_sku || 'sin SKU prov.'}`;
+                return `<option value="${Number(i.id)}" data-product-name="${escapeHtml(i.product_name)}" data-sku="${escapeHtml(i.sku)}">${escapeHtml(label)}</option>`;
+            }).join('');
+        }
+    }
 }
 
 function renderPoItems() {
@@ -3067,6 +3087,9 @@ async function loadSupplierProducts() {
     const res = await apiCall('/admin_supply.php?action=supplier-products-list', 'GET', null, { silent: true });
     const listBox = document.getElementById('supplierProductList');
     const productSelect = document.getElementById('spProduct');
+    
+    const searchInput = document.getElementById('spProductSearch');
+    if (searchInput) searchInput.value = '';
 
     if (productSelect) {
         productSelect.innerHTML = '<option value="">Cargando productos...</option>';
@@ -3086,6 +3109,8 @@ async function loadSupplierProducts() {
                 break;
             }
         }
+
+        window.allSupplierProducts = products;
 
         if (products.length > 0) {
             productSelect.innerHTML = '<option value="">Selecciona producto...</option>' + products
@@ -3163,18 +3188,26 @@ async function createSupplierProductLink() {
 async function loadMappedProductsBySupplier() {
     const supplier = document.getElementById('poSupplier').value.trim();
     const select = document.getElementById('poMappedProduct');
+    
+    const searchInput = document.getElementById('poMappedProductSearch');
+    if (searchInput) searchInput.value = '';
+
     if (!select) return;
 
     if (!supplier) {
         select.innerHTML = '<option value="">Captura proveedor...</option>';
+        window.allMappedProducts = [];
         return;
     }
 
     const res = await apiCall(`/admin_supply.php?action=supplier-products-by-supplier&supplier_name=${encodeURIComponent(supplier)}`, 'GET', null, { silent: true });
     if (!res || !res.success || !Array.isArray(res.items) || res.items.length === 0) {
         select.innerHTML = '<option value="">Sin productos para proveedor</option>';
+        window.allMappedProducts = [];
         return;
     }
+
+    window.allMappedProducts = res.items;
 
     select.innerHTML = '<option value="">Selecciona producto...</option>' + res.items.map((i) => {
         const label = `${displayProductLabel(i.sku, i.product_name)} | ${i.supplier_sku || 'sin SKU prov.'}`;
@@ -3219,6 +3252,8 @@ async function createSupplierOrder() {
     renderPoItems();
     document.getElementById('poSupplier').value = '';
     document.getElementById('poDate').value = '';
+    const poSearchInput = document.getElementById('poMappedProductSearch');
+    if (poSearchInput) poSearchInput.value = '';
     if (res.ticket_url) window.open(res.ticket_url, '_blank');
     loadSupplierOrders();
     loadHistory();
@@ -5514,6 +5549,58 @@ document.addEventListener('DOMContentLoaded', function () {
         supplierInput.addEventListener('input', loadMappedProductsBySupplier);
         supplierInput.addEventListener('change', loadMappedProductsBySupplier);
         supplierInput.addEventListener('blur', loadMappedProductsBySupplier);
+    }
+
+    const spSearchInput = document.getElementById('spProductSearch');
+    if (spSearchInput) {
+        spSearchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase().trim();
+            const select = document.getElementById('spProduct');
+            if (!select) return;
+            if (!window.allSupplierProducts || window.allSupplierProducts.length === 0) return;
+            
+            const filtered = window.allSupplierProducts.filter(p => {
+                const name = (p.name || '').toLowerCase();
+                const sku = (p.sku || '').toLowerCase();
+                const id = String(p.id || '');
+                return name.includes(query) || sku.includes(query) || id.includes(query);
+            });
+            
+            if (filtered.length > 0) {
+                select.innerHTML = '<option value="">Selecciona producto...</option>' + filtered
+                    .map((p) => `<option value="${Number(p.id)}">${escapeHtml(displayProductLabel(p.sku, p.name))}</option>`)
+                    .join('');
+            } else {
+                select.innerHTML = '<option value="">No se encontraron productos</option>';
+            }
+        });
+    }
+
+    const poSearchInput = document.getElementById('poMappedProductSearch');
+    if (poSearchInput) {
+        poSearchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase().trim();
+            const select = document.getElementById('poMappedProduct');
+            if (!select) return;
+            if (!window.allMappedProducts || window.allMappedProducts.length === 0) return;
+            
+            const filtered = window.allMappedProducts.filter(i => {
+                const name = (i.product_name || '').toLowerCase();
+                const sku = (i.sku || '').toLowerCase();
+                const supplierSku = (i.supplier_sku || '').toLowerCase();
+                const id = String(i.id || '');
+                return name.includes(query) || sku.includes(query) || supplierSku.includes(query) || id.includes(query);
+            });
+            
+            if (filtered.length > 0) {
+                select.innerHTML = '<option value="">Selecciona producto...</option>' + filtered.map((i) => {
+                    const label = `${displayProductLabel(i.sku, i.product_name)} | ${i.supplier_sku || 'sin SKU prov.'}`;
+                    return `<option value="${Number(i.id)}" data-product-name="${escapeHtml(i.product_name)}" data-sku="${escapeHtml(i.sku)}">${escapeHtml(label)}</option>`;
+                }).join('');
+            } else {
+                select.innerHTML = '<option value="">No se encontraron productos</option>';
+            }
+        });
     }
 
     const productSkuInput = document.getElementById('newProductSku');
