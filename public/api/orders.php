@@ -188,6 +188,51 @@ try {
             ];
             break;
 
+        case 'delete':
+            if ($method !== 'POST' && $method !== 'DELETE') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            require_admin();
+
+            $orderId = (int)($input['order_id'] ?? ($_GET['id'] ?? 0));
+
+            if ($orderId <= 0) {
+                $response = ['success' => false, 'message' => 'ID de pedido inválido'];
+                break;
+            }
+
+            $pdo->beginTransaction();
+            try {
+                $delPayments = $pdo->prepare("DELETE FROM payments WHERE order_id = ?");
+                $delPayments->execute([$orderId]);
+
+                $delItems = $pdo->prepare("DELETE FROM order_items WHERE order_id = ?");
+                $delItems->execute([$orderId]);
+
+                $delOrder = $pdo->prepare("DELETE FROM orders WHERE id = ?");
+                $delOrder->execute([$orderId]);
+
+                $pdo->commit();
+
+                log_action(
+                    $_SESSION['user_id'],
+                    'DELETE_ORDER',
+                    'Pedido #' . $orderId . ' eliminado de la base de datos',
+                    getTrusSIDBug()
+                );
+
+                $response = [
+                    'success' => true,
+                    'message' => 'Pedido eliminado exitosamente'
+                ];
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
+            break;
+
         default:
             $response = ['success' => false, 'message' => 'Acción no reconocida'];
     }
