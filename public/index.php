@@ -338,7 +338,7 @@ try {
         $activeColumn = 'active';
     }
 
-    $sortColumn = db_column_exists('homepage_updates', 'sort_order') ? 'sort_order' : 'id';
+    $sortColumn = db_column_exists('homepage_updates', 'sort_order') ? 'sort_order' : (db_column_exists('homepage_updates', 'position') ? 'position' : 'id');
     $imageSelect = db_column_exists('homepage_updates', 'image_url')
         ? "COALESCE(image_url, '') AS image_url"
         : "'' AS image_url";
@@ -441,8 +441,8 @@ function homepage_update_label($type) {
                     <p>Información destacada con rotación automática para mantener la portada activa y útil.</p>
                 </div>
                 <div class="promo-controls">
-                    <button type="button" class="btn btn-ghost btn-small" data-promo-prev aria-label="Anterior">Anterior</button>
-                    <button type="button" class="btn btn-ghost btn-small" data-promo-next aria-label="Siguiente">Siguiente</button>
+                    <button type="button" class="btn btn-ghost btn-small" data-promo-prev aria-label="Anterior">← Anterior</button>
+                    <button type="button" class="btn btn-ghost btn-small" data-promo-next aria-label="Siguiente">Siguiente →</button>
                 </div>
             </div>
 

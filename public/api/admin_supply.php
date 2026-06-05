@@ -4411,7 +4411,7 @@ try {
             }
 
             $activeCol = homepage_updates_active_column_admin_supply();
-            $sortCol = first_existing_column_admin_supply('homepage_updates', ['sort_order', 'display_order', 'order_index']);
+            $sortCol = first_existing_column_admin_supply('homepage_updates', ['sort_order', 'display_order', 'order_index', 'position']);
             $imageCol = first_existing_column_admin_supply('homepage_updates', ['image_url', 'image', 'photo_url']);
             $createdAtCol = first_existing_column_admin_supply('homepage_updates', ['created_at']);
             $updatedAtCol = first_existing_column_admin_supply('homepage_updates', ['updated_at']);
@@ -4452,7 +4452,7 @@ try {
                 : (isset($input['is_active']) ? normalize_bool_admin_supply($input['is_active'], true) : true);
 
             $activeCol = homepage_updates_active_column_admin_supply();
-            $sortCol = first_existing_column_admin_supply('homepage_updates', ['sort_order', 'display_order', 'order_index']);
+            $sortCol = first_existing_column_admin_supply('homepage_updates', ['sort_order', 'display_order', 'order_index', 'position']);
             $imageCol = first_existing_column_admin_supply('homepage_updates', ['image_url', 'image', 'photo_url']);
             $createdByCol = first_existing_column_admin_supply('homepage_updates', ['created_by']);
             $updatedByCol = first_existing_column_admin_supply('homepage_updates', ['updated_by']);

@@ -1705,6 +1705,12 @@ footer {
     overflow: hidden;
     background: rgba(0, 0, 0, 0.25);
     border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+}
+
+.promo-slide:hover .promo-slide-media {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
 }
 
 .promo-image {
@@ -1715,6 +1721,11 @@ footer {
     object-fit: contain;
     display: block;
     margin: 0 auto;
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.promo-slide:hover .promo-image {
+    transform: scale(1.03);
 }
 
 @media (min-width: 768px) {
@@ -1761,19 +1772,20 @@ footer {
 }
 
 .promo-dot {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.58);
+    border: 1px solid rgba(255, 255, 255, 0.45);
     background: rgba(255, 255, 255, 0.18);
     cursor: pointer;
-    transition: transform 0.2s ease, background-color 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0;
 }
 
 .promo-dot.active {
+    width: 24px;
     background: #ff7f00;
     border-color: #ff7f00;
-    transform: scale(1.08);
 }
 
 .catalog-categories-top {
