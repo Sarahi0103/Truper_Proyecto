@@ -373,7 +373,7 @@ try {
                 if (in_array($sku, array_map('strtoupper', $exclude_skus), true)) continue;
 
                 $current = (float)$p['unit_price'];
-                $new = $type === 'percentage' ? round($current * (1 + $value / 100), 0) : round($current + $value, 0);
+                $new = $type === 'percentage' ? round($current * (1 + $value / 100), 2) : round($current + $value, 2);
                 
                 $count++;
                 if (count($preview) < 5) {
@@ -412,7 +412,7 @@ try {
                 if (in_array($sku, array_map('strtoupper', $exclude_skus), true)) continue;
 
                 $current = (float)$p['unit_price'];
-                $new = $type === 'percentage' ? round($current * (1 + $value / 100), 0) : round($current + $value, 0);
+                $new = $type === 'percentage' ? round($current * (1 + $value / 100), 2) : round($current + $value, 2);
                 
                 try {
                     $upstmt = $pdo->prepare("UPDATE products SET unit_price = ? WHERE id = ?");

@@ -197,14 +197,21 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
         .exclude-item-action-indicator {
             font-size: 0.8rem;
             color: var(--color-naranja, #ff6600);
+            background: rgba(255, 102, 0, 0.1);
+            border: 1px solid rgba(255, 102, 0, 0.25);
+            padding: 0.3rem 0.65rem;
+            border-radius: 20px;
             font-weight: bold;
-            opacity: 0;
-            transform: translateX(5px);
+            opacity: 0.85;
+            transform: translateX(0);
             transition: all 0.2s ease;
+            white-space: nowrap;
         }
         .exclude-dropdown-item:hover .exclude-item-action-indicator {
             opacity: 1;
-            transform: translateX(0);
+            background: var(--color-naranja, #ff6600);
+            color: #fff;
+            border-color: var(--color-naranja, #ff6600);
         }
 
         /* ===== CARGA MASIVA CSV ===== */
@@ -734,7 +741,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <h3>Ajuste de Precios Masivo</h3>
                 <p class="text-muted">Aplica un cambio de precio a múltiples productos. Usa % para porcentaje o $ para monto fijo.</p>
                 
-                <div class="grid grid-3 mt-2">
+                <div class="grid grid-3 mt-2" style="align-items: flex-end;">
                     <div class="form-group">
                         <label>Tipo de ajuste</label>
                         <select id="priceAdjustType">
@@ -747,8 +754,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                         <input id="priceAdjustValue" type="number" placeholder="0" step="0.01">
                     </div>
                     <div class="form-group">
-                        <label>&nbsp;</label>
-                        <button class="btn btn-primary" onclick="applyPriceAdjustment()">Calcular preview</button>
+                        <button class="btn btn-primary" onclick="applyPriceAdjustment()" style="width: 100%; display: block;">Calcular preview</button>
                     </div>
                 </div>
 
