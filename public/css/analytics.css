@@ -405,7 +405,7 @@
 }
 
 .cal-summary-item { flex: 1; min-width: 100px; }
-.cal-summary-label { font-size: 0.72rem; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.25rem; }
+.cal-summary-label { font-size: 0.72rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.25rem; }
 .cal-summary-value { font-size: 1.4rem; font-weight: 900; color: #fff; }
 
 .cal-grid {
@@ -417,7 +417,7 @@
 .cal-day-head {
     font-size: 0.7rem;
     font-weight: 700;
-    color: #555;
+    color: #888;
     text-align: center;
     padding: 0.4rem 0;
     text-transform: uppercase;
@@ -445,7 +445,7 @@
 .cal-day-num {
     font-size: 0.75rem;
     font-weight: 700;
-    color: #555;
+    color: #888;
     margin-bottom: 0.3rem;
 }
 
@@ -475,8 +475,9 @@
 
 .ai-predictions-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1.25rem;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+    justify-content: center;
 }
 
 .ai-pred-card {
@@ -486,6 +487,10 @@
     border-radius: 16px;
     padding: 1.5rem;
     transition: transform 0.2s, box-shadow 0.2s;
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+    box-sizing: border-box;
 }
 
 .ai-pred-card:hover {
@@ -502,7 +507,7 @@
 }
 
 .ai-pred-name { font-size: 1rem; font-weight: 800; color: #fff; }
-.ai-pred-sku  { font-size: 0.78rem; color: #555; margin-top: 0.2rem; }
+.ai-pred-sku  { font-size: 0.78rem; color: #888; margin-top: 0.2rem; }
 
 .ai-pred-season-badge {
     background: rgba(52,152,219,0.12);
@@ -516,9 +521,9 @@
     flex-shrink: 0;
 }
 
-.ai-pred-demand-label { font-size: 0.72rem; color: #666; text-transform: uppercase; letter-spacing: 0.06em; }
+.ai-pred-demand-label { font-size: 0.72rem; color: #aaa; text-transform: uppercase; letter-spacing: 0.06em; }
 .ai-pred-demand-value { font-size: 2rem; font-weight: 900; color: #fff; line-height: 1.1; }
-.ai-pred-demand-unit  { font-size: 0.9rem; font-weight: 400; color: #555; }
+.ai-pred-demand-unit  { font-size: 0.9rem; font-weight: 400; color: #888; }
 
 .confidence-bar-wrap {
     margin: 1.25rem 0;
@@ -553,12 +558,12 @@
     margin-top: 1rem;
 }
 
-.ai-factor-title { font-size: 0.72rem; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem; }
+.ai-factor-title { font-size: 0.72rem; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem; }
 
 .ai-factor-list { list-style: none; padding: 0; margin: 0 0 0.75rem; }
 .ai-factor-list li {
     font-size: 0.8rem;
-    color: #888;
+    color: #bbb;
     padding: 0.2rem 0;
     padding-left: 1rem;
     position: relative;
@@ -587,14 +592,15 @@
     gap: 2px;
 }
 
-.ai-factor-mini-grid span { font-size: 0.68rem; color: #555; }
+.ai-factor-mini-grid span { font-size: 0.68rem; color: #888; }
 .ai-factor-mini-grid strong { font-size: 0.85rem; color: #fff; }
 
 /* ── Seasonal report ── */
 .seasonal-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 1.25rem;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+    justify-content: center;
 }
 
 .seasonal-card {
@@ -603,6 +609,10 @@
     border-radius: 16px;
     overflow: hidden;
     transition: transform 0.2s;
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+    box-sizing: border-box;
 }
 
 .seasonal-card:hover { transform: translateY(-2px); }
@@ -627,13 +637,13 @@
 }
 
 .seasonal-stat { flex: 1; }
-.seasonal-stat-label { font-size: 0.7rem; color: #555; text-transform: uppercase; letter-spacing: 0.06em; }
+.seasonal-stat-label { font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 0.06em; }
 .seasonal-stat-value { font-size: 1.1rem; font-weight: 800; color: #fff; }
 
 .seasonal-products-title {
     font-size: 0.75rem;
     font-weight: 700;
-    color: #555;
+    color: #888;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     padding-bottom: 0.5rem;
@@ -645,13 +655,32 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.3rem 0;
-    font-size: 0.82rem;
-    color: #999;
-    border-bottom: 1px solid #131313;
+    padding: 0.5rem 0;
+    font-size: 0.85rem;
+    color: #bbb;
+    border-bottom: 1px solid #1f1f1f;
+    gap: 1rem;
+    width: 100%;
 }
 
-.seasonal-product-row span:last-child { font-weight: 700; color: #fff; }
+.seasonal-product-row span:first-child {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #e0e0e0;
+}
+
+.seasonal-product-row span:last-child {
+    flex-shrink: 0;
+    font-weight: 700;
+    color: #ff7f00;
+    background: rgba(255, 127, 0, 0.15);
+    padding: 0.25rem 0.65rem;
+    border-radius: 6px;
+    font-size: 0.78rem;
+}
 
 /* ── Clients analytics ── */
 .client-summary-bar {
@@ -883,4 +912,81 @@
     .ai-predictions-grid { grid-template-columns: 1fr; }
     .seasonal-grid { grid-template-columns: 1fr; }
     .client-cards-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* ── Goal Metrics Grid ── */
+.goal-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.25rem;
+    margin-top: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.goal-metric-card {
+    background: #0d0d0d;
+    border: 1.5px solid #1f1f1f;
+    border-radius: 14px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
+
+.goal-metric-card:hover {
+    transform: translateY(-2px);
+    border-color: #2e2e2e;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+}
+
+.goal-metric-card-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.goal-metric-card-value {
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: #fff;
+}
+
+.goal-metric-card.accent {
+    border-left: 4px solid #ff7f00;
+}
+.goal-metric-card.accent .goal-metric-card-value {
+    color: #ff7f00;
+}
+
+.goal-metric-card.success {
+    border-left: 4px solid #2ecc71;
+}
+.goal-metric-card.success .goal-metric-card-value {
+    color: #2ecc71;
+}
+
+.goal-metric-card.warning {
+    border-left: 4px solid #f1c40f;
+}
+.goal-metric-card.warning .goal-metric-card-value {
+    color: #f1c40f;
+}
+
+.goal-metric-card.info {
+    border-left: 4px solid #3498db;
+}
+.goal-metric-card.info .goal-metric-card-value {
+    color: #3498db;
+}
+
+.goal-progress-wrap {
+    background: #111;
+    border: 1px solid #1f1f1f;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 2rem;
 }

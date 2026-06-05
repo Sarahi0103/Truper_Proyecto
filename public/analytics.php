@@ -284,12 +284,12 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                             </div>
                         </div>
                         
-                        <div id="goalSummary" class="text-muted" style="margin-top:1.5rem; padding:1rem; background:var(--theme-surface-strong); border-radius:8px; line-height:1.6;">
-                            Sin resumen de meta
+                        <div id="goalSummary" style="margin-top:1.5rem;">
+                            <div class="analytics-spinner" style="margin: 2rem auto;"></div>
                         </div>
                         
-                        <div id="goalWeekly" class="text-muted" style="margin-top:1.5rem; overflow-x:auto;">
-                            Sin desglose semanal
+                        <div id="goalWeekly" style="margin-top:1.5rem; overflow-x:auto;">
+                            <!-- Tablas semanales cargadas dinámicamente -->
                         </div>
                     </div>
                 </div>
@@ -499,41 +499,75 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
 
             const g = res.goal || {};
             const formatMoney = (val) => '$' + Number(val || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const progress = Number(g.progress_pct || 0).toFixed(2);
+
             if (summary) {
                 summary.innerHTML = `
-                    <div><strong>Meta mensual:</strong> ${formatMoney(g.target_amount)}</div>
-                    <div><strong>Acumulado logrado:</strong> ${formatMoney(g.achieved_amount)}</div>
-                    <div><strong>Monto restante:</strong> ${formatMoney(g.remaining_amount)}</div>
-                    <div><strong>Avance del mes:</strong> ${Number(g.progress_pct || 0).toFixed(2)}%</div>
+                    <div class="goal-metrics-grid">
+                        <div class="goal-metric-card accent">
+                            <span class="goal-metric-card-label">🎯 Meta Mensual</span>
+                            <div class="goal-metric-card-value">${formatMoney(g.target_amount)}</div>
+                        </div>
+                        <div class="goal-metric-card success">
+                            <span class="goal-metric-card-label">📈 Acumulado Logrado</span>
+                            <div class="goal-metric-card-value">${formatMoney(g.achieved_amount)}</div>
+                        </div>
+                        <div class="goal-metric-card warning">
+                            <span class="goal-metric-card-label">⏳ Monto Restante</span>
+                            <div class="goal-metric-card-value">${formatMoney(g.remaining_amount)}</div>
+                        </div>
+                        <div class="goal-metric-card info">
+                            <span class="goal-metric-card-label">📊 Avance del Mes</span>
+                            <div class="goal-metric-card-value">${progress}%</div>
+                        </div>
+                    </div>
+                    <div class="goal-progress-wrap">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem; font-size:0.85rem; color:#aaa;">
+                            <span style="font-weight:600;">Progreso hacia el objetivo mensual</span>
+                            <span style="font-weight:800; color:#ff7f00;">${progress}%</span>
+                        </div>
+                        <div style="height:12px; background:#111; border:1px solid #222; border-radius:999px; overflow:hidden; position:relative;">
+                            <div style="height:100%; width:${Math.min(100, Number(progress))}%; background:linear-gradient(90deg, #ff7f00, #ffb347); border-radius:999px; transition:width 0.8s cubic-bezier(0.4,0,0.2,1); box-shadow:0 0 10px rgba(255,127,0,0.2);"></div>
+                        </div>
+                    </div>
                 `;
             }
 
             const rows = Array.isArray(res.weekly) ? res.weekly : [];
             if (rows.length === 0) {
-                if (weekly) weekly.innerHTML = '<p class="text-muted">Sin ventas semanales para este mes.</p>';
+                if (weekly) weekly.innerHTML = '<p class="text-muted" style="padding: 1.5rem; text-align: center; border: 1px dashed #222; border-radius: 8px;">Sin ventas semanales para este mes.</p>';
                 return;
             }
 
             if (weekly) {
                 weekly.innerHTML = `
-                    <table style="width:100%; border-collapse:collapse; margin-top:1rem;">
-                        <thead>
-                            <tr style="border-bottom: 1px solid var(--theme-border);">
-                                <th style="padding:0.75rem; text-align:left; background:var(--theme-surface-strong); color:var(--theme-text);">Semana</th>
-                                <th style="padding:0.75rem; text-align:right; background:var(--theme-surface-strong); color:var(--theme-text);">Objetivo semanal</th>
-                                <th style="padding:0.75rem; text-align:right; background:var(--theme-surface-strong); color:var(--theme-text);">Acumulado logrado</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${rows.map((r) => `
-                                <tr style="border-bottom: 1px solid var(--theme-border);">
-                                    <td style="padding:0.75rem; color:var(--theme-text);">${r.week_start}</td>
-                                    <td style="padding:0.75rem; text-align:right; color:var(--theme-text);">${formatMoney(r.week_target)}</td>
-                                    <td style="padding:0.75rem; text-align:right; color:var(--theme-text);">${formatMoney(r.week_total)}</td>
+                    <h3 style="margin:2rem 0 1rem; font-size:1.1rem; font-weight:800; color:#fff;">📅 Desglose Semanal Proyectado</h3>
+                    <div style="border:1px solid #1f1f1f; border-radius:12px; overflow:hidden; background:#0d0d0d;">
+                        <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                            <thead>
+                                <tr style="background:#111; border-bottom:2px solid #1f1f1f;">
+                                    <th style="padding:1rem; text-align:left; font-weight:700; color:#aaa; text-transform:uppercase; font-size:0.75rem; letter-spacing:0.05em;">Semana de Inicio</th>
+                                    <th style="padding:1rem; text-align:right; font-weight:700; color:#aaa; text-transform:uppercase; font-size:0.75rem; letter-spacing:0.05em;">Objetivo Proyectado</th>
+                                    <th style="padding:1rem; text-align:right; font-weight:700; color:#aaa; text-transform:uppercase; font-size:0.75rem; letter-spacing:0.05em;">Acumulado Logrado</th>
+                                    <th style="padding:1rem; text-align:right; font-weight:700; color:#aaa; text-transform:uppercase; font-size:0.75rem; letter-spacing:0.05em;">Cumplimiento</th>
                                 </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                ${rows.map((r) => {
+                                    const pct = Number(r.week_target) > 0 ? (Number(r.week_total) / Number(r.week_target) * 100) : 0;
+                                    const pctColor = pct >= 100 ? '#2ecc71' : pct >= 50 ? '#f1c40f' : '#e74c3c';
+                                    return `
+                                        <tr style="border-bottom:1px solid #1f1f1f; transition:background 0.2s;">
+                                            <td style="padding:1rem; color:#fff; font-weight:600;">Semana del ${new Date(r.week_start + 'T00:00:00').toLocaleDateString('es-MX', {day: 'numeric', month: 'short'})}</td>
+                                            <td style="padding:1rem; text-align:right; color:#bbb;">${formatMoney(r.week_target)}</td>
+                                            <td style="padding:1rem; text-align:right; color:#fff; font-weight:700;">${formatMoney(r.week_total)}</td>
+                                            <td style="padding:1rem; text-align:right; font-weight:700; color:${pctColor};">${pct.toFixed(1)}%</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
                 `;
             }
         }
