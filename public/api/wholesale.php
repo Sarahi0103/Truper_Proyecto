@@ -178,6 +178,53 @@ try {
             $response = ['success' => true, 'message' => 'Solicitud aprobada'];
             break;
 
+        case 'delete':
+            require_admin();
+            if ($method !== 'POST' && $method !== 'DELETE') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $id = (int)($input['id'] ?? 0);
+            if ($id <= 0) {
+                $response = ['success' => false, 'message' => 'ID de solicitud invalido'];
+                break;
+            }
+
+            // Verificar que exista y este aprobada antes de eliminar
+            $checkStmt = $pdo->prepare("SELECT id, is_approved FROM wholesalers WHERE id = ?");
+            $checkStmt->execute([$id]);
+            $wholesale = $checkStmt->fetch();
+
+            if (!$wholesale) {
+                $response = ['success' => false, 'message' => 'Solicitud no encontrada'];
+                break;
+            }
+
+            if (!$wholesale['is_approved']) {
+                $response = ['success' => false, 'message' => 'Solo se pueden eliminar solicitudes aprobadas'];
+                break;
+            }
+
+            $stmt = $pdo->prepare("DELETE FROM wholesalers WHERE id = ?");
+            $stmt->execute([$id]);
+
+            if ($stmt->rowCount() > 0) {
+                try {
+                    log_action(
+                        $_SESSION['user_id'],
+                        'DELETE_WHOLESALE',
+                        'Solicitud de mayoreo #' . $id . ' eliminada',
+                        $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'
+                    );
+                } catch (Exception $ignored) {}
+
+                $response = ['success' => true, 'message' => 'Solicitud eliminada con exito'];
+            } else {
+                $response = ['success' => false, 'message' => 'No se pudo eliminar la solicitud'];
+            }
+            break;
+
         case 'list':
             $isAdmin = (($_SESSION['role'] ?? '') === 'admin');
             if ($isAdmin) {

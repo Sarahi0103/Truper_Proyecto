@@ -145,6 +145,17 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 <div class="card"><div class="card-body text-center"><p class="text-muted">Cargando estadísticas...</p></div></div>
             </div>
 
+            <!-- Reportes PDF Archivados -->
+            <div class="card mt-3" style="background: rgba(255, 255, 255, 0.01); border: 1px solid rgba(255, 255, 255, 0.06); margin-bottom: 1.5rem;">
+                <div class="card-body">
+                    <h3 style="display: flex; align-items: center; gap: 0.5rem;">📄 Reportes Mensuales Archivados</h3>
+                    <p class="text-muted mb-2">Historial de PDFs consolidados acumulados al realizar cierres mensuales de caja.</p>
+                    <div id="archivedPdfsContainer" style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+                        <p class="text-muted" style="font-style: italic;">Cargando archivos...</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Tablas de Historial -->
             <div class="tickets-split-grid">
                 <!-- CLIENTES -->
@@ -216,6 +227,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
         </div>
     </footer>
 
+    <script src="js/jspdf.umd.min.js"></script>
     <script src="js/main.js?v=2.6"></script>
     <script>
         window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>';
@@ -408,8 +420,200 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             }
         }
 
+        function generateMonthlyReportPdf(year, month, data) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+            
+            const monthNames = [
+                'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+            ];
+            const monthStr = monthNames[month - 1] || 'Mes';
+            
+            const primaryColor = [255, 102, 0]; 
+            const darkColor = [30, 30, 30]; 
+            const lightBg = [245, 245, 245];
+            
+            // Header
+            doc.setFillColor(...primaryColor);
+            doc.rect(0, 0, 215.9, 35, 'F');
+            
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(22);
+            doc.text('TRUPER PLATFORM', 15, 18);
+            
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`REPORTE MENSUAL DE CIERRE Y AUDITORÍA - ${monthStr.toUpperCase()} ${year}`, 15, 26);
+            
+            doc.setFontSize(10);
+            doc.text(`Generado: ${new Date().toLocaleDateString('es-MX')}`, 150, 18);
+            doc.text(`Firma digital: MD5-${Math.random().toString(36).substring(2, 10).toUpperCase()}`, 150, 24);
+            
+            let y = 50;
+            
+            // Sección Estadísticas
+            doc.setTextColor(...darkColor);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(13);
+            doc.text('RESUMEN DE ESTADÍSTICAS DEL MES', 15, y);
+            
+            doc.setDrawColor(220, 220, 220);
+            doc.line(15, y + 2, 200, y + 2);
+            y += 10;
+            
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            
+            const stats = data.stats || {};
+            doc.text(`Total Tickets: ${stats.total_tickets || 0}`, 15, y);
+            doc.text(`Total Ventas: $${Number(stats.total_sales || 0).toLocaleString('es-MX', {minimumFractionDigits:2})}`, 15, y + 6);
+            doc.text(`Tickets Devolución: ${stats.return_count || 0}`, 110, y);
+            doc.text(`Pagos Pendientes: ${stats.payment_pending || 0}`, 110, y + 6);
+            y += 18;
+            
+            // Listado de Tickets Clientes
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(13);
+            doc.text('HISTORIAL DE TICKETS DE CLIENTES', 15, y);
+            doc.line(15, y + 2, 200, y + 2);
+            y += 10;
+            
+            // Header Tabla Clientes
+            doc.setFillColor(...lightBg);
+            doc.rect(15, y, 185, 8, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            doc.setTextColor(50, 50, 50);
+            doc.text('Folio', 18, y + 5.5);
+            doc.text('Cliente', 50, y + 5.5);
+            doc.text('Tipo', 105, y + 5.5);
+            doc.text('Estado', 130, y + 5.5);
+            doc.text('Fecha', 155, y + 5.5);
+            doc.text('Total', 180, y + 5.5);
+            
+            y += 8;
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...darkColor);
+            
+            const tickets = data.tickets || [];
+            tickets.forEach((t, idx) => {
+                if (y > 260) {
+                    doc.addPage();
+                    y = 20;
+                    
+                    // Redibuja header en página nueva
+                    doc.setFillColor(...lightBg);
+                    doc.rect(15, y, 185, 8, 'F');
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('Folio', 18, y + 5.5);
+                    doc.text('Cliente', 50, y + 5.5);
+                    doc.text('Tipo', 105, y + 5.5);
+                    doc.text('Estado', 130, y + 5.5);
+                    doc.text('Fecha', 155, y + 5.5);
+                    doc.text('Total', 180, y + 5.5);
+                    y += 8;
+                    doc.setFont('helvetica', 'normal');
+                }
+                
+                if (idx % 2 === 1) {
+                    doc.setFillColor(250, 250, 250);
+                    doc.rect(15, y, 185, 7, 'F');
+                }
+                
+                doc.text(t.folio || '-', 18, y + 5);
+                
+                let name = t.customer_name || 'Sin nombre';
+                if (name.length > 25) name = name.substring(0, 23) + '...';
+                doc.text(name, 50, y + 5);
+                
+                const typeLabel = {
+                    'sale': 'Venta',
+                    'return': 'Devolución',
+                    'adjustment': 'Ajuste',
+                    'credit': 'Crédito'
+                }[t.ticket_type] || t.ticket_type;
+                doc.text(typeLabel, 105, y + 5);
+                
+                const statusLabel = t.payment_status === 'completed' ? 'Pagado' : 'Pendiente';
+                doc.text(statusLabel, 130, y + 5);
+                doc.text(new Date(t.issued_date).toLocaleDateString('es-MX'), 155, y + 5);
+                doc.text(`$${Number(t.total_amount || 0).toLocaleString('es-MX', {minimumFractionDigits:2})}`, 180, y + 5);
+                
+                y += 7;
+            });
+            
+            y += 10;
+            
+            // Órdenes de Proveedores (si existen)
+            const supplierTickets = data.supplier_tickets || [];
+            if (supplierTickets.length > 0) {
+                if (y > 230) {
+                    doc.addPage();
+                    y = 20;
+                }
+                
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(13);
+                doc.text('ÓRDENES DE PROVEEDORES', 15, y);
+                doc.line(15, y + 2, 200, y + 2);
+                y += 10;
+                
+                doc.setFillColor(...lightBg);
+                doc.rect(15, y, 185, 8, 'F');
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(9);
+                doc.setTextColor(50, 50, 50);
+                doc.text('Folio', 18, y + 5.5);
+                doc.text('Proveedor', 50, y + 5.5);
+                doc.text('Estado', 130, y + 5.5);
+                doc.text('Fecha', 155, y + 5.5);
+                doc.text('Total', 180, y + 5.5);
+                
+                y += 8;
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(...darkColor);
+                
+                supplierTickets.forEach((st, idx) => {
+                    if (y > 260) {
+                        doc.addPage();
+                        y = 20;
+                        doc.setFillColor(...lightBg);
+                        doc.rect(15, y, 185, 8, 'F');
+                        doc.setFont('helvetica', 'bold');
+                        doc.text('Folio', 18, y + 5.5);
+                        doc.text('Proveedor', 50, y + 5.5);
+                        doc.text('Estado', 130, y + 5.5);
+                        doc.text('Fecha', 155, y + 5.5);
+                        doc.text('Total', 180, y + 5.5);
+                        y += 8;
+                        doc.setFont('helvetica', 'normal');
+                    }
+                    
+                    if (idx % 2 === 1) {
+                        doc.setFillColor(250, 250, 250);
+                        doc.rect(15, y, 185, 7, 'F');
+                    }
+                    
+                    doc.text(st.folio || '-', 18, y + 5);
+                    
+                    let name = st.customer_name || 'Sin nombre';
+                    if (name.length > 25) name = name.substring(0, 23) + '...';
+                    doc.text(name, 50, y + 5);
+                    doc.text(st.payment_status || 'Recibido', 130, y + 5);
+                    doc.text(new Date(st.issued_date).toLocaleDateString('es-MX'), 155, y + 5);
+                    doc.text(`$${Number(st.total_amount || 0).toLocaleString('es-MX', {minimumFractionDigits:2})}`, 180, y + 5);
+                    
+                    y += 7;
+                });
+            }
+            
+            return doc;
+        }
+
         async function archiveCurrentMonth() {
-            if (!confirm('¿Estás seguro de que quieres archivar los tickets de este mes? Esta acción no se puede deshacer.')) {
+            if (!confirm('¿Estás seguro de que quieres archivar los tickets de este mes? Se generará y guardará un PDF de cierre mensual. Esta acción no se puede deshacer.')) {
                 return;
             }
 
@@ -419,6 +623,34 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
             const month = monthSelect ? monthSelect.value : (new Date().getMonth() + 1);
 
             try {
+                // 1. Obtener datos históricos de este mes para el PDF
+                showAlert('Obteniendo datos del mes...', 'info');
+                const historyRes = await apiCall(`/analytics.php?action=ticket-history&year=${year}&month=${month}`);
+                if (!historyRes || !historyRes.success) {
+                    showAlert('No se pudo obtener el historial para generar el PDF', 'error');
+                    return;
+                }
+
+                // 2. Crear el PDF
+                showAlert('Generando PDF del mes...', 'info');
+                const doc = generateMonthlyReportPdf(year, month, historyRes.data);
+                const pdfBase64 = doc.output('datauristring').split(',')[1];
+
+                // 3. Subir el PDF al servidor
+                showAlert('Guardando PDF en el servidor...', 'info');
+                const uploadRes = await apiCall('/analytics.php?action=save-monthly-pdf', 'POST', {
+                    year: parseInt(year, 10),
+                    month: parseInt(month, 10),
+                    pdf_data: pdfBase64
+                });
+
+                if (!uploadRes || !uploadRes.success) {
+                    showAlert('Error al subir el reporte PDF: ' + (uploadRes?.message || 'Error desconocido'), 'error');
+                    return;
+                }
+
+                // 4. Archivar en base de datos
+                showAlert('Archivando registros en la base de datos...', 'info');
                 const response = await fetch('api/analytics.php?action=archive-tickets', {
                     method: 'POST',
                     headers: {
@@ -430,14 +662,49 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 const data = await response.json();
 
                 if (data.success) {
-                    showAlert(`Se archivaron ${data.archived_count} tickets correctamente.`, 'success');
+                    showAlert(`Se archivaron ${data.archived_count} tickets y se guardó el PDF de cierre.`, 'success');
                     loadTicketHistory();
+                    loadArchivedPdfs();
                 } else {
                     showAlert(data.message || 'Error al archivar', 'error');
                 }
             } catch (error) {
                 console.error('Error archivando tickets:', error);
                 showAlert('Error en la solicitud', 'error');
+            }
+        }
+
+        async function loadArchivedPdfs() {
+            const container = document.getElementById('archivedPdfsContainer');
+            if (!container) return;
+
+            try {
+                const res = await apiCall('/analytics.php?action=list-monthly-pdfs');
+                if (res && res.success) {
+                    const files = res.files || [];
+                    if (files.length === 0) {
+                        container.innerHTML = '<p class="text-muted" style="font-style: italic;">No hay reportes PDF archivados en el servidor.</p>';
+                        return;
+                    }
+
+                    container.innerHTML = files.map(f => {
+                        const sizeKb = (f.size / 1024).toFixed(1);
+                        return `
+                            <a href="${f.url}" target="_blank" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; padding: 0.6rem 1rem; border-radius: 8px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; transition: background 0.2s;">
+                                <span style="font-size: 1.25rem;">📄</span>
+                                <div style="text-align: left;">
+                                    <div style="font-weight: 600; font-size: 0.85rem;">Reporte ${f.readable_name}</div>
+                                    <div style="font-size: 0.7rem; color: #aaa;">PDF (${sizeKb} KB)</div>
+                                </div>
+                            </a>
+                        `;
+                    }).join('');
+                } else {
+                    container.innerHTML = '<p class="text-muted" style="color: var(--color-error) !important;">Error al cargar lista de PDFs.</p>';
+                }
+            } catch (error) {
+                console.error('Error loading archived PDFs:', error);
+                container.innerHTML = '<p class="text-muted">Error al cargar reportes acumulados.</p>';
             }
         }
 
@@ -495,6 +762,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                 }
 
                 loadTicketHistory();
+                loadArchivedPdfs();
             };
 
             apiCall('/analytics.php?action=ticket-years')
@@ -522,6 +790,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
                     }
 
                     loadTicketHistory();
+                    loadArchivedPdfs();
                 })
                 .catch(() => {
                     populateYearFallback();

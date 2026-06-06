@@ -205,7 +205,7 @@ $column_count = $is_admin ? 7 : 6;
             <div class="grid grid-2">
                 <div class="form-group">
                     <label>Descuento solicitado (%)</label>
-                    <input type="number" id="discountPct" min="1" max="40" value="15" required>
+                    <input type="number" id="discountPct" min="0" max="40" value="15" required>
                 </div>
                 <div class="form-group">
                     <label>Términos de pago</label>
@@ -431,6 +431,22 @@ async function approveWholesale(id) {
   }
 }
 
+async function deleteWholesale(id) {
+  if (!confirmDelete('¿Estás seguro de que deseas eliminar esta solicitud de mayoreo aprobada? Esta acción no se puede deshacer.')) {
+    return;
+  }
+  const res = await apiCall('/wholesale.php?action=delete', 'POST', { id });
+  if (res && res.success) {
+    handleSuccessResponse(res, {
+      scrollTarget: '#wholesaleRows',
+      successMessage: res.message || 'Solicitud eliminada correctamente',
+      onSuccess: () => loadWholesale()
+    });
+  } else if (res) {
+    showAlert(res.message, 'error');
+  }
+}
+
 async function loadWholesale() {
   const res = await apiCall('/wholesale.php?action=list');
   const tb = document.getElementById('wholesaleRows');
@@ -498,6 +514,7 @@ async function loadWholesale() {
             <button class="btn-action-sm btn-pdf" onclick="downloadWholesalePdf(${i.id})">📥 PDF</button>
             <button class="btn-action-sm btn-whatsapp" onclick="shareWholesaleWhatsApp(${i.id})">💬 WhatsApp</button>
             ${isAdmin && !i.is_approved ? `<button class="btn-action-sm" style="background:#ff6600; color:#fff;" onclick="approveWholesale(${i.id})">Aprobar</button>` : ''}
+            ${isAdmin && i.is_approved ? `<button class="btn-action-sm" style="background:#dc2626; color:#fff;" onclick="deleteWholesale(${i.id})">🗑️ Eliminar</button>` : ''}
           </div>
         </td>
       </tr>

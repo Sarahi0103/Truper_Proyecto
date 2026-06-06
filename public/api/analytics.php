@@ -659,6 +659,110 @@ try {
             }
             break;
 
+        case 'save-monthly-pdf':
+            require_admin();
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            $rawInput = file_get_contents('php://input');
+            $decodedInput = json_decode($rawInput, true);
+            $input = is_array($decodedInput) ? $decodedInput : (is_array($_POST) ? $_POST : []);
+
+            $year = isset($input['year']) ? (int)$input['year'] : null;
+            $month = isset($input['month']) ? (int)$input['month'] : null;
+            $pdfBase64 = $input['pdf_data'] ?? null;
+
+            if (!$year || !$month || !$pdfBase64) {
+                $response = ['success' => false, 'message' => 'Datos insuficientes (año, mes o pdf_data faltantes)'];
+                break;
+            }
+
+            // Crear carpeta destino
+            $dir = __DIR__ . '/../archivos_mensuales';
+            if (!is_dir($dir)) {
+                mkdir($dir, 0777, true);
+            }
+
+            $filename = 'reporte_mes_' . $year . '_' . str_pad((string)$month, 2, '0', STR_PAD_LEFT) . '.pdf';
+            $filepath = $dir . '/' . $filename;
+
+            // Guardar archivo
+            $binaryData = base64_decode($pdfBase64);
+            if ($binaryData === false) {
+                $response = ['success' => false, 'message' => 'Error al decodificar PDF Base64'];
+                break;
+            }
+
+            if (file_put_contents($filepath, $binaryData) === false) {
+                $response = ['success' => false, 'message' => 'Error al guardar archivo en el servidor'];
+                break;
+            }
+
+            $response = [
+                'success' => true,
+                'message' => 'PDF de reporte guardado correctamente',
+                'filename' => $filename
+            ];
+            break;
+
+        case 'list-monthly-pdfs':
+            require_admin();
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            $dir = __DIR__ . '/../archivos_mensuales';
+            $filesList = [];
+
+            if (is_dir($dir)) {
+                $files = glob($dir . '/reporte_mes_*.pdf');
+                if (is_array($files)) {
+                    foreach ($files as $file) {
+                        $basename = basename($file);
+                        
+                        // Extraer año y mes: reporte_mes_YYYY_MM.pdf
+                        if (preg_match('/reporte_mes_(\d{4})_(\d{2})\.pdf$/', $basename, $matches)) {
+                            $year = (int)$matches[1];
+                            $month = (int)$matches[2];
+                            
+                            $monthNames = [
+                                1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
+                                5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
+                                9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
+                            ];
+                            
+                            $readableName = ($monthNames[$month] ?? 'Mes') . ' ' . $year;
+                            $filesList[] = [
+                                'filename' => $basename,
+                                'readable_name' => $readableName,
+                                'year' => $year,
+                                'month' => $month,
+                                'url' => 'archivos_mensuales/' . $basename,
+                                'size' => filesize($file),
+                                'created_at' => filemtime($file)
+                            ];
+                        }
+                    }
+                }
+            }
+
+            // Ordenar por año y mes descendente
+            usort($filesList, function($a, $b) {
+                if ($a['year'] !== $b['year']) {
+                    return $b['year'] - $a['year'];
+                }
+                return $b['month'] - $a['month'];
+            });
+
+            $response = [
+                'success' => true,
+                'files' => $filesList
+            ];
+            break;
+
         default:
             $response = ['success' => false, 'message' => 'Acción no reconocida'];
     }
