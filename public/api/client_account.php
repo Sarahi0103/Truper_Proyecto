@@ -594,7 +594,11 @@ try {
 
 } catch (Exception $e) {
     error_log('Client account API error: ' . $e->getMessage());
-    $response = ['success' => false, 'message' => 'Error del servidor'];
+    $response = [
+        'success' => false,
+        'message' => 'Error del servidor: ' . $e->getMessage(),
+        'trace' => $e->getTraceAsString()
+    ];
 }
 
 client_account_json_response((array)$response);
