@@ -5,7 +5,7 @@
 let currentCart = [];
 let loadedProducts = [];
 let currentTotal = 0;
-const COMPANY_WHATSAPP = String(window.TRUPER_COMPANY_WHATSAPP || '3317915887');
+const COMPANY_WHATSAPP = String(window.TRUPER_COMPANY_WHATSAPP || '3312482297');
 const ORDERS_ROLE = String(window.TRUPER_ORDERS_ROLE || 'client').toLowerCase();
 const ORDERS_IS_ADMIN = ORDERS_ROLE === 'admin';
 const ORDER_STATUS_OPTIONS = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];

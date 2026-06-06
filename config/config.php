@@ -160,7 +160,7 @@ $pdo = include __DIR__ . '/database.php';
 require_once __DIR__ . '/catalog_images.php';
 
 // Contacto principal para cotizaciones y dudas por WhatsApp.
-define('COMPANY_WHATSAPP_PHONE', getenv('COMPANY_WHATSAPP_PHONE') ?: '3317915887');
+define('COMPANY_WHATSAPP_PHONE', getenv('COMPANY_WHATSAPP_PHONE') ?: '3312482297');
 
 // Funciones de utilidad
 function sanitize($data) {
@@ -197,7 +197,7 @@ function whatsapp_phone_digits($phone = null) {
 
     $digits = preg_replace('/\D+/', '', (string)$raw);
     if ($digits === '') {
-        $digits = '3317915887';
+        $digits = '3312482297';
     }
     return $digits;
 }
