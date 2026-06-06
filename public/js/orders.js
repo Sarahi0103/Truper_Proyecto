@@ -59,10 +59,13 @@ function addToCart(productId, productName, price, quantity) {
     if (existingItem) {
         existingItem.quantity = parseInt(quantity);
     } else {
+        const itemPrice = parseFloat(price);
         currentCart.push({
             productId: productId,
             name: productName,
-            price: parseFloat(price),
+            price: itemPrice,
+            wholesalePrice: itemPrice * 0.70,
+            isCustomPrice: false,
             quantity: parseInt(quantity)
         });
     }
@@ -98,24 +101,63 @@ function updateCartUI() {
     const totalContainer = document.getElementById('cartTotal');
     const subtotalContainer = document.getElementById('cartSubtotal');
     const discountContainer = document.getElementById('cartDiscount');
+    const theadContainer = document.querySelector('.cart-scroll table thead');
     
     if (!cartContainer) return;
+
+    if (theadContainer) {
+        if (ORDERS_IS_ADMIN) {
+            theadContainer.innerHTML = `
+                <tr>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>P. Minoreo</th>
+                    <th>P. Mayoreo</th>
+                    <th>Subtotal</th>
+                    <th>Descuento</th>
+                    <th>Total</th>
+                    <th></th>
+                </tr>
+            `;
+        } else {
+            theadContainer.innerHTML = `
+                <tr>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Precio Unit.</th>
+                    <th>Subtotal</th>
+                    <th>Descuento</th>
+                    <th>Total</th>
+                    <th></th>
+                </tr>
+            `;
+        }
+    }
     
     let html = '';
     let total = 0;
     let subtotalAmount = 0;
     let discountAmount = 0;
+    const isWholesaleChecked = document.getElementById('isWholesale')?.checked || false;
     
     currentCart.forEach(item => {
-        const subtotal = item.price * item.quantity;
+        if (item.wholesalePrice === undefined) {
+            item.wholesalePrice = item.price * 0.70;
+        }
+
+        const activePrice = isWholesaleChecked ? item.wholesalePrice : item.price;
+        const subtotal = activePrice * item.quantity;
         let discount = 0;
         
-        if (item.quantity >= 100) {
-            discount = subtotal * 0.15; // 15%
-        } else if (item.quantity >= 50) {
-            discount = subtotal * 0.10; // 10%
-        } else if (item.quantity >= 20) {
-            discount = subtotal * 0.05; // 5%
+        const isCustomPrice = item.isCustomPrice || false;
+        if (!isCustomPrice) {
+            if (item.quantity >= 100) {
+                discount = subtotal * 0.15; // 15%
+            } else if (item.quantity >= 50) {
+                discount = subtotal * 0.10; // 10%
+            } else if (item.quantity >= 20) {
+                discount = subtotal * 0.05; // 5%
+            }
         }
         
         const lineTotal = subtotal - discount;
@@ -123,28 +165,55 @@ function updateCartUI() {
         discountAmount += discount;
         total += lineTotal;
         
-        html += `
-            <tr>
-                <td>${item.name}</td>
-                <td>
-                    <input type="number" min="1" value="${item.quantity}" 
-                           onchange="updateCartItem(${item.productId}, this.value)">
-                </td>
-                <td>${formatCurrency(item.price)}</td>
-                <td>${formatCurrency(subtotal)}</td>
-                <td>${discount > 0 ? formatCurrency(discount) : 'N/A'}</td>
-                <td>${formatCurrency(lineTotal)}</td>
-                <td>
-                    <button class="btn btn-danger btn-small" onclick="removeFromCart(${item.productId})">Eliminar</button>
-                </td>
-            </tr>
-        `;
+        if (ORDERS_IS_ADMIN) {
+            html += `
+                <tr>
+                    <td>${item.name}</td>
+                    <td>
+                        <input type="number" min="1" value="${item.quantity}" 
+                               onchange="updateCartItem(${item.productId}, this.value)" style="width: 70px; background:#121212; border:1px solid rgba(255,255,255,0.12); color:#fff; border-radius:4px; padding:2px 4px;">
+                    </td>
+                    <td>
+                        <input type="number" step="0.01" min="0" value="${parseFloat(item.price).toFixed(2)}" 
+                               onchange="updateCartItemPrice(${item.productId}, this.value, 'retail')" style="width: 90px; background:#121212; border:1px solid rgba(255,255,255,0.12); color:#fff; border-radius:4px; padding:2px 4px;">
+                    </td>
+                    <td>
+                        <input type="number" step="0.01" min="0" value="${parseFloat(item.wholesalePrice).toFixed(2)}" 
+                               onchange="updateCartItemPrice(${item.productId}, this.value, 'wholesale')" style="width: 90px; background:#121212; border:1px solid rgba(255,255,255,0.12); color:#fff; border-radius:4px; padding:2px 4px;">
+                    </td>
+                    <td>${formatCurrency(subtotal)}</td>
+                    <td>${discount > 0 ? formatCurrency(discount) : 'N/A'}</td>
+                    <td>${formatCurrency(lineTotal)}</td>
+                    <td>
+                        <button class="btn btn-danger btn-small" onclick="removeFromCart(${item.productId})">Eliminar</button>
+                    </td>
+                </tr>
+            `;
+        } else {
+            html += `
+                <tr>
+                    <td>${item.name}</td>
+                    <td>
+                        <input type="number" min="1" value="${item.quantity}" 
+                               onchange="updateCartItem(${item.productId}, this.value)" style="width: 70px; background:#121212; border:1px solid rgba(255,255,255,0.12); color:#fff; border-radius:4px; padding:2px 4px;">
+                    </td>
+                    <td>${formatCurrency(activePrice)}</td>
+                    <td>${formatCurrency(subtotal)}</td>
+                    <td>${discount > 0 ? formatCurrency(discount) : 'N/A'}</td>
+                    <td>${formatCurrency(lineTotal)}</td>
+                    <td>
+                        <button class="btn btn-danger btn-small" onclick="removeFromCart(${item.productId})">Eliminar</button>
+                    </td>
+                </tr>
+            `;
+        }
     });
     
     currentTotal = total;
     
     if (html === '') {
-        html = '<tr><td colspan="7" class="text-center">Tu carrito está vacío</td></tr>';
+        const colspan = ORDERS_IS_ADMIN ? 8 : 7;
+        html = `<tr><td colspan="${colspan}" class="text-center">Tu carrito está vacío</td></tr>`;
     }
     
     cartContainer.innerHTML = html;
@@ -172,6 +241,29 @@ function updateCartItem(productId, quantity) {
         } else {
             updateCartUI();
         }
+    }
+}
+
+/**
+ * Actualizar precio de minoría o mayoreo de un item (solo administrador)
+ */
+function updateCartItemPrice(productId, newPrice, priceType) {
+    const item = currentCart.find(i => i.productId == productId);
+    if (item) {
+        const priceVal = parseFloat(newPrice);
+        if (isNaN(priceVal) || priceVal < 0) {
+            showAlert('Precio inválido', 'warning');
+            return;
+        }
+
+        if (priceType === 'retail') {
+            item.price = priceVal;
+        } else if (priceType === 'wholesale') {
+            item.wholesalePrice = priceVal;
+        }
+
+        item.isCustomPrice = true;
+        updateCartUI();
     }
 }
 
@@ -452,7 +544,7 @@ async function createOrder(buttonElement = null) {
     const quoteItems = currentCart.map(item => ({
         product_id: item.productId,
         name: item.name,
-        price: item.price,
+        price: isWholesale ? (item.wholesalePrice !== undefined ? item.wholesalePrice : item.price * 0.70) : item.price,
         quantity: item.quantity
     }));
 
@@ -538,7 +630,7 @@ async function saveOrderOnly(buttonElement = null) {
     const quoteItems = currentCart.map(item => ({
         product_id: item.productId,
         name: item.name,
-        price: item.price,
+        price: isWholesale ? (item.wholesalePrice !== undefined ? item.wholesalePrice : item.price * 0.70) : item.price,
         quantity: item.quantity
     }));
 
@@ -642,4 +734,11 @@ async function loadOrders() {
 document.addEventListener('DOMContentLoaded', function() {
     loadOrders();
     loadProducts();
+
+    const wholesaleCheckbox = document.getElementById('isWholesale');
+    if (wholesaleCheckbox) {
+        wholesaleCheckbox.addEventListener('change', function() {
+            updateCartUI();
+        });
+    }
 });

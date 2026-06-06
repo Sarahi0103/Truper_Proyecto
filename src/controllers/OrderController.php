@@ -39,17 +39,26 @@ class OrderController {
                     throw new Exception('Producto no encontrado: ' . $productId);
                 }
 
-                $unit_price = calculateProductPrice((float)$product['unit_price'], $quantity, (bool)$is_wholesale);
-                $subtotal = $unit_price * $quantity;
-                
-                // Aplicar descuento por cantidad
-                $discount = 0;
-                if ($quantity >= 100) {
-                    $discount = 0.15; // 15% descuento
-                } elseif ($quantity >= 50) {
-                    $discount = 0.10; // 10%
-                } elseif ($quantity >= 20) {
-                    $discount = 0.05; // 5%
+                $isAdmin = (($_SESSION['role'] ?? '') === 'admin');
+                $customPrice = ($isAdmin && isset($item['price'])) ? (float)$item['price'] : null;
+
+                if ($customPrice !== null) {
+                    $unit_price = $customPrice;
+                    $subtotal = $unit_price * $quantity;
+                    $discount = 0;
+                } else {
+                    $unit_price = calculateProductPrice((float)$product['unit_price'], $quantity, (bool)$is_wholesale);
+                    $subtotal = $unit_price * $quantity;
+                    
+                    // Aplicar descuento por cantidad
+                    $discount = 0;
+                    if ($quantity >= 100) {
+                        $discount = 0.15; // 15% descuento
+                    } elseif ($quantity >= 50) {
+                        $discount = 0.10; // 10%
+                    } elseif ($quantity >= 20) {
+                        $discount = 0.05; // 5%
+                    }
                 }
                 
                 $item_discount = $subtotal * $discount;
