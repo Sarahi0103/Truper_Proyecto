@@ -239,13 +239,14 @@ try {
             $response = ['success' => false, 'message' => 'Acción no reconocida'];
     }
 
-} catch (Exception $e) {
+} catch (Throwable $e) {
     error_log("Orders API Error: " . $e->getMessage());
-    $response = ['success' => false, 'message' => 'Error del servidor'];
+    $response = ['success' => false, 'message' => 'Error del servidor: ' . $e->getMessage()];
     if (($_SESSION['role'] ?? '') === 'admin') {
         $response['debug'] = [
             'action' => (string)$action,
-            'detail' => (string)$e->getMessage()
+            'detail' => (string)$e->getMessage(),
+            'trace' => $e->getTraceAsString()
         ];
     }
 }

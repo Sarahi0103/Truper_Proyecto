@@ -592,7 +592,7 @@ try {
             $response = ['success' => false, 'message' => 'Accion no reconocida'];
     }
 
-} catch (Exception $e) {
+} catch (Throwable $e) {
     error_log('Client account API error: ' . $e->getMessage());
     $response = [
         'success' => false,

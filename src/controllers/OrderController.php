@@ -78,7 +78,7 @@ class OrderController {
             // Crear orden
             $stmt = $this->pdo->prepare("
                 INSERT INTO orders (client_id, order_number, total_amount, balance, is_wholesale, status, notes)
-                VALUES (?, ?, ?, ?, ?, 'pending', ?)
+                VALUES (?, ?, ?, ?, ?::boolean, 'pending', ?)
             ");
             
             $stmt->execute([
@@ -158,12 +158,12 @@ class OrderController {
                 'earned_points' => $earned_points,
                 'ticket_url' => '/ticket_client.php?id=' . $order_id
             ];
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             if ($this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
             }
             error_log("Error creando orden: " . $e->getMessage());
-            return ['success' => false, 'message' => 'Error al crear la orden'];
+            return ['success' => false, 'message' => 'Error al crear la orden: ' . $e->getMessage()];
         }
     }
     
