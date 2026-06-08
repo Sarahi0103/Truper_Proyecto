@@ -279,7 +279,7 @@ let allProducts = [];
 let loadedWholesaleRequests = [];
 
 async function loadProductsForForm() {
-  const res = await apiCall('/wholesale.php?action=products');
+  const res = await apiCall('/api/wholesale.php?action=products');
   if (res && res.success) {
     const catalog = Array.isArray(res.catalog_products) ? res.catalog_products : [];
     const marketplace = Array.isArray(res.marketplace_products) ? res.marketplace_products : [];
@@ -399,7 +399,7 @@ async function submitWholesale(e) {
     products: products
   };
   
-  const res = await apiCall('/wholesale.php?action=request', 'POST', payload);
+  const res = await apiCall('/api/wholesale.php?action=request', 'POST', payload);
   if (res && res.success) {
     handleSuccessResponse(res, {
       scrollTarget: '#wholesaleForm',
@@ -419,7 +419,7 @@ async function submitWholesale(e) {
 }
 
 async function approveWholesale(id) {
-  const res = await apiCall('/wholesale.php?action=approve', 'POST', { id });
+  const res = await apiCall('/api/wholesale.php?action=approve', 'POST', { id });
   if (res && res.success) {
     handleSuccessResponse(res, {
       scrollTarget: '#wholesaleRows',
@@ -435,7 +435,7 @@ async function deleteWholesale(id) {
   if (!confirmDelete('¿Estás seguro de que deseas eliminar esta solicitud de mayoreo aprobada? Esta acción no se puede deshacer.')) {
     return;
   }
-  const res = await apiCall('/wholesale.php?action=delete', 'POST', { id });
+  const res = await apiCall('/api/wholesale.php?action=delete', 'POST', { id });
   if (res && res.success) {
     handleSuccessResponse(res, {
       scrollTarget: '#wholesaleRows',
@@ -448,7 +448,7 @@ async function deleteWholesale(id) {
 }
 
 async function loadWholesale() {
-  const res = await apiCall('/wholesale.php?action=list');
+  const res = await apiCall('/api/wholesale.php?action=list');
   const tb = document.getElementById('wholesaleRows');
   const colCount = <?php echo $column_count; ?>;
   

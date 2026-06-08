@@ -604,16 +604,7 @@ if (is_logged_in()) {
         </div>
     </div>
 
-    <script>
-        document.getElementById('registerForm').addEventListener('submit', function() {
-            const btn = document.getElementById('submitBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="10" cy="10" r="7" stroke-dasharray="44" stroke-dashoffset="44" style="animation:spin 0.8s linear infinite;transform-origin:center;"/></svg> Creando cuenta...';
-            btn.style.opacity = '0.8';
-        });
-    </script>
-    <style>
-        @keyframes spin { to { stroke-dashoffset: 0; } }
-    </style>
+    <script src="js/main.js?v=2.6"></script>
+    <script src="js/mobile-optimize.js"></script>
 </body>
 </html>
