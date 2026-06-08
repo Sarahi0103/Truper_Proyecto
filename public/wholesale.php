@@ -165,7 +165,7 @@ $column_count = $is_admin ? 7 : 6;
     <div class="user-menu">
         <div class="user-info">
             <div class="user-name"><?php echo $user_name; ?></div>
-            <div class="user-role"><?php echo ucfirst($user_role); ?></div>
+            <div class="user-role"><?php echo strtoupper($user_role); ?></div>
         </div>
         <button class="btn-logout" onclick="window.location.href='api/auth.php?action=logout'">Cerrar Sesion</button>
     </div>

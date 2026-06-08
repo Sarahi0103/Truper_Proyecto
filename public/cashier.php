@@ -389,7 +389,10 @@ $user_name = htmlspecialchars(($_SESSION['role'] ?? '') === 'admin' ? 'admin' : 
         </nav>
     </div>
     <div class="user-menu">
-        <div class="user-info"><div class="user-name"><?php echo $user_name; ?></div></div>
+        <div class="user-info">
+            <div class="user-name"><?php echo $user_name; ?></div>
+            <div class="user-role">ADMIN</div>
+        </div>
         <button class="btn-logout" onclick="window.location.href='api/auth.php?action=logout'">Cerrar Sesion</button>
     </div>
 </header>

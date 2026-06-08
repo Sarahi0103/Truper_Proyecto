@@ -84,7 +84,7 @@ $user_name = htmlspecialchars(($_SESSION['role'] ?? '') === 'admin' ? 'admin' : 
         <div class="user-menu">
             <div class="user-info">
                 <div class="user-name"><?php echo $user_name; ?></div>
-                <div class="user-role">Admin</div>
+                <div class="user-role">ADMIN</div>
             </div>
             <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
         </div>
