@@ -367,6 +367,14 @@ function homepage_update_label($type) {
 ?>
 <!DOCTYPE html>
 <html lang="es">
+<head>
+    <link rel="icon" type="image/png" href="/truper_logo2.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Truper - Catálogo de Productos</title>
+    <link rel="stylesheet" href="css/styles.css?v=2.2">
+    <link rel="stylesheet" href="css/theme.css?v=2.5">
+    <link rel="stylesheet" href="css/responsive-complete.css?v=2.2">
     <style>
         /* Modern Title style */
         h1 {
