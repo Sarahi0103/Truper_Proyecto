@@ -2885,10 +2885,6 @@ try {
                 $response = ['success' => false, 'message' => 'El código del producto debe tener exactamente 5 o 6 números (sin letras)'];
                 break;
             }
-            if ($id <= 0) {
-                $response = ['success' => false, 'message' => 'Este código está marcado como eliminado y no se puede reutilizar'];
-                break;
-            }
             if ($price < 0 || $stockQty < 0 || $reorder < 0) {
                 $response = ['success' => false, 'message' => 'Valores numéricos inválidos'];
                 break;
@@ -4293,11 +4289,6 @@ try {
             }
             if (!is_valid_numeric_sku_admin_supply($sku)) {
                 $response = ['success' => false, 'message' => 'El código SKU CE debe tener 5 o 6 números'];
-                break;
-            }
-
-            if ($id <= 0) {
-                $response = ['success' => false, 'message' => 'Este código está marcado como eliminado y no se puede reutilizar'];
                 break;
             }
 
