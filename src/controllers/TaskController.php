@@ -205,21 +205,20 @@ class TaskController {
     
     public function logTaskHours($task_id, $hours, $actual_ampm = 'AM') {
         try {
-            $actual_ampm = in_array((string)$actual_ampm, ['AM', 'PM'], true) ? (string)$actual_ampm : 'AM';
-            
             $stmt = $this->pdo->prepare("
                 UPDATE tasks 
-                SET actual_hours = ?, actual_ampm = ? 
+                SET actual_hours = ? 
                 WHERE id = ?
             ");
             
-            $stmt->execute([$hours, $actual_ampm, $task_id]);
+            $stmt->execute([$hours, $task_id]);
             
             return [
                 'success' => true,
                 'message' => 'Horas actualizadas exitosamente'
             ];
         } catch (PDOException $e) {
+            error_log("Error logging task hours: " . $e->getMessage());
             return ['success' => false, 'message' => 'Error al actualizar horas'];
         }
     }
