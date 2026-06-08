@@ -4,6 +4,46 @@
  * Truper Platform
  */
 
+function truper_load_env_file(string $path): void {
+    if (!is_file($path) || !is_readable($path)) {
+        return;
+    }
+
+    $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    if (!is_array($lines)) {
+        return;
+    }
+
+    foreach ($lines as $line) {
+        $line = trim((string)$line);
+        if ($line === '' || strpos($line, '#') === 0 || strpos($line, '=') === false) {
+            continue;
+        }
+
+        [$key, $value] = array_map('trim', explode('=', $line, 2));
+        if ($key === '' || getenv($key) !== false) {
+            continue;
+        }
+
+        if ($value !== '' && (
+            (substr($value, 0, 1) === '"' && substr($value, -1) === '"') ||
+            (substr($value, 0, 1) === "'" && substr($value, -1) === "'")
+        )) {
+            $value = substr($value, 1, -1);
+        }
+
+        if (($commentPos = strpos($value, ' #')) !== false) {
+            $value = trim(substr($value, 0, $commentPos));
+        }
+
+        putenv($key . '=' . $value);
+        $_ENV[$key] = $value;
+        $_SERVER[$key] = $value;
+    }
+}
+
+truper_load_env_file(__DIR__ . '/../.env');
+
 // Configuración de conexión (compatible con Render)
 $dbHost = getenv('DB_HOST') ?: 'localhost';
 $dbPort = getenv('DB_PORT') ?: '5432';
