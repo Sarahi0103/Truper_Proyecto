@@ -206,12 +206,41 @@ try {
             $year = isset($_GET['year']) ? (int)$_GET['year'] : null;
             $clientId = is_admin_user() ? null : get_current_client_id($pdo);
             if (!$clientId && !is_admin_user()) {
-                $response = ['success' => true, 'stats' => []];
+                $response = ['success' => true, 'stats' => [], 'category_stats' => []];
                 break;
             }
 
             $stats = order_monthly_stats($pdo, $year, $clientId);
-            $response = ['success' => true, 'stats' => $stats];
+            
+            $catSql = "
+                SELECT 
+                    COALESCE(p.category, 'General') AS category, 
+                    SUM(oi.quantity)::int AS total_qty, 
+                    SUM(oi.line_total)::float AS total_amount
+                FROM order_items oi
+                JOIN products p ON oi.product_id = p.id
+                JOIN orders o ON o.id = oi.order_id
+                WHERE o.created_at IS NOT NULL
+            ";
+            $catParams = [];
+            if ($year && $year > 0) {
+                $catSql .= " AND EXTRACT(YEAR FROM o.created_at) = ?";
+                $catParams[] = $year;
+            }
+            if ($clientId) {
+                $catSql .= " AND o.client_id = ?";
+                $catParams[] = $clientId;
+            }
+            $catSql .= " GROUP BY p.category ORDER BY total_amount DESC";
+            $catStmt = $pdo->prepare($catSql);
+            $catStmt->execute($catParams);
+            $catStats = $catStmt->fetchAll() ?: [];
+
+            $response = [
+                'success' => true,
+                'stats' => $stats,
+                'category_stats' => $catStats
+            ];
             break;
 
         case 'available-years':

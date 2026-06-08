@@ -411,6 +411,30 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                 <div id="cashierStatusSubtext" class="status-subtext"></div>
             </div>
 
+            <!-- Progreso de Meta Mensual (Cashier POS Analytics) -->
+            <div class="card mt-3 show-only-open" id="monthlyGoalProgressCard" style="border: 1px solid rgba(255, 102, 0, 0.15); background: rgba(255, 102, 0, 0.02); display:none;">
+                <div class="card-body" style="padding: 1.25rem;">
+                    <h3 style="margin:0 0 0.5rem; font-size:1.1rem; color:#fff; display:flex; align-items:center; gap:8px;">
+                        <span>🎯</span> Meta de Ventas Mensual
+                    </h3>
+                    <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#aaa; margin-bottom:0.4rem;">
+                        <span id="monthlyGoalLabel">Cargando meta del mes...</span>
+                        <span id="monthlyGoalPct" style="font-weight:700; color:var(--color-naranja, #ff6600);">0%</span>
+                    </div>
+                    <div style="height:10px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; position:relative; margin-bottom:0.75rem;">
+                        <div id="monthlyGoalProgressFill" style="height:100%; width:0%; background:linear-gradient(90deg, #ff6600, #ff9500); border-radius:999px; transition:width 0.6s cubic-bezier(0.4,0,0.2,1); box-shadow:0 0 8px rgba(255,102,0,0.25);"></div>
+                    </div>
+                    <div class="grid grid-2" style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; font-size:0.82rem; color:#888;">
+                        <div>
+                            Acumulado del mes: <strong id="monthlyGoalAchieved" style="color:#fff;">$0.00</strong>
+                        </div>
+                        <div style="text-align:right;">
+                            Ventas del día: <strong id="dailyGoalComparison" style="color:#2ecc71;">$0.00</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Session Actions Cards -->
             <div class="cashier-session-actions">
                 <!-- Center this if drawer-closed -->
@@ -724,6 +748,48 @@ async function refreshStatus() {
   }
   
   renderMetrics(res.summary || null);
+
+  if (res.open_session) {
+    updateMonthlyGoalProgress(res.summary ? Number(res.summary.sales_today || 0) : 0);
+  } else {
+    const goalCard = document.getElementById('monthlyGoalProgressCard');
+    if (goalCard) goalCard.style.display = 'none';
+  }
+}
+
+async function updateMonthlyGoalProgress(salesToday) {
+  const goalCard = document.getElementById('monthlyGoalProgressCard');
+  if (!goalCard) return;
+
+  const currentMonthKey = new Date().toISOString().slice(0, 7);
+  const goalRes = await apiCall(`/cashier.php?action=goal-summary&month_key=${currentMonthKey}`, 'GET', null, { silent: true });
+  
+  if (goalRes && goalRes.success && goalRes.goal) {
+    goalCard.style.display = 'block';
+    
+    const goal = goalRes.goal;
+    const target = Number(goal.target_amount || 0);
+    const achieved = Number(goal.achieved_amount || 0);
+    const progress = Number(goal.progress_pct || 0);
+    
+    document.getElementById('monthlyGoalLabel').textContent = `Meta de ${currentMonthKey}: ${formatMoney(target)}`;
+    document.getElementById('monthlyGoalPct').textContent = `${progress.toFixed(1)}%`;
+    document.getElementById('monthlyGoalProgressFill').style.width = `${Math.min(100, progress)}%`;
+    document.getElementById('monthlyGoalAchieved').textContent = formatMoney(achieved);
+    
+    // Comparar ventas de hoy vs meta diaria proporcional (Meta / 30)
+    const dailyTarget = target / 30;
+    const dailyPct = dailyTarget > 0 ? (salesToday / dailyTarget * 100) : 0;
+    
+    document.getElementById('dailyGoalComparison').innerHTML = `
+      ${formatMoney(salesToday)} 
+      <span style="color: ${salesToday >= dailyTarget ? '#2ecc71' : '#f59e0b'}; font-size: 0.75rem; font-weight: bold;">
+        (${salesToday >= dailyTarget ? '✓ Cumplido' : '⏳ ' + dailyPct.toFixed(1) + '% de meta diaria'})
+      </span>
+    `;
+  } else {
+    goalCard.style.display = 'none';
+  }
 }
 
 async function openDrawer() {

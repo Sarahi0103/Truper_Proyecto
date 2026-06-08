@@ -59,11 +59,82 @@ function display_product_code($sku) {
         .row { margin-bottom: 5px; }
         .format-switch { text-align: center; margin-bottom: 8px; }
         .format-switch a { color: var(--theme-accent); }
+        
+        /* Timeline styles */
+        .order-timeline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+            padding: 10px 0;
+            position: relative;
+        }
+        .order-timeline::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--ui-border);
+            z-index: 1;
+            transform: translateY(-50%);
+        }
+        .timeline-progress-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            height: 2px;
+            background: var(--color-naranja, #ff6600);
+            z-index: 1;
+            transform: translateY(-50%);
+            transition: width 0.4s ease;
+        }
+        .timeline-step {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 25%;
+        }
+        .timeline-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: var(--ui-surface-soft);
+            border: 2px solid var(--ui-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: var(--ui-text-muted);
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .timeline-step.active .timeline-icon {
+            background: var(--color-naranja, #ff6600);
+            border-color: var(--color-naranja, #ff6600);
+            color: #fff;
+            box-shadow: 0 0 10px rgba(255,102,0,0.5);
+        }
+        .timeline-label {
+            font-size: 9px;
+            font-weight: bold;
+            margin-top: 6px;
+            color: var(--ui-text-muted);
+            text-align: center;
+            text-transform: uppercase;
+        }
+        .timeline-step.active .timeline-label {
+            color: var(--color-naranja, #ff6600);
+        }
+
         @media print {
             html, body { background: #fff !important; color: #000 !important; }
             .ticket { background: #fff !important; color: #000 !important; border: 1px solid #000 !important; }
             .line { border-top-color: #000 !important; }
-            .format-switch, .theme-toggle { display: none !important; }
+            .format-switch, .theme-toggle, .order-timeline { display: none !important; }
         }
     </style>
 </head>
@@ -76,6 +147,39 @@ function display_product_code($sku) {
         <a href="#" onclick="downloadClientTicketPdf(); return false;">Descargar PDF</a>
     </div>
     <h1>TICKET CLIENTE</h1>
+    
+    <?php
+    $status = strtolower($order['status'] ?? 'pending');
+    $step1 = true; // Recibido
+    $step2 = in_array($status, ['confirmed', 'processing', 'shipped', 'delivered']);
+    $step3 = in_array($status, ['shipped', 'delivered']);
+    $step4 = ($status === 'delivered');
+    
+    $progressPct = 0;
+    if ($step4) $progressPct = 100;
+    elseif ($step3) $progressPct = 66.6;
+    elseif ($step2) $progressPct = 33.3;
+    ?>
+    <div class="order-timeline">
+        <div class="timeline-progress-line" style="width: <?php echo $progressPct; ?>%;"></div>
+        <div class="timeline-step <?php echo $step1 ? 'active' : ''; ?>">
+            <div class="timeline-icon">📝</div>
+            <div class="timeline-label">Recibido</div>
+        </div>
+        <div class="timeline-step <?php echo $step2 ? 'active' : ''; ?>">
+            <div class="timeline-icon">🔧</div>
+            <div class="timeline-label">Preparando</div>
+        </div>
+        <div class="timeline-step <?php echo $step3 ? 'active' : ''; ?>">
+            <div class="timeline-icon">🚚</div>
+            <div class="timeline-label">Enviado</div>
+        </div>
+        <div class="timeline-step <?php echo $step4 ? 'active' : ''; ?>">
+            <div class="timeline-icon">✅</div>
+            <div class="timeline-label">Entregado</div>
+        </div>
+    </div>
+
     <div class="row"><strong>Folio:</strong> <?php echo htmlspecialchars($order['order_number'], ENT_QUOTES, 'UTF-8'); ?></div>
     <div class="row"><strong>Fecha:</strong> <?php echo htmlspecialchars($order['created_at'] ?? $order['order_date'], ENT_QUOTES, 'UTF-8'); ?></div>
     <div class="row"><strong>Cliente:</strong> <?php echo htmlspecialchars(($order['first_name'] ?? '') . ' ' . ($order['last_name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></div>

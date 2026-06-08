@@ -357,6 +357,111 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
         .csv-progress-label.success { color: #22c55e; font-weight: 600; }
         .csv-progress-label.warning { color: #f59e0b; font-weight: 600; }
         .csv-progress-label.error { color: #ef4444; font-weight: 600; }
+
+        /* Auto PO Modal styles */
+        .auto-po-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .auto-po-modal.active {
+            display: flex;
+        }
+        .auto-po-modal-content {
+            background: #1e1e1e;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 850px;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            color: #fff;
+        }
+        .auto-po-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .auto-po-header h2 {
+            margin: 0;
+            color: var(--color-naranja, #ff6600);
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .auto-po-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .auto-po-close:hover {
+            color: #fff;
+        }
+        .supplier-group-card {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+        }
+        .supplier-group-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #ff8833;
+            margin: 0 0 0.75rem 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            padding-bottom: 0.4rem;
+        }
+        .auto-po-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+        .auto-po-table th, .auto-po-table td {
+            padding: 0.5rem 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .auto-po-table th {
+            color: #888;
+            font-weight: 600;
+            background: rgba(255,255,255,0.01);
+        }
+        .auto-po-input {
+            width: 65px;
+            background: #121212;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+            border-radius: 4px;
+            padding: 3px 6px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .auto-po-input:focus {
+            border-color: #ff6600;
+            outline: none;
+        }
     </style>
 </head>
 <body>
@@ -506,8 +611,11 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
 
             <div class="card"><div class="card-body">
                 <h3>Control de Existencias</h3>
-                <div class="admin-search-row">
-                    <input id="stockSearch" type="text" placeholder="Buscar por código, nombre o categoría...">
+                <div class="admin-search-row" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:1rem;">
+                    <input id="stockSearch" type="text" placeholder="Buscar por código, nombre o categoría..." style="flex:1; min-width:250px; margin-bottom:0;">
+                    <button class="btn btn-primary" onclick="openAutoPoModal()" style="background:var(--color-naranja, #ff6600); border-color:var(--color-naranja, #ff6600); display:inline-flex; align-items:center; gap:6px; margin:0;">
+                        <span>📦</span> Generar Orden Automática
+                    </button>
                 </div>
                 <div class="admin-section-subtitle mt-3">📤 Carga Masiva (CSV)</div>
                 <div class="csv-upload-panel" id="stockCsvPanel">
@@ -985,6 +1093,27 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Administrador', ENT_QUOTES, 
         </section>
     </div>
 </main>
+
+<!-- Modal de Orden de Compra Automática -->
+<div id="autoPoModal" class="auto-po-modal">
+    <div class="auto-po-modal-content">
+        <div class="auto-po-header">
+            <h2><span>📦</span> Sugerencias de Reabastecimiento Automático</h2>
+            <button class="auto-po-close" onclick="closeAutoPoModal()">&times;</button>
+        </div>
+        <p class="text-muted" style="margin-top:0; margin-bottom:1.5rem; font-size:0.9rem;">
+            A continuación se muestran los productos cuyo stock actual es menor o igual a su nivel de reorden, agrupados por su proveedor asignado.
+        </p>
+        <div id="autoPoContainer">
+            <div style="text-align:center; padding:2rem;">
+                <p class="text-muted">Analizando inventario y buscando proveedores...</p>
+            </div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid rgba(255,255,255,0.08); padding-top:1rem; margin-top:1rem;">
+            <button class="btn btn-secondary" onclick="closeAutoPoModal()">Cerrar</button>
+        </div>
+    </div>
+</div>
 
 <script src="js/main.js?v=2.6"></script>
 <script>
@@ -5470,6 +5599,233 @@ function goToClientsTab() {
     if (section) {
         section.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+}
+
+let currentAutoPoDrafts = [];
+
+function openAutoPoModal() {
+    const modal = document.getElementById('autoPoModal');
+    if (modal) {
+        modal.classList.add('active');
+        loadAutoPoDrafts();
+    }
+}
+
+function closeAutoPoModal() {
+    const modal = document.getElementById('autoPoModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+async function loadAutoPoDrafts() {
+    const container = document.getElementById('autoPoContainer');
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div style="text-align:center; padding:2rem;">
+            <p class="text-muted">Cargando borrador y analizando stock...</p>
+        </div>
+    `;
+    
+    const res = await apiCall(`/admin_supply.php?action=auto-reorder-draft&_=${Date.now()}`, 'GET', null, { silent: true });
+    
+    if (!res || !res.success || !Array.isArray(res.drafts)) {
+        container.innerHTML = `<p class="text-center text-muted" style="padding:2rem;">No fue posible obtener sugerencias de reabastecimiento.</p>`;
+        return;
+    }
+    
+    currentAutoPoDrafts = res.drafts;
+    
+    if (res.drafts.length === 0) {
+        container.innerHTML = `
+            <div style="text-align:center; padding:3rem; border:1px dashed rgba(255,255,255,0.1); border-radius:8px; background:rgba(255,255,255,0.01);">
+                <span style="font-size:2rem; display:block; margin-bottom:0.5rem;">🎉</span>
+                <h4 style="margin:0 0 0.5rem; color:#fff;">¡Todo en Orden!</h4>
+                <p class="text-muted" style="margin:0;">No hay ningún producto por debajo del nivel mínimo de reorden en este momento.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    res.drafts.forEach((draft, idx) => {
+        const items = draft.items;
+        let totalEst = 0;
+        let rows = '';
+        
+        items.forEach((item, itemIdx) => {
+            const cost = Number(item.estimated_cost || 0);
+            const qty = Number(item.suggested_quantity || 1);
+            const subtotal = cost * qty;
+            totalEst += subtotal;
+            
+            rows += `
+                <tr data-draft-idx="${idx}" data-item-idx="${itemIdx}">
+                    <td><strong>${escapeHtml(displayProductCode(item.sku))}</strong></td>
+                    <td>${escapeHtml(item.product_name)}</td>
+                    <td class="text-center">${item.stock_quantity}</td>
+                    <td class="text-center">${item.reorder_level}</td>
+                    <td>
+                        <input type="number" min="1" step="1" class="auto-po-input" 
+                               value="${qty}" 
+                               oninput="updateAutoPoItemQty(${idx}, ${itemIdx}, this.value)">
+                    </td>
+                    <td>$${cost.toFixed(2)}</td>
+                    <td class="item-subtotal">$${subtotal.toFixed(2)}</td>
+                </tr>
+            `;
+        });
+        
+        html += `
+            <div class="supplier-group-card" id="supplier-group-${idx}">
+                <div class="supplier-group-title">
+                    <span>🏢 ${escapeHtml(draft.supplier_name)}</span>
+                    <span style="font-size:0.85rem; font-weight:normal; color:#888;">
+                        Total Estimado: <strong style="color:var(--color-naranja, #ff6600);" id="group-total-${idx}">$${totalEst.toFixed(2)}</strong>
+                    </span>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="auto-po-table">
+                        <thead>
+                            <tr>
+                                <th>SKU</th>
+                                <th>Producto</th>
+                                <th class="text-center">Stock Act.</th>
+                                <th class="text-center">Min. Reorden</th>
+                                <th>Cant. Pedir</th>
+                                <th>Costo Unit.</th>
+                                <th>Subtotal Est.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows}
+                        </tbody>
+                    </table>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:0.5rem;">
+                    <button class="btn btn-secondary btn-small" onclick="downloadCsvPoDraft(${idx})">⬇️ Descargar Borrador</button>
+                    <button class="btn btn-primary btn-small" onclick="generatePoFromGroup(${idx})">💾 Crear Orden de Compra</button>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function updateAutoPoItemQty(draftIdx, itemIdx, value) {
+    const qty = parseInt(value, 10);
+    if (isNaN(qty) || qty <= 0) return;
+    
+    currentAutoPoDrafts[draftIdx].items[itemIdx].suggested_quantity = qty;
+    
+    // Recalcular subtotal
+    const item = currentAutoPoDrafts[draftIdx].items[itemIdx];
+    const subtotal = qty * Number(item.estimated_cost || 0);
+    
+    // Buscar la fila correspondiente
+    const card = document.getElementById(`supplier-group-${draftIdx}`);
+    if (card) {
+        const row = card.querySelector(`tr[data-draft-idx="${draftIdx}"][data-item-idx="${itemIdx}"]`);
+        if (row) {
+            const subtotalCell = row.querySelector('.item-subtotal');
+            if (subtotalCell) {
+                subtotalCell.textContent = `$${subtotal.toFixed(2)}`;
+            }
+        }
+        
+        // Recalcular total de grupo
+        let totalEst = 0;
+        currentAutoPoDrafts[draftIdx].items.forEach(it => {
+            totalEst += Number(it.suggested_quantity) * Number(it.estimated_cost);
+        });
+        
+        const totalEl = document.getElementById(`group-total-${draftIdx}`);
+        if (totalEl) {
+            totalEl.textContent = `$${totalEst.toFixed(2)}`;
+        }
+    }
+}
+
+async function generatePoFromGroup(index) {
+    const draft = currentAutoPoDrafts[index];
+    if (!draft) return;
+    
+    if (!confirm(`¿Generar Orden de Compra oficial para ${draft.supplier_name}?`)) {
+        return;
+    }
+    
+    const payload = {
+        supplier_name: draft.supplier_name,
+        expected_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10), // 1 semana después
+        items: draft.items.map(it => {
+            return {
+                supplier_product_id: it.supplier_product_id || 0,
+                sku: it.sku,
+                product_name: it.product_name,
+                quantity: it.suggested_quantity,
+                estimated_cost: it.estimated_cost
+            };
+        })
+    };
+    
+    const res = await apiCall('/admin_supply.php?action=supplier-order-create', 'POST', payload);
+    if (res && res.success) {
+        showAlert(res.message, 'success');
+        // Remover de la pantalla
+        const card = document.getElementById(`supplier-group-${index}`);
+        if (card) {
+            card.style.transition = 'all 0.4s ease';
+            card.style.opacity = '0';
+            card.style.transform = 'scale(0.9)';
+            setTimeout(() => {
+                card.remove();
+                // Si ya no quedan grupos, mostrar el mensaje de Todo Listo
+                const remaining = document.querySelectorAll('.supplier-group-card');
+                if (remaining.length === 0) {
+                    loadAutoPoDrafts(); // Recargará y mostrará el banner de completado
+                }
+            }, 400);
+        }
+        
+        // Recargar la lista general de órdenes de proveedor si existe el método
+        if (typeof loadSupplierOrders === 'function') {
+            loadSupplierOrders();
+        }
+    } else if (res) {
+        showAlert(res.message, 'error');
+    }
+}
+
+function downloadCsvPoDraft(index) {
+    const draft = currentAutoPoDrafts[index];
+    if (!draft) return;
+    
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // UTF-8 BOM
+    csvContent += "Proveedor: " + draft.supplier_name + "\r\n";
+    csvContent += "Fecha de Emisión: " + new Date().toLocaleDateString('es-MX') + "\r\n\r\n";
+    csvContent += "SKU,Producto,Cantidad,Costo Estimado,Subtotal\r\n";
+    
+    let grandTotal = 0;
+    draft.items.forEach(it => {
+        const subtotal = Number(it.suggested_quantity) * Number(it.estimated_cost);
+        grandTotal += subtotal;
+        csvContent += `"${it.sku}","${it.product_name.replace(/"/g, '""')}",${it.suggested_quantity},${it.estimated_cost},${subtotal}\r\n`;
+    });
+    
+    csvContent += `,,,Total Estimado,${grandTotal}\r\n`;
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    const safeSupplierName = draft.supplier_name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    link.setAttribute("download", `borrador_oc_${safeSupplierName}_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showAlert('Borrador descargado en CSV', 'success');
 }
 
 document.addEventListener('DOMContentLoaded', function () {

@@ -111,15 +111,193 @@ if (!empty($profile['birthdate'])) {
     <link rel="stylesheet" href="css/theme.css?v=3.0">
     <link rel="stylesheet" href="css/responsive-complete.css?v=3.0">
     <style>
+        /* Modern Title style */
+        h1 {
+            font-size: 2rem !important;
+            font-weight: 800 !important;
+            color: #ffffff !important;
+            margin-bottom: 0.5rem !important;
+            letter-spacing: -0.02em !important;
+        }
+
+        /* Segment-controlled tabs */
+        .tabs {
+            background: #111111 !important;
+            border: 1px solid #222222 !important;
+            padding: 0.35rem !important;
+            border-radius: 12px !important;
+            display: flex !important;
+            gap: 0.25rem !important;
+            margin: 2rem 0 2.5rem 0 !important;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5) !important;
+        }
+
+        .tab-button {
+            flex: 1 !important;
+            text-align: center !important;
+            padding: 0.75rem 1rem !important;
+            border-radius: 8px !important;
+            border: none !important;
+            background: transparent !important;
+            color: #888888 !important;
+            font-weight: 600 !important;
+            transition: all 0.25s ease !important;
+            font-size: 0.95rem !important;
+            border-bottom: none !important;
+        }
+
+        .tab-button:hover {
+            color: #ffffff !important;
+            background: rgba(255,255,255,0.03) !important;
+        }
+
+        .tab-button.active {
+            background: var(--theme-accent, #ff7f00) !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 12px rgba(255, 127, 0, 0.3) !important;
+            border-bottom: none !important;
+        }
+
+        /* Modern card layout specifically for profile */
+        .container {
+            background: transparent !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+        }
+
+        .card {
+            background: #111111 !important;
+            border: 1px solid #222222 !important;
+            border-radius: 16px !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+            overflow: hidden !important;
+            margin-bottom: 2rem !important;
+        }
+
+        .card-header {
+            background: #161616 !important;
+            border-bottom: 1px solid #222222 !important;
+            color: #ffffff !important;
+            padding: 1.25rem 1.75rem !important;
+            font-weight: 700 !important;
+            font-size: 1.15rem !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+        }
+
+        .card-header::before {
+            content: '' !important;
+            display: inline-block !important;
+            width: 4px !important;
+            height: 18px !important;
+            background: var(--theme-accent, #ff7f00) !important;
+            border-radius: 2px !important;
+        }
+
+        .card-body {
+            padding: 2rem 1.75rem !important;
+        }
+
+        /* Form styling */
+        .form-group {
+            margin-bottom: 1.5rem !important;
+        }
+
+        .form-group label {
+            display: block !important;
+            font-size: 0.82rem !important;
+            font-weight: 600 !important;
+            margin-bottom: 0.5rem !important;
+            color: #888888 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.05em !important;
+        }
+
+        input[type="text"], 
+        input[type="email"], 
+        input[type="password"], 
+        input[type="tel"], 
+        input[type="date"], 
+        textarea {
+            width: 100% !important;
+            background: #0d0d0d !important;
+            border: 1px solid #222222 !important;
+            color: #ffffff !important;
+            border-radius: 10px !important;
+            padding: 0.85rem 1rem !important;
+            font-size: 0.95rem !important;
+            transition: all 0.2s ease !important;
+        }
+
+        input[type="text"]:focus, 
+        input[type="email"]:focus, 
+        input[type="password"]:focus, 
+        input[type="tel"]:focus, 
+        input[type="date"]:focus, 
+        textarea:focus {
+            border-color: var(--theme-accent, #ff7f00) !important;
+            box-shadow: 0 0 0 3px rgba(255, 127, 0, 0.15) !important;
+            background: #111111 !important;
+            outline: none !important;
+        }
+
+        input:disabled {
+            background: #080808 !important;
+            border-color: #1a1a1a !important;
+            color: #555555 !important;
+            cursor: not-allowed !important;
+        }
+
+        .text-muted {
+            color: #666666 !important;
+            font-size: 0.8rem !important;
+            margin-top: 0.35rem !important;
+            display: block !important;
+        }
+
+        /* Premium update buttons */
+        .btn-primary.btn-block {
+            background: linear-gradient(90deg, #ff6600, #ff9500) !important;
+            border: none !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            padding: 1rem !important;
+            border-radius: 12px !important;
+            font-size: 1rem !important;
+            letter-spacing: 0.03em !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            box-shadow: 0 4px 15px rgba(255, 102, 0, 0.25) !important;
+            margin-top: 1.5rem !important;
+        }
+
+        .btn-primary.btn-block:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 20px rgba(255, 102, 0, 0.4) !important;
+            background: linear-gradient(90deg, #ff7711, #ffa522) !important;
+        }
+
+        .btn-primary.btn-block:active {
+            transform: translateY(0) !important;
+        }
+
+        /* Loyalty (Lealtad) styling */
         .loyalty-wrap {
             text-align: center;
             padding: 2rem;
         }
 
         .loyalty-star {
-            font-size: 2rem;
+            font-size: 3rem !important;
+            animation: starBounce 2s infinite ease-in-out !important;
             color: var(--theme-accent);
             margin-bottom: 0.5rem;
+        }
+
+        @keyframes starBounce {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-8px) scale(1.08); }
         }
 
         .loyalty-points-number {

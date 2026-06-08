@@ -169,24 +169,42 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                     </div>
                 </div>
 
-                <!-- Chart card (bar/line) -->
-                <div class="chart-card" id="chartCard">
-                    <div class="chart-card-header">
-                        <div class="chart-card-title">
-                            <span class="chart-icon">📈</span>
-                            <span id="chartTitle">Rendimiento Mensual</span>
+                <!-- Contenedor de gráficos divididos en rejilla -->
+                <div class="analytics-charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                    <!-- Chart card (bar/line) -->
+                    <div class="chart-card" id="chartCard" style="margin-bottom: 0;">
+                        <div class="chart-card-header">
+                            <div class="chart-card-title">
+                                <span class="chart-icon">📈</span>
+                                <span id="chartTitle">Rendimiento Mensual</span>
+                            </div>
+                            <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
+                                <?php if ($is_admin): ?>
+                                <button class="btn-analytics-secondary" onclick="exportStats('csv')" style="font-size:.8rem; padding:.45rem .9rem;">
+                                    📥 Exportar CSV
+                                </button>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                        <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
-                            <?php if ($is_admin): ?>
-                            <button class="btn-analytics-secondary" onclick="exportStats('csv')" style="font-size:.8rem; padding:.45rem .9rem;">
-                                📥 Exportar CSV
-                            </button>
-                            <?php endif; ?>
+                        <div class="chart-card-body">
+                            <div class="chart-canvas-wrap" style="height: 350px; position: relative;">
+                                <canvas id="mainChart"></canvas>
+                            </div>
                         </div>
                     </div>
-                    <div class="chart-card-body">
-                        <div class="chart-canvas-wrap">
-                            <canvas id="mainChart"></canvas>
+
+                    <!-- Category Pie Chart card (new!) -->
+                    <div class="chart-card" id="categoryChartCard" style="margin-bottom: 0;">
+                        <div class="chart-card-header">
+                            <div class="chart-card-title">
+                                <span class="chart-icon">🍩</span>
+                                <span>Categorías Más Vendidas</span>
+                            </div>
+                        </div>
+                        <div class="chart-card-body">
+                            <div class="chart-canvas-wrap" style="height: 350px; position: relative; display: flex; align-items: center; justify-content: center;">
+                                <canvas id="categoryChart"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -413,6 +431,9 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
             if (response && response.stats) {
                 renderMonthlyChart(response.stats);
                 updateSummaryStats(response.stats);
+                if (typeof renderCategoryChart === 'function' && response.category_stats) {
+                    renderCategoryChart(response.category_stats);
+                }
             }
         }
 

@@ -4706,6 +4706,85 @@ try {
             $response = ['success' => true, 'message' => 'Visita eliminada'];
             break;
 
+        case 'auto-reorder-draft':
+            require_admin();
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+            
+            $skuColumn = sku_column_for_table_admin_supply('products') ?: 'sku';
+            $nameColumn = name_column_for_table_admin_supply('products') ?: 'name';
+            $priceColumn = db_column_exists('products', 'unit_price') ? 'unit_price' : (db_column_exists('products', 'sell_price') ? 'sell_price' : '0');
+            
+            $sql = "
+                SELECT 
+                    p.id AS product_id,
+                    p.{$skuColumn} AS sku,
+                    p.{$nameColumn} AS name,
+                    COALESCE(p.stock_quantity, 0) AS stock_quantity,
+                    COALESCE(p.reorder_level, 10) AS reorder_level,
+                    COALESCE(p.{$priceColumn}, 0) AS unit_price,
+                    ps.id AS supplier_product_id,
+                    ps.supplier_name,
+                    ps.supplier_sku,
+                    ps.unit_cost
+                FROM products p
+                LEFT JOIN product_suppliers ps ON ps.product_id = p.id
+                WHERE p.stock_quantity <= COALESCE(p.reorder_level, 10)
+                AND (CASE WHEN p.is_active IS NULL THEN 1 WHEN LOWER(CAST(p.is_active AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1
+                ORDER BY ps.supplier_name NULLS LAST, p.{$nameColumn} ASC
+            ";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute();
+            $items = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            
+            // Group by supplier
+            $grouped = [];
+            foreach ($items as $item) {
+                $supplier = trim((string)($item['supplier_name'] ?? ''));
+                if ($supplier === '') {
+                    $supplier = 'Proveedor General Truper';
+                }
+                
+                if (!isset($grouped[$supplier])) {
+                    $grouped[$supplier] = [
+                        'supplier_name' => $supplier,
+                        'items' => []
+                    ];
+                }
+                
+                // Suggested order quantity to reach reorder_level * 2
+                $stock = (int)$item['stock_quantity'];
+                $reorder = (int)$item['reorder_level'];
+                $suggestedQty = max(1, ($reorder * 2) - $stock);
+                
+                // Estimated cost (use supplier cost if available, else unit price * 0.7 as wholesale estimate)
+                $cost = (float)($item['unit_cost'] ?? 0);
+                if ($cost <= 0) {
+                    $cost = (float)$item['unit_price'] * 0.7;
+                }
+                
+                $grouped[$supplier]['items'][] = [
+                    'product_id' => (int)$item['product_id'],
+                    'sku' => $item['sku'],
+                    'product_name' => $item['name'],
+                    'stock_quantity' => $stock,
+                    'reorder_level' => $reorder,
+                    'supplier_product_id' => $item['supplier_product_id'] ? (int)$item['supplier_product_id'] : null,
+                    'supplier_sku' => $item['supplier_sku'] ?? '',
+                    'suggested_quantity' => $suggestedQty,
+                    'estimated_cost' => round($cost, 2)
+                ];
+            }
+            
+            $response = [
+                'success' => true,
+                'drafts' => array_values($grouped)
+            ];
+            break;
+
         case 'supplier-order-create':
             if ($method !== 'POST') {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];

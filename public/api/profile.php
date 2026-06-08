@@ -50,10 +50,12 @@ try {
             }
             if (db_column_exists('users', 'birthdate')) {
                 $sets[] = 'birthdate = ?';
-                $values[] = $_POST['birthdate'] ?? null;
+                $birthdateVal = isset($_POST['birthdate']) ? trim($_POST['birthdate']) : '';
+                $values[] = ($birthdateVal === '') ? null : $birthdateVal;
             } elseif (db_column_exists('users', 'birthday')) {
                 $sets[] = 'birthday = ?';
-                $values[] = $_POST['birthdate'] ?? null;
+                $birthdateVal = isset($_POST['birthdate']) ? trim($_POST['birthdate']) : '';
+                $values[] = ($birthdateVal === '') ? null : $birthdateVal;
             }
             if (db_column_exists('users', 'updated_at')) {
                 $sets[] = 'updated_at = NOW()';

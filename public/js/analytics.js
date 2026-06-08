@@ -3,6 +3,8 @@
  */
 
 let mainChartInstance = null;
+let categoryChartInstance = null;
+
 
 /**
  * Renderiza gráfico mensual
@@ -803,3 +805,77 @@ if (document.readyState === 'loading') {
 } else {
     initTicketFilters();
 }
+
+/**
+ * Renderiza gráfico de categorías (Doughnut)
+ */
+function renderCategoryChart(catData) {
+    const ctx = document.getElementById('categoryChart');
+    if (!ctx) return;
+
+    if (categoryChartInstance) categoryChartInstance.destroy();
+
+    if (!catData || catData.length === 0) {
+        return;
+    }
+
+    const labels = catData.map(c => c.category || 'General');
+    const data = catData.map(c => Number(c.total_amount || 0));
+
+    // Colores modernos y armoniosos acordes a la paleta de Truper
+    const backgroundColors = [
+        '#ff6600', // Naranja Truper
+        '#ff9500', // Ámbar brillante
+        '#ffb347', // Naranja claro/pastel
+        '#2ecc71', // Verde éxito
+        '#3498db', // Azul
+        '#9b59b6', // Púrpura
+        '#1abc9c', // Turquesa
+        '#e74c3c', // Rojo
+        '#34495e', // Pizarra
+        '#7f8c8d'  // Gris
+    ];
+
+    categoryChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels,
+            datasets: [{
+                data,
+                backgroundColor: backgroundColors.slice(0, data.length),
+                borderWidth: 2,
+                borderColor: '#0d0d0d'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        boxWidth: 12,
+                        padding: 12,
+                        color: '#888',
+                        font: { family: 'Inter' }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: '#111',
+                    borderColor: '#2a2a2a',
+                    borderWidth: 1,
+                    titleColor: '#fff',
+                    bodyColor: '#aaa',
+                    padding: 12,
+                    callbacks: {
+                        label: ctx => {
+                            const val = ctx.parsed;
+                            return ` Ventas: $${val.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
