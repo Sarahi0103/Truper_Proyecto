@@ -641,7 +641,7 @@ function homepage_update_label($type) {
             border-radius: 20px !important;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
             overflow: hidden !important;
-            display: flex !important;
+            display: flex;
             flex-direction: column !important;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
         }
