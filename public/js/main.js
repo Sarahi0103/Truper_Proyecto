@@ -295,7 +295,10 @@ function validateForm(formId) {
 function loadUserData() {
     const userNameEl = document.querySelector('.user-name');
     if (userNameEl) {
-        userNameEl.textContent = localStorage.getItem('userName') || 'Usuario';
+        const storedName = localStorage.getItem('userName');
+        if (storedName) {
+            userNameEl.textContent = storedName;
+        }
     }
 }
 

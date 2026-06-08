@@ -2,7 +2,7 @@
 require_once '../config/config.php';
 require_login();
 
-$user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8');
+$user_name = htmlspecialchars(($_SESSION['role'] ?? '') === 'admin' ? 'admin' : ($_SESSION['name'] ?? 'Usuario'), ENT_QUOTES, 'UTF-8');
 $user_role = htmlspecialchars($_SESSION['role'] ?? 'employee', ENT_QUOTES, 'UTF-8');
 $is_admin = (($_SESSION['role'] ?? '') === 'admin');
 ?>
