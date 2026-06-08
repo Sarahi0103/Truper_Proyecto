@@ -659,7 +659,7 @@ function homepage_update_label($type) {
 
             let promoIndex = 0;
             let promoTimer = null;
-            const promoDelay = 2000;
+            const promoDelay = 4000;
 
             function renderPromoDots() {
                 if (!promoDotsHost || promoSlides.length <= 1) return;
