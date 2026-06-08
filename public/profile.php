@@ -111,13 +111,29 @@ if (!empty($profile['birthdate'])) {
     <link rel="stylesheet" href="css/theme.css?v=3.0">
     <link rel="stylesheet" href="css/responsive-complete.css?v=3.0">
     <style>
-        /* Modern Title style */
+        /* ===== Profile Page — Premium Redesign ===== */
+        body {
+            background: #08080a !important;
+            color: #ffffff !important;
+            font-family: var(--theme-font, 'Outfit', 'Inter', sans-serif) !important;
+        }
+
+        .container {
+            padding: 2.5rem 1.5rem !important;
+            max-width: 700px !important;
+            margin: 0 auto !important;
+        }
+
         h1 {
-            font-size: 2rem !important;
+            font-size: 2.25rem !important;
             font-weight: 800 !important;
             color: #ffffff !important;
-            margin-bottom: 0.5rem !important;
+            background: linear-gradient(90deg, #ffffff, #ffb347) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
             letter-spacing: -0.02em !important;
+            margin-bottom: 1.5rem !important;
+            text-align: center !important;
         }
 
         /* Segment-controlled tabs */
@@ -125,65 +141,60 @@ if (!empty($profile['birthdate'])) {
             background: #111111 !important;
             border: 1px solid #222222 !important;
             padding: 0.35rem !important;
-            border-radius: 12px !important;
+            border-radius: 999px !important;
             display: flex !important;
             gap: 0.25rem !important;
             margin: 2rem 0 2.5rem 0 !important;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5) !important;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5) !important;
         }
 
         .tab-button {
             flex: 1 !important;
             text-align: center !important;
-            padding: 0.75rem 1rem !important;
-            border-radius: 8px !important;
+            padding: 0.75rem 1.25rem !important;
+            border-radius: 999px !important;
             border: none !important;
             background: transparent !important;
             color: #888888 !important;
-            font-weight: 600 !important;
+            font-weight: 700 !important;
             transition: all 0.25s ease !important;
-            font-size: 0.95rem !important;
-            border-bottom: none !important;
+            font-size: 0.9rem !important;
+            cursor: pointer !important;
         }
 
         .tab-button:hover {
             color: #ffffff !important;
-            background: rgba(255,255,255,0.03) !important;
+            background: rgba(255, 255, 255, 0.03) !important;
         }
 
         .tab-button.active {
             background: var(--theme-accent, #ff7f00) !important;
             color: #ffffff !important;
             box-shadow: 0 4px 12px rgba(255, 127, 0, 0.3) !important;
-            border-bottom: none !important;
         }
 
         /* Modern card layout specifically for profile */
-        .container {
-            background: transparent !important;
-            box-shadow: none !important;
-            padding: 0 !important;
-        }
-
         .card {
             background: #111111 !important;
             border: 1px solid #222222 !important;
-            border-radius: 16px !important;
+            border-radius: 20px !important;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
             overflow: hidden !important;
-            margin-bottom: 2rem !important;
+            margin-bottom: 2.5rem !important;
         }
 
         .card-header {
-            background: #161616 !important;
+            background: #141416 !important;
             border-bottom: 1px solid #222222 !important;
             color: #ffffff !important;
-            padding: 1.25rem 1.75rem !important;
-            font-weight: 700 !important;
-            font-size: 1.15rem !important;
+            padding: 1.5rem 1.75rem !important;
+            font-weight: 800 !important;
+            font-size: 1.2rem !important;
             display: flex !important;
             align-items: center !important;
-            gap: 10px !important;
+            gap: 12px !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.03em !important;
         }
 
         .card-header::before {
@@ -196,18 +207,18 @@ if (!empty($profile['birthdate'])) {
         }
 
         .card-body {
-            padding: 2rem 1.75rem !important;
+            padding: 2.25rem 2rem !important;
         }
 
         /* Form styling */
         .form-group {
-            margin-bottom: 1.5rem !important;
+            margin-bottom: 1.75rem !important;
         }
 
         .form-group label {
             display: block !important;
-            font-size: 0.82rem !important;
-            font-weight: 600 !important;
+            font-size: 0.8rem !important;
+            font-weight: 700 !important;
             margin-bottom: 0.5rem !important;
             color: #888888 !important;
             text-transform: uppercase !important;
@@ -221,13 +232,14 @@ if (!empty($profile['birthdate'])) {
         input[type="date"], 
         textarea {
             width: 100% !important;
-            background: #0d0d0d !important;
+            background: #0d0d0f !important;
             border: 1px solid #222222 !important;
             color: #ffffff !important;
             border-radius: 10px !important;
             padding: 0.85rem 1rem !important;
             font-size: 0.95rem !important;
             transition: all 0.2s ease !important;
+            box-sizing: border-box;
         }
 
         input[type="text"]:focus, 
@@ -243,56 +255,54 @@ if (!empty($profile['birthdate'])) {
         }
 
         input:disabled {
-            background: #080808 !important;
-            border-color: #1a1a1a !important;
+            background: #08080a !important;
+            border-color: #1a1a1c !important;
             color: #555555 !important;
             cursor: not-allowed !important;
         }
 
         .text-muted {
-            color: #666666 !important;
+            color: #555555 !important;
             font-size: 0.8rem !important;
-            margin-top: 0.35rem !important;
+            margin-top: 0.5rem !important;
             display: block !important;
+            font-weight: 500 !important;
         }
 
         /* Premium update buttons */
         .btn-primary.btn-block {
+            width: 100% !important;
             background: linear-gradient(90deg, #ff6600, #ff9500) !important;
             border: none !important;
             color: #ffffff !important;
             font-weight: 700 !important;
-            padding: 1rem !important;
-            border-radius: 12px !important;
+            padding: 0.85rem 1.5rem !important;
+            border-radius: 999px !important;
             font-size: 1rem !important;
-            letter-spacing: 0.03em !important;
+            letter-spacing: 0.02em !important;
             cursor: pointer !important;
-            transition: all 0.3s ease !important;
-            box-shadow: 0 4px 15px rgba(255, 102, 0, 0.25) !important;
+            transition: all 0.2s ease !important;
+            box-shadow: 0 4px 12px rgba(255, 102, 0, 0.25) !important;
             margin-top: 1.5rem !important;
         }
 
         .btn-primary.btn-block:hover {
             transform: translateY(-2px) !important;
-            box-shadow: 0 6px 20px rgba(255, 102, 0, 0.4) !important;
+            box-shadow: 0 6px 18px rgba(255, 102, 0, 0.4) !important;
             background: linear-gradient(90deg, #ff7711, #ffa522) !important;
-        }
-
-        .btn-primary.btn-block:active {
-            transform: translateY(0) !important;
         }
 
         /* Loyalty (Lealtad) styling */
         .loyalty-wrap {
             text-align: center;
-            padding: 2rem;
+            padding: 1rem 0;
         }
 
         .loyalty-star {
-            font-size: 3rem !important;
+            font-size: 3.5rem !important;
             animation: starBounce 2s infinite ease-in-out !important;
-            color: var(--theme-accent);
-            margin-bottom: 0.5rem;
+            color: var(--theme-accent, #ff7f00) !important;
+            margin-bottom: 0.75rem !important;
         }
 
         @keyframes starBounce {
@@ -301,68 +311,115 @@ if (!empty($profile['birthdate'])) {
         }
 
         .loyalty-points-number {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--theme-accent);
+            font-size: 3rem !important;
+            font-weight: 800 !important;
+            color: var(--theme-accent, #ff7f00) !important;
+            letter-spacing: -0.02em !important;
         }
 
         .loyalty-points-label {
-            color: var(--theme-text-muted);
-            margin-bottom: 2rem;
+            color: #888888 !important;
+            font-size: 0.95rem !important;
+            font-weight: 600 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.05em !important;
+            margin-bottom: 2rem !important;
         }
 
         .loyalty-discount-box {
-            margin-bottom: 1.5rem;
-            padding: 1rem;
-            border-radius: 8px;
-            background: var(--theme-accent-soft);
-            border: 1px solid rgba(255, 138, 31, 0.4);
-            color: var(--theme-text);
+            margin-bottom: 2rem !important;
+            padding: 1.25rem 1.5rem !important;
+            border-radius: 12px !important;
+            background: rgba(255, 127, 0, 0.08) !important;
+            border: 1px solid rgba(255, 127, 0, 0.2) !important;
+            color: #ffffff !important;
         }
 
         .loyalty-discount-title {
-            font-weight: 700;
-            margin-bottom: 0.35rem;
+            font-size: 1.25rem !important;
+            font-weight: 800 !important;
+            color: var(--theme-accent, #ff7f00) !important;
+            margin-bottom: 0.5rem !important;
         }
 
         .loyalty-hint {
-            color: var(--theme-text-muted);
-            margin-top: 0.5rem;
-            font-size: 0.9rem;
+            color: #888888 !important;
+            margin-top: 0.75rem !important;
+            font-size: 0.85rem !important;
+            font-weight: 500 !important;
         }
 
         .loyalty-rules {
-            background: var(--theme-surface-strong);
-            border: 1px solid var(--theme-border);
-            padding: 1.5rem;
-            border-radius: 8px;
-            text-align: left;
-            color: var(--theme-text);
+            background: #0d0d0f !important;
+            border: 1px solid #222222 !important;
+            padding: 1.5rem !important;
+            border-radius: 12px !important;
+            text-align: left !important;
         }
 
         .loyalty-rules h4 {
-            margin-bottom: 1rem;
-            color: var(--theme-text);
+            margin: 0 0 1rem 0 !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.03em !important;
         }
 
         .loyalty-rules ul {
-            line-height: 2;
-            margin: 0;
-            padding-left: 1.2rem;
+            line-height: 1.8 !important;
+            margin: 0 !important;
+            padding-left: 1.2rem !important;
+            color: #aaaaaa !important;
+            font-size: 0.95rem !important;
         }
 
         .loyalty-birthday {
-            margin-top: 2rem;
-            color: var(--theme-text);
+            margin-top: 2rem !important;
+            color: #888888 !important;
+            font-weight: 500 !important;
+            font-size: 0.9rem !important;
+        }
+
+        .loyalty-birthday strong {
+            color: #ffffff !important;
+        }
+
+        /* Success/Error Alerts on forms */
+        .toast {
+            border-radius: 12px !important;
+            padding: 1rem 1.25rem !important;
+            font-weight: 600 !important;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1.5rem 1rem !important;
+            }
+
+            .tabs {
+                border-radius: 16px !important;
+                flex-direction: column !important;
+                padding: 0.5rem !important;
+                gap: 0.35rem !important;
+            }
+
+            .tab-button {
+                border-radius: 10px !important;
+                padding: 0.65rem 1rem !important;
+            }
+
+            .card-body {
+                padding: 1.5rem 1.25rem !important;
+            }
         }
     </style>
 </head>
-<body>
+<body class="catalog-minimal">
     <!-- HEADER -->
     <header>
         <div class="header-content">
-            <a href="dashboard.php" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
-                        <nav class="nav-menu">
+            <a href="index.php" class="logo"><img src="img/logo_truper.1.1.png" alt="Truper" style="height: 40px; width: auto; object-fit: contain;"></a>
+            <nav class="nav-menu">
                 <a href="index.php">Catálogo</a>
                 <a href="marketplace_ce.php">Marketplace CE</a>
                 <div class="nav-dropdown">
