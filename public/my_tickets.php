@@ -163,27 +163,34 @@ document.addEventListener('DOMContentLoaded', () => {
     loadStatistics();
 });
 
+let allTickets = [];
+
 async function loadTickets() {
-    const response = await apiCall(`${apiBase}?action=list&page=1&per_page=20`, 'GET');
+    const response = await apiCall(`${apiBase}?action=list&page=1&per_page=100`, 'GET');
     
     if (!response.success) {
         alert('Error: ' + response.message);
         return;
     }
     
+    allTickets = response.tickets || [];
+    renderTickets(allTickets);
+}
+
+function renderTickets(tickets) {
     const container = document.getElementById('ticketsListContainer');
     
-    if (response.tickets.length === 0) {
+    if (tickets.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
                 <div class="empty-icon">🛒</div>
-                <p>Aún no tienes compras registradas</p>
+                <p>No se encontraron comprobantes</p>
             </div>
         `;
         return;
     }
     
-    container.innerHTML = response.tickets.map(ticket => `
+    container.innerHTML = tickets.map(ticket => `
         <div class="ticket-card" onclick="viewTicketDetails(${ticket.id})">
             <div class="ticket-folio">${ticket.folio}</div>
             <div class="ticket-info">
@@ -365,8 +372,16 @@ function closeDetail() {
 }
 
 function applyFilters() {
-    // Implementar filtros si es necesario
-    loadTickets();
+    const folioQuery = (document.getElementById('filterFolio')?.value || '').toLowerCase().trim();
+    const typeQuery = document.getElementById('filterType')?.value || '';
+    
+    const filtered = allTickets.filter(ticket => {
+        const matchesFolio = !folioQuery || (ticket.folio || '').toLowerCase().includes(folioQuery);
+        const matchesType = !typeQuery || ticket.ticket_type === typeQuery;
+        return matchesFolio && matchesType;
+    });
+    
+    renderTickets(filtered);
 }
 </script>
     <script src="js/mobile-optimize.js"></script>
