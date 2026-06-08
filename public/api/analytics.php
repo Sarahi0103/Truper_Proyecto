@@ -7,13 +7,34 @@ require_once '../../config/config.php';
 require_once '../../src/controllers/AnalyticsController.php';
 
 require_login();
-header('Content-Type: application/json');
 
 $action = $_GET['action'] ?? null;
 $method = $_SERVER['REQUEST_METHOD'];
 
+// get-monthly-pdf streams binary — don't set JSON header yet
+if ($action !== 'get-monthly-pdf') {
+    header('Content-Type: application/json');
+}
+
 $analyticsController = new AnalyticsController($pdo);
 $response = [];
+
+// Ensure monthly_report_pdfs table exists (DB-backed PDF storage, safe on Render)
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS monthly_report_pdfs (
+        id          SERIAL PRIMARY KEY,
+        year        SMALLINT NOT NULL,
+        month       SMALLINT NOT NULL,
+        filename    VARCHAR(100) NOT NULL,
+        pdf_data    BYTEA NOT NULL,
+        file_size   INTEGER NOT NULL DEFAULT 0,
+        created_by  INTEGER REFERENCES users(id),
+        created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (year, month)
+    )");
+} catch (Exception $ignored) {}
+
 
 function is_admin_user(): bool {
     return (($_SESSION['role'] ?? '') === 'admin');
@@ -683,8 +704,15 @@ try {
                 break;
             }
 
-            $year = isset($_POST['year']) ? (int)$_POST['year'] : null;
-            $month = isset($_POST['month']) ? (int)$_POST['month'] : null;
+            // Accept both JSON body and form-urlencoded
+            $rawArchive = file_get_contents('php://input');
+            $archiveInput = json_decode($rawArchive, true);
+            if (!is_array($archiveInput)) {
+                $archiveInput = $_POST;
+            }
+
+            $year  = isset($archiveInput['year'])  ? (int)$archiveInput['year']  : null;
+            $month = isset($archiveInput['month']) ? (int)$archiveInput['month'] : null;
 
             $result = $analyticsController->archiveTicketsOfMonth($year, $month);
             $response = $result;
@@ -710,39 +738,46 @@ try {
             $decodedInput = json_decode($rawInput, true);
             $input = is_array($decodedInput) ? $decodedInput : (is_array($_POST) ? $_POST : []);
 
-            $year = isset($input['year']) ? (int)$input['year'] : null;
-            $month = isset($input['month']) ? (int)$input['month'] : null;
-            $pdfBase64 = $input['pdf_data'] ?? null;
+            $year      = isset($input['year'])     ? (int)$input['year']     : null;
+            $month     = isset($input['month'])    ? (int)$input['month']    : null;
+            $pdfBase64 = $input['pdf_data']        ?? null;
 
             if (!$year || !$month || !$pdfBase64) {
                 $response = ['success' => false, 'message' => 'Datos insuficientes (año, mes o pdf_data faltantes)'];
                 break;
             }
 
-            // Crear carpeta destino
-            $dir = __DIR__ . '/../archivos_mensuales';
-            if (!is_dir($dir)) {
-                mkdir($dir, 0777, true);
-            }
-
-            $filename = 'reporte_mes_' . $year . '_' . str_pad((string)$month, 2, '0', STR_PAD_LEFT) . '.pdf';
-            $filepath = $dir . '/' . $filename;
-
-            // Guardar archivo
-            $binaryData = base64_decode($pdfBase64);
-            if ($binaryData === false) {
-                $response = ['success' => false, 'message' => 'Error al decodificar PDF Base64'];
+            if ($year < 2000 || $year > 2100 || $month < 1 || $month > 12) {
+                $response = ['success' => false, 'message' => 'Año o mes inválidos'];
                 break;
             }
 
-            if (file_put_contents($filepath, $binaryData) === false) {
-                $response = ['success' => false, 'message' => 'Error al guardar archivo en el servidor'];
+            $binaryData = base64_decode($pdfBase64, true);
+            if ($binaryData === false || strlen($binaryData) < 4) {
+                $response = ['success' => false, 'message' => 'Error al decodificar PDF (Base64 inválido)'];
                 break;
             }
+
+            $filename  = 'reporte_mes_' . $year . '_' . str_pad((string)$month, 2, '0', STR_PAD_LEFT) . '.pdf';
+            $fileSize  = strlen($binaryData);
+            // Store as hex literal for PostgreSQL BYTEA
+            $hexData   = bin2hex($binaryData);
+
+            $stmt = $pdo->prepare(
+                "INSERT INTO monthly_report_pdfs (year, month, filename, pdf_data, file_size, created_by, updated_at)
+                 VALUES (?, ?, ?, decode(?, 'hex'), ?, ?, CURRENT_TIMESTAMP)
+                 ON CONFLICT (year, month)
+                 DO UPDATE SET
+                     filename   = EXCLUDED.filename,
+                     pdf_data   = EXCLUDED.pdf_data,
+                     file_size  = EXCLUDED.file_size,
+                     updated_at = CURRENT_TIMESTAMP"
+            );
+            $stmt->execute([$year, $month, $filename, $hexData, $fileSize, $_SESSION['user_id']]);
 
             $response = [
-                'success' => true,
-                'message' => 'PDF de reporte guardado correctamente',
+                'success'  => true,
+                'message'  => 'PDF de reporte guardado correctamente en la base de datos',
                 'filename' => $filename
             ];
             break;
@@ -754,54 +789,78 @@ try {
                 break;
             }
 
-            $dir = __DIR__ . '/../archivos_mensuales';
-            $filesList = [];
+            $monthNames = [
+                1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo',    4 => 'Abril',
+                5 => 'Mayo',  6 => 'Junio',   7 => 'Julio',    8 => 'Agosto',
+                9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
+            ];
 
-            if (is_dir($dir)) {
-                $files = glob($dir . '/reporte_mes_*.pdf');
-                if (is_array($files)) {
-                    foreach ($files as $file) {
-                        $basename = basename($file);
-                        
-                        // Extraer año y mes: reporte_mes_YYYY_MM.pdf
-                        if (preg_match('/reporte_mes_(\d{4})_(\d{2})\.pdf$/', $basename, $matches)) {
-                            $year = (int)$matches[1];
-                            $month = (int)$matches[2];
-                            
-                            $monthNames = [
-                                1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
-                                5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
-                                9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
-                            ];
-                            
-                            $readableName = ($monthNames[$month] ?? 'Mes') . ' ' . $year;
-                            $filesList[] = [
-                                'filename' => $basename,
-                                'readable_name' => $readableName,
-                                'year' => $year,
-                                'month' => $month,
-                                'url' => 'archivos_mensuales/' . $basename,
-                                'size' => filesize($file),
-                                'created_at' => filemtime($file)
-                            ];
-                        }
-                    }
-                }
+            $stmt = $pdo->query(
+                "SELECT year, month, filename, file_size, created_at, updated_at
+                 FROM monthly_report_pdfs
+                 ORDER BY year DESC, month DESC"
+            );
+            $rows = $stmt->fetchAll();
+
+            $filesList = array_map(function ($row) use ($monthNames) {
+                $y = (int)$row['year'];
+                $m = (int)$row['month'];
+                return [
+                    'filename'      => $row['filename'],
+                    'readable_name' => ($monthNames[$m] ?? 'Mes') . ' ' . $y,
+                    'year'          => $y,
+                    'month'         => $m,
+                    'url'           => 'api/analytics.php?action=get-monthly-pdf&year=' . $y . '&month=' . $m,
+                    'size'          => (int)$row['file_size'],
+                    'created_at'    => strtotime((string)$row['updated_at'])
+                ];
+            }, $rows);
+
+            $response = ['success' => true, 'files' => $filesList];
+            break;
+
+        case 'get-monthly-pdf':
+            require_admin();
+            if ($method !== 'GET') {
+                http_response_code(405);
+                echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+                exit;
             }
 
-            // Ordenar por año y mes descendente
-            usort($filesList, function($a, $b) {
-                if ($a['year'] !== $b['year']) {
-                    return $b['year'] - $a['year'];
-                }
-                return $b['month'] - $a['month'];
-            });
+            $year  = isset($_GET['year'])  ? (int)$_GET['year']  : 0;
+            $month = isset($_GET['month']) ? (int)$_GET['month'] : 0;
 
-            $response = [
-                'success' => true,
-                'files' => $filesList
-            ];
-            break;
+            if ($year < 2000 || $year > 2100 || $month < 1 || $month > 12) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Año o mes inválidos']);
+                exit;
+            }
+
+            $stmt = $pdo->prepare(
+                "SELECT filename, pdf_data FROM monthly_report_pdfs WHERE year = ? AND month = ? LIMIT 1"
+            );
+            $stmt->execute([$year, $month]);
+            $pdfRow = $stmt->fetch();
+
+            if (!$pdfRow || empty($pdfRow['pdf_data'])) {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'message' => 'Reporte no encontrado']);
+                exit;
+            }
+
+            // PostgreSQL returns BYTEA as hex string prefixed with \x
+            $rawPdfData = $pdfRow['pdf_data'];
+            if (is_string($rawPdfData) && str_starts_with($rawPdfData, '\x')) {
+                $rawPdfData = hex2bin(substr($rawPdfData, 2));
+            }
+
+            $safeFilename = preg_replace('/[^a-zA-Z0-9_\-\.]/', '_', (string)$pdfRow['filename']);
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: attachment; filename="' . $safeFilename . '"');
+            header('Content-Length: ' . strlen($rawPdfData));
+            header('Cache-Control: private, max-age=0, must-revalidate');
+            echo $rawPdfData;
+            exit;
 
         default:
             $response = ['success' => false, 'message' => 'Acción no reconocida'];

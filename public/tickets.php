@@ -651,22 +651,17 @@ $user_name = htmlspecialchars(($_SESSION['role'] ?? '') === 'admin' ? 'admin' : 
 
                 // 4. Archivar en base de datos
                 showAlert('Archivando registros en la base de datos...', 'info');
-                const response = await fetch('api/analytics.php?action=archive-tickets', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `year=${year}&month=${month}`
+                const data = await apiCall('api/analytics.php?action=archive-tickets', 'POST', {
+                    year: parseInt(year, 10),
+                    month: parseInt(month, 10)
                 });
 
-                const data = await response.json();
-
-                if (data.success) {
+                if (data && data.success) {
                     showAlert(`Se archivaron ${data.archived_count} tickets y se guardó el PDF de cierre.`, 'success');
                     loadTicketHistory();
                     loadArchivedPdfs();
                 } else {
-                    showAlert(data.message || 'Error al archivar', 'error');
+                    showAlert((data && data.message) || 'Error al archivar', 'error');
                 }
             } catch (error) {
                 console.error('Error archivando tickets:', error);
@@ -689,12 +684,13 @@ $user_name = htmlspecialchars(($_SESSION['role'] ?? '') === 'admin' ? 'admin' : 
 
                     container.innerHTML = files.map(f => {
                         const sizeKb = (f.size / 1024).toFixed(1);
+                        // f.url already points to api/analytics.php?action=get-monthly-pdf&year=...&month=...
                         return `
                             <a href="${f.url}" target="_blank" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; padding: 0.6rem 1rem; border-radius: 8px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; transition: background 0.2s;">
                                 <span style="font-size: 1.25rem;">📄</span>
                                 <div style="text-align: left;">
                                     <div style="font-weight: 600; font-size: 0.85rem;">Reporte ${f.readable_name}</div>
-                                    <div style="font-size: 0.7rem; color: #aaa;">PDF (${sizeKb} KB)</div>
+                                    <div style="font-size: 0.7rem; color: #aaa;">PDF (${sizeKb} KB) • Descargar</div>
                                 </div>
                             </a>
                         `;

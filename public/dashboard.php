@@ -121,7 +121,53 @@ $first_name = explode(' ', $user_name)[0];
             display: flex;
             flex-direction: column;
             align-items: flex-end;
-            gap: .5rem;
+            gap: .75rem;
+            flex-shrink: 0;
+        }
+
+        .db-hero-visual {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+
+        .db-hero-stat {
+            text-align: right;
+        }
+
+        .db-hero-stat-val {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #ff9a33;
+            letter-spacing: -.03em;
+            line-height: 1;
+        }
+
+        .db-hero-stat-label {
+            font-size: .68rem;
+            color: #555;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            margin-top: 2px;
+        }
+
+        .db-hero-icon-wrap {
+            width: 72px;
+            height: 72px;
+            background: rgba(255,127,0,.07);
+            border: 1px solid rgba(255,127,0,.15);
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .db-hero-icon-wrap svg {
+            width: 38px;
+            height: 38px;
+            opacity: .85;
         }
 
         .db-date-chip {
@@ -515,7 +561,29 @@ $first_name = explode(' ', $user_name)[0];
                     <p class="db-hero-sub">Bienvenido de vuelta a Truper Platform. Aquí está el resumen de hoy.</p>
                 </div>
                 <div class="db-hero-right">
-                    <div class="db-date-chip" id="dbLiveClock">—</div>
+                    <div class="db-hero-visual">
+                        <div class="db-hero-stat">
+                            <div class="db-hero-stat-val" id="dbLiveClock" style="font-size:1rem; color:#666;">—</div>
+                            <div class="db-hero-stat-label">Hora local</div>
+                        </div>
+                        <div class="db-hero-icon-wrap">
+                            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <!-- Chart bars -->
+                                <rect x="6" y="28" width="7" height="14" rx="2" fill="rgba(255,127,0,0.4)"/>
+                                <rect x="16" y="18" width="7" height="24" rx="2" fill="rgba(255,127,0,0.65)"/>
+                                <rect x="26" y="22" width="7" height="20" rx="2" fill="rgba(255,127,0,0.5)"/>
+                                <rect x="36" y="10" width="7" height="32" rx="2" fill="#ff7f00"/>
+                                <!-- Trend line -->
+                                <polyline points="9,28 19,18 29,22 39,10" stroke="#ff9a33" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="50" stroke-dashoffset="50" style="animation:draw-line 1.2s ease forwards .3s">
+                                </polyline>
+                                <!-- Dots -->
+                                <circle cx="9" cy="28" r="2.5" fill="#ff9a33"/>
+                                <circle cx="19" cy="18" r="2.5" fill="#ff9a33"/>
+                                <circle cx="29" cy="22" r="2.5" fill="#ff9a33"/>
+                                <circle cx="39" cy="10" r="2.5" fill="#ff9a33"/>
+                            </svg>
+                        </div>
+                    </div>
                     <div class="db-role-chip">
                         <?php echo $is_admin ? 'Administrador' : ucfirst($user_role); ?>
                     </div>
@@ -748,6 +816,7 @@ $first_name = explode(' ', $user_name)[0];
     <script src="js/main.js?v=2.6"></script>
     <style>
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes draw-line { to { stroke-dashoffset: 0; } }
         @keyframes countUp {
             from { opacity: 0; transform: translateY(6px); }
             to   { opacity: 1; transform: translateY(0); }
@@ -766,6 +835,8 @@ $first_name = explode(' ', $user_name)[0];
             const clockEl = document.getElementById('dbLiveClock');
             if (clockEl) {
                 clockEl.textContent = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} · ${h}:${m}`;
+                clockEl.style.color = '#c0c0c8';
+                clockEl.style.fontSize = '0.82rem';
             }
 
             // Update greeting based on local hour
