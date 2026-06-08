@@ -507,9 +507,7 @@ if (is_logged_in() && !$force_login_screen) {
         <!-- Left Panel -->
         <aside class="auth-panel">
             <div class="auth-logo">
-                <div class="auth-logo-badge">
-                    <span>Truper</span>
-                </div>
+                <img src="img/logo_truper.1.1.png" alt="Truper Logo">
             </div>
 
             <h2 class="auth-heading">Bienvenido de<br>vuelta</h2>

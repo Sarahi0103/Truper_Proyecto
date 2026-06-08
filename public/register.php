@@ -109,33 +109,15 @@ if (is_logged_in()) {
             pointer-events: none;
         }
 
-        .auth-logo-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: var(--accent-dim);
-            border: 1px solid rgba(255,127,0,0.2);
-            border-radius: 30px;
-            padding: 0.35rem 0.85rem;
+        .auth-logo {
+            position: relative;
             margin-bottom: 2.5rem;
         }
 
-        .auth-logo-badge span {
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: var(--accent);
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-        }
-
-        .auth-logo-badge::before {
-            content: '';
-            width: 7px;
-            height: 7px;
-            background: var(--accent);
-            border-radius: 50%;
-            box-shadow: 0 0 6px var(--accent);
-            animation: pulse 2s ease infinite;
+        .auth-logo img {
+            height: 44px;
+            width: auto;
+            object-fit: contain;
         }
 
         @keyframes pulse {
@@ -460,8 +442,8 @@ if (is_logged_in()) {
 
         <!-- Left Panel -->
         <aside class="auth-panel">
-            <div class="auth-logo-badge">
-                <span>Truper</span>
+            <div class="auth-logo">
+                <img src="img/logo_truper.1.1.png" alt="Truper Logo">
             </div>
 
             <h2 class="auth-heading">Crea tu cuenta<br>de cliente</h2>
