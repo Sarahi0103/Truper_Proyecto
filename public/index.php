@@ -397,6 +397,10 @@ function homepage_update_label($type) {
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6) !important;
             position: relative;
             overflow: hidden;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            text-align: center !important;
         }
 
         .catalog-hero h1 {
@@ -415,6 +419,7 @@ function homepage_update_label($type) {
             font-size: 1.1rem !important;
             max-width: 600px !important;
             line-height: 1.6 !important;
+            text-align: center !important;
         }
 
         /* Modernized Promo Carousel */

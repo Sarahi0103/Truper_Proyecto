@@ -204,61 +204,316 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
     <link rel="stylesheet" href="css/theme.css?v=2.5">
     <link rel="stylesheet" href="css/responsive-complete.css?v=2.2">
     <style>
-        /* ===== Marketplace CE — Mejoras de diseño ===== */
+        /* ===== Marketplace CE — Premium Redesign ===== */
 
-        /* Hero: alineado a la izquierda como el catálogo de Productos */
+        /* Premium mesh gradient background for catalog hero */
         .catalog-hero {
-            text-align: left !important;
-        }
-        .catalog-hero .module-badge {
-            display: inline-flex;
+            background: radial-gradient(circle at 10% 20%, rgba(255, 127, 0, 0.15), transparent 45%),
+                        radial-gradient(circle at 90% 80%, rgba(255, 127, 0, 0.08), transparent 45%),
+                        linear-gradient(135deg, #0e0e10 0%, #17171a 100%) !important;
+            border: 1px solid #222222 !important;
+            border-radius: 24px !important;
+            padding: 2.5rem 2.25rem !important;
+            margin-bottom: 2rem !important;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6) !important;
+            position: relative;
+            overflow: hidden;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            text-align: center !important;
         }
 
-        /* Barra de búsqueda: pill elegante, sin borde azul */
+        .catalog-hero h1 {
+            font-size: 2.5rem !important;
+            font-weight: 800 !important;
+            letter-spacing: -0.02em !important;
+            color: #ffffff !important;
+            margin-bottom: 0.75rem !important;
+            background: linear-gradient(90deg, #ffffff, #ffb347) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+        }
+
+        .catalog-hero p {
+            color: #aaaaaa !important;
+            font-size: 1.1rem !important;
+            max-width: 600px !important;
+            line-height: 1.6 !important;
+            text-align: center !important;
+        }
+
+        /* Toolbar and inputs */
+        .catalog-toolbar {
+            background: #111111 !important;
+            border: 1px solid #222222 !important;
+            border-radius: 16px !important;
+            padding: 1.25rem !important;
+            margin-bottom: 1.5rem !important;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3) !important;
+        }
+
         #ceSearch {
             width: 100%;
             box-sizing: border-box;
-            padding: 0.75rem 1.25rem;
-            border-radius: 999px;
-            border: 1.5px solid rgba(255,255,255,0.1);
-            background: rgba(255,255,255,0.04);
-            color: #fff;
+            padding: 0.8rem 1rem !important;
+            border-radius: 10px !important;
+            border: 1px solid #222222 !important;
+            background: #0d0d0d !important;
+            color: #ffffff !important;
             font-size: 1rem;
             outline: none;
-            transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+            transition: all 0.2s ease !important;
         }
+
         #ceSearch::placeholder {
-            color: rgba(255,255,255,0.38);
+            color: #666666 !important;
         }
+
         #ceSearch:focus {
-            border-color: var(--theme-accent, #ff7f00);
-            box-shadow: 0 0 0 3px rgba(255,127,0,0.15);
-            background: rgba(255,255,255,0.06);
+            border-color: var(--theme-accent, #ff7f00) !important;
+            box-shadow: 0 0 0 3px rgba(255, 127, 0, 0.15) !important;
+            background: #111111 !important;
         }
 
-        /* condition badge */
-        .condition-tag {
-            display: inline-block;
-            padding: 0.2rem 0.65rem;
-            border-radius: 999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            background: rgba(255,127,0,0.12);
-            color: var(--theme-accent, #ff7f00);
-            border: 1px solid rgba(255,127,0,0.3);
-            margin-bottom: 0.3rem;
+        /* Category Pill Buttons */
+        .catalog-categories-top {
+            border: none !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin-bottom: 1.5rem !important;
         }
 
-        /* Animación de entrada en cards */
-        #ceGrid .product-card-min {
+        .catalog-categories-title {
+            font-size: 1.2rem !important;
+            font-weight: 800 !important;
+            color: #ffffff !important;
+            margin-bottom: 1rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.05em !important;
+        }
+
+        .catalog-categories-actions {
+            display: flex !important;
+            gap: 0.5rem !important;
+            overflow-x: auto !important;
+            padding-bottom: 0.5rem !important;
+            scrollbar-width: none !important;
+        }
+
+        .catalog-categories-actions::-webkit-scrollbar {
+            display: none !important;
+        }
+
+        .catalog-categories-actions button {
+            background: #111111 !important;
+            border: 1px solid #222222 !important;
+            color: #888888 !important;
+            border-radius: 999px !important;
+            padding: 0.65rem 1.35rem !important;
+            font-weight: 600 !important;
+            font-size: 0.9rem !important;
+            transition: all 0.2s ease !important;
+            cursor: pointer !important;
+        }
+
+        .catalog-categories-actions button:hover {
+            background: #1a1a1a !important;
+            color: #ffffff !important;
+            border-color: #333333 !important;
+        }
+
+        .catalog-categories-actions button.active {
+            background: var(--theme-accent, #ff7f00) !important;
+            color: #ffffff !important;
+            border-color: var(--theme-accent, #ff7f00) !important;
+            box-shadow: 0 4px 12px rgba(255, 127, 0, 0.3) !important;
+        }
+
+        /* Product Cards Grid & Card Redesign */
+        .catalog-grid-min {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+            gap: 2rem !important;
+            margin-top: 2rem !important;
+        }
+
+        .product-card-min {
+            background: #111111 !important;
+            border: 1px solid #222222 !important;
+            border-radius: 20px !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+            overflow: hidden !important;
+            display: flex !important;
+            flex-direction: column !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
             animation: ce-fade-in 0.35s ease both;
         }
+
         @keyframes ce-fade-in {
             from { opacity: 0; transform: translateY(10px); }
             to   { opacity: 1; transform: translateY(0); }
         }
 
-        /* Contador de artículos */
+        .product-card-min:hover {
+            transform: translateY(-6px) !important;
+            border-color: var(--theme-accent, #ff7f00) !important;
+            box-shadow: 0 12px 36px rgba(255, 127, 0, 0.15), 0 12px 36px rgba(0, 0, 0, 0.6) !important;
+        }
+
+        .product-media {
+            height: 220px !important;
+            border-bottom: 1px solid #222222 !important;
+            background: #0a0a0c !important;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .product-gallery-image {
+            object-fit: contain !important;
+            width: 100% !important;
+            height: 100% !important;
+            padding: 1.25rem !important;
+            transition: transform 0.5s ease !important;
+        }
+
+        .product-card-min:hover .product-gallery-image.active {
+            transform: scale(1.05);
+        }
+
+        .product-content {
+            padding: 1.5rem !important;
+            display: flex !important;
+            flex-direction: column !important;
+            flex-grow: 1 !important;
+        }
+
+        .catalog-tag {
+            background: rgba(255, 127, 0, 0.1) !important;
+            border: 1px solid rgba(255, 127, 0, 0.25) !important;
+            color: var(--theme-accent, #ff7f00) !important;
+            padding: 0.25rem 0.75rem !important;
+            border-radius: 999px !important;
+            font-size: 0.75rem !important;
+            font-weight: 700 !important;
+            width: fit-content !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.03em !important;
+            margin-bottom: 0.75rem !important;
+        }
+
+        .product-code-label {
+            font-size: 0.8rem !important;
+            color: #666666 !important;
+            margin-bottom: 0.5rem !important;
+        }
+
+        .product-code-label strong {
+            color: #888888 !important;
+        }
+
+        .product-title {
+            font-size: 1.15rem !important;
+            font-weight: 700 !important;
+            color: #ffffff !important;
+            line-height: 1.4 !important;
+            margin-bottom: 0.5rem !important;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            height: 3.2rem;
+        }
+
+        .product-spec {
+            font-size: 0.85rem !important;
+            color: #777777 !important;
+            line-height: 1.5 !important;
+            margin-bottom: 1.25rem !important;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            height: 2.5rem;
+        }
+
+        /* condition badge */
+        .condition-tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem !important;
+            border-radius: 999px !important;
+            font-size: 0.72rem !important;
+            font-weight: 700 !important;
+            background: rgba(255,127,0,0.12) !important;
+            color: var(--theme-accent, #ff7f00) !important;
+            border: 1px solid rgba(255,127,0,0.3) !important;
+            margin-bottom: 0.5rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.02em !important;
+        }
+
+        /* Stock Badges Capsule style */
+        .stock-badge {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 4px !important;
+            padding: 0.25rem 0.75rem !important;
+            border-radius: 999px !important;
+            font-size: 0.72rem !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.02em !important;
+            margin-bottom: 0.75rem !important;
+            width: fit-content;
+        }
+
+        .stock-badge.stock-ok {
+            background: rgba(46, 204, 113, 0.1) !important;
+            border: 1px solid rgba(46, 204, 113, 0.25) !important;
+            color: #2ecc71 !important;
+        }
+
+        .stock-badge.stock-low {
+            background: rgba(231, 76, 60, 0.1) !important;
+            border: 1px solid rgba(231, 76, 60, 0.25) !important;
+            color: #e74c3c !important;
+        }
+
+        .catalog-price {
+            font-size: 1.35rem !important;
+            font-weight: 800 !important;
+            color: var(--theme-accent, #ff7f00) !important;
+            margin-top: auto !important;
+            margin-bottom: 0.75rem !important;
+        }
+
+        .product-actions {
+            border-top: 1px solid #222222 !important;
+            padding-top: 1rem !important;
+            margin-top: 0.25rem !important;
+        }
+
+        .product-actions .btn-primary {
+            width: 100% !important;
+            background: linear-gradient(90deg, #ff6600, #ff9500) !important;
+            border: none !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            padding: 0.6rem 1.25rem !important;
+            border-radius: 999px !important;
+            font-size: 0.88rem !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+            box-shadow: 0 4px 10px rgba(255, 102, 0, 0.2) !important;
+        }
+
+        .product-actions .btn-primary:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 15px rgba(255, 102, 0, 0.35) !important;
+            background: linear-gradient(90deg, #ff7711, #ffa522) !important;
+        }
+
         #ceCount {
             color: rgba(255,255,255,0.45);
             font-size: 0.85rem;
