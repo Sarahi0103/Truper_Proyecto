@@ -528,7 +528,7 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
 
     <header>
         <div class="header-content">
-            <a href="/" class="logo"><img src="images/truper-logo.svg" alt="Truper"></a>
+            <a href="/" class="logo"><img src="img/logo_truper.1.1.png" alt="Truper" style="height: 40px; width: auto; object-fit: contain;"></a>
             <nav class="nav-menu">
                 <a href="/">Productos</a>
                 <a href="/marketplace_ce.php" class="active">Marketplace CE</a>
