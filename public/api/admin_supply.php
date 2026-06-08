@@ -2305,14 +2305,6 @@ function bootstrap_admin_supply_schema($pdo): void {
     }
 
     try {
-        if (function_exists('ensure_xlsx_products_seeded')) {
-            ensure_xlsx_products_seeded();
-        }
-    } catch (Throwable $e) {
-        error_log('admin_supply bootstrap warning (xlsx seed): ' . $e->getMessage());
-    }
-
-    try {
         ensure_products_seeded_for_admin_supply($pdo);
     } catch (Throwable $e) {
         error_log('admin_supply bootstrap warning (admin seed ensure): ' . $e->getMessage());

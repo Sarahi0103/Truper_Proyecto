@@ -25,7 +25,7 @@ if (preg_match('#^/(css|js|images|img)/#', $requestPath) === 1 || preg_match('#\
     }
 }
 
-require_once '../config/config.php';
+require_once __DIR__ . '/../config/config.php';
 
 $products = [];
 try {
