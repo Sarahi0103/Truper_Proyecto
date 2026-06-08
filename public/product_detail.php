@@ -582,41 +582,101 @@ $stock = (int)($product['stock_quantity'] ?? 0);
 
         /* Lightbox modal modifications */
         .modal-lightbox {
+            display: none !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
             background: rgba(0, 0, 0, 0.95) !important;
             backdrop-filter: blur(10px) !important;
+            z-index: 10000 !important;
+            padding: 2rem !important;
+            overflow: auto !important;
+            box-sizing: border-box !important;
+        }
+
+        .modal-lightbox.active {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        .lightbox-content {
+            position: relative !important;
+            max-width: 90% !important;
+            max-height: 90vh !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        .lightbox-image {
+            max-width: 100% !important;
+            max-height: 85vh !important;
+            object-fit: contain !important;
+            border-radius: 12px !important;
+            border: 1px solid #222222 !important;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8) !important;
         }
 
         .lightbox-close {
-            color: #ffffff !important;
+            position: absolute !important;
+            top: -3.5rem !important;
+            right: 0 !important;
             background: rgba(255, 255, 255, 0.1) !important;
-            border-radius: 999px !important;
+            border: none !important;
+            color: #ffffff !important;
+            font-size: 2.5rem !important;
+            cursor: pointer !important;
+            padding: 0 !important;
             width: 2.5rem !important;
             height: 2.5rem !important;
-            line-height: 2.5rem !important;
+            line-height: 2.3rem !important;
+            border-radius: 999px !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
             transition: all 0.2s ease !important;
+            z-index: 10002 !important;
         }
 
         .lightbox-close:hover {
             background: #ef4444 !important;
+            transform: scale(1.1) !important;
         }
 
         .lightbox-nav {
+            position: absolute !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
             background: rgba(255, 255, 255, 0.1) !important;
+            border: none !important;
+            color: white !important;
+            font-size: 2rem !important;
+            cursor: pointer !important;
+            width: 3.5rem !important;
+            height: 3.5rem !important;
             border-radius: 999px !important;
-            width: 3rem !important;
-            height: 3rem !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
             transition: all 0.2s ease !important;
+            z-index: 10001 !important;
         }
 
         .lightbox-nav:hover {
             background: var(--theme-accent, #ff7f00) !important;
-            box-shadow: 0 0 10px rgba(255, 127, 0, 0.4) !important;
+            box-shadow: 0 0 15px rgba(255, 127, 0, 0.4) !important;
+            transform: translateY(-50%) scale(1.1) !important;
+        }
+
+        .lightbox-prev {
+            left: -5rem !important;
+        }
+
+        .lightbox-next {
+            right: -5rem !important;
         }
 
         @media (max-width: 992px) {
@@ -624,6 +684,31 @@ $stock = (int)($product['stock_quantity'] ?? 0);
                 grid-template-columns: 1fr !important;
                 gap: 2rem !important;
                 padding: 1.5rem !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .modal-lightbox {
+                padding: 1rem !important;
+            }
+
+            .lightbox-close {
+                top: 1rem !important;
+                right: 1rem !important;
+            }
+
+            .lightbox-nav {
+                width: 2.5rem !important;
+                height: 2.5rem !important;
+                font-size: 1.5rem !important;
+            }
+
+            .lightbox-prev {
+                left: 0.5rem !important;
+            }
+
+            .lightbox-next {
+                right: 0.5rem !important;
             }
         }
     </style>
