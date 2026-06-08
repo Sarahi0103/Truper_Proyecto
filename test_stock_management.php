@@ -4,22 +4,10 @@
  * Script directo sin múltiples includes
  */
 
-// Conexión directa a BD
-$db_host = 'truper-db';
-$db_port = 5432;
-$db_name = 'truper_platform';
-$db_user = 'truper_admin';
-$db_pass = 'Truper123!';
-
-try {
-    $pdo = new PDO(
-        "pgsql:host=$db_host;port=$db_port;dbname=$db_name",
-        $db_user,
-        $db_pass,
-        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-    );
-} catch (Exception $e) {
-    die("❌ Error de conexión: " . $e->getMessage() . "\n");
+// Conexión directa a BD usando la configuración del sistema
+require_once __DIR__ . '/config/config.php';
+if (!isset($pdo) || !$pdo) {
+    die("❌ Error de conexión: no se inicializó la conexión a la base de datos.\n");
 }
 
 $test_results = [];
@@ -30,6 +18,13 @@ echo "════════════════════════�
 
 // TEST 1: Verificar directorio de galerías
 $gallery_base = '/var/www/html/images/products/gallery';
+if (!is_dir($gallery_base)) {
+    if (is_dir(__DIR__ . '/public/images/products/gallery')) {
+        $gallery_base = __DIR__ . '/public/images/products/gallery';
+    } elseif (is_dir(__DIR__ . '/images/products/gallery')) {
+        $gallery_base = __DIR__ . '/images/products/gallery';
+    }
+}
 $gallery_exists = is_dir($gallery_base);
 $test_results['gallery_dir_exists'] = $gallery_exists;
 echo "✓ TEST 1: Directorio de galerías\n";
@@ -126,10 +121,21 @@ $stmt = $pdo->query(
 );
 $images_in_products = $stmt->fetch()['total'] ?? 0;
 
-$stmt = $pdo->query(
-    "SELECT COUNT(*) as total FROM marketplace_ce_products WHERE variants_json IS NOT NULL AND variants_json != '[]' AND variants_json != 'null'"
-);
-$images_in_marketplace = $stmt->fetch()['total'] ?? 0;
+$has_mp_variants = false;
+try {
+    $col_check = $pdo->query("SELECT 1 FROM information_schema.columns WHERE table_name = 'marketplace_ce_products' AND column_name = 'variants_json' LIMIT 1");
+    if ($col_check->fetchColumn()) {
+        $has_mp_variants = true;
+    }
+} catch (Exception $e) {}
+
+$images_in_marketplace = 0;
+if ($has_mp_variants) {
+    $stmt = $pdo->query(
+        "SELECT COUNT(*) as total FROM marketplace_ce_products WHERE variants_json IS NOT NULL AND variants_json != '[]' AND variants_json != 'null'"
+    );
+    $images_in_marketplace = $stmt->fetch()['total'] ?? 0;
+}
 
 echo "  Productos con galerías: $images_in_products\n";
 echo "  Marketplace con galerías: $images_in_marketplace\n";

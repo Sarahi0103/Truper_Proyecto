@@ -373,6 +373,17 @@ try {
             
             if (!is_dir('../exports')) {
                 mkdir('../exports', 0777, true);
+            } else {
+                // Clear files older than 7 days
+                $files = glob('../exports/truper_report_*');
+                if (is_array($files)) {
+                    $cutoff = time() - (7 * 24 * 60 * 60);
+                    foreach ($files as $file) {
+                        if (is_file($file) && filemtime($file) < $cutoff) {
+                            @unlink($file);
+                        }
+                    }
+                }
             }
 
             $fp = fopen($filepath, 'w');

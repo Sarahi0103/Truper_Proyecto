@@ -104,6 +104,8 @@ for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
 
         // Primer arranque: crea tablas e inserts base automaticamente.
         truper_db_bootstrap_schema($pdo);
+        // Establecer zona horaria local de México para reportes y fechas
+        $pdo->exec("SET TIME ZONE 'America/Mexico_City'");
         $connectError = null;
         break;
     } catch (PDOException $e) {
