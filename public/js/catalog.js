@@ -396,10 +396,16 @@
     applyFilters();
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  function initCatalog() {
     setupProductGalleries();
     setupHandlers();
     updateCartBadge();
     renderCart();
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCatalog);
+  } else {
+    initCatalog();
+  }
 })();

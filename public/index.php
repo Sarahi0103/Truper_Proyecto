@@ -1051,7 +1051,7 @@ function homepage_update_label($type) {
     </footer>
     <script src="js/jspdf.umd.min.js"></script>
     <script src="js/main.js?v=2.6"></script>
-    <script src="js/catalog.js"></script>
+    <script src="js/catalog.js?v=3.1"></script>
     <script>
         // Compartir por WhatsApp
         document.addEventListener('DOMContentLoaded', function() {

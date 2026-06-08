@@ -361,7 +361,7 @@ document.addEventListener('click', function(e) {
 /**
  * Inicializar cuando el DOM está listo
  */
-document.addEventListener('DOMContentLoaded', function() {
+function initMain() {
     initThemeSystem();
     loadUserData();
     setupTabs();
@@ -371,7 +371,13 @@ document.addEventListener('DOMContentLoaded', function() {
     forms.forEach(form => {
         form.addEventListener('submit', handleFormSubmit);
     });
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMain);
+} else {
+    initMain();
+}
 
 /**
  * Manejo genérico de envío de formularios

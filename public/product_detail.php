@@ -862,7 +862,7 @@ $stock = (int)($product['stock_quantity'] ?? 0);
     </div>
 </div>
 
-<script src="js/catalog.js"></script>
+<script src="js/catalog.js?v=3.1"></script>
 <script src="js/main.js?v=2.6"></script>
 <script>
     (function () {

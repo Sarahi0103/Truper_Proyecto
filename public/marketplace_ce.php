@@ -719,7 +719,7 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
 
     <script src="js/jspdf.umd.min.js"></script>
     <script src="js/main.js?v=2.6"></script>
-    <script src="js/catalog.js"></script>
+    <script src="js/catalog.js?v=3.1"></script>
     <script>
     (function () {
         const companyWhatsApp = '<?php echo htmlspecialchars($whatsappPhone, ENT_QUOTES, 'UTF-8'); ?>';
