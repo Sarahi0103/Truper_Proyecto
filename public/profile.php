@@ -67,7 +67,7 @@ if (db_table_exists('clients') && db_column_exists('clients', 'company_name')) {
     }
 }
 
-$user_name = htmlspecialchars(($_SESSION['role'] ?? '') === 'admin' ? 'admin' : ($_SESSION['name'] ?? 'Usuario'), ENT_QUOTES, 'UTF-8');
+$user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8');
 $is_client = (($_SESSION['role'] ?? 'client') === 'client');
 $is_admin = (($_SESSION['role'] ?? '') === 'admin');
 $loyalty_points = (int)($profile['loyalty_points'] ?? 0);
