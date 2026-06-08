@@ -48,14 +48,16 @@ try {
                 $sets[] = 'address = ?';
                 $values[] = sanitize($_POST['address'] ?? '');
             }
+            $birthdateVal = isset($_POST['birthdate']) ? trim($_POST['birthdate']) : '';
+            $birthdateDbVal = ($birthdateVal === '') ? null : $birthdateVal;
+
             if (db_column_exists('users', 'birthdate')) {
                 $sets[] = 'birthdate = ?';
-                $birthdateVal = isset($_POST['birthdate']) ? trim($_POST['birthdate']) : '';
-                $values[] = ($birthdateVal === '') ? null : $birthdateVal;
-            } elseif (db_column_exists('users', 'birthday')) {
+                $values[] = $birthdateDbVal;
+            }
+            if (db_column_exists('users', 'birthday')) {
                 $sets[] = 'birthday = ?';
-                $birthdateVal = isset($_POST['birthdate']) ? trim($_POST['birthdate']) : '';
-                $values[] = ($birthdateVal === '') ? null : $birthdateVal;
+                $values[] = $birthdateDbVal;
             }
             if (db_column_exists('users', 'updated_at')) {
                 $sets[] = 'updated_at = NOW()';
@@ -69,6 +71,9 @@ try {
             $values[] = $_SESSION['user_id'];
             $stmt = $pdo->prepare('UPDATE users SET ' . implode(', ', $sets) . ' WHERE id = ?');
             $stmt->execute($values);
+
+            // Synchronize name in session
+            $_SESSION['name'] = trim(sanitize($_POST['first_name'] ?? '') . ' ' . sanitize($_POST['last_name'] ?? ''));
 
             if (db_table_exists('clients') && db_column_exists('clients', 'company_name') && array_key_exists('company_name', $_POST)) {
                 $companyName = sanitize($_POST['company_name'] ?? '');
@@ -128,17 +133,30 @@ try {
 
             $new_hash = hash_password($_POST['new_password']);
 
+            $sets = [];
+            $values = [];
+
             if (db_column_exists('users', 'password_hash')) {
-                $sql = 'UPDATE users SET password_hash = ?';
-            } else {
-                $sql = 'UPDATE users SET password = ?';
+                $sets[] = 'password_hash = ?';
+                $values[] = $new_hash;
+            }
+            if (db_column_exists('users', 'password')) {
+                $sets[] = 'password = ?';
+                $values[] = $new_hash;
             }
             if (db_column_exists('users', 'updated_at')) {
-                $sql .= ', updated_at = NOW()';
+                $sets[] = 'updated_at = NOW()';
             }
-            $sql .= ' WHERE id = ?';
+
+            if (empty($sets)) {
+                $response = ['success' => false, 'message' => 'No hay columna de contraseña disponible'];
+                break;
+            }
+
+            $values[] = $_SESSION['user_id'];
+            $sql = 'UPDATE users SET ' . implode(', ', $sets) . ' WHERE id = ?';
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([$new_hash, $_SESSION['user_id']]);
+            $stmt->execute($values);
 
             $response = ['success' => true, 'message' => 'Contraseña cambiada exitosamente'];
             
@@ -161,7 +179,9 @@ try {
             $select[] = db_column_exists('users', 'last_name') ? 'last_name' : "'' AS last_name";
             $select[] = db_column_exists('users', 'phone') ? 'phone' : "'' AS phone";
             $select[] = db_column_exists('users', 'address') ? 'address' : "'' AS address";
-            if (db_column_exists('users', 'birthdate')) {
+            if (db_column_exists('users', 'birthdate') && db_column_exists('users', 'birthday')) {
+                $select[] = 'COALESCE(birthdate, birthday) AS birthdate';
+            } elseif (db_column_exists('users', 'birthdate')) {
                 $select[] = 'birthdate';
             } elseif (db_column_exists('users', 'birthday')) {
                 $select[] = 'birthday AS birthdate';

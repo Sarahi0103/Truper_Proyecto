@@ -28,7 +28,9 @@ if (db_column_exists('users', 'address')) {
     $selectParts[] = "'' AS address";
 }
 
-if (db_column_exists('users', 'birthdate')) {
+if (db_column_exists('users', 'birthdate') && db_column_exists('users', 'birthday')) {
+    $selectParts[] = 'COALESCE(birthdate, birthday) AS birthdate';
+} elseif (db_column_exists('users', 'birthdate')) {
     $selectParts[] = 'birthdate';
 } elseif (db_column_exists('users', 'birthday')) {
     $selectParts[] = 'birthday AS birthdate';
@@ -113,16 +115,45 @@ if (!empty($profile['birthdate'])) {
     <style>
         /* ===== Profile Page — Premium Redesign ===== */
         body {
-            background: #08080a !important;
             color: #ffffff !important;
             font-family: var(--theme-font, 'Outfit', 'Inter', sans-serif) !important;
         }
 
         .container {
             padding: 2.5rem 1.5rem !important;
-            max-width: 700px !important;
+            max-width: 550px !important;
             margin: 0 auto !important;
         }
+
+        /* Prevent all tab contents from showing, only display active one */
+        .tab-content {
+            display: none !important;
+        }
+        .tab-content.active {
+            display: block !important;
+        }
+
+        /* Profile grid layout for form */
+        .profile-grid {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 1.25rem !important;
+        }
+
+        .profile-grid-full {
+            grid-column: span 2 !important;
+        }
+
+        @media (max-width: 600px) {
+            .profile-grid {
+                grid-template-columns: 1fr !important;
+                gap: 1rem !important;
+            }
+            .profile-grid-full {
+                grid-column: span 1 !important;
+            }
+        }
+
 
         h1 {
             font-size: 2.25rem !important;
@@ -473,48 +504,50 @@ if (!empty($profile['birthdate'])) {
                 <div class="card">
                     <div class="card-header">Información de Perfil</div>
                     <div class="card-body">
-                        <form id="profileForm" action="api/profile.php?action=update" method="POST" data-success-scroll="#profileInfo" data-success-message="Perfil actualizado correctamente">
+                        <form id="profileForm" action="api/profile.php?action=update" method="POST" data-success-scroll="#profileInfo" data-success-message="Perfil actualizado correctamente" data-success-reload="true">
                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
-                            <div class="form-group">
-                                <label>Nombre</label>
-                                <input type="text" name="first_name" value="<?php echo htmlspecialchars($profile['first_name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" required>
-                            </div>
+                            <div class="profile-grid">
+                                <div class="form-group">
+                                    <label>Nombre</label>
+                                    <input type="text" name="first_name" value="<?php echo htmlspecialchars($profile['first_name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" required>
+                                </div>
 
-                            <div class="form-group">
-                                <label>Apellido</label>
-                                <input type="text" name="last_name" value="<?php echo htmlspecialchars($profile['last_name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" required>
-                            </div>
+                                <div class="form-group">
+                                    <label>Apellido</label>
+                                    <input type="text" name="last_name" value="<?php echo htmlspecialchars($profile['last_name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" required>
+                                </div>
 
-                            <div class="form-group">
-                                <label>Email</label>
-                                <input type="email" name="email" value="<?php echo htmlspecialchars($profile['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" disabled>
-                                <small class="text-muted">No se puede cambiar el email</small>
-                            </div>
+                                <div class="form-group">
+                                    <label>Email</label>
+                                    <input type="email" name="email" value="<?php echo htmlspecialchars($profile['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" disabled>
+                                    <small class="text-muted">No se puede cambiar el email</small>
+                                </div>
 
-                            <div class="form-group">
-                                <label>Código único de cliente</label>
-                                <input type="text" value="<?php echo htmlspecialchars($profile['user_code'] ?? 'No asignado', ENT_QUOTES, 'UTF-8'); ?>" disabled>
-                                <small class="text-muted">Usa este código para identificación rápida</small>
-                            </div>
+                                <div class="form-group">
+                                    <label>Código único de cliente</label>
+                                    <input type="text" value="<?php echo htmlspecialchars($profile['user_code'] ?? 'No asignado', ENT_QUOTES, 'UTF-8'); ?>" disabled>
+                                    <small class="text-muted">Usa este código para identificación rápida</small>
+                                </div>
 
-                            <div class="form-group">
-                                <label>Teléfono</label>
-                                <input type="tel" name="phone" value="<?php echo htmlspecialchars($profile['phone'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
-                            </div>
+                                <div class="form-group">
+                                    <label>Teléfono</label>
+                                    <input type="tel" name="phone" value="<?php echo htmlspecialchars($profile['phone'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                                </div>
 
-                            <div class="form-group">
-                                <label>Dirección</label>
-                                <textarea name="address"><?php echo htmlspecialchars($profile['address'] ?? '', ENT_QUOTES, 'UTF-8'); ?></textarea>
-                            </div>
+                                <div class="form-group">
+                                    <label>Fecha de Nacimiento</label>
+                                    <input type="date" name="birthdate" value="<?php echo htmlspecialchars($profile['birthdate'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                                </div>
 
-                            <div class="form-group">
-                                <label>Empresa</label>
-                                <input type="text" name="company_name" value="<?php echo htmlspecialchars($company_name, ENT_QUOTES, 'UTF-8'); ?>">
-                            </div>
+                                <div class="form-group profile-grid-full">
+                                    <label>Empresa</label>
+                                    <input type="text" name="company_name" value="<?php echo htmlspecialchars($company_name, ENT_QUOTES, 'UTF-8'); ?>">
+                                </div>
 
-                            <div class="form-group">
-                                <label>Fecha de Nacimiento</label>
-                                <input type="date" name="birthdate" value="<?php echo htmlspecialchars($profile['birthdate'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                                <div class="form-group profile-grid-full">
+                                    <label>Dirección</label>
+                                    <textarea name="address" rows="3"><?php echo htmlspecialchars($profile['address'] ?? '', ENT_QUOTES, 'UTF-8'); ?></textarea>
+                                </div>
                             </div>
 
                             <button type="submit" class="btn btn-primary btn-block">Actualizar Perfil</button>
