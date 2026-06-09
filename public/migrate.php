@@ -138,6 +138,58 @@ try {
     $pdo->exec($sql8);
     echo "✅ Tabla sales_monthly_statistics creada\n";
     
+    // 8.1. Columnas faltantes en sales_tickets (para estadísticas y verificación)
+    $pdo->exec("ALTER TABLE sales_tickets ADD COLUMN IF NOT EXISTS verified_by INT REFERENCES users(id) ON DELETE SET NULL");
+    $pdo->exec("ALTER TABLE sales_tickets ADD COLUMN IF NOT EXISTS verified_date TIMESTAMP NULL");
+    $pdo->exec("ALTER TABLE sales_tickets ADD COLUMN IF NOT EXISTS archived_date TIMESTAMP NULL");
+    $pdo->exec("ALTER TABLE sales_tickets ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived', 'cancelled'))");
+    echo "✅ Columnas faltantes añadidas a sales_tickets\n";
+
+    // 8.2. Tabla de tickets archivados
+    $sqlArchived = "CREATE TABLE IF NOT EXISTS sales_tickets_archived (
+        id SERIAL PRIMARY KEY,
+        original_ticket_id INT,
+        folio VARCHAR(50) UNIQUE NOT NULL,
+        ticket_data JSONB NOT NULL,
+        archived_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        archive_reason VARCHAR(255),
+        total_amount DECIMAL(12, 2),
+        ticket_type VARCHAR(50)
+    )";
+    $pdo->exec($sqlArchived);
+    echo "✅ Tabla sales_tickets_archived creada\n";
+
+    // 8.3. Vistas del sistema de tickets
+    $pdo->exec("CREATE OR REPLACE VIEW v_current_tickets AS
+    SELECT 
+        st.id,
+        st.folio,
+        st.ticket_type,
+        st.total_amount,
+        st.payment_status,
+        st.issued_date,
+        u.email AS customer_email,
+        u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END AS customer_name,
+        COUNT(sti.id) AS item_count
+    FROM sales_tickets st
+    LEFT JOIN users u ON st.user_id = u.id
+    LEFT JOIN ticket_items sti ON st.id = sti.ticket_id
+    WHERE st.status = 'active'
+    GROUP BY st.id, u.email, u.first_name, u.last_name
+    ORDER BY st.issued_date DESC");
+
+    $pdo->exec("CREATE OR REPLACE VIEW v_ticket_summary AS
+    SELECT 
+        TO_CHAR(issued_date, 'YYYY-MM') AS month,
+        ticket_type,
+        COUNT(*) AS count,
+        SUM(total_amount) AS total_amount,
+        AVG(total_amount) AS avg_amount
+    FROM sales_tickets
+    WHERE status = 'active'
+    GROUP BY TO_CHAR(issued_date, 'YYYY-MM'), ticket_type");
+    echo "✅ Vistas v_current_tickets y v_ticket_summary creadas\n";
+    
     // 9. Crear índices para mejorar performance
     $indexes = [
         "CREATE INDEX IF NOT EXISTS idx_tickets_folio ON sales_tickets(folio)",
