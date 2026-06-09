@@ -213,6 +213,14 @@ try {
                 break;
             }
 
+            // Clear references in tables referencing orders to prevent foreign key constraint violations
+            if (db_table_exists('sales_tickets')) {
+                $pdo->prepare("UPDATE sales_tickets SET order_id = NULL WHERE order_id = ?")->execute([$orderId]);
+            }
+            if (db_table_exists('credit_payments')) {
+                $pdo->prepare("UPDATE credit_payments SET order_id = NULL WHERE order_id = ?")->execute([$orderId]);
+            }
+
             $stmt = $pdo->prepare("DELETE FROM orders WHERE id = ?");
             $stmt->execute([$orderId]);
 
