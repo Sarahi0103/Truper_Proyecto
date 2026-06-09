@@ -163,6 +163,12 @@ class AuthController {
         try {
             $this->ensureAuthSchema();
             $userCode = trim((string)$userCode);
+            
+            // Si el código incluye el prefijo 'CLI-' (insensible a mayúsculas), lo eliminamos
+            if (str_starts_with(strtolower($userCode), 'cli-')) {
+                $userCode = substr($userCode, 4);
+            }
+            
             $birthdate = trim((string)$birthdate);
 
             if ($userCode === '' || $birthdate === '') {
