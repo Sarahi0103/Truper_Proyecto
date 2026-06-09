@@ -228,12 +228,13 @@ async function apiCall(endpoint, method = 'GET', data = null, options = {}) {
             cache: 'no-store',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-Token': window.csrfToken || ''
             }
         };
         
         let bodyData = data;
-        if (bodyData && (method === 'POST' || method === 'PUT')) {
+        if (bodyData && (method === 'POST' || method === 'PUT' || method === 'DELETE')) {
             // Add CSRF token to request data
             if (typeof bodyData === 'object' && bodyData !== null) {
                 bodyData.csrf_token = window.csrfToken || '';
