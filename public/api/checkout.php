@@ -174,6 +174,14 @@ try {
         'Pago registrado desde checkout'
     ]);
 
+    // Trigger automatic ticket generation
+    try {
+        require_once '../../backend/hooks/ticket_hooks.php';
+        onOrderCompleted($orderId);
+    } catch (Exception $e) {
+        error_log("Error al crear ticket automático desde checkout: " . $e->getMessage());
+    }
+
     // Log action
     $logStmt = $pdo->prepare("
         INSERT INTO action_logs 

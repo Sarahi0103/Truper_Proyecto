@@ -368,7 +368,7 @@ $stock = (int)($product['stock_quantity'] ?? 0);
 
         .detail-header h1 {
             margin: 0 0 0.5rem 0 !important;
-            font-size: 2.25rem !important;
+            font-size: 1.75rem !important;
             font-weight: 800 !important;
             color: #ffffff !important;
             letter-spacing: -0.02em !important;
@@ -688,6 +688,10 @@ $stock = (int)($product['stock_quantity'] ?? 0);
         }
 
         @media (max-width: 768px) {
+            .detail-header h1 {
+                font-size: 1.35rem !important;
+            }
+
             .modal-lightbox {
                 padding: 1rem !important;
             }

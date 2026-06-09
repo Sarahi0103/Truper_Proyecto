@@ -8,7 +8,7 @@
  * onOrderCompleted($orderId, $orderData);
  */
 
-require_once __DIR__ . '/../backend/models/TicketIntegration.php';
+require_once __DIR__ . '/../models/TicketIntegration.php';
 
 /**
  * Hook que se dispara cuando se completa una orden

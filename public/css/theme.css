@@ -1062,12 +1062,11 @@ header .nav-dropdown:hover .arrow {
     /* Main wrapper container */
     body header {
         display: flex !important;
-        flex-direction: row !important;
-        flex-wrap: wrap !important;
+        flex-direction: column !important;
         align-items: center !important;
-        justify-content: space-between !important;
-        padding: 0.5rem 0.75rem !important;
-        gap: 0.4rem !important;
+        justify-content: center !important;
+        padding: 0.75rem !important;
+        gap: 0.75rem !important;
     }
 
     /* display: contents removes the wrapper to let children align in the header's flexbox */
@@ -1075,31 +1074,55 @@ header .nav-dropdown:hover .arrow {
         display: contents !important;
     }
 
-    /* Row 1, Left: Brand Logo */
+    /* Row 1, Center: Brand Logo */
     body header .logo {
         order: 1 !important;
         flex: 0 0 auto !important;
-        margin: 0 !important;
+        margin: 0 auto !important;
+        display: flex !important;
+        justify-content: center !important;
     }
 
-    /* Row 1, Right: Actions & User Info / Logout buttons */
+    /* Row 2: Actions & User Info / Logout buttons */
     body header .user-menu,
     body header .header-actions {
         order: 2 !important;
-        flex: 0 0 auto !important;
-        margin-left: auto !important;
-        margin-right: 0 !important;
-        width: auto !important;
+        width: 100% !important;
         display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
         align-items: center !important;
-        gap: 0.4rem !important;
+        gap: 0.5rem !important;
+        margin: 0 auto !important;
+        flex: 0 0 auto !important;
     }
 
     body header .user-info {
         display: none !important; /* Hide details to save space on mobile, or make compact */
     }
 
-    /* Row 2: Full Width scrollable pill-based navigation */
+    /* Style the actions/user menu buttons on mobile to be consistent and avoid overflow */
+    body header .user-menu .btn,
+    body header .user-menu a,
+    body header .user-menu button,
+    body header .header-actions .btn,
+    body header .header-actions a {
+        font-size: 0.8rem !important;
+        padding: 0.5rem 1rem !important;
+        border-radius: 999px !important;
+        white-space: nowrap !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        height: 38px !important;
+        box-sizing: border-box !important;
+        margin: 0 !important;
+        flex: 1 1 auto !important;
+        max-width: 240px !important;
+    }
+
+    /* Row 3: Full Width scrollable pill-based navigation */
     body header .nav-menu {
         order: 3 !important;
         width: calc(100% + 1.5rem) !important; /* edge to edge bleed */
@@ -1148,6 +1171,14 @@ header .nav-dropdown:hover .arrow {
         min-width: 0 !important;
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
+    }
+
+    /* Prevent squashing/overlapping of navigation pills in scroll view */
+    body header .nav-dropdown,
+    body header .nav-dropdown-content,
+    body header .nav-dropdown-content a,
+    body header .nav-menu a {
+        flex-shrink: 0 !important;
     }
 
     /* Style the horizontal pills */

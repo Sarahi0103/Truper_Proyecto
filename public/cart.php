@@ -245,6 +245,13 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
             color: #ffffff !important;
             font-weight: 700 !important;
             font-size: 0.95rem !important;
+            -moz-appearance: textfield !important;
+        }
+
+        .qty-input::-webkit-outer-spin-button,
+        .qty-input::-webkit-inner-spin-button {
+            -webkit-appearance: none !important;
+            margin: 0 !important;
         }
 
         .remove-btn {

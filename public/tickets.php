@@ -651,7 +651,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
 
                 // 4. Archivar en base de datos
                 showAlert('Archivando registros en la base de datos...', 'info');
-                const data = await apiCall('api/analytics.php?action=archive-tickets', 'POST', {
+                const data = await apiCall('/analytics.php?action=archive-tickets', 'POST', {
                     year: parseInt(year, 10),
                     month: parseInt(month, 10)
                 });

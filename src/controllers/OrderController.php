@@ -151,6 +151,14 @@ class OrderController {
             
             $this->pdo->commit();
 
+            // Trigger automatic ticket generation
+            try {
+                require_once __DIR__ . '/../../backend/hooks/ticket_hooks.php';
+                onOrderCompleted($order_id);
+            } catch (Exception $e) {
+                error_log("Error al crear ticket automático desde OrderController: " . $e->getMessage());
+            }
+            
             $historyStmt = $this->pdo->prepare("INSERT INTO transaction_history (transaction_type, reference_folio, data_json, created_by) VALUES ('client_order', ?, ?, ?)");
             $historyStmt->execute([
                 $order_number,
