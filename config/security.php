@@ -107,7 +107,7 @@ class SecurityValidator {
 
 // ===== IP SECURITY =====
 class IPSecurity {
-    
+
     public static function getClientIP() {
         if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
             // Cloudflare
@@ -119,25 +119,63 @@ class IPSecurity {
         }
         return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
     }
-    
+
     public static function isAdminIPWhitelisted($ip = null) {
         $ip = $ip ?? self::getClientIP();
-        
+
         // Whitelist de IPs admin (configurable)
         $whitelist = explode(',', getenv('ADMIN_IP_WHITELIST') ?: '');
         $whitelist = array_map('trim', $whitelist);
-        
+
         // Si no hay whitelist, permitir todos (desarrollo)
         if (empty(array_filter($whitelist))) {
             return true;
         }
-        
+
         // Permitir localhost siempre
         if (in_array($ip, ['127.0.0.1', '::1', 'localhost'])) {
             return true;
         }
-        
+
         return in_array($ip, array_filter($whitelist));
+    }
+
+    public static function isIPBlocked($ip = null) {
+        $ip = $ip ?? self::getClientIP();
+        $blockedKey = 'blocked_ip_' . md5($ip);
+        return isset($_SESSION[$blockedKey]) && $_SESSION[$blockedKey] > time();
+    }
+
+    public static function blockIP($ip = null, $duration = 3600) {
+        $ip = $ip ?? self::getClientIP();
+        $_SESSION['blocked_ip_' . md5($ip)] = time() + $duration;
+    }
+
+    public static function incrementFailedAttempts($ip = null) {
+        $ip = $ip ?? self::getClientIP();
+        $key = 'failed_attempts_' . md5($ip);
+        $_SESSION[$key] = ($_SESSION[$key] ?? 0) + 1;
+        return $_SESSION[$key];
+    }
+
+    public static function getFailedAttempts($ip = null) {
+        $ip = $ip ?? self::getClientIP();
+        return $_SESSION['failed_attempts_' . md5($ip)] ?? 0;
+    }
+
+    public static function resetFailedAttempts($ip = null) {
+        $ip = $ip ?? self::getClientIP();
+        unset($_SESSION['failed_attempts_' . md5($ip)]);
+    }
+
+    public static function shouldBlockAfterFailures($ip = null, $maxAttempts = 10) {
+        $ip = $ip ?? self::getClientIP();
+        $attempts = self::getFailedAttempts($ip);
+        if ($attempts >= $maxAttempts) {
+            self::blockIP($ip, 3600); // Bloquear por 1 hora
+            return true;
+        }
+        return false;
     }
 }
 

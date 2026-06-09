@@ -48,6 +48,63 @@ function normalize_date_value($value): ?string {
     return null;
 }
 
+/**
+ * Sincroniza un producto automáticamente con Marketplace CE
+ */
+function sync_product_to_marketplace_ce($pdo, $sku, $productData) {
+    if (!db_table_exists('marketplace_ce_products')) {
+        return;
+    }
+
+    try {
+        // Verificar si ya existe en Marketplace CE
+        $checkStmt = $pdo->prepare("SELECT id FROM marketplace_ce_products WHERE sku = ? LIMIT 1");
+        $checkStmt->execute([$sku]);
+        $existing = $checkStmt->fetch();
+
+        if ($existing) {
+            // Actualizar producto existente
+            $updateStmt = $pdo->prepare("
+                UPDATE marketplace_ce_products 
+                SET name = ?, unit_price = ?, stock_quantity = ?, 
+                    image_url = ?, category = ?, description = ?, 
+                    variants_json = ?, updated_at = NOW()
+                WHERE sku = ?
+            ");
+            $updateStmt->execute([
+                $productData['name'],
+                $productData['price'],
+                $productData['stock_quantity'],
+                $productData['image_url'],
+                $productData['category'],
+                $productData['description'],
+                $productData['variants_json'],
+                $sku
+            ]);
+        } else {
+            // Crear nuevo producto en Marketplace CE
+            $insertStmt = $pdo->prepare("
+                INSERT INTO marketplace_ce_products 
+                (sku, name, unit_price, stock_quantity, image_url, category, description, variants_json, is_active, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, true, NOW(), NOW())
+            ");
+            $insertStmt->execute([
+                $sku,
+                $productData['name'],
+                $productData['price'],
+                $productData['stock_quantity'],
+                $productData['image_url'],
+                $productData['category'],
+                $productData['description'],
+                $productData['variants_json']
+            ]);
+        }
+    } catch (Exception $e) {
+        error_log('sync_product_to_marketplace_ce failed: ' . $e->getMessage());
+        throw $e;
+    }
+}
+
 function normalize_datetime_value($value): ?string {
     $raw = trim((string)$value);
     if ($raw === '') {
@@ -3063,6 +3120,34 @@ try {
                     'image_url' => $imageUrl
                 ]
             ];
+
+            // Sincronización automática con Marketplace CE si marketplace_enabled = true
+            try {
+                $marketplaceEnabled = !empty($input['marketplace_enabled']) && $input['marketplace_enabled'] === true;
+                if ($marketplaceEnabled) {
+                    sync_product_to_marketplace_ce($pdo, $sku, [
+                        'name' => $name,
+                        'price' => $price,
+                        'stock_quantity' => $stockQty,
+                        'image_url' => $imageUrl,
+                        'category' => $category,
+                        'description' => $description,
+                        'variants_json' => $variantsJson
+                    ]);
+                }
+            } catch (Throwable $e) {
+                error_log('auto_sync_marketplace (create) failed: ' . $e->getMessage());
+            }
+
+            // Background: sync updated stock to marketplace for this SKU
+            try {
+                if (function_exists('auto_sync_stock_after_change')) {
+                    @auto_sync_stock_after_change($pdo, $sku);
+                }
+            } catch (Throwable $e) {
+                error_log('auto_sync_stock_after_change (create) failed: ' . $e->getMessage());
+            }
+
             break;
 
         case 'product-delete':
@@ -3157,10 +3242,19 @@ try {
                     $stmt = $pdo->prepare("DELETE FROM products WHERE id = ?");
                     $stmt->execute([$id]);
                     $productDeleted = $stmt->rowCount();
-                
+
                     if ($productDeleted === 0) {
                         $response = ['success' => false, 'message' => 'No se pudo eliminar el producto de la BD'];
                         break;
+                    }
+
+                    // Step 4.5: Clean orphaned SKU cache
+                    if (function_exists('apcu_delete')) {
+                        apcu_delete('product_codes_cache');
+                    }
+                    $cacheFile = sys_get_temp_dir() . '/truper_codes.json';
+                    if (file_exists($cacheFile)) {
+                        @unlink($cacheFile);
                     }
                 
                     // Step 5: Clean gallery directories if empty

@@ -507,3 +507,292 @@ function formatNumber(num) {
 function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
+
+/**
+ * Sistema de atajos de teclado
+ */
+class KeyboardShortcuts {
+    constructor() {
+        this.shortcuts = new Map();
+        this.init();
+    }
+
+    init() {
+        document.addEventListener('keydown', this.handleKeyDown.bind(this));
+        this.registerDefaultShortcuts();
+    }
+
+    register(key, callback, description = '') {
+        this.shortcuts.set(key, {
+            callback,
+            description,
+            key
+        });
+    }
+
+    registerDefaultShortcuts() {
+        // Ctrl+K: Búsqueda
+        this.register('ctrl+k', () => {
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.focus();
+                searchInput.select();
+            }
+        }, 'Foco en búsqueda');
+
+        // Ctrl+/: Mostrar ayuda de atajos
+        this.register('ctrl+/', () => {
+            this.showHelp();
+        }, 'Mostrar ayuda de atajos');
+
+        // Escape: Cerrar modales y drawers
+        this.register('escape', () => {
+            this.closeModals();
+        }, 'Cerrar modales');
+
+        // Ctrl+S: Guardar (si hay formulario activo)
+        this.register('ctrl+s', (e) => {
+            const activeForm = document.activeElement?.closest('form');
+            if (activeForm) {
+                const submitBtn = activeForm.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    e.preventDefault();
+                    submitBtn.click();
+                }
+            }
+        }, 'Guardar formulario');
+
+        // Ctrl+N: Nuevo producto (solo admin)
+        this.register('ctrl+n', (e) => {
+            if (window.location.pathname.includes('admin')) {
+                e.preventDefault();
+                const newProductBtn = document.querySelector('[data-action="new-product"]');
+                if (newProductBtn) {
+                    newProductBtn.click();
+                }
+            }
+        }, 'Nuevo producto (admin)');
+
+        // Ctrl+F: Búsqueda avanzada
+        this.register('ctrl+f', (e) => {
+            e.preventDefault();
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.focus();
+                searchInput.select();
+            }
+        }, 'Búsqueda avanzada');
+
+        // Ctrl+D: Dashboard
+        this.register('ctrl+d', () => {
+            if (window.location.pathname !== '/dashboard.php') {
+                window.location.href = '/dashboard.php';
+            }
+        }, 'Ir al dashboard');
+    }
+
+    handleKeyDown(e) {
+        const key = this.getKeyString(e);
+        const shortcut = this.shortcuts.get(key);
+
+        if (shortcut) {
+            e.preventDefault();
+            shortcut.callback(e);
+        }
+    }
+
+    getKeyString(e) {
+        const parts = [];
+
+        if (e.ctrlKey) parts.push('ctrl');
+        if (e.altKey) parts.push('alt');
+        if (e.shiftKey) parts.push('shift');
+        if (e.metaKey) parts.push('meta');
+
+        const key = e.key.toLowerCase();
+        if (key !== 'control' && key !== 'alt' && key !== 'shift' && key !== 'meta') {
+            parts.push(key);
+        }
+
+        return parts.join('+');
+    }
+
+    closeModals() {
+        // Cerrar modales
+        const modals = document.querySelectorAll('.confirmation-modal, .modal, .drawer');
+        modals.forEach(modal => {
+            modal.remove();
+        });
+
+        // Cerrar dropdowns
+        const dropdowns = document.querySelectorAll('.dropdown.open');
+        dropdowns.forEach(dropdown => {
+            dropdown.classList.remove('open');
+        });
+    }
+
+    showHelp() {
+        const helpModal = document.createElement('div');
+        helpModal.className = 'keyboard-shortcuts-help';
+        helpModal.innerHTML = `
+            <div class="help-overlay"></div>
+            <div class="help-dialog">
+                <div class="help-header">
+                    <h3>Atajos de Teclado</h3>
+                    <button class="btn-close-help">×</button>
+                </div>
+                <div class="help-body">
+                    <ul class="shortcuts-list">
+                        ${Array.from(this.shortcuts.entries()).map(([key, shortcut]) => `
+                            <li>
+                                <kbd>${this.formatKey(key)}</kbd>
+                                <span>${shortcut.description}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(helpModal);
+
+        const closeBtn = helpModal.querySelector('.btn-close-help');
+        const overlay = helpModal.querySelector('.help-overlay');
+
+        const close = () => helpModal.remove();
+        closeBtn.addEventListener('click', close);
+        overlay.addEventListener('click', close);
+
+        document.addEventListener('keydown', function escHandler(e) {
+            if (e.key === 'Escape') {
+                close();
+                document.removeEventListener('keydown', escHandler);
+            }
+        });
+    }
+
+    formatKey(key) {
+        return key
+            .replace('ctrl', 'Ctrl')
+            .replace('alt', 'Alt')
+            .replace('shift', 'Shift')
+            .replace('meta', '⌘')
+            .split('+')
+            .map(part => `<kbd>${part}</kbd>`)
+            .join(' + ');
+    }
+}
+
+// Estilos para ayuda de atajos
+const shortcutsStyles = `
+    .keyboard-shortcuts-help {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .help-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(4px);
+    }
+
+    .help-dialog {
+        position: relative;
+        background: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 16px;
+        padding: 2rem;
+        max-width: 500px;
+        width: 90%;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        z-index: 1;
+    }
+
+    .help-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .help-header h3 {
+        margin: 0;
+        color: #ffffff;
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    .btn-close-help {
+        background: none;
+        border: none;
+        color: #888;
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+    }
+
+    .btn-close-help:hover {
+        background: #333;
+        color: #fff;
+    }
+
+    .shortcuts-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .shortcuts-list li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #222;
+    }
+
+    .shortcuts-list li:last-child {
+        border-bottom: none;
+    }
+
+    .shortcuts-list kbd {
+        background: #333;
+        border: 1px solid #444;
+        border-radius: 4px;
+        padding: 0.25rem 0.5rem;
+        font-family: monospace;
+        font-size: 0.85rem;
+        color: #fff;
+    }
+
+    .shortcuts-list span {
+        color: #888;
+        font-size: 0.9rem;
+    }
+`;
+
+const styleSheet = document.createElement('style');
+styleSheet.textContent = shortcutsStyles;
+document.head.appendChild(styleSheet);
+
+// Inicializar atajos de teclado
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        window.keyboardShortcuts = new KeyboardShortcuts();
+    });
+} else {
+    window.keyboardShortcuts = new KeyboardShortcuts();
+}

@@ -149,7 +149,19 @@ class AuthController {
             $_SESSION['phone'] = $user['phone'] ?? null;
             $_SESSION['loyalty_points'] = (int)$points;
             $_SESSION['login_time'] = time();
-            
+
+            // 2FA para admin (opcional, activado por ENV)
+            if ($role === 'admin' && getenv('REQUIRE_2FA_ADMIN') === 'true') {
+                $_SESSION['pending_2fa'] = true;
+                $_SESSION['2fa_secret'] = TwoFactorAuth::generateSecret();
+                return [
+                    'success' => true,
+                    'require_2fa' => true,
+                    'message' => 'Se requiere autenticación de dos factores',
+                    'secret' => $_SESSION['2fa_secret']
+                ];
+            }
+
             return [
                 'success' => true,
                 'message' => 'Bienvenido ' . $name,
