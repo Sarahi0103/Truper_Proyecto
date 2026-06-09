@@ -861,7 +861,6 @@ function homepage_update_label($type) {
                 <div>
                     <div class="module-badge module-main"><span class="module-glyph">NT</span> Noticias y promociones</div>
                     <h2>Novedades del punto de venta</h2>
-                    <p>Información destacada con rotación automática para mantener la portada activa y útil.</p>
                 </div>
                 <div class="promo-controls">
                     <button type="button" class="btn btn-ghost btn-small" data-promo-prev aria-label="Anterior">← Anterior</button>
