@@ -239,19 +239,46 @@ if (is_logged_in()) {
         }
 
         @media (max-width: 768px) {
+            body.auth-page {
+                padding: 1rem !important;
+                align-items: flex-start !important;
+                min-height: 100vh !important;
+            }
+
+            .login-container {
+                align-items: flex-start !important;
+            }
+
             .auth-shell {
                 grid-template-columns: 1fr !important;
                 border-radius: 16px !important;
+                margin-top: 1rem !important;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
             }
 
             .auth-side {
-                border-right: none !important;
-                border-bottom: 1px solid #222222 !important;
-                padding: 2.5rem 1.5rem !important;
+                display: none !important;
+            }
+
+            .mobile-logo-wrap {
+                display: flex !important;
             }
 
             .auth-form-wrap {
                 padding: 2.5rem 1.5rem !important;
+            }
+
+            .login-title {
+                font-size: 1.6rem !important;
+                text-align: center !important;
+            }
+
+            .login-subtitle {
+                text-align: center !important;
+            }
+
+            .auth-back-row {
+                text-align: center !important;
             }
         }
     </style>
@@ -272,6 +299,9 @@ if (is_logged_in()) {
 
             <div class="auth-form-wrap">
                 <div class="login-box">
+                    <div class="mobile-logo-wrap" style="display: none; justify-content: center; margin-bottom: 1.5rem;">
+                        <img src="img/logo_truper.1.1.png" alt="Truper" style="height: 40px; width: auto; object-fit: contain;">
+                    </div>
                     <div class="auth-back-row">
                         <a href="index.php" class="auth-back-link">← Volver a productos</a>
                     </div>

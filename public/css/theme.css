@@ -1139,6 +1139,7 @@ header .nav-dropdown:hover .arrow {
         background: transparent !important;
         border: none !important;
         box-shadow: none !important;
+        box-sizing: border-box !important;
     }
 
     body header .nav-menu::-webkit-scrollbar {
@@ -1181,20 +1182,23 @@ header .nav-dropdown:hover .arrow {
         flex-shrink: 0 !important;
     }
 
-    /* Style the horizontal pills */
+    /* Style the horizontal pills to be extremely consistent and aligned */
     body header .nav-dropdown-content a,
     body header .nav-menu a {
-        padding: 0.35rem 0.7rem !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        height: 38px !important;
+        padding: 0 1rem !important;
         border-radius: 999px !important;
-        font-size: 0.78rem !important;
+        font-size: 0.82rem !important;
         margin: 0 !important;
         background-color: var(--theme-surface-strong) !important;
         border: 1px solid var(--theme-border) !important;
         color: var(--theme-text-muted) !important;
         white-space: nowrap !important;
         font-weight: 600 !important;
-        display: inline-block !important;
         transition: all 0.2s ease !important;
+        box-sizing: border-box !important;
     }
 
     body header .nav-dropdown-content a:hover,

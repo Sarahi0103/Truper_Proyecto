@@ -462,6 +462,10 @@ if (is_logged_in() && !$force_login_screen) {
             background: rgba(255,255,255,0.03);
         }
 
+        .mobile-logo-wrap {
+            display: none;
+        }
+
         /* ===== Responsive ===== */
         @media (max-width: 780px) {
             body { padding: 1rem; align-items: flex-start; }
@@ -473,15 +477,28 @@ if (is_logged_in() && !$force_login_screen) {
             }
 
             .auth-panel {
-                border-right: none;
-                border-bottom: 1px solid var(--border);
-                padding: 2.2rem 1.75rem 2rem;
+                display: none !important;
             }
 
-            .auth-heading { font-size: 1.6rem; }
-            .auth-desc { margin-bottom: 1.5rem; }
+            .mobile-logo-wrap {
+                display: flex !important;
+            }
 
             .auth-form-panel { padding: 2.2rem 1.75rem 2.5rem; }
+
+            .form-title {
+                text-align: center !important;
+            }
+
+            .form-subtitle {
+                text-align: center !important;
+            }
+
+            .auth-back {
+                display: flex !important;
+                justify-content: center !important;
+                margin-bottom: 1.5rem !important;
+            }
         }
 
         @media (max-width: 480px) {
@@ -495,7 +512,10 @@ if (is_logged_in() && !$force_login_screen) {
                 border-right: none;
             }
 
-            .auth-panel { padding: 2rem 1.25rem 1.75rem; }
+            .auth-panel {
+                display: none !important;
+            }
+
             .auth-form-panel { padding: 2rem 1.25rem 2.5rem; }
             .form-title { font-size: 1.5rem; }
         }
@@ -533,9 +553,11 @@ if (is_logged_in() && !$force_login_screen) {
             </ul>
         </aside>
 
-        <!-- Right Panel -->
         <div class="auth-form-panel">
             <div class="auth-form-inner">
+                <div class="mobile-logo-wrap" style="display: none; justify-content: center; margin-bottom: 1.5rem;">
+                    <img src="img/logo_truper.1.1.png" alt="Truper Logo" style="height: 40px; width: auto; object-fit: contain;">
+                </div>
 
                 <a href="index.php" class="auth-back" onclick="if(window.history.length>1){window.history.back();return false;}">
                     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
