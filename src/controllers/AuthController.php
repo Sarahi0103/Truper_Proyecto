@@ -131,7 +131,9 @@ class AuthController {
             }
             
             // Regenerate session ID to prevent session fixation attacks
-            session_regenerate_id(true);
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_regenerate_id(true);
+            }
             
             $role = $user['role'] ?? 'client';
             $name = trim((string)(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')));
@@ -223,7 +225,9 @@ class AuthController {
                 $stmtLogin->execute([$user['id']]);
             }
 
-            session_regenerate_id(true);
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_regenerate_id(true);
+            }
 
             $role = $user['role'] ?? 'client';
             $name = trim((string)(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')));
