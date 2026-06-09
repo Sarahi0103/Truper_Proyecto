@@ -705,8 +705,8 @@ async function loadOrders() {
 
     ordersList.innerHTML = response.orders.map(order => {
         const normalizedStatus = normalizeOrderStatus(order.status);
-        const isCompleted = normalizedStatus === 'delivered';
-        const deleteBtn = (ORDERS_IS_ADMIN && isCompleted)
+        const isDeleteAvailable = normalizedStatus === 'delivered' || normalizedStatus === 'cancelled';
+        const deleteBtn = (ORDERS_IS_ADMIN && isDeleteAvailable)
             ? `<button class="btn btn-small btn-danger order-delete-btn" style="margin-left:6px;" onclick="deleteOrder(${Number(order.id)}, '${String(order.order_number || '').replace(/'/g, '')}')">
                 🗑 Eliminar
                </button>`
