@@ -53,13 +53,15 @@ try {
             }
             
             // Validación básica
-            if (empty($input['user_id'])) {
-                $response = ['success' => false, 'message' => 'user_id requerido'];
+            if (empty($input['total_amount'])) {
+                $response = ['success' => false, 'message' => 'total_amount requerido'];
                 break;
             }
             
-            if (empty($input['total_amount'])) {
-                $response = ['success' => false, 'message' => 'total_amount requerido'];
+            // Para ventas de mostrador, customer_name es opcional
+            // Para ventas de clientes, user_id es opcional (se puede usar customer_name)
+            if (empty($input['user_id']) && empty($input['customer_name'])) {
+                $response = ['success' => false, 'message' => 'Se requiere user_id o customer_name'];
                 break;
             }
             

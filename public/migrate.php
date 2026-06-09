@@ -6,8 +6,11 @@
 
 require_once '../config/config.php';
 
+// Permitir ejecución desde CLI
+$is_cli = php_sapi_name() === 'cli';
+
 // Solo permitir desde localhost o si estamos logueados como admin
-$localhost = in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', '::1', 'localhost']);
+$localhost = $is_cli || in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1', 'localhost']);
 $is_admin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
 
 if (!$localhost && !$is_admin) {
@@ -24,6 +27,7 @@ try {
         folio VARCHAR(20) UNIQUE NOT NULL,
         order_id INT REFERENCES orders(id) ON DELETE SET NULL,
         user_id INT REFERENCES users(id) ON DELETE SET NULL,
+        customer_name VARCHAR(255),
         ticket_type VARCHAR(50) DEFAULT 'sale',
         description TEXT,
         subtotal_amount DECIMAL(10,2) DEFAULT 0,
@@ -139,6 +143,7 @@ try {
     echo "✅ Tabla sales_monthly_statistics creada\n";
     
     // 8.1. Columnas faltantes en sales_tickets (para estadísticas y verificación)
+    $pdo->exec("ALTER TABLE sales_tickets ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255)");
     $pdo->exec("ALTER TABLE sales_tickets ADD COLUMN IF NOT EXISTS verified_by INT REFERENCES users(id) ON DELETE SET NULL");
     $pdo->exec("ALTER TABLE sales_tickets ADD COLUMN IF NOT EXISTS verified_date TIMESTAMP NULL");
     $pdo->exec("ALTER TABLE sales_tickets ADD COLUMN IF NOT EXISTS archived_date TIMESTAMP NULL");
@@ -169,13 +174,13 @@ try {
         st.payment_status,
         st.issued_date,
         u.email AS customer_email,
-        u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END AS customer_name,
+        COALESCE(st.customer_name, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END, 'Mostrador') AS customer_name,
         COUNT(sti.id) AS item_count
     FROM sales_tickets st
     LEFT JOIN users u ON st.user_id = u.id
     LEFT JOIN ticket_items sti ON st.id = sti.ticket_id
     WHERE st.status = 'active'
-    GROUP BY st.id, u.email, u.first_name, u.last_name
+    GROUP BY st.id, u.email, u.first_name, u.last_name, st.customer_name
     ORDER BY st.issued_date DESC");
 
     $pdo->exec("CREATE OR REPLACE VIEW v_ticket_summary AS

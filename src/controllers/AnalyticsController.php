@@ -347,12 +347,14 @@ class AnalyticsController {
                     st.payment_status,
                     st.issued_date,
                     st.verified_date,
-                    u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END as customer_name,
+                    COALESCE(st.customer_name, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END, 'Mostrador') as customer_name,
                     u.email,
                     (SELECT COUNT(*) FROM ticket_items WHERE ticket_id = st.id) as item_count,
-                    st.description
+                    st.description,
+                    ib.first_name || CASE WHEN ib.last_name IS NOT NULL AND ib.last_name <> '' THEN ' ' || ib.last_name ELSE '' END as issued_by_name
                 FROM sales_tickets st
                 LEFT JOIN users u ON st.user_id = u.id
+                LEFT JOIN users ib ON st.issued_by = ib.id
                 WHERE EXTRACT(YEAR FROM st.issued_date) = ?
                 AND EXTRACT(MONTH FROM st.issued_date) = ?
                 ORDER BY st.issued_date DESC, st.folio DESC

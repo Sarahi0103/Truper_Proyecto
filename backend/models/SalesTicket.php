@@ -39,12 +39,13 @@ class SalesTicket {
                 return ['success' => false, 'message' => 'Error generando folio'];
             }
 
-            $stmt = $this->pdo->prepare("INSERT INTO sales_tickets (folio, order_id, user_id, ticket_type, description, subtotal_amount, tax_amount, discount_amount, total_amount, payment_method, payment_status, issued_by, notes, issued_date, created_at, updated_at) VALUES (:folio, :order_id, :user_id, :ticket_type, :description, :subtotal_amount, :tax_amount, :discount_amount, :total_amount, :payment_method, :payment_status, :issued_by, :notes, NOW(), NOW(), NOW())");
+            $stmt = $this->pdo->prepare("INSERT INTO sales_tickets (folio, order_id, user_id, customer_name, ticket_type, description, subtotal_amount, tax_amount, discount_amount, total_amount, payment_method, payment_status, issued_by, notes, issued_date, created_at, updated_at) VALUES (:folio, :order_id, :user_id, :customer_name, :ticket_type, :description, :subtotal_amount, :tax_amount, :discount_amount, :total_amount, :payment_method, :payment_status, :issued_by, :notes, NOW(), NOW(), NOW())");
 
             $ok = $stmt->execute([
                 ':folio' => $folio,
                 ':order_id' => $data['order_id'] ?? null,
-                ':user_id' => $data['user_id'],
+                ':user_id' => $data['user_id'] ?? null,
+                ':customer_name' => $data['customer_name'] ?? null,
                 ':ticket_type' => $data['ticket_type'] ?? 'sale',
                 ':description' => $data['description'] ?? null,
                 ':subtotal_amount' => (float)($data['subtotal_amount'] ?? $data['subtotal'] ?? 0),

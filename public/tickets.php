@@ -192,6 +192,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                                     <tr>
                                         <th>Folio</th>
                                         <th>Cliente</th>
+                                        <th>Emisor</th>
                                         <th>Tipo</th>
                                         <th>Total</th>
                                         <th>Estado</th>
@@ -200,7 +201,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                                     </tr>
                                 </thead>
                                 <tbody id="ticketsTableBody">
-                                    <tr><td colspan="7" style="text-align: center; padding: 2rem;">Cargando...</td></tr>
+                                    <tr><td colspan="8" style="text-align: center; padding: 2rem;">Cargando...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -351,7 +352,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
 
             // Client tickets rows
             if (tickets.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="7" style="padding: 2rem; text-align: center; color: var(--theme-text-muted);">No hay tickets en este período</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="8" style="padding: 2rem; text-align: center; color: var(--theme-text-muted);">No hay tickets en este período</td></tr>';
             } else {
                 let html = '';
                 tickets.forEach(ticket => {
@@ -367,8 +368,11 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                         <tr style="border-bottom: 1px solid var(--theme-border);">
                             <td style="padding: 1rem; font-family: monospace; font-weight: 700; color: var(--color-naranja);">${escapeHtml(ticket.folio)}</td>
                             <td style="padding: 1rem;">
-                                <div style="font-weight: 600;">${escapeHtml(ticket.customer_name || 'Sin nombre')}</div>
+                                <div style="font-weight: 600;">${escapeHtml(ticket.customer_name || 'Mostrador')}</div>
                                 <div style="font-size: 0.8rem; color: var(--theme-text-muted);">${escapeHtml(ticket.email || '')}</div>
+                            </td>
+                            <td style="padding: 1rem; font-size: 0.85rem; color: var(--theme-text-muted);">
+                                ${ticket.issued_by_name ? escapeHtml(ticket.issued_by_name) : 'Admin'}
                             </td>
                             <td style="padding: 1rem;">${typeLabel}</td>
                             <td style="padding: 1rem; font-weight: 700; color: var(--color-naranja);">${formatAdminMoney(ticket.total_amount || 0)}</td>
