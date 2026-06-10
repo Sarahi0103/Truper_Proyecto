@@ -131,6 +131,11 @@ try {
                 break;
             }
 
+            if (!preg_match('/[A-Za-z]/', $_POST['new_password']) || !preg_match('/\d/', $_POST['new_password'])) {
+                $response = ['success' => false, 'message' => 'La contraseña debe incluir letras y números'];
+                break;
+            }
+
             $new_hash = hash_password($_POST['new_password']);
 
             $sets = [];

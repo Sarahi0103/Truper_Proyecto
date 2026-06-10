@@ -386,6 +386,7 @@ function homepage_update_label($type) {
     <link rel="stylesheet" href="css/styles.css?v=2.2">
     <link rel="stylesheet" href="css/theme.css?v=2.5">
     <link rel="stylesheet" href="css/responsive-complete.css?v=2.2">
+    <link rel="stylesheet" href="css/dark-mode-auto.css?v=1.0">
     <style>
         /* Modern Title style */
         h1 {
@@ -934,11 +935,19 @@ function homepage_update_label($type) {
             </div>
 
             <div class="catalog-filters">
-                <input id="filterMaxPrice" type="number" min="0" step="1" placeholder="Precio maximo">
+                <input id="filterMinPrice" type="number" min="0" step="1" placeholder="Precio mínimo">
+                <input id="filterMaxPrice" type="number" min="0" step="1" placeholder="Precio máximo">
                 <select id="filterStock">
                     <option value="">Todo stock</option>
                     <option value="available">Solo disponibles</option>
                     <option value="low">Stock bajo</option>
+                </select>
+                <select id="filterSort">
+                    <option value="name_asc">Nombre A-Z</option>
+                    <option value="name_desc">Nombre Z-A</option>
+                    <option value="price_asc">Precio menor a mayor</option>
+                    <option value="price_desc">Precio mayor a menor</option>
+                    <option value="stock_desc">Más stock primero</option>
                 </select>
                 <button id="clearFilters" class="btn btn-ghost">Limpiar filtros</button>
             </div>
@@ -1019,6 +1028,16 @@ function homepage_update_label($type) {
                             </span>
                             <div class="catalog-price"><?php echo '$' . number_format((float)$product['unit_price'], 2, '.', ','); ?></div>
                             <div class="product-actions">
+                                <button
+                                    type="button"
+                                    class="btn btn-secondary btn-small"
+                                    data-compare-product
+                                    data-id="<?php echo (int)$product['id']; ?>"
+                                    data-sku="<?php echo htmlspecialchars($displaySku, ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-name="<?php echo htmlspecialchars($productName, ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-image="<?php echo htmlspecialchars($galleryImages[0] ?? $imagePath, ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-price="<?php echo (float)$product['unit_price']; ?>"
+                                    data-category="<?php echo htmlspecialchars($productCategory, ENT_QUOTES, 'UTF-8'); ?>">Comparar</button>
                                 <button
                                     type="button"
                                     class="btn btn-primary btn-small"

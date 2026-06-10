@@ -1,0 +1,155 @@
+/* ============================================================
+   MODO OSCURO AUTOMÁTICO
+   Detecta preferencia del sistema del usuario
+   ============================================================ */
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-base: #0a0a0c;
+        --bg-card: #121214;
+        --bg-input: #0f0f12;
+        --border: #252529;
+        --text-primary: #f5f5fa;
+        --text-secondary: #a0a0b0;
+    }
+    
+    /* Ajustes específicos para modo oscuro */
+    body {
+        background: radial-gradient(ellipse 70% 50% at 15% 10%, rgba(255,127,0,0.12), transparent),
+                    radial-gradient(ellipse 60% 40% at 85% 85%, rgba(255,127,0,0.08), transparent),
+                    linear-gradient(160deg, #0e0e12 0%, #0a0a0c 60%, #08080a 100%);
+    }
+    
+    .card {
+        background: var(--bg-card);
+        border-color: var(--border);
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        background: var(--bg-input);
+        border-color: var(--border);
+        color: var(--text-primary);
+    }
+    
+    .btn-secondary {
+        background: rgba(255,127,0,0.1);
+        border-color: var(--accent);
+        color: var(--accent);
+    }
+    
+    .btn-secondary:hover {
+        background: rgba(255,127,0,0.2);
+    }
+    
+    /* Ajustes para tablas */
+    table {
+        background: var(--bg-card);
+    }
+    
+    th {
+        background: var(--bg-input);
+        border-color: var(--border);
+    }
+    
+    td {
+        border-color: var(--border);
+    }
+    
+    /* Ajustes para modales */
+    .modal {
+        background: var(--bg-card);
+    }
+    
+    /* Ajustes para tooltips */
+    .tooltip {
+        background: var(--bg-input);
+        border-color: var(--border);
+    }
+    
+    /* Ajustes para badges */
+    .badge {
+        background: rgba(255,127,0,0.15);
+        color: var(--accent);
+    }
+    
+    /* Ajustes para progress bars */
+    .progress-bar {
+        background: var(--bg-input);
+    }
+    
+    .progress-bar-fill {
+        background: linear-gradient(90deg, var(--accent), var(--accent-light));
+    }
+    
+    /* Ajustes para dropdowns */
+    .dropdown-menu {
+        background: var(--bg-card);
+        border-color: var(--border);
+    }
+    
+    .dropdown-item {
+        color: var(--text-primary);
+    }
+    
+    .dropdown-item:hover {
+        background: rgba(255,127,0,0.1);
+    }
+    
+    /* Ajustes para alerts */
+    .alert {
+        background: rgba(255,127,0,0.1);
+        border-color: rgba(255,127,0,0.3);
+    }
+    
+    .alert-success {
+        background: rgba(46, 213, 115, 0.1);
+        border-color: rgba(46, 213, 115, 0.3);
+    }
+    
+    .alert-error {
+        background: rgba(255, 71, 87, 0.1);
+        border-color: rgba(255, 71, 87, 0.3);
+    }
+    
+    /* Ajustes para links */
+    a {
+        color: var(--accent);
+    }
+    
+    a:hover {
+        color: var(--accent-light);
+    }
+    
+    /* Ajustes para código */
+    code,
+    pre {
+        background: var(--bg-input);
+        border-color: var(--border);
+    }
+    
+    /* Ajustes para scrollbars */
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: var(--bg-input);
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 5px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--accent);
+    }
+}
+
+/* Transición suave entre modos */
+* {
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}

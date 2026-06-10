@@ -652,6 +652,7 @@ if (is_logged_in() && !$force_login_screen) {
 
                 <div class="form-footer">
                     <p>¿No tienes cuenta? <a href="register.php">Regístrate aquí</a></p>
+                    <p style="margin-top: 0.5rem;"><a href="forgot_password.php">¿Olvidaste tu contraseña?</a></p>
 
                     <div class="divider"><span>o accede como</span></div>
 

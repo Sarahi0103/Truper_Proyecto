@@ -24,21 +24,44 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
-// Headers de seguridad
+// Headers de seguridad mejorados
 header("X-Content-Type-Options: nosniff");
 header("X-Frame-Options: SAMEORIGIN");
 header("X-XSS-Protection: 1; mode=block");
+header("Referrer-Policy: strict-origin-when-cross-origin");
+header("Permissions-Policy: geolocation=(), microphone=(), camera=()");
 if ($is_https) {
-    header("Strict-Transport-Security: max-age=31536000; includeSubDomains");
+    header("Strict-Transport-Security: max-age=31536000; includeSubDomains; preload");
 }
-// Content Security Policy activado para mejor seguridad
-header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; frame-ancestors 'self';");
+// Content Security Policy mejorado
+$csp_directives = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://www.google.com https://www.gstatic.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "img-src 'self' data: https: blob:",
+    "font-src 'self' https://fonts.gstatic.com",
+    "connect-src 'self' https://api.github.com",
+    "frame-ancestors 'self'",
+    "form-action 'self'",
+    "base-uri 'self'",
+    "require-trusted-types-for 'script'"
+];
+header("Content-Security-Policy: " . implode('; ', $csp_directives));
 
 // ===== OPTIMIZACIONES DE PERFORMANCE =====
-// Compresión gzip automática
+// Compresión gzip automática mejorada
 if (!ob_get_level() || ob_get_status()['name'] === 'default output handler') {
-    ob_start('ob_gzhandler');
+    // Intentar usar brotli si está disponible, sino gzip
+    if (function_exists('brotli_compress')) {
+        ob_start('brotli_compress');
+    } else {
+        ob_start('ob_gzhandler');
+    }
 }
+
+// Headers de compresión para navegadores
+header('Accept-Encoding: gzip, deflate, br');
+header('Vary: Accept-Encoding');
 
 // Headers de caché para navegadores (cliente-side caching)
 $request_uri = $_SERVER['REQUEST_URI'] ?? '';

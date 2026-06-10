@@ -21,11 +21,27 @@ if (in_array($action, ['login', 'register'], true)) {
 if ($action === 'login') {
     $email = Security::sanitize($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
+    $ip_address = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+
+    // Rate limiting por IP
+    $ipKey = 'login_attempts_ip_' . hash('sha256', $ip_address);
+    $ipBucket = $_SESSION[$ipKey] ?? ['count' => 0, 'first' => time()];
+    $windowSeconds = 900; // 15 minutos
+    $maxIpAttempts = 10; // Máximo 10 intentos por IP
+
+    if ((time() - $ipBucket['first']) > $windowSeconds) {
+        $ipBucket = ['count' => 0, 'first' => time()];
+    }
+
+    if ($ipBucket['count'] >= $maxIpAttempts) {
+        Logger::warning("IP blocked due to too many login attempts: " . $ip_address);
+        header("Location: /views/login.php?error=" . urlencode("Demasiados intentos desde tu IP. Intenta de nuevo en 15 minutos"));
+        exit();
+    }
 
     // Limitador básico de intentos por sesión+email (protección inicial)
     $attemptKey = 'login_attempts_' . hash('sha256', strtolower($email));
     $bucket = $_SESSION[$attemptKey] ?? ['count' => 0, 'first' => time()];
-    $windowSeconds = 900;
     $maxAttempts = 5;
 
     if ((time() - $bucket['first']) > $windowSeconds) {
@@ -43,13 +59,18 @@ if ($action === 'login') {
     if ($result['success']) {
         session_regenerate_id(true);
         unset($_SESSION[$attemptKey]);
-        Logger::info("User login: " . $email);
+        unset($_SESSION[$ipKey]);
+        Logger::info("User login: " . $email . " from IP: " . $ip_address);
         header("Location: /views/dashboard.php");
         exit();
     } else {
         $bucket['count']++;
         $_SESSION[$attemptKey] = $bucket;
-        Logger::warning("Failed login attempt: " . $email);
+        
+        $ipBucket['count']++;
+        $_SESSION[$ipKey] = $ipBucket;
+        
+        Logger::warning("Failed login attempt: " . $email . " from IP: " . $ip_address);
         header("Location: /views/login.php?error=" . urlencode($result['message']));
         exit();
     }

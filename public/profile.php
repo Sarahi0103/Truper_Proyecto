@@ -600,7 +600,6 @@ if (!empty($profile['birthdate'])) {
             <?php endif; ?>
 
             <!-- CAMBIAR CONTRASEÑA -->
-            <?php if (!$is_client): ?>
             <div id="passwordChange" class="tab-content">
                 <div class="card">
                     <div class="card-header">Cambiar Contraseña</div>
@@ -615,7 +614,7 @@ if (!empty($profile['birthdate'])) {
                             <div class="form-group">
                                 <label>Nueva Contraseña</label>
                                 <input type="password" name="new_password" required minlength="8">
-                                <small class="text-muted">Mínimo 8 caracteres</small>
+                                <small class="text-muted">Mínimo 8 caracteres, debe incluir letras y números</small>
                             </div>
 
                             <div class="form-group">
@@ -628,7 +627,6 @@ if (!empty($profile['birthdate'])) {
                     </div>
                 </div>
             </div>
-            <?php endif; ?>
         </div>
     </main>
 

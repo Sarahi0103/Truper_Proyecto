@@ -261,8 +261,13 @@
     const query = (document.getElementById('catalogSearch')?.value || '').toLowerCase().trim();
     const category = selectedQuickCategory || '';
     const stockMode = document.getElementById('filterStock')?.value || '';
+    const minPriceRaw = document.getElementById('filterMinPrice')?.value || '';
     const maxPriceRaw = document.getElementById('filterMaxPrice')?.value || '';
+    const minPrice = minPriceRaw === '' ? null : toNumber(minPriceRaw);
     const maxPrice = maxPriceRaw === '' ? null : toNumber(maxPriceRaw);
+    const sortMode = document.getElementById('filterSort')?.value || 'name_asc';
+
+    let visibleCards = [];
 
     document.querySelectorAll('[data-product-card]').forEach((card) => {
       const name = (card.dataset.name || '').toLowerCase();
@@ -277,10 +282,156 @@
 
       const textMatch = `${name} ${sku} ${cardCategory.toLowerCase()}`.includes(query);
       const categoryMatch = !category || categoryTokens.includes(normalizeCategory(category));
-      const priceMatch = maxPrice === null || price <= maxPrice;
+      const priceMatch = (minPrice === null || price >= minPrice) && (maxPrice === null || price <= maxPrice);
       const stockMatch = !stockMode || (stockMode === 'available' ? stock > 0 : stock <= 10);
 
-      card.style.display = textMatch && categoryMatch && priceMatch && stockMatch ? '' : 'none';
+      const isVisible = textMatch && categoryMatch && priceMatch && stockMatch;
+      
+      if (isVisible) {
+        visibleCards.push({ card, price, stock, name });
+      }
+      
+      card.style.display = isVisible ? '' : 'none';
+    });
+
+    // Aplicar ordenamiento
+    const grid = document.querySelector('.catalog-grid-min');
+    if (!grid) return;
+
+    visibleCards.sort((a, b) => {
+      switch (sortMode) {
+        case 'name_asc':
+          return a.name.localeCompare(b.name);
+        case 'name_desc':
+          return b.name.localeCompare(a.name);
+        case 'price_asc':
+          return a.price - b.price;
+        case 'price_desc':
+          return b.price - a.price;
+        case 'stock_desc':
+          return b.stock - a.stock;
+        default:
+          return 0;
+      }
+    });
+
+    // Reordenar las tarjetas en el DOM
+    visibleCards.forEach(({ card }) => {
+      grid.appendChild(card);
+    });
+  }
+
+  function setupAutocomplete() {
+    const searchInput = document.getElementById('catalogSearch');
+    if (!searchInput) return;
+
+    let autocompleteContainer = null;
+    let debounceTimer = null;
+
+    // Crear contenedor de autocompletado
+    function createAutocompleteContainer() {
+      autocompleteContainer = document.createElement('div');
+      autocompleteContainer.className = 'autocomplete-suggestions';
+      autocompleteContainer.style.cssText = `
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin-top: 4px;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      `;
+      searchInput.parentElement.style.position = 'relative';
+      searchInput.parentElement.appendChild(autocompleteContainer);
+    }
+
+    // Mostrar sugerencias
+    function showSuggestions(suggestions) {
+      if (!autocompleteContainer) createAutocompleteContainer();
+      
+      if (suggestions.length === 0) {
+        autocompleteContainer.style.display = 'none';
+        return;
+      }
+
+      autocompleteContainer.innerHTML = suggestions.map(s => `
+        <div class="autocomplete-item" data-sku="${s.sku}" style="
+          padding: 12px 16px;
+          cursor: pointer;
+          border-bottom: 1px solid var(--border);
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        ">
+          <div>
+            <div style="font-weight: 500; color: var(--text-primary);">${s.name}</div>
+            <div style="font-size: 0.85rem; color: var(--text-secondary);">${s.sku} - ${s.category || ''}</div>
+          </div>
+          <div style="font-weight: 600; color: var(--accent);">${money(s.price)}</div>
+        </div>
+      `).join('');
+
+      autocompleteContainer.querySelectorAll('.autocomplete-item').forEach(item => {
+        item.addEventListener('click', () => {
+          searchInput.value = item.dataset.sku;
+          autocompleteContainer.style.display = 'none';
+          applyFilters();
+        });
+      });
+
+      autocompleteContainer.style.display = 'block';
+    }
+
+    // Buscar sugerencias
+    function searchSuggestions(query) {
+      if (query.length < 2) {
+        if (autocompleteContainer) autocompleteContainer.style.display = 'none';
+        return;
+      }
+
+      fetch(`/api/search_autocomplete.php?q=${encodeURIComponent(query)}&limit=8`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            showSuggestions(data.suggestions);
+          }
+        })
+        .catch(err => {
+          console.error('Autocomplete error:', err);
+        });
+    }
+
+    // Event listeners
+    searchInput.addEventListener('input', (e) => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        searchSuggestions(e.target.value);
+      }, 300);
+    });
+
+    searchInput.addEventListener('blur', () => {
+      setTimeout(() => {
+        if (autocompleteContainer) autocompleteContainer.style.display = 'none';
+      }, 200);
+    });
+
+    searchInput.addEventListener('focus', () => {
+      if (searchInput.value.length >= 2) {
+        searchSuggestions(searchInput.value);
+      }
+    });
+
+    // Cerrar al presionar Escape
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && autocompleteContainer) {
+        autocompleteContainer.style.display = 'none';
+      }
     });
   }
 
@@ -338,7 +489,21 @@
       });
     });
 
-    const filterIds = ['catalogSearch', 'filterStock', 'filterMaxPrice'];
+    document.querySelectorAll('[data-compare-product]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const product = {
+          id: btn.dataset.id,
+          sku: btn.dataset.sku,
+          name: decodeHtmlEntities(btn.dataset.name),
+          image_url: btn.dataset.image || 'images/products/default-product.svg',
+          unit_price: toNumber(btn.dataset.price),
+          category: btn.dataset.category || ''
+        };
+        addToCompare(product);
+      });
+    });
+
+    const filterIds = ['catalogSearch', 'filterStock', 'filterMinPrice', 'filterMaxPrice', 'filterSort'];
     filterIds.forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.addEventListener('input', applyFilters);
@@ -350,10 +515,14 @@
       clearFilters.addEventListener('click', () => {
         const search = document.getElementById('catalogSearch');
         const stock = document.getElementById('filterStock');
-        const price = document.getElementById('filterMaxPrice');
+        const minPrice = document.getElementById('filterMinPrice');
+        const maxPrice = document.getElementById('filterMaxPrice');
+        const sort = document.getElementById('filterSort');
         if (search) search.value = '';
         if (stock) stock.value = '';
-        if (price) price.value = '';
+        if (minPrice) minPrice.value = '';
+        if (maxPrice) maxPrice.value = '';
+        if (sort) sort.value = 'name_asc';
         selectedQuickCategory = '';
         document.querySelectorAll('[data-quick-category]').forEach((btn) => {
           btn.classList.toggle('active', (btn.dataset.quickCategory || '') === '');
@@ -396,9 +565,149 @@
     applyFilters();
   }
 
+  function addToCompare(product) {
+    const COMPARE_STORAGE = 'truper_compare';
+    let compareList = readJson(COMPARE_STORAGE, []);
+    
+    // Verificar si el producto ya está en la lista
+    const existingIndex = compareList.findIndex(p => p.sku === product.sku);
+    if (existingIndex !== -1) {
+      if (window.showAlert) {
+        window.showAlert('Este producto ya está en la comparación', 'warning');
+      }
+      return;
+    }
+    
+    // Limitar a 4 productos para comparación
+    if (compareList.length >= 4) {
+      if (window.showAlert) {
+        window.showAlert('Máximo 4 productos para comparar', 'warning');
+      }
+      return;
+    }
+    
+    compareList.push(product);
+    writeJson(COMPARE_STORAGE, compareList);
+    
+    if (window.showAlert) {
+      window.showAlert('Producto agregado a comparación', 'success');
+    }
+    
+    // Mostrar botón de ver comparación si hay productos
+    updateCompareButton();
+  }
+
+  function updateCompareButton() {
+    const COMPARE_STORAGE = 'truper_compare';
+    const compareList = readJson(COMPARE_STORAGE, []);
+    
+    let compareBtn = document.getElementById('compareBtn');
+    if (!compareBtn && compareList.length > 0) {
+      compareBtn = document.createElement('button');
+      compareBtn.id = 'compareBtn';
+      compareBtn.className = 'btn btn-secondary';
+      compareBtn.textContent = `Comparar (${compareList.length})`;
+      compareBtn.style.cssText = 'position: fixed; bottom: 80px; right: 20px; z-index: 999;';
+      compareBtn.addEventListener('click', showCompareModal);
+      document.body.appendChild(compareBtn);
+    } else if (compareBtn) {
+      if (compareList.length === 0) {
+        compareBtn.remove();
+      } else {
+        compareBtn.textContent = `Comparar (${compareList.length})`;
+      }
+    }
+  }
+
+  function showCompareModal() {
+    const COMPARE_STORAGE = 'truper_compare';
+    const compareList = readJson(COMPARE_STORAGE, []);
+    
+    if (compareList.length === 0) {
+      if (window.showAlert) {
+        window.showAlert('No hay productos para comparar', 'warning');
+      }
+      return;
+    }
+    
+    // Crear modal de comparación
+    const modal = document.createElement('div');
+    modal.className = 'compare-modal';
+    modal.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    `;
+    
+    const modalContent = document.createElement('div');
+    modalContent.style.cssText = `
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 90vw;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+    `;
+    
+    let html = '<h2 style="margin-bottom: 1.5rem;">Comparación de Productos</h2>';
+    html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">';
+    
+    compareList.forEach(product => {
+      html += `
+        <div style="border: 1px solid var(--border); border-radius: 8px; padding: 1rem; text-align: center;">
+          <img src="${product.image_url}" alt="${product.name}" style="max-width: 100%; height: 150px; object-fit: contain; margin-bottom: 1rem;">
+          <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">${product.name}</h3>
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.5rem;">${product.sku}</p>
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.5rem;">${product.category}</p>
+          <p style="font-weight: 600; color: var(--accent); font-size: 1.1rem;">${money(product.unit_price)}</p>
+          <button class="btn btn-small btn-danger" onclick="removeFromCompare('${product.sku}')" style="margin-top: 1rem;">Eliminar</button>
+        </div>
+      `;
+    });
+    
+    html += '</div>';
+    html += '<button class="btn btn-primary" onclick="closeCompareModal()" style="margin-top: 1.5rem; width: 100%;">Cerrar</button>';
+    
+    modalContent.innerHTML = html;
+    modal.appendChild(modalContent);
+    
+    // Función para eliminar de comparación
+    window.removeFromCompare = (sku) => {
+      let compareList = readJson(COMPARE_STORAGE, []);
+      compareList = compareList.filter(p => p.sku !== sku);
+      writeJson(COMPARE_STORAGE, compareList);
+      modal.remove();
+      updateCompareButton();
+      showCompareModal();
+    };
+    
+    // Función para cerrar modal
+    window.closeCompareModal = () => {
+      modal.remove();
+    };
+    
+    // Cerrar al hacer clic fuera del modal
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.remove();
+      }
+    });
+    
+    document.body.appendChild(modal);
+  }
+
   function initCatalog() {
     setupProductGalleries();
     setupHandlers();
+    setupAutocomplete();
     updateCartBadge();
     renderCart();
   }

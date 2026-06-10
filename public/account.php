@@ -331,7 +331,14 @@ $company_whatsapp = htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8
         ================================================ -->
         <section id="historyTab" class="tab-content">
             <div class="card"><div class="card-body">
-                <div class="section-header"><span class="section-dot"></span><h2>Historial General de Transacciones</h2></div>
+                <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="section-dot"></span><h2>Historial General de Transacciones</h2>
+                    </div>
+                    <button class="btn btn-secondary" onclick="exportHistoryToCSV()" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                        📥 Exportar CSV
+                    </button>
+                </div>
                 <p class="text-muted" style="margin-bottom: 20px;">
                     Revisa en un solo lugar todas tus compras, abonos y movimientos registrados.
                 </p>
@@ -752,6 +759,76 @@ function changeHistoryPage(page) {
     _historyPage = page;
     renderHistoryTable(filtered);
     document.getElementById('historyTab').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function exportHistoryToCSV() {
+    if (_allHistoryItems.length === 0) {
+        alert('No hay datos para exportar');
+        return;
+    }
+
+    // Headers del CSV
+    const headers = ['Tipo', 'Folio/Referencia', 'Fecha', 'Detalles'];
+    
+    // Filtrar según los filtros actuales
+    const typeFilter   = document.getElementById('historyTypeFilter').value;
+    const searchFilter = document.getElementById('historySearchFilter').value.trim().toLowerCase();
+    let filtered = _allHistoryItems.filter(i => {
+        const matchType   = !typeFilter || i.transaction_type === typeFilter;
+        const matchSearch = !searchFilter || (i.reference_folio || '').toLowerCase().includes(searchFilter);
+        return matchType && matchSearch;
+    });
+
+    // Convertir datos a formato CSV
+    const csvRows = [headers];
+    
+    filtered.forEach(item => {
+        let typeLabel = '';
+        switch(item.transaction_type) {
+            case 'client_order': typeLabel = 'Pedido'; break;
+            case 'payment': typeLabel = 'Pago'; break;
+            case 'supplier_order': typeLabel = 'Orden Proveedor'; break;
+            default: typeLabel = item.transaction_type;
+        }
+
+        let parsedData = {};
+        if (item.data_json) {
+            try { parsedData = JSON.parse(item.data_json); } catch (e) {}
+        }
+
+        let details = '';
+        if (item.transaction_type === 'client_order') {
+            details = `Monto total: ${formatMoney(parsedData.total || 0)}`;
+        } else if (item.transaction_type === 'payment') {
+            details = `Abono: ${formatMoney(parsedData.amount || 0)} (${parsedData.method || 'efectivo'})`;
+        } else {
+            details = item.data_json || '';
+        }
+
+        const row = [
+            typeLabel,
+            item.reference_folio || '—',
+            item.created_at || '—',
+            details.replace(/"/g, '""') // Escapar comillas dobles
+        ];
+        csvRows.push(row.map(cell => `"${cell}"`).join(','));
+    });
+
+    // Generar CSV string
+    const csvString = csvRows.join('\n');
+    
+    // Crear blob y descargar
+    const blob = new Blob(['\ufeff' + csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `historial_transacciones_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 /* ============================================================
