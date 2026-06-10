@@ -38,7 +38,8 @@ CREATE INDEX IF NOT EXISTS idx_cash_drawer_audit_log_action ON cash_drawer_audit
 CREATE INDEX IF NOT EXISTS idx_cash_drawer_audit_log_created ON cash_drawer_audit_log(created_at);
 
 -- Función para conciliación automática de caja
-CREATE OR REPLACE FUNCTION reconcile_cash_drawer(session_id INTEGER)
+DROP FUNCTION IF EXISTS reconcile_cash_drawer(INTEGER);
+CREATE OR REPLACE FUNCTION reconcile_cash_drawer(p_session_id INTEGER)
 RETURNS TABLE(
     expected_amount DECIMAL(12,2),
     actual_amount DECIMAL(12,2),
@@ -64,7 +65,7 @@ BEGIN
              COALESCE(s.total_sales, 0)) - COALESCE(s.closing_amount, s.opening_amount)) AS discrepancy_amount
     FROM cash_drawer_sessions s
     LEFT JOIN cash_drawer_movements m ON m.session_id = s.id
-    WHERE s.id = session_id
+    WHERE s.id = p_session_id
     GROUP BY s.id, s.opening_amount, s.closing_amount, s.total_sales;
 END;
 $$ LANGUAGE plpgsql;
