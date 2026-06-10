@@ -10,6 +10,10 @@ const ORDERS_ROLE = String(window.TRUPER_ORDERS_ROLE || 'client').toLowerCase();
 const ORDERS_IS_ADMIN = ORDERS_ROLE === 'admin';
 const ORDER_STATUS_OPTIONS = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
 
+// Historial de búsqueda y autocompletado
+let searchHistory = JSON.parse(localStorage.getItem('orderSearchHistory') || '[]');
+let autocompleteTimeout = null;
+
 function displayProductCode(rawSku) {
     return String(rawSku || '').replace(/^\s*XLS-/i, '').trim();
 }
@@ -270,16 +274,281 @@ function updateCartItemPrice(productId, newPrice, priceType) {
 
 
 /**
- * Buscar productos
+ * Buscar productos con debounce y autocompletado
  */
 function searchProducts() {
     const searchTerm = document.getElementById('productSearch')?.value.toLowerCase() || '';
     const rows = document.querySelectorAll('#productsList tr');
-    
+
+    // Guardar en historial de búsqueda
+    if (searchTerm.length >= 2) {
+        saveSearchHistory(searchTerm);
+    }
+
     rows.forEach(row => {
         const text = row.textContent.toLowerCase();
         row.style.display = text.includes(searchTerm) ? '' : 'none';
     });
+
+    // Mostrar sugerencias de autocompletado
+    showAutocompleteSuggestions(searchTerm);
+}
+
+/**
+ * Guardar historial de búsqueda
+ */
+function saveSearchHistory(term) {
+    // Eliminar duplicados y mantener solo los últimos 10
+    searchHistory = searchHistory.filter(t => t.toLowerCase() !== term.toLowerCase());
+    searchHistory.unshift(term);
+    searchHistory = searchHistory.slice(0, 10);
+    localStorage.setItem('orderSearchHistory', JSON.stringify(searchHistory));
+}
+
+/**
+ * Mostrar sugerencias de autocompletado
+ */
+function showAutocompleteSuggestions(searchTerm) {
+    const searchInput = document.getElementById('productSearch');
+    if (!searchInput || searchTerm.length < 2) return;
+
+    // Eliminar sugerencias anteriores
+    const existingSuggestions = document.querySelector('.autocomplete-suggestions');
+    if (existingSuggestions) existingSuggestions.remove();
+
+    // Buscar coincidencias en productos cargados
+    const matches = loadedProducts.filter(p =>
+        p.name.toLowerCase().includes(searchTerm) ||
+        p.sku.toLowerCase().includes(searchTerm)
+    ).slice(0, 5);
+
+    if (matches.length === 0) return;
+
+    // Crear contenedor de sugerencias
+    const suggestionsDiv = document.createElement('div');
+    suggestionsDiv.className = 'autocomplete-suggestions';
+    suggestionsDiv.style.cssText = `
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: #1e1e1e;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+        margin-top: 4px;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    `;
+
+    matches.forEach(product => {
+        const suggestion = document.createElement('div');
+        suggestion.style.cssText = `
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            transition: background 0.2s;
+        `;
+        suggestion.textContent = `${product.name} (${displayProductCode(product.sku)})`;
+        suggestion.onmouseover = () => suggestion.style.background = 'rgba(255, 102, 0, 0.1)';
+        suggestion.onmouseout = () => suggestion.style.background = 'transparent';
+        suggestion.onclick = () => {
+            searchInput.value = product.name;
+            suggestionsDiv.remove();
+            searchProducts();
+        };
+        suggestionsDiv.appendChild(suggestion);
+    });
+
+    searchInput.parentElement.style.position = 'relative';
+    searchInput.parentElement.appendChild(suggestionsDiv);
+
+    // Cerrar al hacer clic fuera
+    document.addEventListener('click', function closeSuggestions(e) {
+        if (!suggestionsDiv.contains(e.target) && e.target !== searchInput) {
+            suggestionsDiv.remove();
+            document.removeEventListener('click', closeSuggestions);
+        }
+    });
+}
+
+/**
+ * Mostrar historial de búsqueda
+ */
+function showSearchHistory() {
+    const searchInput = document.getElementById('productSearch');
+    if (!searchInput) return;
+
+    // Eliminar historial anterior
+    const existingHistory = document.querySelector('.search-history-dropdown');
+    if (existingHistory) existingHistory.remove();
+
+    if (searchHistory.length === 0) return;
+
+    const historyDiv = document.createElement('div');
+    historyDiv.className = 'search-history-dropdown';
+    historyDiv.style.cssText = `
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: #1e1e1e;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+        margin-top: 4px;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    `;
+
+    const header = document.createElement('div');
+    header.style.cssText = 'padding: 8px 15px; font-size: 12px; color: #888; border-bottom: 1px solid rgba(255, 255, 255, 0.06);';
+    header.textContent = 'Búsquedas recientes';
+    historyDiv.appendChild(header);
+
+    searchHistory.forEach(term => {
+        const item = document.createElement('div');
+        item.style.cssText = `
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        `;
+        item.innerHTML = `
+            <span>${term}</span>
+            <span style="font-size: 12px; color: #888;">🕐</span>
+        `;
+        item.onmouseover = () => item.style.background = 'rgba(255, 102, 0, 0.1)';
+        item.onmouseout = () => item.style.background = 'transparent';
+        item.onclick = () => {
+            searchInput.value = term;
+            historyDiv.remove();
+            searchProducts();
+        };
+        historyDiv.appendChild(item);
+    });
+
+    searchInput.parentElement.style.position = 'relative';
+    searchInput.parentElement.appendChild(historyDiv);
+
+    // Cerrar al hacer clic fuera
+    document.addEventListener('click', function closeHistory(e) {
+        if (!historyDiv.contains(e.target) && e.target !== searchInput) {
+            historyDiv.remove();
+            document.removeEventListener('click', closeHistory);
+        }
+    });
+}
+
+/**
+ * Vista rápida de producto en modal
+ */
+function showQuickView(productId) {
+    const product = loadedProducts.find(p => p.id == productId);
+    if (!product) return;
+
+    // Eliminar modal existente
+    const existingModal = document.querySelector('.quick-view-modal');
+    if (existingModal) existingModal.remove();
+
+    const modal = document.createElement('div');
+    modal.className = 'quick-view-modal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+    `;
+
+    modal.innerHTML = `
+        <div style="
+            background: #1e1e1e;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        ">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="margin: 0; color: #fff; font-size: 1.5rem;">${product.name}</h2>
+                <button onclick="this.closest('.quick-view-modal').remove()" style="
+                    background: none;
+                    border: none;
+                    color: #fff;
+                    font-size: 1.5rem;
+                    cursor: pointer;
+                    padding: 0.5rem;
+                ">✕</button>
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <strong style="color: #ff6600;">SKU:</strong> ${displayProductCode(product.sku)}
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <strong style="color: #ff6600;">Categoría:</strong> ${product.category || 'N/A'}
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <strong style="color: #ff6600;">Precio:</strong> ${formatCurrency(product.unit_price)}
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <strong style="color: #ff6600;">Stock:</strong> ${product.stock_quantity || 0} unidades
+            </div>
+            ${product.description ? `<div style="margin-bottom: 1rem;"><strong style="color: #ff6600;">Descripción:</strong> ${product.description}</div>` : ''}
+            <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+                <button onclick="addToCartFromList(${product.id}); this.closest('.quick-view-modal').remove();" style="
+                    flex: 1;
+                    background: #28a745;
+                    color: #fff;
+                    border: none;
+                    padding: 0.75rem;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-weight: 600;
+                ">Agregar al Pedido</button>
+                <button onclick="this.closest('.quick-view-modal').remove();" style="
+                    flex: 1;
+                    background: #6c757d;
+                    color: #fff;
+                    border: none;
+                    padding: 0.75rem;
+                    border-radius: 8px;
+                    cursor: pointer;
+                ">Cerrar</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Cerrar al hacer clic fuera del contenido
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+    });
+}
+
+/**
+ * Imprimir orden directamente
+ */
+function printOrder(orderId) {
+    const printUrl = `/ticket_client.php?id=${orderId}&print=1`;
+    const printWindow = window.open(printUrl, '_blank');
+    if (printWindow) {
+        printWindow.onload = function() {
+            printWindow.print();
+        };
+    }
 }
 
 /**
@@ -472,14 +741,14 @@ function addToCartFromList(productId) {
 }
 
 async function loadProducts() {
-    const response = await apiCall('/products.php?action=list');
+    const response = await apiCall('/api/products_lazy.php?page=1&limit=50');
     const productsList = document.getElementById('productsList');
     const categoryFilter = document.getElementById('productCategoryFilter');
     const selectedCategory = categoryFilter?.value || '';
     if (!productsList) return;
 
     if (!response || !response.success || !Array.isArray(response.products)) {
-        productsList.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No fue posible cargar productos</td></tr>';
+        productsList.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No fue posible cargar productos</td></tr>';
         return;
     }
 
@@ -490,7 +759,7 @@ async function loadProducts() {
     const filteredProducts = response.products.filter(product => categoryMatches(product.category, selectedCategory));
 
     if (filteredProducts.length === 0) {
-        productsList.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No hay productos registrados</td></tr>';
+        productsList.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No hay productos registrados</td></tr>';
         return;
     }
 
@@ -499,12 +768,11 @@ async function loadProducts() {
             <td>${product.name}</td>
             <td>${displayProductCode(product.sku)}</td>
             <td>${formatCurrency(product.unit_price)}</td>
+            <td>${product.stock_quantity || 0}</td>
             <td><input id="qty_${product.id}" type="number" min="1" value="1" style="width: 80px;"></td>
             <td>
-                <button class="btn btn-primary btn-small"
-                    onclick="addToCartFromList(${product.id})">
-                    Agregar
-                </button>
+                <button class="btn btn-info btn-small" onclick="showQuickView(${product.id})" title="Vista rápida">👁</button>
+                <button class="btn btn-primary btn-small" onclick="addToCartFromList(${product.id})">Agregar</button>
             </td>
         </tr>
     `).join('');
@@ -721,6 +989,7 @@ async function loadOrders() {
             <td>${renderOrderStatusCell(normalizedStatus, order.id)}</td>
             <td>
                 <a class="btn btn-small btn-primary" href="/ticket_client.php?id=${order.id}" target="_blank">Ticket</a>
+                <button class="btn btn-small btn-info" onclick="printOrder(${order.id})" title="Imprimir">🖨</button>
                 ${deleteBtn}
             </td>
         </tr>
@@ -739,6 +1008,16 @@ document.addEventListener('DOMContentLoaded', function() {
     if (wholesaleCheckbox) {
         wholesaleCheckbox.addEventListener('change', function() {
             updateCartUI();
+        });
+    }
+
+    // Agregar evento para mostrar historial de búsqueda al hacer focus
+    const productSearch = document.getElementById('productSearch');
+    if (productSearch) {
+        productSearch.addEventListener('focus', function() {
+            if (this.value === '' && searchHistory.length > 0) {
+                showSearchHistory();
+            }
         });
     }
 });

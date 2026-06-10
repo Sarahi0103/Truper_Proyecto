@@ -4,31 +4,122 @@
  */
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../../src/Services/AnalyticsCacheService.php';
 
 class Analytics {
     private $conn;
+    private $cacheService;
 
     public function __construct() {
         $this->conn = $GLOBALS['db'];
+        $this->cacheService = new AnalyticsCacheService();
     }
 
     /**
-     * Obtener estadísticas de compras por mes
+     * Obtener estadísticas de compras por mes con caché y Data Warehouse
      */
     public function getPurchaseStatsByMonth($months = 12) {
-                $stmt = $this->conn->prepare("SELECT TO_CHAR(o.created_at, 'YYYY-MM') as month, COUNT(DISTINCT o.id) as total_orders, SUM(oi.quantity) as total_items, SUM(oi.subtotal) as total_spent FROM orders o JOIN order_items oi ON o.id = oi.order_id WHERE o.created_at >= (NOW() - (:months || ' months')::interval) GROUP BY TO_CHAR(o.created_at, 'YYYY-MM') ORDER BY month DESC");
-                $stmt->execute([':months' => $months]);
-                return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $cacheKey = $this->cacheService->generateCacheKey('purchase_stats_monthly', ['months' => $months]);
+        $cached = $this->cacheService->get($cacheKey);
+
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        // Intentar usar vista materializada primero (más rápido)
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT metric_date as month, total_orders, total_amount as total_spent,
+                       total_items, unique_customers, avg_order_value
+                FROM mv_monthly_metrics
+                ORDER BY metric_date DESC
+                LIMIT :limit
+            ");
+            $stmt->bindValue(':limit', (int)$months, PDO::PARAM_INT);
+            $stmt->execute();
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if (!empty($result)) {
+                $this->cacheService->set($cacheKey, $result);
+                return $result;
+            }
+        } catch (Exception $e) {
+            error_log("Error using materialized view: " . $e->getMessage());
+        }
+
+        // Fallback a consulta original con optimización
+        $stmt = $this->conn->prepare("
+            SELECT TO_CHAR(o.created_at, 'YYYY-MM') as month,
+                   COUNT(DISTINCT o.id) as total_orders,
+                   SUM(oi.quantity) as total_items,
+                   SUM(oi.subtotal) as total_spent
+            FROM orders o
+            JOIN order_items oi ON o.id = oi.order_id
+            WHERE o.created_at >= (NOW() - (:months || ' months')::interval)
+            GROUP BY TO_CHAR(o.created_at, 'YYYY-MM')
+            ORDER BY month DESC
+        ");
+        $stmt->execute([':months' => $months]);
+        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $this->cacheService->set($cacheKey, $result);
+        return $result;
     }
 
     /**
-     * Productos más comprados
+     * Productos más comprados con caché y límite de seguridad
      */
     public function getTopPurchasedProducts($limit = 10) {
-                $stmt = $this->conn->prepare("SELECT p.id, p.name, p.category, p.sku, SUM(oi.quantity) as total_quantity, SUM(oi.subtotal) as total_cost, COUNT(DISTINCT oi.order_id) as purchase_count FROM products p JOIN order_items oi ON p.id = oi.product_id JOIN orders o ON oi.order_id = o.id GROUP BY p.id, p.name, p.category, p.sku ORDER BY total_quantity DESC LIMIT :limit");
-                $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
-                $stmt->execute();
-                return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Limitar máximo a 1000 registros por seguridad
+        $limit = min(max((int)$limit, 1), 1000);
+
+        $cacheKey = $this->cacheService->generateCacheKey('top_products', ['limit' => $limit]);
+        $cached = $this->cacheService->get($cacheKey);
+
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        // Intentar usar vista materializada de categorías
+        try {
+            $stmt = $this->conn->prepare("
+                SELECT category, total_orders, total_quantity, total_amount,
+                       avg_line_total, unique_customers
+                FROM mv_category_metrics
+                ORDER BY total_amount DESC
+                LIMIT :limit
+            ");
+            $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+            $stmt->execute();
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if (!empty($result)) {
+                $this->cacheService->set($cacheKey, $result);
+                return $result;
+            }
+        } catch (Exception $e) {
+            error_log("Error using category materialized view: " . $e->getMessage());
+        }
+
+        // Fallback a consulta original
+        $stmt = $this->conn->prepare("
+            SELECT p.id, p.name, p.category, p.sku,
+                   SUM(oi.quantity) as total_quantity,
+                   SUM(oi.subtotal) as total_cost,
+                   COUNT(DISTINCT oi.order_id) as purchase_count
+            FROM products p
+            JOIN order_items oi ON p.id = oi.product_id
+            JOIN orders o ON oi.order_id = o.id
+            GROUP BY p.id, p.name, p.category, p.sku
+            ORDER BY total_quantity DESC
+            LIMIT :limit
+        ");
+        $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+        $stmt->execute();
+        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $this->cacheService->set($cacheKey, $result);
+        return $result;
     }
 
     /**
@@ -89,25 +180,55 @@ class Analytics {
      * Total general de estadísticas
      */
     public function getSummary() {
+        $cacheKey = $this->cacheService->generateCacheKey('summary');
+        $cached = $this->cacheService->get($cacheKey);
+
+        if ($cached !== null) {
+            return $cached;
+        }
+
         // Total de órdenes
         $total_orders = (int)$this->conn->query("SELECT COUNT(*) as total FROM orders")->fetch(PDO::FETCH_ASSOC)['total'];
-        
+
         // Total de ventas
         $total_sales = $this->conn->query("SELECT COALESCE(SUM(total_amount), 0) as total FROM orders")->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
-        
+
         // Total de clientes
         $total_clients = (int)$this->conn->query("SELECT COUNT(*) as total FROM users WHERE role = 'client'")->fetch(PDO::FETCH_ASSOC)['total'];
-        
+
         // Costo total de compras
         $total_cost = $this->conn->query("SELECT COALESCE(SUM(oi.quantity * COALESCE(p.cost_price, p.unit_price, 0)), 0) as total FROM order_items oi JOIN products p ON oi.product_id = p.id")->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
-        
-        return [
+
+        $result = [
             'total_orders' => $total_orders,
             'total_sales' => round($total_sales, 2),
             'total_clients' => $total_clients,
             'total_cost' => round($total_cost, 2),
             'profit' => round($total_sales - $total_cost, 2)
         ];
+
+        $this->cacheService->set($cacheKey, $result);
+        return $result;
+    }
+
+    /**
+     * Invalidar caché de analytics (llamar después de actualizar datos)
+     */
+    public function invalidateCache() {
+        return $this->cacheService->invalidateAll();
+    }
+
+    /**
+     * Refrescar vistas materializadas
+     */
+    public function refreshMaterializedViews() {
+        try {
+            $this->conn->exec("SELECT refresh_analytics_views()");
+            return true;
+        } catch (Exception $e) {
+            error_log("Error refreshing materialized views: " . $e->getMessage());
+            return false;
+        }
     }
 }
 ?>
