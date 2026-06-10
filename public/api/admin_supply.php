@@ -5174,6 +5174,206 @@ try {
             ];
             break;
 
+        case 'stock-alerts':
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $resolved = isset($_GET['resolved']) ? $_GET['resolved'] === 'true' : false;
+            
+            if ($resolved) {
+                $stmt = $pdo->prepare("SELECT sa.*, p.name, p.sku FROM stock_alerts sa JOIN products p ON sa.product_id = p.id WHERE sa.is_resolved = true ORDER BY sa.resolved_at DESC LIMIT 100");
+                $stmt->execute();
+            } else {
+                $stmt = $pdo->prepare("SELECT sa.*, p.name, p.sku FROM stock_alerts sa JOIN products p ON sa.product_id = p.id WHERE sa.is_resolved = false ORDER BY sa.created_at DESC LIMIT 100");
+                $stmt->execute();
+            }
+            
+            $alerts = $stmt->fetchAll();
+            $response = ['success' => true, 'alerts' => $alerts];
+            break;
+
+        case 'resolve-alert':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $alert_id = (int)($input['alert_id'] ?? 0);
+            if ($alert_id <= 0) {
+                $response = ['success' => false, 'message' => 'ID de alerta inválido'];
+                break;
+            }
+
+            $stmt = $pdo->prepare("UPDATE stock_alerts SET is_resolved = true, resolved_at = NOW(), resolved_by = ? WHERE id = ?");
+            $stmt->execute([$_SESSION['user_id'], $alert_id]);
+            $response = ['success' => true, 'message' => 'Alerta resuelta'];
+            break;
+
+        case 'check-stock-alerts':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            try {
+                $stmt = $pdo->prepare("SELECT check_and_create_stock_alerts()");
+                $stmt->execute();
+                $count = (int)$stmt->fetchColumn();
+                $response = ['success' => true, 'message' => "Se crearon {$count} alertas de stock", 'count' => $count];
+            } catch (Exception $e) {
+                $response = ['success' => false, 'message' => 'Error al verificar alertas: ' . $e->getMessage()];
+            }
+            break;
+
+        case 'batch-import':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            if (!isset($_FILES['csv_file'])) {
+                $response = ['success' => false, 'message' => 'Archivo CSV requerido'];
+                break;
+            }
+
+            $file = $_FILES['csv_file'];
+            $import_type = sanitize($input['import_type'] ?? 'products');
+            
+            if ($file['error'] !== UPLOAD_ERR_OK) {
+                $response = ['success' => false, 'message' => 'Error al subir archivo'];
+                break;
+            }
+
+            // Crear registro de importación
+            $stmt = $pdo->prepare("INSERT INTO batch_imports (imported_by, import_type, file_name, file_size, status, started_at) VALUES (?, ?, ?, ?, 'processing', NOW()) RETURNING id");
+            $stmt->execute([$_SESSION['user_id'], $import_type, $file['name'], $file['size']]);
+            $batch_id = $stmt->fetchColumn();
+
+            // Procesar CSV
+            $handle = fopen($file['tmp_name'], 'r');
+            if (!$handle) {
+                $response = ['success' => false, 'message' => 'Error al abrir archivo'];
+                break;
+            }
+
+            $header = fgetcsv($handle);
+            $total_rows = 0;
+            $successful_rows = 0;
+            $failed_rows = 0;
+
+            while (($row = fgetcsv($handle)) !== false) {
+                $total_rows++;
+                
+                try {
+                    if ($import_type === 'products') {
+                        // Mapear columnas CSV a campos de producto
+                        $product_data = array_combine($header, $row);
+                        $sku = sanitize($product_data['sku'] ?? '');
+                        $name = sanitize($product_data['name'] ?? '');
+                        $price = (float)($product_data['price'] ?? 0);
+                        $stock = (int)($product_data['stock_quantity'] ?? 0);
+                        
+                        if ($sku && $name) {
+                            $upsert = $pdo->prepare("INSERT INTO products (sku, name, unit_price, stock_quantity, batch_import_id) VALUES (?, ?, ?, ?, ?) ON CONFLICT (sku) DO UPDATE SET name = ?, unit_price = ?, stock_quantity = ?");
+                            $upsert->execute([$sku, $name, $price, $stock, $batch_id, $name, $price, $stock]);
+                            $successful_rows++;
+                        }
+                    }
+                } catch (Exception $e) {
+                    $failed_rows++;
+                    // Registrar error
+                    $error_stmt = $pdo->prepare("INSERT INTO batch_import_errors (batch_import_id, row_number, error_message, error_data) VALUES (?, ?, ?, ?)");
+                    $error_stmt->execute([$batch_id, $total_rows, $e->getMessage(), json_encode($row)]);
+                }
+            }
+
+            fclose($handle);
+
+            // Actualizar estado de importación
+            $update = $pdo->prepare("UPDATE batch_imports SET total_rows = ?, successful_rows = ?, failed_rows = ?, status = 'completed', completed_at = NOW() WHERE id = ?");
+            $update->execute([$total_rows, $successful_rows, $failed_rows, $batch_id]);
+
+            $response = [
+                'success' => true,
+                'message' => "Importación completada: {$successful_rows} exitosas, {$failed_rows} fallidas",
+                'batch_id' => $batch_id,
+                'total_rows' => $total_rows,
+                'successful_rows' => $successful_rows,
+                'failed_rows' => $failed_rows
+            ];
+            break;
+
+        case 'batch-operations':
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $stmt = $pdo->prepare("SELECT bo.*, u.first_name, u.last_name FROM batch_operations bo JOIN users u ON bo.created_by = u.id ORDER BY bo.created_at DESC LIMIT 50");
+            $stmt->execute();
+            $operations = $stmt->fetchAll();
+            $response = ['success' => true, 'operations' => $operations];
+            break;
+
+        case 'batch-operation-create':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $operation_type = sanitize($input['operation_type'] ?? 'update_stock');
+            $target_type = sanitize($input['target_type'] ?? 'products');
+            $target_ids = $input['target_ids'] ?? [];
+            $operation_data = json_encode($input['operation_data'] ?? []);
+
+            if (!is_array($target_ids) || empty($target_ids)) {
+                $response = ['success' => false, 'message' => 'IDs de objetivos requeridos'];
+                break;
+            }
+
+            $stmt = $pdo->prepare("INSERT INTO batch_operations (operation_type, target_type, target_ids, operation_data, created_by, total_targets, status, started_at) VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW()) RETURNING id");
+            $stmt->execute([$operation_type, $target_type, json_encode($target_ids), $operation_data, $_SESSION['user_id'], count($target_ids)]);
+            $batch_id = $stmt->fetchColumn();
+
+            // Ejecutar operación
+            $successful_targets = 0;
+            $failed_targets = 0;
+
+            foreach ($target_ids as $target_id) {
+                try {
+                    if ($operation_type === 'update_stock' && $target_type === 'products') {
+                        $new_stock = (int)($input['operation_data']['stock_quantity'] ?? 0);
+                        $update = $pdo->prepare("UPDATE products SET stock_quantity = ? WHERE id = ?");
+                        $update->execute([$new_stock, $target_id]);
+                        $successful_targets++;
+                    } elseif ($operation_type === 'update_price' && $target_type === 'products') {
+                        $new_price = (float)($input['operation_data']['unit_price'] ?? 0);
+                        $update = $pdo->prepare("UPDATE products SET unit_price = ? WHERE id = ?");
+                        $update->execute([$new_price, $target_id]);
+                        $successful_targets++;
+                    } elseif ($operation_type === 'delete' && $target_type === 'products') {
+                        $delete = $pdo->prepare("DELETE FROM products WHERE id = ?");
+                        $delete->execute([$target_id]);
+                        $successful_targets++;
+                    }
+                } catch (Exception $e) {
+                    $failed_targets++;
+                }
+            }
+
+            // Actualizar estado de operación
+            $update = $pdo->prepare("UPDATE batch_operations SET successful_targets = ?, failed_targets = ?, status = 'completed', completed_at = NOW() WHERE id = ?");
+            $update->execute([$successful_targets, $failed_targets, $batch_id]);
+
+            $response = [
+                'success' => true,
+                'message' => "Operación completada: {$successful_targets} exitosas, {$failed_targets} fallidas",
+                'batch_id' => $batch_id
+            ];
+            break;
+
         default:
             $response = ['success' => false, 'message' => 'Accion no reconocida'];
     }

@@ -17,10 +17,22 @@ function ensure_wholesale_client_id($pdo, int $userId): int {
         return 0;
     }
 
+    // Caché de clientes usando APCu (TTL: 1 hora)
+    $cacheKey = 'wholesale_client_' . $userId;
+    if (function_exists('apcu_fetch')) {
+        $cached = apcu_fetch($cacheKey, $success);
+        if ($success && $cached > 0) {
+            return $cached;
+        }
+    }
+
     $stmt = $pdo->prepare('SELECT id FROM clients WHERE user_id = ? LIMIT 1');
     $stmt->execute([$userId]);
     $clientId = (int)$stmt->fetchColumn();
     if ($clientId > 0) {
+        if (function_exists('apcu_store')) {
+            apcu_store($cacheKey, $clientId, 3600); // 1 hora
+        }
         return $clientId;
     }
 
@@ -52,7 +64,13 @@ function ensure_wholesale_client_id($pdo, int $userId): int {
 
     $stmt = $pdo->prepare('SELECT id FROM clients WHERE user_id = ? LIMIT 1');
     $stmt->execute([$userId]);
-    return (int)$stmt->fetchColumn();
+    $clientId = (int)$stmt->fetchColumn();
+    
+    if (function_exists('apcu_store') && $clientId > 0) {
+        apcu_store($cacheKey, $clientId, 3600); // 1 hora
+    }
+    
+    return $clientId;
 }
 
 try {
@@ -130,6 +148,24 @@ try {
                 break;
             }
 
+            // Validar RFC si se proporciona
+            $rfc = sanitize($input['rfc'] ?? '');
+            if (!empty($rfc)) {
+                try {
+                    $stmt = $pdo->prepare("SELECT validate_rfc(?) AS is_valid");
+                    $stmt->execute([$rfc]);
+                    $isValid = (bool)$stmt->fetchColumn();
+                    if (!$isValid) {
+                        $response = ['success' => false, 'message' => 'RFC inválido. Debe tener 12 o 13 caracteres con el formato correcto'];
+                        break;
+                    }
+                    // Actualizar RFC del cliente
+                    $pdo->prepare("UPDATE clients SET rfc = ? WHERE id = ?")->execute([$rfc, $clientId]);
+                } catch (Exception $ignored) {
+                    // Si la función no existe, continuar sin validación
+                }
+            }
+
             $pdo->beginTransaction();
             try {
                 $stmt = $pdo->prepare("INSERT INTO wholesalers (client_id, business_type, min_order_quantity, discount_percentage, payment_terms, is_approved)
@@ -145,6 +181,8 @@ try {
                 $wholesalerId = (int)$stmt->fetchColumn();
                 
                 $requestedProducts = $input['products'] ?? [];
+                $totalAmount = 0;
+                
                 if (is_array($requestedProducts) && count($requestedProducts) > 0) {
                     $prodStmt = $pdo->prepare("INSERT INTO wholesaler_products (wholesaler_id, product_type, product_id, quantity) VALUES (?, ?, ?, ?)");
                     foreach ($requestedProducts as $p) {
@@ -153,12 +191,60 @@ try {
                         $pType = sanitize($p['product_type'] ?? 'catalog');
                         if ($pId > 0 && $pQty > 0) {
                             $prodStmt->execute([$wholesalerId, $pType, $pId, $pQty]);
+                            
+                            // Calcular precio con descuento mayoreo
+                            try {
+                                $discountStmt = $pdo->prepare("SELECT * FROM calculate_wholesale_discount(?, ?)");
+                                $discountStmt->execute([$pId, $pQty]);
+                                $discount = $discountStmt->fetch();
+                                
+                                $basePrice = 0;
+                                if ($pType === 'marketplace') {
+                                    $priceStmt = $pdo->prepare("SELECT COALESCE(unit_price, 0) FROM marketplace_ce_products WHERE id = ?");
+                                    $priceStmt->execute([$pId]);
+                                    $basePrice = (float)$priceStmt->fetchColumn();
+                                } else {
+                                    $priceStmt = $pdo->prepare("SELECT COALESCE(unit_price, sell_price, 0) FROM products WHERE id = ?");
+                                    $priceStmt->execute([$pId]);
+                                    $basePrice = (float)$priceStmt->fetchColumn();
+                                }
+                                
+                                if ($discount && $discount['discount_price']) {
+                                    $totalAmount += $discount['discount_price'] * $pQty;
+                                } elseif ($discount && $discount['discount_percent']) {
+                                    $discountedPrice = $basePrice * (1 - $discount['discount_percent'] / 100);
+                                    $totalAmount += $discountedPrice * $pQty;
+                                } else {
+                                    $totalAmount += $basePrice * $pQty;
+                                }
+                            } catch (Exception $ignored) {
+                                // Si la función no existe, usar precio base
+                            }
                         }
                     }
                 }
                 
+                // Verificar límite de crédito si el cliente tiene uno
+                try {
+                    $creditStmt = $pdo->prepare("SELECT * FROM check_credit_limit(?, ?)");
+                    $creditStmt->execute([$clientId, $totalAmount]);
+                    $creditCheck = $creditStmt->fetch();
+                    
+                    if ($creditCheck && !$creditCheck['can_purchase']) {
+                        $pdo->rollBack();
+                        $response = [
+                            'success' => false, 
+                            'message' => 'Límite de crédito excedido. Crédito disponible: $' . number_format($creditCheck['remaining_credit'], 2),
+                            'remaining_credit' => $creditCheck['remaining_credit']
+                        ];
+                        break;
+                    }
+                } catch (Exception $ignored) {
+                    // Si la función no existe, continuar sin verificación
+                }
+                
                 $pdo->commit();
-                $response = ['success' => true, 'message' => 'Solicitud de mayoreo enviada con éxito'];
+                $response = ['success' => true, 'message' => 'Solicitud de mayoreo enviada con éxito', 'total_amount' => $totalAmount];
             } catch (Exception $e) {
                 $pdo->rollBack();
                 throw $e;
@@ -268,6 +354,60 @@ try {
             }
 
             $response = ['success' => true, 'items' => $items];
+            break;
+
+        case 'export':
+            require_admin();
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $stmt = $pdo->prepare("SELECT w.*, c.company_name, u.first_name, u.last_name, c.rfc
+                                   FROM wholesalers w
+                                   JOIN clients c ON c.id = w.client_id
+                                   JOIN users u ON u.id = c.user_id
+                                   ORDER BY w.requested_date DESC");
+            $stmt->execute();
+            $items = $stmt->fetchAll();
+
+            $filename = 'wholesale_requests_' . date('Y-m-d_H-i') . '.csv';
+            $filepath = '../exports/' . $filename;
+
+            if (!is_dir('../exports')) {
+                mkdir('../exports', 0777, true);
+            }
+
+            $fp = fopen($filepath, 'w');
+            if ($fp) {
+                fputs($fp, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM for Excel UTF-8
+                fputcsv($fp, ['ID', 'Empresa', 'Cliente', 'RFC', 'Tipo Negocio', 'Cantidad Mínima', 'Descuento %', 'Términos Pago', 'Estado', 'Fecha Solicitud', 'Fecha Aprobación']);
+                
+                foreach ($items as $item) {
+                    fputcsv($fp, [
+                        $item['id'],
+                        htmlspecialchars($item['company_name'] ?? '', ENT_QUOTES, 'UTF-8'),
+                        htmlspecialchars(trim(($item['first_name'] ?? '') . ' ' . ($item['last_name'] ?? '')), ENT_QUOTES, 'UTF-8'),
+                        htmlspecialchars($item['rfc'] ?? '', ENT_QUOTES, 'UTF-8'),
+                        htmlspecialchars($item['business_type'] ?? '', ENT_QUOTES, 'UTF-8'),
+                        $item['min_order_quantity'],
+                        $item['discount_percentage'],
+                        htmlspecialchars($item['payment_terms'] ?? '', ENT_QUOTES, 'UTF-8'),
+                        $item['is_approved'] ? 'Aprobado' : 'Pendiente',
+                        $item['requested_date'],
+                        $item['approved_date'] ?? ''
+                    ]);
+                }
+                fclose($fp);
+
+                $response = [
+                    'success' => true,
+                    'file_url' => 'exports/' . $filename,
+                    'filename' => $filename
+                ];
+            } else {
+                $response = ['success' => false, 'message' => 'No se pudo generar el archivo'];
+            }
             break;
 
         default:

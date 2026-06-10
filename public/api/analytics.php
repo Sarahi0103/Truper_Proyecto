@@ -5,11 +5,15 @@
 
 require_once '../../config/config.php';
 require_once '../../src/controllers/AnalyticsController.php';
+require_once '../../src/Services/AnalyticsCacheService.php';
 
 require_login();
 
 $action = $_GET['action'] ?? null;
 $method = $_SERVER['REQUEST_METHOD'];
+
+// Inicializar servicio de caché para validaciones de seguridad
+$cacheService = new AnalyticsCacheService($pdo);
 
 // get-monthly-pdf streams binary — don't set JSON header yet
 if ($action !== 'get-monthly-pdf') {
@@ -371,11 +375,38 @@ try {
                 break;
             }
 
+            // Rate limiting: máximo 5 exportaciones por hora
+            if (!$cacheService->checkExportRateLimit($_SESSION['user_id'])) {
+                $resetTime = $cacheService->getRateLimitResetTime($_SESSION['user_id']);
+                $minutes = ceil($resetTime / 60);
+                $response = [
+                    'success' => false,
+                    'message' => "Has alcanzado el límite de exportaciones (5/hora). Intenta de nuevo en {$minutes} minutos."
+                ];
+                break;
+            }
+
             $format = $_GET['format'] ?? 'csv';
-            
+
+            // Validación de formato
+            if (!in_array($format, ['csv', 'xlsx'])) {
+                $format = 'csv';
+            }
+
+            // Validación de rango de fechas (máximo 1 año)
+            $startDate = $_GET['start_date'] ?? null;
+            $endDate = $_GET['end_date'] ?? null;
+
+            if ($startDate && $endDate) {
+                if (!$cacheService->validateDateRange($startDate, $endDate)) {
+                    $response = ['success' => false, 'message' => 'El rango de fechas no puede exceder 1 año'];
+                    break;
+                }
+            }
+
             // Fetch data for report
-            $stmt = $pdo->prepare("
-                SELECT 
+            $sql = "
+                SELECT
                     o.id AS order_id,
                     o.created_at,
                     o.total_amount,
@@ -384,14 +415,24 @@ try {
                 FROM orders o
                 LEFT JOIN clients c ON o.client_id = c.id
                 LEFT JOIN users u ON c.user_id = u.id
-                ORDER BY o.created_at DESC
-            ");
-            $stmt->execute();
+            ";
+
+            $params = [];
+            if ($startDate && $endDate) {
+                $sql .= " WHERE DATE(o.created_at) BETWEEN :start_date AND :end_date";
+                $params[':start_date'] = $startDate;
+                $params[':end_date'] = $endDate;
+            }
+
+            $sql .= " ORDER BY o.created_at DESC LIMIT 1000"; // Limitar a 1000 registros
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
             $data = $stmt->fetchAll();
 
             $filename = 'truper_report_' . date('Y-m-d_H-i') . '.' . $format;
             $filepath = '../exports/' . $filename;
-            
+
             if (!is_dir('../exports')) {
                 mkdir('../exports', 0777, true);
             } else {
@@ -411,22 +452,22 @@ try {
             if ($fp) {
                 // BOM for Excel UTF-8
                 fputs($fp, $bom = chr(0xEF).chr(0xBB).chr(0xBF));
-                
+
                 // Headers
                 fputcsv($fp, ['ID Pedido', 'Fecha', 'Total', 'Empresa', 'Cliente']);
-                
-                // Data
+
+                // Data con sanitización
                 foreach ($data as $row) {
                     fputcsv($fp, [
-                        $row['order_id'],
-                        $row['created_at'],
-                        $row['total_amount'],
-                        $row['company_name'],
-                        $row['client_name']
+                        htmlspecialchars((string)($row['order_id'] ?? ''), ENT_QUOTES, 'UTF-8'),
+                        htmlspecialchars((string)($row['created_at'] ?? ''), ENT_QUOTES, 'UTF-8'),
+                        htmlspecialchars((string)($row['total_amount'] ?? ''), ENT_QUOTES, 'UTF-8'),
+                        htmlspecialchars((string)($row['company_name'] ?? ''), ENT_QUOTES, 'UTF-8'),
+                        htmlspecialchars((string)($row['client_name'] ?? ''), ENT_QUOTES, 'UTF-8')
                     ]);
                 }
                 fclose($fp);
-                
+
                 $response = [
                     'success' => true,
                     'file_url' => 'exports/' . $filename,

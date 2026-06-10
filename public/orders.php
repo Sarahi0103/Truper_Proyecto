@@ -278,13 +278,14 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                                                 <th>Producto</th>
                                                 <th>SKU</th>
                                                 <th>Precio Unitario</th>
+                                                <th>Stock</th>
                                                 <th>Cantidad</th>
                                                 <th>Acción</th>
                                             </tr>
                                         </thead>
                                         <tbody id="productsList">
                                             <tr>
-                                                <td colspan="5" class="text-center text-muted">Cargando productos...</td>
+                                                <td colspan="6" class="text-center text-muted">Cargando productos...</td>
                                             </tr>
                                         </tbody>
                                     </table>

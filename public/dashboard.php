@@ -635,6 +635,31 @@ $first_name = explode(' ', $user_name)[0];
                 </div>
             </div>
 
+            <!-- ── Dashboard Filters & Export ── -->
+            <div class="db-card" style="margin-bottom: 1.25rem;">
+                <div class="db-card-header">
+                    <div class="db-card-title">📅 Filtros de Fecha</div>
+                    <button onclick="exportDashboardData()" class="db-action-btn" style="background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                        📥 Exportar Datos
+                    </button>
+                </div>
+                <div class="db-card-body">
+                    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                        <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                            <label style="font-size: 0.75rem; color: #888; font-weight: 600;">Fecha Inicio</label>
+                            <input type="date" id="dashStartDate" style="background: #111; border: 1px solid #1f1f1f; color: white; padding: 0.5rem; border-radius: 8px; font-size: 0.85rem;" onchange="applyDateFilters()">
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                            <label style="font-size: 0.75rem; color: #888; font-weight: 600;">Fecha Fin</label>
+                            <input type="date" id="dashEndDate" style="background: #111; border: 1px solid #1f1f1f; color: white; padding: 0.5rem; border-radius: 8px; font-size: 0.85rem;" onchange="applyDateFilters()">
+                        </div>
+                        <button onclick="applyDateFilters()" style="background: linear-gradient(135deg, #ff7f00, #e06b00); color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: auto;">
+                            🔍 Aplicar Filtros
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- ── Main content: Orders + Products ── -->
             <div class="db-grid-2">
 
@@ -884,17 +909,42 @@ $first_name = explode(' ', $user_name)[0];
 
         /* ── KPI Metrics ── */
         async function loadDashboardMetrics() {
-            const response = await apiCall('/analytics.php?action=yearly-stats');
             const ordEl  = document.getElementById('monthlyOrders');
             const revEl  = document.getElementById('monthlyRevenue');
             const pendEl = document.getElementById('pendingPayments');
             const taskEl = document.getElementById('pendingTasks');
 
+            if (!ordEl || !revEl || !pendEl || !taskEl) return;
+
+            // Check cache first (5 min TTL) - Mejora de caché de métricas
+            const cacheKey = 'dash_metrics_' + (<?php echo $_SESSION['user_id'] ?? 0; ?>);
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                const data = JSON.parse(cached);
+                if (Date.now() - data.timestamp < 300000) { // 5 minutes
+                    animateCount(ordEl, data.orders);
+                    revEl.classList.remove('db-skeleton');
+                    revEl.style.animation = 'countUp .4s ease';
+                    revEl.textContent = '$' + data.revenue.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                    animateCount(pendEl, data.pending);
+                    animateCount(taskEl, data.tasks);
+                    return;
+                }
+            }
+
+            const response = await apiCall('/analytics.php?action=yearly-stats');
             if (response && response.stats && Array.isArray(response.stats)) {
                 const currentYear = new Date().getFullYear();
                 const yearData = response.stats.find(s => Number(s.year_val) === currentYear) || {};
                 const orders  = Number(yearData.total_orders  || 0);
                 const revenue = Number(yearData.total_amount  || 0);
+                
+                // Cache the results
+                localStorage.setItem(cacheKey, JSON.stringify({
+                    timestamp: Date.now(),
+                    orders, revenue, pending: 0, tasks: 0
+                }));
+
                 animateCount(ordEl, orders);
                 if (revEl) {
                     revEl.classList.remove('db-skeleton');
@@ -913,6 +963,10 @@ $first_name = explode(' ', $user_name)[0];
             if (ordResp && ordResp.success && Array.isArray(ordResp.orders)) {
                 const pending = ordResp.orders.filter(o => o.payment_status === 'pending').length;
                 animateCount(pendEl, pending);
+                // Update cache with pending count
+                const cachedData = JSON.parse(localStorage.getItem(cacheKey) || '{}');
+                cachedData.pending = pending;
+                localStorage.setItem(cacheKey, JSON.stringify(cachedData));
             } else {
                 if (pendEl) { pendEl.classList.remove('db-skeleton'); pendEl.textContent = '0'; }
             }
@@ -922,8 +976,46 @@ $first_name = explode(' ', $user_name)[0];
             if (taskResp && taskResp.success && Array.isArray(taskResp.tasks)) {
                 const open = taskResp.tasks.filter(t => t.status !== 'completed' && t.status !== 'done').length;
                 animateCount(taskEl, open);
+                // Update cache with tasks count
+                const cachedData = JSON.parse(localStorage.getItem(cacheKey) || '{}');
+                cachedData.tasks = open;
+                localStorage.setItem(cacheKey, JSON.stringify(cachedData));
             } else {
                 if (taskEl) { taskEl.classList.remove('db-skeleton'); taskEl.textContent = '0'; }
+            }
+        }
+
+        /* ── Dashboard Date Filters ── */
+        let dashboardStartDate = null;
+        let dashboardEndDate = null;
+
+        function applyDateFilters() {
+            const startInput = document.getElementById('dashStartDate');
+            const endInput = document.getElementById('dashEndDate');
+            
+            if (startInput && endInput) {
+                dashboardStartDate = startInput.value;
+                dashboardEndDate = endInput.value;
+                loadDashboardHistory();
+                loadRecentOrders();
+            }
+        }
+
+        /* ── Dashboard Export ── */
+        async function exportDashboardData() {
+            const format = 'csv';
+            const startDate = dashboardStartDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            const endDate = dashboardEndDate || new Date().toISOString().split('T')[0];
+
+            try {
+                const response = await apiCall(`/analytics.php?action=export&format=${format}&start_date=${startDate}&end_date=${endDate}`);
+                if (response && response.success && response.file_url) {
+                    window.open(response.file_url, '_blank');
+                } else {
+                    alert('Error al exportar datos: ' + (response?.message || 'Error desconocido'));
+                }
+            } catch (e) {
+                alert('Error al exportar datos: ' + e.message);
             }
         }
 

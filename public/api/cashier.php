@@ -1,5 +1,7 @@
 <?php
 require_once '../../config/config.php';
+require_once '../../src/Services/CashierCacheService.php';
+require_once '../../src/Services/NotificationService.php';
 
 require_login();
 header('Content-Type: application/json');
@@ -13,6 +15,10 @@ $input = is_array($decodedInput) ? $decodedInput : (is_array($_POST) ? $_POST : 
 if (in_array($method, ['POST', 'PUT', 'DELETE'], true)) {
     require_csrf_token();
 }
+
+// Inicializar servicios
+$cacheService = new CashierCacheService();
+$notificationService = new NotificationService($pdo);
 
 $response = [];
 
@@ -106,9 +112,33 @@ try {
             }
 
             $opening = (float)($input['opening_amount'] ?? 0);
-            $stmt = $pdo->prepare("INSERT INTO cash_drawer_sessions (opened_by, opening_amount, status) VALUES (?, ?, 'open') RETURNING id");
-            $stmt->execute([$_SESSION['user_id'], $opening]);
+
+            // Validar monto
+            if (!$cacheService->validateAmount($opening)) {
+                $response = ['success' => false, 'message' => 'Monto inválido. Debe ser un número positivo menor a $1,000,000'];
+                break;
+            }
+
+            // Obtener IP y user agent para auditoría
+            $ipAddress = $_SERVER['REMOTE_ADDR'] ?? null;
+            $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+
+            $stmt = $pdo->prepare("INSERT INTO cash_drawer_sessions (opened_by, opening_amount, status, ip_address, user_agent) VALUES (?, ?, 'open', ?, ?) RETURNING id");
+            $stmt->execute([$_SESSION['user_id'], $opening, $ipAddress, $userAgent]);
             $row = $stmt->fetch();
+
+            // Invalidar caché del cajón
+            $cacheService->invalidateCashierStatus($_SESSION['user_id']);
+
+            // Log de auditoría
+            $pdo->prepare("INSERT INTO cash_drawer_audit_log (session_id, action, user_id, ip_address, user_agent, new_values) VALUES (?, 'open', ?, ?, ?, ?)")->execute([
+                $row['id'],
+                $_SESSION['user_id'],
+                $ipAddress,
+                $userAgent,
+                json_encode(['opening_amount' => $opening])
+            ]);
+
             $response = ['success' => true, 'session_id' => $row['id'], 'message' => 'Caja abierta'];
             break;
 
@@ -127,16 +157,63 @@ try {
                 break;
             }
 
-            $stmt = $pdo->prepare("INSERT INTO cash_drawer_movements (session_id, movement_type, amount, description, created_by)
-                                   VALUES (?, ?, ?, ?, ?)");
+            $amount = (float)($input['amount'] ?? 0);
+
+            // Validar monto
+            if (!$cacheService->validateAmount($amount)) {
+                $response = ['success' => false, 'message' => 'Monto inválido. Debe ser un número positivo menor a $1,000,000'];
+                break;
+            }
+
+            // Obtener IP y user agent para auditoría
+            $ipAddress = $_SERVER['REMOTE_ADDR'] ?? null;
+            $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+            $ticketId = $input['ticket_id'] ?? null;
+
+            $stmt = $pdo->prepare("INSERT INTO cash_drawer_movements (session_id, movement_type, amount, description, created_by, ip_address, user_agent, ticket_id)
+                                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([
                 $session['id'],
                 sanitize($input['movement_type'] ?? 'in'),
-                (float)($input['amount'] ?? 0),
+                $amount,
                 sanitize($input['description'] ?? ''),
-                $_SESSION['user_id']
+                $_SESSION['user_id'],
+                $ipAddress,
+                $userAgent,
+                $ticketId
             ]);
+
+            // Invalidar caché del cajón
+            $cacheService->invalidateCashierStatus($_SESSION['user_id']);
+
+            // Log de auditoría
+            $pdo->prepare("INSERT INTO cash_drawer_audit_log (session_id, action, user_id, ip_address, user_agent, new_values) VALUES (?, 'movement', ?, ?, ?, ?)")->execute([
+                $session['id'],
+                $_SESSION['user_id'],
+                $ipAddress,
+                $userAgent,
+                json_encode(['movement_type' => $input['movement_type'], 'amount' => $amount])
+            ]);
+
             $response = ['success' => true, 'message' => 'Movimiento registrado'];
+            break;
+
+        case 'request-confirmation-code':
+            require_admin();
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            // Generar código de confirmación
+            $code = $cacheService->generateConfirmationCode();
+            $cacheService->setConfirmationCode($_SESSION['user_id'], $code);
+
+            $response = [
+                'success' => true,
+                'message' => 'Código de confirmación generado',
+                'code' => $code
+            ];
             break;
 
         case 'close':
@@ -144,6 +221,14 @@ try {
             if ($method !== 'POST') {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];
                 break;
+            }
+
+            // Verificar doble autenticación si se proporciona código
+            if (isset($input['confirmation_code'])) {
+                if (!$cacheService->verifyConfirmationCode($_SESSION['user_id'], $input['confirmation_code'])) {
+                    $response = ['success' => false, 'message' => 'Código de confirmación inválido o expirado'];
+                    break;
+                }
             }
 
             $stmt = $pdo->prepare("SELECT * FROM cash_drawer_sessions WHERE status='open' ORDER BY opened_at DESC LIMIT 1");
@@ -154,18 +239,65 @@ try {
                 break;
             }
 
-            $stmt = $pdo->prepare("SELECT COALESCE(SUM(CASE WHEN movement_type IN ('in','sale') THEN amount ELSE -amount END),0) total
-                                   FROM cash_drawer_movements WHERE session_id = ?");
-            $stmt->execute([$session['id']]);
-            $calc = $stmt->fetch();
-
-            $expected = (float)$session['opening_amount'] + (float)$calc['total'];
+            // Validar monto de cierre
             $closing = (float)($input['closing_amount'] ?? 0);
-            $difference = $closing - $expected;
+            if (!$cacheService->validateAmount($closing)) {
+                $response = ['success' => false, 'message' => 'Monto de cierre inválido'];
+                break;
+            }
 
-            $stmt = $pdo->prepare("UPDATE cash_drawer_sessions SET closed_by=?, closed_at=NOW(), closing_amount=?, expected_amount=?, difference_amount=?, status='closed', notes=? WHERE id=?");
-            $stmt->execute([$_SESSION['user_id'], $closing, $expected, $difference, sanitize($input['notes'] ?? ''), $session['id']]);
-            $response = ['success' => true, 'message' => 'Caja cerrada', 'expected_amount' => $expected, 'difference_amount' => $difference];
+            // Usar función de conciliación automática
+            $stmt = $pdo->prepare("SELECT * FROM reconcile_cash_drawer(?)");
+            $stmt->execute([$session['id']]);
+            $reconcile = $stmt->fetch();
+
+            $expected = (float)$reconcile['expected_amount'];
+            $difference = (float)$reconcile['difference'];
+            $hasDiscrepancy = (bool)$reconcile['has_discrepancy'];
+            $discrepancyAmount = (float)$reconcile['discrepancy_amount'];
+
+            // Obtener IP y user agent para auditoría
+            $ipAddress = $_SERVER['REMOTE_ADDR'] ?? null;
+            $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+
+            $stmt = $pdo->prepare("UPDATE cash_drawer_sessions SET closed_by=?, closed_at=NOW(), closing_amount=?, expected_amount=?, difference_amount=?, status='closed', notes=?, ip_address=?, user_agent=? WHERE id=?");
+            $stmt->execute([$_SESSION['user_id'], $closing, $expected, $difference, sanitize($input['notes'] ?? ''), $ipAddress, $userAgent, $session['id']]);
+
+            // Invalidar caché del cajón
+            $cacheService->invalidateCashierStatus($_SESSION['user_id']);
+
+            // Log de auditoría
+            $pdo->prepare("INSERT INTO cash_drawer_audit_log (session_id, action, user_id, ip_address, user_agent, old_values, new_values) VALUES (?, 'close', ?, ?, ?, ?, ?)")->execute([
+                $session['id'],
+                $_SESSION['user_id'],
+                $ipAddress,
+                $userAgent,
+                json_encode(['status' => 'open']),
+                json_encode(['closing_amount' => $closing, 'expected_amount' => $expected, 'difference_amount' => $difference])
+            ]);
+
+            // Alertar si hay discrepancia significativa (> $100)
+            if ($hasDiscrepancy && !$session['discrepancy_notified']) {
+                $notificationService->create(
+                    $_SESSION['user_id'],
+                    'CASH_DISCREPANCY',
+                    'Discrepancia en Cierre de Caja',
+                    "Diferencia de $" . number_format($discrepancyAmount, 2) . " detectada al cerrar el cajón #" . $session['id'],
+                    ['session_id' => $session['id'], 'difference' => $discrepancyAmount]
+                );
+
+                // Marcar como notificado
+                $pdo->prepare("UPDATE cash_drawer_sessions SET discrepancy_notified = true WHERE id = ?")->execute([$session['id']]);
+            }
+
+            $response = [
+                'success' => true,
+                'message' => 'Caja cerrada',
+                'expected_amount' => $expected,
+                'difference_amount' => $difference,
+                'has_discrepancy' => $hasDiscrepancy,
+                'discrepancy_amount' => $discrepancyAmount
+            ];
             break;
 
         case 'summary':

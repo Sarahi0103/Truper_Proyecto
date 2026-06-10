@@ -183,7 +183,118 @@ try {
                 'item_count' => count($ticket['items'] ?? [])
             ];
             break;
-        
+
+        // Corregir datos históricos de tickets
+        case 'fix-historical-data':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            try {
+                $stmt = $pdo->prepare("SELECT * FROM run_all_ticket_corrections()");
+                $stmt->execute();
+                $corrections = $stmt->fetch();
+
+                $response = [
+                    'success' => true,
+                    'message' => 'Correcciones de datos históricos completadas',
+                    'corrections' => $corrections
+                ];
+            } catch (Exception $e) {
+                $response = ['success' => false, 'message' => 'Error al corregir datos: ' . $e->getMessage()];
+            }
+            break;
+
+        // Agregar nota interna a ticket
+        case 'add-internal-note':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            $ticket_id = (int)($input['ticket_id'] ?? 0);
+            $note = sanitize($input['note'] ?? '');
+
+            if ($ticket_id <= 0 || empty($note)) {
+                $response = ['success' => false, 'message' => 'Datos incompletos'];
+                break;
+            }
+
+            try {
+                // Verificar si existe tabla de notas internas
+                $pdo->exec("CREATE TABLE IF NOT EXISTS ticket_internal_notes (
+                    id SERIAL PRIMARY KEY,
+                    ticket_id INTEGER REFERENCES tickets(id) ON DELETE CASCADE,
+                    note TEXT NOT NULL,
+                    created_by INTEGER REFERENCES users(id),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )");
+
+                $stmt = $pdo->prepare("INSERT INTO ticket_internal_notes (ticket_id, note, created_by) VALUES (?, ?, ?)");
+                $stmt->execute([$ticket_id, $note, $_SESSION['user_id']]);
+
+                $response = ['success' => true, 'message' => 'Nota interna agregada'];
+            } catch (Exception $e) {
+                $response = ['success' => false, 'message' => 'Error al agregar nota: ' . $e->getMessage()];
+            }
+            break;
+
+        // Obtener notas internas de ticket
+        case 'get-internal-notes':
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            $ticket_id = (int)($_GET['ticket_id'] ?? 0);
+
+            if ($ticket_id <= 0) {
+                $response = ['success' => false, 'message' => 'ID de ticket requerido'];
+                break;
+            }
+
+            try {
+                $stmt = $pdo->prepare("
+                    SELECT tin.*, u.first_name, u.last_name
+                    FROM ticket_internal_notes tin
+                    JOIN users u ON tin.created_by = u.id
+                    WHERE tin.ticket_id = ?
+                    ORDER BY tin.created_at DESC
+                ");
+                $stmt->execute([$ticket_id]);
+                $notes = $stmt->fetchAll();
+
+                $response = ['success' => true, 'notes' => $notes];
+            } catch (Exception $e) {
+                $response = ['success' => false, 'message' => 'Error al obtener notas: ' . $e->getMessage()];
+            }
+            break;
+
+        // Filtros múltiples avanzados
+        case 'advanced-filter':
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            $page = (int)($_GET['page'] ?? 1);
+            $perPage = (int)($_GET['per_page'] ?? 20);
+
+            $filters = [];
+            if (!empty($_GET['folio'])) $filters['folio'] = $_GET['folio'];
+            if (!empty($_GET['ticket_type'])) $filters['ticket_type'] = $_GET['ticket_type'];
+            if (!empty($_GET['payment_status'])) $filters['payment_status'] = $_GET['payment_status'];
+            if (!empty($_GET['start_date'])) $filters['start_date'] = $_GET['start_date'];
+            if (!empty($_GET['end_date'])) $filters['end_date'] = $_GET['end_date'];
+            if (!empty($_GET['min_amount'])) $filters['min_amount'] = $_GET['min_amount'];
+            if (!empty($_GET['max_amount'])) $filters['max_amount'] = $_GET['max_amount'];
+            if (!empty($_GET['customer_name'])) $filters['customer_name'] = $_GET['customer_name'];
+            if (!empty($_GET['status'])) $filters['status'] = $_GET['status'];
+
+            $response = $ticketManager->listActiveTickets($page, $perPage, $filters);
+            break;
+
         default:
             $response = ['success' => false, 'message' => 'Acción no reconocida: ' . $action];
     }
