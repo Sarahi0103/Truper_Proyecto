@@ -44,6 +44,12 @@ function truper_load_env_file(string $path): void {
 
 truper_load_env_file(__DIR__ . '/../.env');
 
+// Debug: log available environment variables
+error_log("DATABASE_URL: " . (getenv('DATABASE_URL') ? 'SET' : 'NOT SET'));
+error_log("INTERNAL_DATABASE_URL: " . (getenv('INTERNAL_DATABASE_URL') ? 'SET' : 'NOT SET'));
+error_log("DB_HOST: " . (getenv('DB_HOST') ?: 'NOT SET'));
+error_log("DB_NAME: " . (getenv('DB_NAME') ?: 'NOT SET'));
+
 // Configuración de conexión (compatible con Render)
 $dbHost = getenv('DB_HOST') ?: 'localhost';
 $dbPort = getenv('DB_PORT') ?: '5432';
