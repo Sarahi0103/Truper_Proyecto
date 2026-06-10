@@ -534,7 +534,13 @@
     const closeBtn = document.getElementById('closeCart');
     const drawer = document.getElementById('cartDrawer');
     if (openBtn && drawer) openBtn.addEventListener('click', () => drawer.classList.add('open'));
-    if (closeBtn && drawer) closeBtn.addEventListener('click', () => drawer.classList.remove('open'));
+    if (closeBtn && drawer) {
+      closeBtn.addEventListener('click', () => {
+        if (confirm('¿Seguro que quieres cerrar el carrito?')) {
+          drawer.classList.remove('open');
+        }
+      });
+    }
 
     const ticketBtn = document.getElementById('printTicket');
     if (ticketBtn) ticketBtn.addEventListener('click', () => drawTicketPdf('thermal'));

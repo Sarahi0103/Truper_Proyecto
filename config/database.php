@@ -49,7 +49,7 @@ $dbHost = getenv('DB_HOST') ?: 'localhost';
 $dbPort = getenv('DB_PORT') ?: '5432';
 $dbName = getenv('DB_NAME') ?: 'truper_platform';
 $dbUser = getenv('DB_USER') ?: 'truper_admin';
-$dbPass = getenv('DB_PASS') ?: '';
+$dbPass = getenv('DB_PASSWORD') ?: getenv('DB_PASS') ?: '';
 // Fallback: some environments (docker) expose POSTGRES_PASSWORD
 if (empty($dbPass)) {
     $dbPass = getenv('POSTGRES_PASSWORD') ?: $dbPass;
