@@ -43,8 +43,7 @@ $csp_directives = [
     "connect-src 'self' https://api.github.com",
     "frame-ancestors 'self'",
     "form-action 'self'",
-    "base-uri 'self'",
-    "require-trusted-types-for 'script'"
+    "base-uri 'self'"
 ];
 header("Content-Security-Policy: " . implode('; ', $csp_directives));
 
