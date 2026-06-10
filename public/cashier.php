@@ -841,6 +841,10 @@ async function closeDrawer() {
     return;
   }
 
+  if (!confirm('¿Seguro que la quieres cerrar?')) {
+    return;
+  }
+
   const res = await apiCall('/cashier.php?action=close', 'POST', {
     closing_amount: closeAmount,
     notes: closeNote
