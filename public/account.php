@@ -434,27 +434,40 @@ function escapeHtml(text) {
    CRÉDITO
 ============================================================ */
 async function loadCreditSummary() {
+    const statusEl = document.getElementById('creditStatus');
+    const limitEl = document.getElementById('creditLimit');
+    const availableEl = document.getElementById('creditAvailable');
+    const usedEl = document.getElementById('creditUsed');
+    const owedEl = document.getElementById('totalOwed');
+    const alertEl = document.getElementById('creditAlert');
+
+    if (!statusEl && !limitEl && !availableEl && !usedEl && !owedEl && !alertEl) {
+        return;
+    }
+
     const res = await apiCall('/client_account.php?action=credit-summary');
     if (!res || !res.success) {
-        document.getElementById('creditStatus').innerHTML = '<div class="alert alert-warning">No se pudo cargar el estado del crédito</div>';
+        if (statusEl) statusEl.innerHTML = '<div class="alert alert-warning">No se pudo cargar el estado del crédito</div>';
         return;
     }
 
     const c = res.credit;
-    document.getElementById('creditLimit').textContent     = formatMoney(c.credit_limit);
-    document.getElementById('creditAvailable').textContent = formatMoney(c.credit_available);
-    document.getElementById('creditUsed').textContent      = formatMoney(c.credit_used);
-    document.getElementById('totalOwed').textContent       = formatMoney(c.total_owed);
+    if (limitEl) limitEl.textContent     = formatMoney(c.credit_limit);
+    if (availableEl) availableEl.textContent = formatMoney(c.credit_available);
+    if (usedEl) usedEl.textContent      = formatMoney(c.credit_used);
+    if (owedEl) owedEl.textContent       = formatMoney(c.total_owed);
 
-    let alertHtml = '';
-    if (c.days_overdue > 0) {
-        alertHtml = `<div class="alert alert-warning"><strong>⚠️ Cuenta vencida:</strong> Tienes ${c.days_overdue} días de atraso. Por favor contacta para ponerte al corriente.</div>`;
-    } else if (c.total_owed > 0) {
-        alertHtml = `<div class="alert alert-info"><strong>ℹ️ Nota activa:</strong> Tienes ${formatMoney(c.total_owed)} por pagar.</div>`;
-    } else {
-        alertHtml = `<div class="alert alert-success"><strong>✅ Cuenta al corriente:</strong> No tienes deudas pendientes.</div>`;
+    if (alertEl) {
+        let alertHtml = '';
+        if (c.days_overdue > 0) {
+            alertHtml = `<div class="alert alert-warning"><strong>⚠️ Cuenta vencida:</strong> Tienes ${c.days_overdue} días de atraso. Por favor contacta para ponerte al corriente.</div>`;
+        } else if (c.total_owed > 0) {
+            alertHtml = `<div class="alert alert-info"><strong>ℹ️ Nota activa:</strong> Tienes ${formatMoney(c.total_owed)} por pagar.</div>`;
+        } else {
+            alertHtml = `<div class="alert alert-success"><strong>✅ Cuenta al corriente:</strong> No tienes deudas pendientes.</div>`;
+        }
+        alertEl.innerHTML = alertHtml;
     }
-    document.getElementById('creditAlert').innerHTML = alertHtml;
 }
 
 /* ============================================================
@@ -514,9 +527,14 @@ async function loadWeeklySummary() {
    HISTORIAL DE PAGOS
 ============================================================ */
 async function loadPaymentHistory() {
+    const listEl = document.getElementById('paymentsList');
+    if (!listEl) {
+        return;
+    }
+
     const res = await apiCall('/client_account.php?action=payment-history');
     if (!res || !res.success || !res.payments || res.payments.length === 0) {
-        document.getElementById('paymentsList').innerHTML = '<tr><td colspan="5" class="text-muted">Sin pagos registrados</td></tr>';
+        listEl.innerHTML = '<tr><td colspan="5" class="text-muted">Sin pagos registrados</td></tr>';
         return;
     }
 
@@ -529,7 +547,7 @@ async function loadPaymentHistory() {
             <td><small>${escapeHtml(p.notes || '-')}</small></td>
         </tr>
     `).join('');
-    document.getElementById('paymentsList').innerHTML = html;
+    listEl.innerHTML = html;
 }
 
 /* ============================================================
