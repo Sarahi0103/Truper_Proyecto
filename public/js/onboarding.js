@@ -1,203 +1,280 @@
-(function () {
+/**
+ * Sistema de Onboarding para Usuarios
+ * Guía interactiva para nuevos usuarios
+ */
+
+(function() {
     const ONBOARDING_STORAGE = 'truper_onboarding_completed';
-    const ONBOARDING_VERSION = '1.0';
+    const ONBOARDING_STEPS = [
+        {
+            target: '#catalogSearch',
+            title: 'Busca Productos',
+            description: 'Utiliza la barra de búsqueda para encontrar productos por nombre, código o categoría. La búsqueda es en tiempo real.',
+            position: 'bottom'
+        },
+        {
+            target: '.catalog-categories-actions button:first-child',
+            title: 'Filtrar por Categoría',
+            description: 'Selecciona una categoría para filtrar rápidamente los productos que necesitas.',
+            position: 'bottom'
+        },
+        {
+            target: '#filterMinPrice',
+            title: 'Rango de Precios',
+            description: 'Establece un precio mínimo y máximo para filtrar productos según tu presupuesto.',
+            position: 'bottom'
+        },
+        {
+            target: '[data-add-product]',
+            title: 'Agregar al Carrito',
+            description: 'Haz clic en este botón para agregar productos a tu carrito de compras.',
+            position: 'top'
+        },
+        {
+            target: '#openCart',
+            title: 'Ver Carrito',
+            description: 'Haz clic aquí para ver tu carrito, modificar cantidades o generar un ticket de pedido.',
+            position: 'left'
+        },
+        {
+            target: '[data-compare-product]',
+            title: 'Comparar Productos',
+            description: 'Agrega productos a la lista de comparación para analizar sus características lado a lado.',
+            position: 'top'
+        }
+    ];
+
+    let currentStep = 0;
+    let overlay = null;
+    let tooltip = null;
+    let skipButton = null;
 
     function hasCompletedOnboarding() {
         try {
-            const data = localStorage.getItem(ONBOARDING_STORAGE);
-            if (!data) return false;
-            const parsed = JSON.parse(data);
-            return parsed.version === ONBOARDING_VERSION && parsed.completed;
+            return localStorage.getItem(ONBOARDING_STORAGE) === 'true';
         } catch (e) {
             return false;
         }
     }
 
-    function markOnboardingCompleted() {
-        localStorage.setItem(ONBOARDING_STORAGE, JSON.stringify({
-            version: ONBOARDING_VERSION,
-            completed: true,
-            date: new Date().toISOString()
-        }));
+    function markOnboardingAsCompleted() {
+        try {
+            localStorage.setItem(ONBOARDING_STORAGE, 'true');
+        } catch (e) {
+            console.error('Error saving onboarding status:', e);
+        }
     }
 
-    function createOnboardingModal() {
-        const modal = document.createElement('div');
-        modal.className = 'onboarding-modal';
-        modal.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.85);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            animation: fadeIn 0.3s ease;
-        `;
-
-        const content = document.createElement('div');
-        content.className = 'onboarding-content';
-        content.style.cssText = `
-            background: var(--bg-card);
-            border-radius: 16px;
-            padding: 2.5rem;
-            max-width: 600px;
-            width: 90%;
-            max-height: 90vh;
-            overflow-y: auto;
-            position: relative;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-        `;
-
-        const steps = [
-            {
-                title: '¡Bienvenido a Truper Platform!',
-                content: `
-                    <p style="margin-bottom: 1rem;">Estamos emocionados de tenerte con nosotros. Esta plataforma te permitirá:</p>
-                    <ul style="margin-left: 1.5rem; margin-bottom: 1rem;">
-                        <li>Explorar nuestro catálogo completo de productos</li>
-                        <li>Realizar pedidos de manera rápida y sencilla</li>
-                        <li>Ver tu historial de transacciones</li>
-                        <li>Acumular puntos por tus compras</li>
-                    </ul>
-                `,
-                icon: '🎉'
-            },
-            {
-                title: 'Explora el Catálogo',
-                content: `
-                    <p style="margin-bottom: 1rem;">Navega por miles de productos usando:</p>
-                    <ul style="margin-left: 1.5rem; margin-bottom: 1rem;">
-                        <li>El buscador inteligente con autocompletado</li>
-                        <li>Filtros avanzados por precio, stock y categoría</li>
-                        <li>Comparación de productos (máximo 4)</li>
-                        <li>Sistema de favoritos para guardar tus productos preferidos</li>
-                    </ul>
-                `,
-                icon: '🔍'
-            },
-            {
-                title: 'Gestiona tus Pedidos',
-                content: `
-                    <p style="margin-bottom: 1rem;">Desde tu panel de control puedes:</p>
-                    <ul style="margin-left: 1.5rem; margin-bottom: 1rem;">
-                        <li>Ver el estado de tus pedidos en tiempo real</li>
-                        <li>Descargar tickets en PDF</li>
-                        <li>Exportar tu historial a CSV</li>
-                        <li>Usar cupones de descuento disponibles</li>
-                    </ul>
-                `,
-                icon: '📦'
-            },
-            {
-                title: '¡Comienza Ahora!',
-                content: `
-                    <p style="margin-bottom: 1rem;">Ya estás listo para comenzar a explorar. Recuerda que:</p>
-                    <ul style="margin-left: 1.5rem; margin-bottom: 1rem;">
-                        <li>Tu información está protegida con seguridad avanzada</li>
-                        <li>Puedes cambiar tu contraseña cuando lo desees</li>
-                        <li>El soporte está disponible para ayudarte</li>
-                    </ul>
-                    <p style="margin-top: 1rem; font-weight: 600; color: var(--accent);">¡Disfruta tu experiencia en Truper Platform!</p>
-                `,
-                icon: '🚀'
-            }
-        ];
-
-        let currentStep = 0;
-
-        function renderStep() {
-            const step = steps[currentStep];
-            content.innerHTML = `
-                <div style="text-align: center; margin-bottom: 1.5rem;">
-                    <span style="font-size: 3rem;">${step.icon}</span>
-                    <h2 style="margin-top: 1rem; color: var(--text-primary);">${step.title}</h2>
-                </div>
-                <div style="color: var(--text-secondary); line-height: 1.6;">
-                    ${step.content}
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
-                    <button id="onboardingPrev" class="btn btn-ghost" style="visibility: ${currentStep === 0 ? 'hidden' : 'visible'};">
-                        ← Anterior
-                    </button>
-                    <div style="display: flex; gap: 0.5rem;">
-                        ${steps.map((_, i) => `
-                            <div style="
-                                width: 10px;
-                                height: 10px;
-                                border-radius: 50%;
-                                background: ${i === currentStep ? 'var(--accent)' : 'var(--border)'};
-                                transition: background 0.3s ease;
-                            "></div>
-                        `).join('')}
-                    </div>
-                    <button id="onboardingNext" class="btn btn-primary">
-                        ${currentStep === steps.length - 1 ? 'Comenzar' : 'Siguiente →'}
-                    </button>
-                </div>
-            `;
-
-            const prevBtn = document.getElementById('onboardingPrev');
-            const nextBtn = document.getElementById('onboardingNext');
-
-            if (prevBtn) {
-                prevBtn.addEventListener('click', () => {
-                    if (currentStep > 0) {
-                        currentStep--;
-                        renderStep();
-                    }
-                });
-            }
-
-            if (nextBtn) {
-                nextBtn.addEventListener('click', () => {
-                    if (currentStep < steps.length - 1) {
-                        currentStep++;
-                        renderStep();
-                    } else {
-                        modal.remove();
-                        markOnboardingCompleted();
-                    }
-                });
-            }
+    function resetOnboarding() {
+        try {
+            localStorage.removeItem(ONBOARDING_STORAGE);
+        } catch (e) {
+            console.error('Error resetting onboarding:', e);
         }
+    }
 
-        renderStep();
-        modal.appendChild(content);
-        document.body.appendChild(modal);
-
-        // Cerrar al hacer clic fuera del modal
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.remove();
-                markOnboardingCompleted();
+    function createOverlay() {
+        if (overlay) return;
+        
+        overlay = document.createElement('div');
+        overlay.className = 'onboarding-overlay';
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                // No hacer nada al hacer clic en el overlay
             }
         });
+        document.body.appendChild(overlay);
     }
 
-    function initOnboarding() {
-        // Solo mostrar si el usuario está logueado y no ha completado el onboarding
-        if (typeof isLoggedIn === 'function' && isLoggedIn() && !hasCompletedOnboarding()) {
-            // Esperar un momento para que la página cargue completamente
-            setTimeout(() => {
-                createOnboardingModal();
-            }, 1500);
+    function createTooltip(step) {
+        if (tooltip) {
+            tooltip.remove();
+        }
+
+        tooltip = document.createElement('div');
+        tooltip.className = `onboarding-tooltip ${step.position}`;
+        
+        // Progress dots
+        let progressHTML = '<div class="onboarding-progress">';
+        ONBOARDING_STEPS.forEach((_, index) => {
+            let dotClass = '';
+            if (index < currentStep) dotClass = 'completed';
+            else if (index === currentStep) dotClass = 'active';
+            progressHTML += `<div class="onboarding-progress-dot ${dotClass}"></div>`;
+        });
+        progressHTML += '</div>';
+
+        tooltip.innerHTML = `
+            ${progressHTML}
+            <h3>${step.title}</h3>
+            <p>${step.description}</p>
+            <div class="onboarding-actions">
+                <button class="btn-skip" onclick="window.TruperOnboarding.skip()">Saltar</button>
+                ${currentStep < ONBOARDING_STEPS.length - 1 
+                    ? '<button class="btn-next" onclick="window.TruperOnboarding.next()">Siguiente</button>'
+                    : '<button class="btn-finish" onclick="window.TruperOnboarding.finish()">Completar</button>'
+                }
+            </div>
+        `;
+
+        document.body.appendChild(tooltip);
+        positionTooltip(step);
+    }
+
+    function positionTooltip(step) {
+        const target = document.querySelector(step.target);
+        if (!target) return;
+
+        const targetRect = target.getBoundingClientRect();
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+        const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+
+        let top, left;
+
+        switch (step.position) {
+            case 'top':
+                top = targetRect.top + scrollY - tooltipRect.height - 20;
+                left = targetRect.left + scrollX + (targetRect.width / 2) - (tooltipRect.width / 2);
+                break;
+            case 'bottom':
+                top = targetRect.bottom + scrollY + 20;
+                left = targetRect.left + scrollX + (targetRect.width / 2) - (tooltipRect.width / 2);
+                break;
+            case 'left':
+                top = targetRect.top + scrollY + (targetRect.height / 2) - (tooltipRect.height / 2);
+                left = targetRect.left + scrollX - tooltipRect.width - 20;
+                break;
+            case 'right':
+                top = targetRect.top + scrollY + (targetRect.height / 2) - (tooltipRect.height / 2);
+                left = targetRect.right + scrollX + 20;
+                break;
+            default:
+                top = targetRect.bottom + scrollY + 20;
+                left = targetRect.left + scrollX;
+        }
+
+        // Asegurar que el tooltip no se salga de la pantalla
+        const padding = 20;
+        const maxLeft = window.innerWidth - tooltipRect.width - padding;
+        const maxTop = window.innerHeight - tooltipRect.height - padding;
+
+        left = Math.max(padding, Math.min(left, maxLeft));
+        top = Math.max(padding, Math.min(top, maxTop));
+
+        tooltip.style.top = top + 'px';
+        tooltip.style.left = left + 'px';
+    }
+
+    function highlightTarget(target) {
+        // Remover highlight anterior
+        document.querySelectorAll('.onboarding-highlight').forEach(el => {
+            el.classList.remove('onboarding-highlight');
+        });
+
+        // Agregar highlight al target actual
+        target.classList.add('onboarding-highlight');
+    }
+
+    function showStep(stepIndex) {
+        if (stepIndex >= ONBOARDING_STEPS.length) {
+            finish();
+            return;
+        }
+
+        currentStep = stepIndex;
+        const step = ONBOARDING_STEPS[stepIndex];
+        const target = document.querySelector(step.target);
+
+        if (!target) {
+            // Si no se encuentra el target, saltar al siguiente paso
+            next();
+            return;
+        }
+
+        createOverlay();
+        highlightTarget(target);
+        createTooltip(step);
+
+        overlay.classList.add('active');
+        if (skipButton) skipButton.classList.add('active');
+    }
+
+    function next() {
+        if (currentStep < ONBOARDING_STEPS.length - 1) {
+            showStep(currentStep + 1);
+        } else {
+            finish();
         }
     }
 
-    // Exponer función para reiniciar onboarding (útil para testing)
-    window.resetOnboarding = function() {
-        localStorage.removeItem(ONBOARDING_STORAGE);
-        createOnboardingModal();
+    function skip() {
+        finish();
+    }
+
+    function finish() {
+        if (overlay) {
+            overlay.classList.remove('active');
+            setTimeout(() => {
+                if (overlay) {
+                    overlay.remove();
+                    overlay = null;
+                }
+            }, 300);
+        }
+
+        if (tooltip) {
+            tooltip.remove();
+            tooltip = null;
+        }
+
+        document.querySelectorAll('.onboarding-highlight').forEach(el => {
+            el.classList.remove('onboarding-highlight');
+        });
+
+        if (skipButton) {
+            skipButton.classList.remove('active');
+        }
+
+        markOnboardingAsCompleted();
+    }
+
+    function start() {
+        if (hasCompletedOnboarding()) {
+            return;
+        }
+
+        // Esperar a que el DOM esté completamente cargado
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(() => showStep(0), 1000);
+            });
+        } else {
+            setTimeout(() => showStep(0), 1000);
+        }
+    }
+
+    function createSkipButton() {
+        if (skipButton) return;
+
+        skipButton = document.createElement('button');
+        skipButton.className = 'onboarding-skip-button hidden';
+        skipButton.textContent = 'Saltar Tour';
+        skipButton.addEventListener('click', skip);
+        document.body.appendChild(skipButton);
+    }
+
+    // Exponer funciones globalmente
+    window.TruperOnboarding = {
+        start,
+        next,
+        skip,
+        finish,
+        reset: resetOnboarding
     };
 
     // Inicializar
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initOnboarding);
-    } else {
-        initOnboarding();
-    }
+    createSkipButton();
+    start();
+
 })();

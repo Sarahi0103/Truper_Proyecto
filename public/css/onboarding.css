@@ -1,0 +1,197 @@
+/* ============================================================
+   SISTEMA DE ONBOARDING PARA USUARIOS
+   Guía interactiva para nuevos usuarios
+   ============================================================ */
+
+.onboarding-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 9999;
+    display: none;
+}
+
+.onboarding-overlay.active {
+    display: block;
+}
+
+.onboarding-tooltip {
+    position: absolute;
+    background: var(--bg-card);
+    border: 2px solid var(--accent);
+    border-radius: 12px;
+    padding: 1.5rem;
+    max-width: 350px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    z-index: 10000;
+}
+
+.onboarding-tooltip::before {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 0;
+    border: 12px solid transparent;
+}
+
+.onboarding-tooltip.top::before {
+    bottom: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-top-color: var(--accent);
+}
+
+.onboarding-tooltip.bottom::before {
+    top: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-bottom-color: var(--accent);
+}
+
+.onboarding-tooltip.left::before {
+    right: -28px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-left-color: var(--accent);
+}
+
+.onboarding-tooltip.right::before {
+    left: -28px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-right-color: var(--accent);
+}
+
+.onboarding-tooltip h3 {
+    margin: 0 0 0.75rem 0;
+    color: var(--accent);
+    font-size: 1.1rem;
+}
+
+.onboarding-tooltip p {
+    margin: 0 0 1rem 0;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.onboarding-tooltip .onboarding-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+}
+
+.onboarding-tooltip .onboarding-actions button {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.onboarding-tooltip .onboarding-actions .btn-skip {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+}
+
+.onboarding-tooltip .onboarding-actions .btn-skip:hover {
+    background: var(--bg-input);
+}
+
+.onboarding-tooltip .onboarding-actions .btn-next {
+    background: var(--accent);
+    border: none;
+    color: white;
+    font-weight: 600;
+}
+
+.onboarding-tooltip .onboarding-actions .btn-next:hover {
+    background: var(--accent-light);
+}
+
+.onboarding-tooltip .onboarding-actions .btn-finish {
+    background: #2ed573;
+    border: none;
+    color: white;
+    font-weight: 600;
+}
+
+.onboarding-tooltip .onboarding-actions .btn-finish:hover {
+    background: #26af61;
+}
+
+.onboarding-tooltip .onboarding-progress {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 1rem;
+}
+
+.onboarding-tooltip .onboarding-progress-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 0.3s ease;
+}
+
+.onboarding-tooltip .onboarding-progress-dot.active {
+    background: var(--accent);
+}
+
+.onboarding-tooltip .onboarding-progress-dot.completed {
+    background: #2ed573;
+}
+
+.onboarding-highlight {
+    position: relative;
+    z-index: 10001;
+    box-shadow: 0 0 0 4px var(--accent), 0 0 0 8px rgba(255, 127, 0, 0.3);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.onboarding-skip-button {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    border: 1px solid var(--border);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    z-index: 10002;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.onboarding-skip-button:hover {
+    background: rgba(0, 0, 0, 0.9);
+}
+
+.onboarding-skip-button.active {
+    display: block;
+}
+
+.onboarding-skip-button.hidden {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .onboarding-tooltip {
+        max-width: 280px;
+        padding: 1rem;
+    }
+    
+    .onboarding-tooltip h3 {
+        font-size: 1rem;
+    }
+    
+    .onboarding-tooltip p {
+        font-size: 0.85rem;
+    }
+}

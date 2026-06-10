@@ -387,6 +387,7 @@ function homepage_update_label($type) {
     <link rel="stylesheet" href="css/theme.css?v=2.5">
     <link rel="stylesheet" href="css/responsive-complete.css?v=2.2">
     <link rel="stylesheet" href="css/dark-mode-auto.css?v=1.0">
+    <link rel="stylesheet" href="css/onboarding.css?v=1.0">
     <style>
         /* Modern Title style */
         h1 {
@@ -1254,5 +1255,6 @@ function homepage_update_label($type) {
         });
     </script>
     <script src="js/mobile-optimize.js"></script>
+    <script src="js/onboarding.js?v=1.0"></script>
 </body>
 </html>
