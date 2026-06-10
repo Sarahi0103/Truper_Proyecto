@@ -602,6 +602,7 @@ class KeyboardShortcuts {
     }
 
     getKeyString(e) {
+        if (!e || !e.key) return '';
         const parts = [];
 
         if (e.ctrlKey) parts.push('ctrl');
