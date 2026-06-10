@@ -383,11 +383,11 @@ function homepage_update_label($type) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Truper - Catálogo de Productos</title>
-    <link rel="stylesheet" href="css/styles.css?v=2.2">
-    <link rel="stylesheet" href="css/theme.css?v=2.5">
-    <link rel="stylesheet" href="css/responsive-complete.css?v=2.2">
-    <link rel="stylesheet" href="css/dark-mode-auto.css?v=1.0">
-    <link rel="stylesheet" href="css/onboarding.css?v=1.0">
+    <link rel="stylesheet" href="css/styles.css?v=2.3">
+    <link rel="stylesheet" href="css/theme.css?v=2.6">
+    <link rel="stylesheet" href="css/responsive-complete.css?v=2.3">
+    <link rel="stylesheet" href="css/dark-mode-auto.css?v=1.1">
+    <link rel="stylesheet" href="css/onboarding.css?v=1.1">
     <style>
         /* Modern Title style */
         h1 {
@@ -1070,8 +1070,8 @@ function homepage_update_label($type) {
         <div class="footer-bottom">&copy; 2026 Truper Platform</div>
     </footer>
     <script src="js/jspdf.umd.min.js"></script>
-    <script src="js/main.js?v=2.6"></script>
-    <script src="js/catalog.js?v=3.1"></script>
+    <script src="js/main.js?v=2.7"></script>
+    <script src="js/catalog.js?v=3.2"></script>
     <script>
         // Compartir por WhatsApp
         document.addEventListener('DOMContentLoaded', function() {
@@ -1245,6 +1245,6 @@ function homepage_update_label($type) {
         });
     </script>
     <script src="js/mobile-optimize.js"></script>
-    <script src="js/onboarding.js?v=1.0"></script>
+    <script src="js/onboarding.js?v=1.1"></script>
 </body>
 </html>
