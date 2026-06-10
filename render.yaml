@@ -18,7 +18,7 @@ services:
       - key: APP_DEBUG
         value: "false"
       - key: APP_URL
-        value: https://truper-web.onrender.com
+        value: https://truper-web-eg3h.onrender.com
       - key: DB_HOST
         fromDatabase:
           name: truper-db
