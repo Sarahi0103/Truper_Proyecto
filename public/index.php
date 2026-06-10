@@ -1031,16 +1031,6 @@ function homepage_update_label($type) {
                             <div class="product-actions">
                                 <button
                                     type="button"
-                                    class="btn btn-secondary btn-small"
-                                    data-compare-product
-                                    data-id="<?php echo (int)$product['id']; ?>"
-                                    data-sku="<?php echo htmlspecialchars($displaySku, ENT_QUOTES, 'UTF-8'); ?>"
-                                    data-name="<?php echo htmlspecialchars($productName, ENT_QUOTES, 'UTF-8'); ?>"
-                                    data-image="<?php echo htmlspecialchars($galleryImages[0] ?? $imagePath, ENT_QUOTES, 'UTF-8'); ?>"
-                                    data-price="<?php echo (float)$product['unit_price']; ?>"
-                                    data-category="<?php echo htmlspecialchars($productCategory, ENT_QUOTES, 'UTF-8'); ?>">Comparar</button>
-                                <button
-                                    type="button"
                                     class="btn btn-primary btn-small"
                                     data-add-product
                                     data-id="<?php echo (int)$product['id']; ?>"
