@@ -109,9 +109,9 @@ if (!empty($profile['birthdate'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Perfil - Truper Platform</title>
-    <link rel="stylesheet" href="css/styles.css?v=3.0">
-    <link rel="stylesheet" href="css/theme.css?v=3.0">
-    <link rel="stylesheet" href="css/responsive-complete.css?v=3.0">
+    <link rel="stylesheet" href="css/styles.css?v=4.0">
+    <link rel="stylesheet" href="css/theme.css?v=4.0">
+    <link rel="stylesheet" href="css/responsive-complete.css?v=4.0">
     <style>
         /* ===== Profile Page — Premium Redesign ===== */
         body {
@@ -450,6 +450,11 @@ if (!empty($profile['birthdate'])) {
     <header>
         <div class="header-content">
             <a href="index.php" class="logo"><img src="img/logo_truper.1.1.png" alt="Truper" style="height: 40px; width: auto; object-fit: contain;"></a>
+                        <button class="hamburger-btn" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
             <nav class="nav-menu">
                 <a href="index.php">Catálogo</a>
                 <a href="marketplace_ce.php">Marketplace CE</a>

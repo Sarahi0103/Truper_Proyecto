@@ -220,6 +220,51 @@
         });
     };
 
+    const initHamburgerMenu = () => {
+        const hamburgerBtn = document.querySelector('.hamburger-btn');
+        const navMenu = document.querySelector('.nav-menu');
+
+        if (hamburgerBtn && navMenu) {
+            // Remove any existing listener to prevent duplicate binding
+            const newBtn = hamburgerBtn.cloneNode(true);
+            hamburgerBtn.parentNode.replaceChild(newBtn, hamburgerBtn);
+
+            newBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                navMenu.classList.toggle('active');
+                newBtn.classList.toggle('active');
+            });
+
+            // Dropdown toggle on mobile
+            const dropdownBtns = document.querySelectorAll('.nav-dropdown-btn');
+            dropdownBtns.forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const dropdown = this.closest('.nav-dropdown');
+                    dropdown.classList.toggle('active');
+                });
+            });
+
+            // Close menu when clicking on a link
+            navMenu.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', function() {
+                    navMenu.classList.remove('active');
+                    newBtn.classList.remove('active');
+                });
+            });
+
+            // Close menu when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!newBtn.contains(e.target) && !navMenu.contains(e.target)) {
+                    navMenu.classList.remove('active');
+                    newBtn.classList.remove('active');
+                }
+            });
+        }
+    };
+
     // Inicializar todo cuando el DOM esté listo
     const init = () => {
         // Ejecutar funciones en orden
@@ -238,6 +283,7 @@
         monitorBattery();
         respectMotionPreferences();
         enableEventDelegation();
+        initHamburgerMenu();
 
         // Re-optimizar cuando cambie el tamaño
         window.addEventListener('resize', debounce(() => {

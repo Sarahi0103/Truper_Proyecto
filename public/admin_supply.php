@@ -11,10 +11,10 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Abastecimiento - Truper Platform</title>
-    <link rel="stylesheet" href="css/styles.css?v=2.2">
-    <link rel="stylesheet" href="css/theme.css?v=2.5">
+    <link rel="stylesheet" href="css/styles.css?v=4.0">
+    <link rel="stylesheet" href="css/theme.css?v=4.0">
     <link rel="stylesheet" href="css/dashboard.css">
-    <link rel="stylesheet" href="css/responsive-complete.css?v=2.2">
+    <link rel="stylesheet" href="css/responsive-complete.css?v=4.0">
     <style>
         /* Estilos para badges de estatus de visitas */
         .visit-status-badge {

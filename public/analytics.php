@@ -15,9 +15,9 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
     <title>Estadísticas y Análisis - Truper Platform</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css?v=3.0">
-    <link rel="stylesheet" href="css/theme.css?v=3.0">
-    <link rel="stylesheet" href="css/responsive-complete.css?v=3.0">
+    <link rel="stylesheet" href="css/styles.css?v=4.0">
+    <link rel="stylesheet" href="css/theme.css?v=4.0">
+    <link rel="stylesheet" href="css/responsive-complete.css?v=4.0">
     <link rel="stylesheet" href="css/dashboard.css?v=3.0">
     <link rel="stylesheet" href="css/analytics.css?v=3.0">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -27,7 +27,12 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
     <header>
         <div class="header-content">
             <a href="dashboard.php" class="logo"><img src="img/logo_truper.1.1.png" alt="Truper" style="height: 40px; width: auto; object-fit: contain;"></a>
-                        <nav class="nav-menu">
+                                    <button class="hamburger-btn" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <nav class="nav-menu">
                 <a href="index.php">Catálogo</a>
                 <a href="marketplace_ce.php">Marketplace CE</a>
                 <div class="nav-dropdown">

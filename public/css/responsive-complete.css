@@ -42,7 +42,9 @@ html {
 
     .header-content {
         width: 100%;
-        flex-direction: column;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
         gap: 0.5rem;
     }
 
@@ -848,6 +850,8 @@ html {
         box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         z-index: 1000;
         gap: 0.5rem;
+        flex-wrap: wrap !important;
+        overflow-x: visible !important;
     }
 
     header .nav-menu.active {

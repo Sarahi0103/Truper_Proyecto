@@ -217,9 +217,9 @@ $stock = (int)($product['stock_quantity'] ?? 0);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title><?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?> - Truper Platform</title>
-    <link rel="stylesheet" href="css/styles.css?v=2.2">
-    <link rel="stylesheet" href="css/theme.css?v=2.5">
-    <link rel="stylesheet" href="css/responsive-complete.css?v=2.2">
+    <link rel="stylesheet" href="css/styles.css?v=4.0">
+    <link rel="stylesheet" href="css/theme.css?v=4.0">
+    <link rel="stylesheet" href="css/responsive-complete.css?v=4.0">
     <style>
         /* ===== Product Detail Page — Premium Redesign ===== */
         body {
@@ -721,7 +721,12 @@ $stock = (int)($product['stock_quantity'] ?? 0);
 <header>
     <div class="header-content">
         <a href="index.php" class="logo"><img src="img/logo_truper.1.1.png" alt="Truper" style="height: 40px; width: auto; object-fit: contain;"></a>
-        <nav class="nav-menu">
+                    <button class="hamburger-btn" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <nav class="nav-menu">
             <a href="index.php">Catálogo</a>
             <a href="marketplace_ce.php">Marketplace CE</a>
             <?php if ($isLogged): ?>

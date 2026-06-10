@@ -14,10 +14,10 @@ $column_count = $is_admin ? 7 : 6;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Mayoreo - Truper Platform</title>
-    <link rel="stylesheet" href="css/styles.css?v=2.2">
-    <link rel="stylesheet" href="css/theme.css?v=2.5">
+    <link rel="stylesheet" href="css/styles.css?v=4.0">
+    <link rel="stylesheet" href="css/theme.css?v=4.0">
     <link rel="stylesheet" href="css/dashboard.css">
-    <link rel="stylesheet" href="css/responsive-complete.css?v=2.2">
+    <link rel="stylesheet" href="css/responsive-complete.css?v=4.0">
     <!-- jsPDF Library for PDF Generation -->
     <script src="js/jspdf.umd.min.js"></script>
     <style>
@@ -135,7 +135,12 @@ $column_count = $is_admin ? 7 : 6;
 <header>
     <div class="header-content">
         <a href="dashboard.php" class="logo"><img src="img/logo_truper.1.1.png" alt="Truper" style="height: 40px; width: auto; object-fit: contain;"></a>
-                <nav class="nav-menu">
+                            <button class="hamburger-btn" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <nav class="nav-menu">
             <a href="index.php">Catálogo</a>
             <a href="marketplace_ce.php">Marketplace CE</a>
             <div class="nav-dropdown">

@@ -33,8 +33,8 @@ if ($orderId && $isLogged) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title><?php echo $order ? 'Orden ' . $order['order_number'] : 'Confirmación'; ?> - Truper Platform</title>
-    <link rel="stylesheet" href="css/styles.css?v=2.2">
-    <link rel="stylesheet" href="css/theme.css?v=2.5">
+    <link rel="stylesheet" href="css/styles.css?v=4.0">
+    <link rel="stylesheet" href="css/theme.css?v=4.0">
     <style>
         .confirmation-page { padding: 2rem 1rem; }
         .confirmation-container { max-width: 800px; margin: 0 auto; }
@@ -195,7 +195,12 @@ if ($orderId && $isLogged) {
     <header>
         <div class="header-content">
             <a href="index.php" class="logo"><img src="img/logo_truper.1.1.png" alt="Truper" style="height: 40px; width: auto; object-fit: contain;"></a>
-                        <nav class="nav-menu">
+                                    <button class="hamburger-btn" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <nav class="nav-menu">
                 <a href="index.php">Catálogo</a>
                 <a href="marketplace_ce.php">Marketplace CE</a>
                 <?php if ($isLogged): ?>
