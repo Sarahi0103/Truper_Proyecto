@@ -164,7 +164,7 @@ class ProductSystemOptimizer {
             // Búsqueda 2: SKUs duplicados
             $stmt = $this->pdo->query("
                 SELECT sku, COUNT(*) as cnt FROM products 
-                WHERE sku != '' GROUP BY sku HAVING cnt > 1
+                WHERE sku != '' GROUP BY sku HAVING COUNT(*) > 1
             ");
             $duplicates = $stmt->fetchAll();
             if (!empty($duplicates)) {
