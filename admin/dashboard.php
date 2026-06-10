@@ -24,11 +24,17 @@ $top_products = $analytics->getTopPurchasedProducts(5);
     <title>Admin Dashboard - Truper</title>
     <link rel="stylesheet" href="/assets/css/style.css">
     <link rel="stylesheet" href="/assets/css/dashboard.css">
+    <link rel="stylesheet" href="/assets/css/responsive.css">
 </head>
 <body>
     <nav class="navbar">
         <div class="nav-container">
             <div class="logo">Truper ADMIN</div>
+            <button class="hamburger-btn" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
             <ul class="nav-menu">
                 <li><a href="/admin/dashboard.php">Dashboard</a></li>
                 <li><a href="/admin/users.php">Usuarios</a></li>
@@ -42,11 +48,10 @@ $top_products = $analytics->getTopPurchasedProducts(5);
 
     <div class="dashboard-container">
         <aside class="sidebar">
-        <link rel="icon" type="image/png" href="/truper_logo2.png">
             <div class="sidebar-header">
                 <h3>Administración</h3>
             </div>
-            
+            <nav class="sidebar-nav">
                 <div class="logo">Truper ADMIN</div>
                 <a href="/admin/dashboard.php" class="nav-link active">Dashboard</a>
                 <a href="/admin/users.php" class="nav-link">Gestionar Usuarios</a>
@@ -100,11 +105,11 @@ $top_products = $analytics->getTopPurchasedProducts(5);
                     <tbody>
                         <?php foreach ($top_products as $product): ?>
                         <tr>
-                            <td><?php echo htmlspecialchars($product['name']); ?></td>
-                            <td><?php echo htmlspecialchars($product['sku']); ?></td>
-                            <td><?php echo $product['total_quantity']; ?></td>
-                            <td>$<?php echo number_format($product['total_cost'], 2); ?></td>
-                            <td><?php echo $product['purchase_count']; ?></td>
+                            <td data-label="Producto"><?php echo htmlspecialchars($product['name']); ?></td>
+                            <td data-label="SKU"><?php echo htmlspecialchars($product['sku']); ?></td>
+                            <td data-label="Cantidad"><?php echo $product['total_quantity']; ?></td>
+                            <td data-label="Costo Total">$<?php echo number_format($product['total_cost'], 2); ?></td>
+                            <td data-label="Compras"><?php echo $product['purchase_count']; ?></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -114,6 +119,36 @@ $top_products = $analytics->getTopPurchasedProducts(5);
     </div>
 
     <script src="/assets/js/dashboard.js"></script>
+    <script>
+        // Menú hamburguesa responsivo
+        document.addEventListener('DOMContentLoaded', function() {
+            const hamburgerBtn = document.querySelector('.hamburger-btn');
+            const navMenu = document.querySelector('.nav-menu');
+
+            if (hamburgerBtn && navMenu) {
+                hamburgerBtn.addEventListener('click', function() {
+                    navMenu.classList.toggle('active');
+                    hamburgerBtn.classList.toggle('active');
+                });
+
+                // Cerrar menú al hacer click en un enlace
+                navMenu.querySelectorAll('a').forEach(link => {
+                    link.addEventListener('click', function() {
+                        navMenu.classList.remove('active');
+                        hamburgerBtn.classList.remove('active');
+                    });
+                });
+
+                // Cerrar menú al hacer click fuera
+                document.addEventListener('click', function(e) {
+                    if (!hamburgerBtn.contains(e.target) && !navMenu.contains(e.target)) {
+                        navMenu.classList.remove('active');
+                        hamburgerBtn.classList.remove('active');
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>
 

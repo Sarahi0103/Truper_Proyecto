@@ -134,33 +134,71 @@
    RESPONSIVE DASHBOARD
    ============================================ */
 
+/* Hamburger button styles */
+.hamburger-btn {
+    display: none;
+    flex-direction: column;
+    justify-content: space-around;
+    width: 30px;
+    height: 25px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    z-index: 1001;
+}
+
+.hamburger-btn span {
+    width: 30px;
+    height: 3px;
+    background: var(--color-primary);
+    border-radius: 3px;
+    transition: all 0.3s ease;
+}
+
+.hamburger-btn.active span:nth-child(1) {
+    transform: rotate(45deg) translate(8px, 8px);
+}
+
+.hamburger-btn.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.hamburger-btn.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(7px, -7px);
+}
+
 @media (max-width: 768px) {
+    .hamburger-btn {
+        display: flex;
+    }
+
     .dashboard-container {
         grid-template-columns: 1fr;
     }
-    
+
     .sidebar {
         height: auto;
         display: flex;
         flex-direction: column;
         position: static;
     }
-    
+
     .sidebar-nav {
         flex-direction: row;
         flex-wrap: wrap;
     }
-    
+
     .sidebar-nav .nav-link {
         flex: 1;
         min-width: 150px;
         padding: 0.5rem 1rem;
     }
-    
+
     .dashboard-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .dashboard-main {
         padding: 1rem;
     }
