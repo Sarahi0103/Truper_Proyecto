@@ -22,9 +22,9 @@ $top_products = $analytics->getTopPurchasedProducts(5);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Truper</title>
-    <link rel="stylesheet" href="/assets/css/style.css?v=4.0">
-    <link rel="stylesheet" href="/assets/css/dashboard.css?v=4.0">
-    <link rel="stylesheet" href="/assets/css/responsive.css?v=4.0">
+    <link rel="stylesheet" href="/assets/css/style.css?v=4.1">
+    <link rel="stylesheet" href="/assets/css/dashboard.css?v=4.1">
+    <link rel="stylesheet" href="/assets/css/responsive.css?v=4.1">
 </head>
 <body>
     <nav class="navbar">
