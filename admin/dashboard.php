@@ -125,10 +125,17 @@ $top_products = $analytics->getTopPurchasedProducts(5);
             const hamburgerBtn = document.querySelector('.hamburger-btn');
             const navMenu = document.querySelector('.nav-menu');
 
+            console.log('Hamburger button:', hamburgerBtn);
+            console.log('Nav menu:', navMenu);
+
             if (hamburgerBtn && navMenu) {
-                hamburgerBtn.addEventListener('click', function() {
+                hamburgerBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Hamburger clicked');
                     navMenu.classList.toggle('active');
                     hamburgerBtn.classList.toggle('active');
+                    console.log('Menu active:', navMenu.classList.contains('active'));
                 });
 
                 // Cerrar menú al hacer click en un enlace
@@ -146,6 +153,8 @@ $top_products = $analytics->getTopPurchasedProducts(5);
                         hamburgerBtn.classList.remove('active');
                     }
                 });
+            } else {
+                console.error('Hamburger button or nav menu not found');
             }
         });
     </script>

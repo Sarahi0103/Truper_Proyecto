@@ -511,6 +511,11 @@ $first_name = explode(' ', $user_name)[0];
     <header>
         <div class="header-content">
             <a href="dashboard.php" class="logo"><img src="img/logo_truper.1.1.png" alt="Truper" style="height: 40px; width: auto; object-fit: contain;"></a>
+            <button class="hamburger-btn" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
             <nav class="nav-menu">
                 <a href="index.php">Catálogo</a>
                 <a href="marketplace_ce.php">Marketplace CE</a>
@@ -1152,6 +1157,46 @@ $first_name = explode(' ', $user_name)[0];
             loadRecentOrders();
             loadTopProducts();
             loadDashboardHistory();
+
+            // Menú hamburguesa responsivo
+            const hamburgerBtn = document.querySelector('.hamburger-btn');
+            const navMenu = document.querySelector('.nav-menu');
+
+            if (hamburgerBtn && navMenu) {
+                hamburgerBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    navMenu.classList.toggle('active');
+                    hamburgerBtn.classList.toggle('active');
+                });
+
+                // Dropdown toggle en móvil
+                const dropdownBtns = document.querySelectorAll('.nav-dropdown-btn');
+                dropdownBtns.forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const dropdown = this.closest('.nav-dropdown');
+                        dropdown.classList.toggle('active');
+                    });
+                });
+
+                // Cerrar menú al hacer click en un enlace
+                navMenu.querySelectorAll('a').forEach(link => {
+                    link.addEventListener('click', function() {
+                        navMenu.classList.remove('active');
+                        hamburgerBtn.classList.remove('active');
+                    });
+                });
+
+                // Cerrar menú al hacer click fuera
+                document.addEventListener('click', function(e) {
+                    if (!hamburgerBtn.contains(e.target) && !navMenu.contains(e.target)) {
+                        navMenu.classList.remove('active');
+                        hamburgerBtn.classList.remove('active');
+                    }
+                });
+            }
         });
     </script>
     <script src="js/mobile-optimize.js"></script>
