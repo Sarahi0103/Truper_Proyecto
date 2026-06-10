@@ -704,7 +704,7 @@ async function refreshStatus() {
   const container = document.getElementById('cashierContainer');
   if (container) container.classList.add('drawer-loading');
 
-  const res = await apiCall('/cashier.php?action=summary');
+  const res = await apiCall(`/cashier.php?action=summary&_=${Date.now()}`);
   
   if (container) container.classList.remove('drawer-loading');
 
@@ -765,7 +765,7 @@ async function updateMonthlyGoalProgress(salesToday) {
   if (!goalCard) return;
 
   const currentMonthKey = new Date().toISOString().slice(0, 7);
-  const goalRes = await apiCall(`/cashier.php?action=goal-summary&month_key=${currentMonthKey}`, 'GET', null, { silent: true });
+  const goalRes = await apiCall(`/cashier.php?action=goal-summary&month_key=${currentMonthKey}&_=${Date.now()}`, 'GET', null, { silent: true });
   
   if (goalRes && goalRes.success && goalRes.goal) {
     goalCard.style.display = 'block';
@@ -888,7 +888,7 @@ async function createControlNote() {
 }
 
 async function loadNotesList() {
-  const res = await apiCall('/cashier.php?action=notes-list');
+  const res = await apiCall(`/cashier.php?action=notes-list&_=${Date.now()}`);
   const box = document.getElementById('notesList');
   if (!res || !res.success || !Array.isArray(res.items) || res.items.length === 0) {
     if (box) box.innerHTML = '<p class="text-muted">No hay notas registradas.</p>';
@@ -982,7 +982,7 @@ async function registerNotePayment() {
 
 async function loadWeeklyCashflow() {
   const weeks = document.getElementById('flowWeeks').value || 8;
-  const res = await apiCall(`/cashier.php?action=weekly-cashflow&weeks=${encodeURIComponent(weeks)}`);
+  const res = await apiCall(`/cashier.php?action=weekly-cashflow&weeks=${encodeURIComponent(weeks)}&_=${Date.now()}`);
   const box = document.getElementById('weeklyFlow');
   if (!res || !res.success) {
     if (box) box.textContent = 'No fue posible consultar flujo semanal';

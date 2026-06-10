@@ -509,7 +509,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
 
         async function loadGoalSummary() {
             const monthKey = document.getElementById('goalMonth').value || new Date().toISOString().slice(0, 7);
-            const res = await apiCall(`/cashier.php?action=goal-summary&month_key=${encodeURIComponent(monthKey)}`);
+            const res = await apiCall(`/cashier.php?action=goal-summary&month_key=${encodeURIComponent(monthKey)}&_=${Date.now()}`);
             const summary = document.getElementById('goalSummary');
             const weekly = document.getElementById('goalWeekly');
 
