@@ -24,6 +24,9 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
+// ===== COMPATIBILIDAD CON ENVIROS SIN APCu (COMO RENDER) =====
+require_once __DIR__ . '/apcu_compatibility.php';
+
 // Headers de seguridad mejorados
 header("X-Content-Type-Options: nosniff");
 header("X-Frame-Options: SAMEORIGIN");

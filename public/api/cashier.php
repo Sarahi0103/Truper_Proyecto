@@ -22,17 +22,21 @@ $notificationService = new NotificationService($pdo);
 
 $response = [];
 
-function table_exists(PDO $pdo, string $tableName): bool {
-    $stmt = $pdo->prepare("SELECT to_regclass(?) AS reg");
-    $stmt->execute([$tableName]);
-    $row = $stmt->fetch();
-    return !empty($row['reg']);
+if (!function_exists('table_exists')) {
+    function table_exists(PDO $pdo, string $tableName): bool {
+        $stmt = $pdo->prepare("SELECT to_regclass(?) AS reg");
+        $stmt->execute([$tableName]);
+        $row = $stmt->fetch();
+        return !empty($row['reg']);
+    }
 }
 
-function column_exists(PDO $pdo, string $tableName, string $columnName): bool {
-    $stmt = $pdo->prepare("SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = ? AND column_name = ? LIMIT 1");
-    $stmt->execute([$tableName, $columnName]);
-    return (bool)$stmt->fetchColumn();
+if (!function_exists('column_exists')) {
+    function column_exists(PDO $pdo, string $tableName, string $columnName): bool {
+        $stmt = $pdo->prepare("SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = ? AND column_name = ? LIMIT 1");
+        $stmt->execute([$tableName, $columnName]);
+        return (bool)$stmt->fetchColumn();
+    }
 }
 
 try {
