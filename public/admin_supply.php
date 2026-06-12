@@ -867,6 +867,18 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
             </div></div>
 
             <div class="card mt-3"><div class="card-body">
+                <h3>Tickets de Recolección en Sucursal</h3>
+                <p class="text-muted">Consulta y valida tickets pendientes de recolección física del cliente seleccionado.</p>
+                <div class="form-group mt-2">
+                    <label>Seleccionar Cliente</label>
+                    <select id="pickupClientSelect" onchange="loadClientPickupTickets()">
+                        <option value="">-- Seleccionar cliente --</option>
+                    </select>
+                </div>
+                <div id="clientPickupTicketsResult" class="mt-3"></div>
+            </div></div>
+
+            <div class="card mt-3"><div class="card-body">
                 <h3>Clientes registrados</h3>
                 <div id="clientListResult" class="text-muted">Cargando clientes...</div>
             </div></div>
@@ -2257,6 +2269,108 @@ async function loadClients() {
     }
 
     renderClientList(response.clients);
+    populatePickupClientSelect(response.clients);
+}
+
+function populatePickupClientSelect(clients) {
+    const select = document.getElementById('pickupClientSelect');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">-- Seleccionar cliente --</option>';
+
+    clients.forEach(client => {
+        const fullName = `${client.first_name || ''} ${client.last_name || ''}`.trim();
+        const option = document.createElement('option');
+        option.value = client.id;
+        option.textContent = `${fullName} (${client.phone || 'Sin teléfono'})`;
+        select.appendChild(option);
+    });
+}
+
+async function loadClientPickupTickets() {
+    const select = document.getElementById('pickupClientSelect');
+    const resultBox = document.getElementById('clientPickupTicketsResult');
+
+    if (!select || !resultBox) return;
+
+    const userId = select.value;
+    if (!userId) {
+        resultBox.innerHTML = '<p class="text-muted">Selecciona un cliente para ver sus tickets pendientes.</p>';
+        return;
+    }
+
+    resultBox.innerHTML = '<p class="text-muted">Cargando tickets...</p>';
+
+    try {
+        const response = await apiCall(`/api/ticket_validation.php?action=pending&user_id=${userId}`, 'GET', null, { silent: true });
+
+        if (!response || !response.success) {
+            resultBox.innerHTML = '<p class="text-muted">No fue posible cargar los tickets.</p>';
+            return;
+        }
+
+        renderClientPickupTickets(response.tickets);
+    } catch (error) {
+        console.error('Error loading client pickup tickets:', error);
+        resultBox.innerHTML = '<p class="text-muted">Error al cargar los tickets.</p>';
+    }
+}
+
+function renderClientPickupTickets(tickets) {
+    const resultBox = document.getElementById('clientPickupTicketsResult');
+    if (!resultBox) return;
+
+    if (!Array.isArray(tickets) || tickets.length === 0) {
+        resultBox.innerHTML = '<p class="text-muted">Este cliente no tiene tickets pendientes de recolección.</p>';
+        return;
+    }
+
+    const pickupStatusMap = {
+        'pending': { color: 'rgba(255, 193, 7, 0.2)', border: '#ffc107', text: '⏳ Pendiente' },
+        'picked_up': { color: 'rgba(76, 175, 80, 0.2)', border: '#4caf50', text: '✓ Entregado' },
+        'cancelled': { color: 'rgba(244, 67, 54, 0.2)', border: '#f44336', text: '✗ Cancelado' },
+        'expired': { color: 'rgba(255, 87, 34, 0.2)', border: '#ff5722', text: '⚠️ Expirado' }
+    };
+
+    let html = `
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr>
+                    <th>Folio</th>
+                    <th>Tipo</th>
+                    <th>Total</th>
+                    <th>Fecha</th>
+                    <th>Estado Entrega</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    tickets.forEach(ticket => {
+        const pickupStatus = ticket.pickup_status || 'pending';
+        const pickupBadge = pickupStatusMap[pickupStatus] || pickupStatusMap['pending'];
+
+        html += `
+            <tr style="border-bottom: 1px solid var(--theme-border);">
+                <td style="padding: 1rem; font-family: monospace; font-weight: 700; color: var(--color-naranja);">${escapeHtml(ticket.folio)}</td>
+                <td style="padding: 1rem;">${escapeHtml(ticket.ticket_type)}</td>
+                <td style="padding: 1rem; font-weight: 700;">$${parseFloat(ticket.total_amount || 0).toFixed(2)}</td>
+                <td style="padding: 1rem; font-size: 0.9rem;">${new Date(ticket.issued_date).toLocaleDateString('es-MX')}</td>
+                <td style="padding: 1rem;">
+                    <span style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: ${pickupBadge.color}; border: 1px solid ${pickupBadge.border}; color: white;">
+                        ${pickupBadge.text}
+                    </span>
+                </td>
+                <td style="padding: 1rem;">
+                    <button onclick="window.location.href='ticket_validation.php?folio=${escapeHtml(ticket.folio)}'" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: var(--color-naranja); color: white; border: none; border-radius: 4px; cursor: pointer;">Validar</button>
+                </td>
+            </tr>
+        `;
+    });
+
+    html += '</tbody></table>';
+    resultBox.innerHTML = html;
 }
 
 let stockCurrentPage = 1;

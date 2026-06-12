@@ -253,4 +253,314 @@ class SalesTicket {
             return false;
         }
     }
+
+    // ============================================================
+    // MÉTODOS DE VALIDACIÓN DE RECOLECCIÓN EN SUCURSAL
+    // ============================================================
+
+    /**
+     * Valida ticket por folio, actualiza estado a picked_up, guarda log y sincroniza con pedido
+     */
+    public function validatePickup($folio, $adminId, $notes = null) {
+        try {
+            $this->pdo->beginTransaction();
+
+            // Obtener ticket
+            $ticket = $this->getTicketByFolio($folio);
+            if (!$ticket) {
+                return ['success' => false, 'message' => 'Ticket no encontrado'];
+            }
+
+            // Verificar elegibilidad
+            $eligibility = $this->checkTicketEligibility($ticket['id']);
+            if (!$eligibility['eligible']) {
+                return ['success' => false, 'message' => $eligibility['reason']];
+            }
+
+            // Actualizar estado de recolección
+            $stmt = $this->pdo->prepare("UPDATE sales_tickets SET pickup_status = 'picked_up', pickup_date = NOW(), pickup_verified_by = :admin_id, pickup_notes = :notes, updated_at = NOW() WHERE id = :ticket_id");
+            $stmt->execute([
+                ':ticket_id' => $ticket['id'],
+                ':admin_id' => $adminId,
+                ':notes' => $notes
+            ]);
+
+            // Registrar en log de recolección
+            $logStmt = $this->pdo->prepare("INSERT INTO ticket_pickup_log (ticket_id, admin_id, action, notes, ip_address, created_at) VALUES (:ticket_id, :admin_id, 'validated', :notes, :ip_address, NOW())");
+            $logStmt->execute([
+                ':ticket_id' => $ticket['id'],
+                ':admin_id' => $adminId,
+                ':notes' => $notes,
+                ':ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
+            ]);
+
+            // Sincronizar con pedido relacionado (manejo de error si tabla no existe)
+            if ($ticket['order_id']) {
+                try {
+                    $orderStmt = $this->pdo->prepare("UPDATE orders SET status = 'delivered', updated_at = NOW() WHERE id = :order_id AND payment_status = 'completed'");
+                    $orderStmt->execute([':order_id' => $ticket['order_id']]);
+
+                    // Registrar sincronización en auditoría
+                    $this->addAuditLog($ticket['id'], 'pickup_validated', null, ['order_status' => 'delivered'], 'Recolección validada y pedido marcado como entregado');
+                } catch (Exception $e) {
+                    error_log('Tabla orders no existe o error al actualizar: ' . $e->getMessage());
+                    $this->addAuditLog($ticket['id'], 'pickup_validated', null, null, 'Recolección validada (tabla orders no disponible)');
+                }
+            } else {
+                $this->addAuditLog($ticket['id'], 'pickup_validated', null, null, 'Recolección validada (sin pedido relacionado)');
+            }
+
+            $this->pdo->commit();
+
+            return [
+                'success' => true,
+                'message' => 'Ticket validado exitosamente',
+                'ticket_id' => $ticket['id'],
+                'folio' => $ticket['folio']
+            ];
+        } catch (Exception $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            error_log('Error en validatePickup: ' . $e->getMessage());
+            return ['success' => false, 'message' => 'Error validando ticket'];
+        }
+    }
+
+    /**
+     * Obtiene detalles del ticket con información de pickup
+     */
+    public function getTicketWithPickupInfo($folio) {
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT
+                    st.*,
+                    u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END AS customer_name,
+                    u.email,
+                    u.phone,
+                    admin.first_name || CASE WHEN admin.last_name IS NOT NULL AND admin.last_name <> '' THEN ' ' || admin.last_name ELSE '' END AS pickup_admin_name
+                FROM sales_tickets st
+                LEFT JOIN users u ON st.user_id = u.id
+                LEFT JOIN users admin ON st.pickup_verified_by = admin.id
+                WHERE st.folio = :folio
+            ");
+            $stmt->execute([':folio' => $folio]);
+            $ticket = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$ticket) {
+                return null;
+            }
+
+            // Obtener items del ticket
+            $itemsStmt = $this->pdo->prepare("SELECT * FROM ticket_items WHERE ticket_id = :ticket_id");
+            $itemsStmt->execute([':ticket_id' => $ticket['id']]);
+            $ticket['items'] = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Verificar elegibilidad
+            $ticket['eligibility'] = $this->checkTicketEligibility($ticket['id']);
+
+            return $ticket;
+        } catch (Exception $e) {
+            error_log('Error en getTicketWithPickupInfo: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Obtiene tickets pendientes de recolección con filtros opcionales
+     */
+    public function getPendingPickups($userId = null, $searchTerm = null, $page = 1, $perPage = 20) {
+        try {
+            $offset = max(0, ($page - 1) * $perPage);
+            $where = "WHERE st.status = 'active' AND st.pickup_status = 'pending' AND st.payment_status = 'completed'";
+            $params = [];
+
+            if ($userId) {
+                $where .= " AND st.user_id = :user_id";
+                $params[':user_id'] = $userId;
+            }
+
+            if ($searchTerm) {
+                $where .= " AND (st.folio ILIKE :search OR u.email ILIKE :search OR u.phone ILIKE :search)";
+                $params[':search'] = '%' . $searchTerm . '%';
+            }
+
+            // Contar total
+            $countSql = "SELECT COUNT(*) as total FROM sales_tickets st LEFT JOIN users u ON st.user_id = u.id $where";
+            $countStmt = $this->pdo->prepare($countSql);
+            $countStmt->execute($params);
+            $total = (int)$countStmt->fetchColumn();
+
+            // Obtener tickets
+            $sql = "
+                SELECT
+                    st.id,
+                    st.folio,
+                    st.ticket_type,
+                    st.total_amount,
+                    st.issued_date,
+                    st.expiration_date,
+                    u.email AS customer_email,
+                    u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END AS customer_name,
+                    u.phone,
+                    COUNT(sti.id) as item_count
+                FROM sales_tickets st
+                LEFT JOIN users u ON st.user_id = u.id
+                LEFT JOIN ticket_items sti ON st.id = sti.ticket_id
+                $where
+                GROUP BY st.id, u.email, u.first_name, u.last_name, u.phone
+                ORDER BY st.issued_date DESC
+                LIMIT :limit OFFSET :offset
+            ";
+
+            $stmt = $this->pdo->prepare($sql);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+            $stmt->bindValue(':limit', (int)$perPage, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
+            $stmt->execute();
+            $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            return [
+                'success' => true,
+                'tickets' => $tickets,
+                'pagination' => [
+                    'page' => $page,
+                    'per_page' => $perPage,
+                    'total' => $total,
+                    'total_pages' => (int)ceil($total / max($perPage, 1))
+                ]
+            ];
+        } catch (Exception $e) {
+            error_log('Error en getPendingPickups: ' . $e->getMessage());
+            return ['success' => false, 'tickets' => []];
+        }
+    }
+
+    /**
+     * Obtiene historial de auditoría de visitas del ticket
+     */
+    public function getPickupLog($ticketId) {
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT
+                    tpl.*,
+                    admin.first_name || CASE WHEN admin.last_name IS NOT NULL AND admin.last_name <> '' THEN ' ' || admin.last_name ELSE '' END AS admin_name
+                FROM ticket_pickup_log tpl
+                LEFT JOIN users admin ON tpl.admin_id = admin.id
+                WHERE tpl.ticket_id = :ticket_id
+                ORDER BY tpl.created_at DESC
+            ");
+            $stmt->execute([':ticket_id' => $ticketId]);
+            $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            return [
+                'success' => true,
+                'logs' => $logs,
+                'total' => count($logs)
+            ];
+        } catch (Exception $e) {
+            error_log('Error en getPickupLog: ' . $e->getMessage());
+            return ['success' => false, 'logs' => []];
+        }
+    }
+
+    /**
+     * Reactiva ticket expirado (solo admin superior)
+     */
+    public function reactivateTicket($ticketId, $adminId, $notes = null) {
+        try {
+            $this->pdo->beginTransaction();
+
+            // Verificar que ticket esté expirado
+            $stmt = $this->pdo->prepare("SELECT * FROM sales_tickets WHERE id = :ticket_id");
+            $stmt->execute([':ticket_id' => $ticketId]);
+            $ticket = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$ticket) {
+                return ['success' => false, 'message' => 'Ticket no encontrado'];
+            }
+
+            if ($ticket['pickup_status'] !== 'expired') {
+                return ['success' => false, 'message' => 'Solo se pueden reactivar tickets expirados'];
+            }
+
+            // Reactivar ticket
+            $updateStmt = $this->pdo->prepare("UPDATE sales_tickets SET pickup_status = 'pending', expiration_date = NOW() + INTERVAL '30 days', updated_at = NOW() WHERE id = :ticket_id");
+            $updateStmt->execute([':ticket_id' => $ticketId]);
+
+            // Registrar en log
+            $logStmt = $this->pdo->prepare("INSERT INTO ticket_pickup_log (ticket_id, admin_id, action, notes, ip_address, created_at) VALUES (:ticket_id, :admin_id, 'reactivated', :notes, :ip_address, NOW())");
+            $logStmt->execute([
+                ':ticket_id' => $ticketId,
+                ':admin_id' => $adminId,
+                ':notes' => $notes,
+                ':ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
+            ]);
+
+            // Registrar en auditoría
+            $this->addAuditLog($ticketId, 'ticket_reactivated', ['pickup_status' => 'expired'], ['pickup_status' => 'pending'], 'Ticket reactivado por admin');
+
+            $this->pdo->commit();
+
+            return [
+                'success' => true,
+                'message' => 'Ticket reactivado exitosamente',
+                'new_expiration_date' => date('Y-m-d H:i:s', strtotime('+30 days'))
+            ];
+        } catch (Exception $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            error_log('Error en reactivateTicket: ' . $e->getMessage());
+            return ['success' => false, 'message' => 'Error reactivando ticket'];
+        }
+    }
+
+    /**
+     * Verifica si ticket puede ser validado (pagado, no entregado, no expirado)
+     */
+    public function checkTicketEligibility($ticketId) {
+        try {
+            $stmt = $this->pdo->prepare("SELECT * FROM sales_tickets WHERE id = :ticket_id");
+            $stmt->execute([':ticket_id' => $ticketId]);
+            $ticket = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$ticket) {
+                return ['eligible' => false, 'reason' => 'Ticket no encontrado'];
+            }
+
+            if ($ticket['status'] !== 'active') {
+                return ['eligible' => false, 'reason' => 'Ticket no está activo'];
+            }
+
+            if ($ticket['payment_status'] !== 'completed') {
+                return ['eligible' => false, 'reason' => 'Ticket no está pagado'];
+            }
+
+            if ($ticket['pickup_status'] === 'picked_up') {
+                return ['eligible' => false, 'reason' => 'Ticket ya fue entregado'];
+            }
+
+            if ($ticket['pickup_status'] === 'cancelled') {
+                return ['eligible' => false, 'reason' => 'Ticket fue cancelado'];
+            }
+
+            if ($ticket['pickup_status'] === 'expired') {
+                return ['eligible' => false, 'reason' => 'Ticket ha expirado'];
+            }
+
+            if ($ticket['expiration_date'] && strtotime($ticket['expiration_date']) < time()) {
+                // Actualizar estado a expired automáticamente
+                $this->pdo->prepare("UPDATE sales_tickets SET pickup_status = 'expired' WHERE id = :ticket_id")->execute([':ticket_id' => $ticketId]);
+                return ['eligible' => false, 'reason' => 'Ticket ha expirado'];
+            }
+
+            return ['eligible' => true, 'reason' => ''];
+        } catch (Exception $e) {
+            error_log('Error en checkTicketEligibility: ' . $e->getMessage());
+            return ['eligible' => false, 'reason' => 'Error verificando elegibilidad'];
+        }
+    }
 }

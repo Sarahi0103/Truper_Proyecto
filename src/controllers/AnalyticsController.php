@@ -339,7 +339,7 @@ class AnalyticsController {
             $month = $month ?? date('m');
             
             $stmt = $this->pdo->prepare("
-                SELECT 
+                SELECT
                     st.id,
                     st.folio,
                     st.ticket_type,
@@ -347,6 +347,8 @@ class AnalyticsController {
                     st.payment_status,
                     st.issued_date,
                     st.verified_date,
+                    st.pickup_status,
+                    st.expiration_date,
                     COALESCE(st.customer_name, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END, 'Mostrador') as customer_name,
                     u.email,
                     (SELECT COUNT(*) FROM ticket_items WHERE ticket_id = st.id) as item_count,
