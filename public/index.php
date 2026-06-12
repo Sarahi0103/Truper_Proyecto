@@ -1007,7 +1007,11 @@ function homepage_update_label($type) {
                                     class="product-gallery-image <?php echo $idx === 0 ? 'active' : ''; ?>"
                                     src="<?php echo htmlspecialchars($galleryImage, ENT_QUOTES, 'UTF-8'); ?>"
                                     alt="<?php echo htmlspecialchars($productName, ENT_QUOTES, 'UTF-8'); ?>"
-                                    loading="lazy">
+                                    loading="lazy"
+                                    decoding="async"
+                                    fetchpriority="<?php echo $idx === 0 ? 'high' : 'low'; ?>"
+                                    width="300"
+                                    height="300">
                             <?php endforeach; ?>
                             <?php if (count($galleryImages) > 1): ?>
                                 <button type="button" class="gallery-nav gallery-prev" data-gallery-prev aria-label="Imagen anterior">&#10094;</button>

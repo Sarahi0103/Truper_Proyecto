@@ -113,11 +113,11 @@ try {
                 exit;
             }
 
-            // Verificar que sea admin superior (opcional - descomentar si se requiere)
-            // if (!isAdminSuper()) {
-            //     echo json_encode(['success' => false, 'message' => 'Solo administradores superiores pueden reactivar tickets']);
-            //     exit;
-            // }
+            // Verificar que sea admin superior
+            if (!isAdminSuper()) {
+                echo json_encode(['success' => false, 'message' => 'Solo administradores superiores pueden reactivar tickets']);
+                exit;
+            }
 
             $result = $ticketModel->reactivateTicket($ticketId, $adminId, $notes);
             echo json_encode($result);
@@ -135,6 +135,32 @@ try {
 
             $result = $ticketModel->getPendingPickups($userId > 0 ? $userId : null, null, $page, $perPage);
             echo json_encode($result);
+            break;
+
+        case 'notify':
+            if ($method !== 'POST') {
+                echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+                exit;
+            }
+
+            $folio = sanitize($input['folio'] ?? '');
+            $email = sanitize($input['email'] ?? '');
+            $customerName = sanitize($input['customer_name'] ?? '');
+
+            if (empty($folio) || empty($email)) {
+                echo json_encode(['success' => false, 'message' => 'Folio y email son requeridos']);
+                exit;
+            }
+
+            // Simular envío de email (en producción usar servicio real de email)
+            $subject = "Tu ticket ha sido validado - Truper";
+            $message = "Hola $customerName,\n\nTu ticket #$folio ha sido validado exitosamente. Ya puedes recoger tu pedido.\n\nGracias por tu compra.\n\nTruper";
+
+            // Aquí se integraría con servicio real de email como PHPMailer, SendGrid, etc.
+            // Por ahora, solo logueamos el envío
+            error_log("Email enviado a $email: $subject");
+
+            echo json_encode(['success' => true, 'message' => 'Notificación enviada']);
             break;
 
         default:

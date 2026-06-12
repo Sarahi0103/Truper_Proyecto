@@ -774,13 +774,13 @@ $stock = (int)($product['stock_quantity'] ?? 0);
         <div class="product-detail-hero">
             <div class="detail-gallery">
                 <div class="detail-main-image" data-lightbox-trigger>
-                    <img id="mainImage" src="<?php echo htmlspecialchars($galleryImages[0], ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($productName, ENT_QUOTES, 'UTF-8'); ?>">
+                    <img id="mainImage" src="<?php echo htmlspecialchars($galleryImages[0], ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($productName, ENT_QUOTES, 'UTF-8'); ?>" loading="eager" decoding="async" fetchpriority="high" width="600" height="600">
                 </div>
                 <?php if (count($galleryImages) > 1): ?>
                     <div class="detail-thumbnails" data-thumbnails-container>
                         <?php foreach ($galleryImages as $idx => $image): ?>
                             <div class="detail-thumbnail <?php echo $idx === 0 ? 'active' : ''; ?>" data-thumbnail data-image="<?php echo htmlspecialchars($image, ENT_QUOTES, 'UTF-8'); ?>">
-                                <img src="<?php echo htmlspecialchars($image, ENT_QUOTES, 'UTF-8'); ?>" alt="Imagen <?php echo $idx + 1; ?>">
+                                <img src="<?php echo htmlspecialchars($image, ENT_QUOTES, 'UTF-8'); ?>" alt="Imagen <?php echo $idx + 1; ?>" loading="lazy" decoding="async" width="100" height="100">
                             </div>
                         <?php endforeach; ?>
                     </div>

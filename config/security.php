@@ -331,17 +331,37 @@ function setSecurityHeaders() {
     }
 }
 
+// ===== ADMIN SUPERIOR VALIDATION =====
+function isAdminSuper(): bool {
+    // Verificar si el usuario es admin
+    if (($_SESSION['role'] ?? '') !== 'admin') {
+        return false;
+    }
+
+    // Verificar si el usuario tiene permisos de super admin
+    // Esto puede basarse en un campo en la tabla users o en una lista de IDs específicos
+    $userId = $_SESSION['user_id'] ?? 0;
+    if ($userId <= 0) {
+        return false;
+    }
+
+    // Lista de IDs de super admins (configurable)
+    $superAdminIds = [1]; // ID 1 es super admin por defecto
+
+    return in_array($userId, $superAdminIds, true);
+}
+
 // ===== TWO-FACTOR AUTHENTICATION =====
 class TwoFactorAuth {
-    
+
     public static function generateSecret() {
         return bin2hex(random_bytes(16));
     }
-    
+
     public static function generateTOTP($secret) {
         $time = floor(time() / 30);
         $code = 0;
-        
+
         for ($i = 0; $i < 64; $i++) {
             $hmac = hash_hmac('sha1', pack('N*', 0, $time), $secret, true);
             $offset = ord($hmac[19]) & 0xf;

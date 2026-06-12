@@ -211,11 +211,17 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
 
         .validation-actions {
             display: flex;
+            flex-direction: column;
             gap: 1rem;
-            align-items: center;
             margin-top: 2rem;
             padding-top: 2rem;
             border-top: 2px solid #333;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
         }
 
         .btn-confirm {
@@ -243,6 +249,25 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             cursor: not-allowed;
             transform: none;
             box-shadow: none;
+        }
+
+        .btn-print {
+            padding: 1.5rem 2rem;
+            font-size: 1rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-print:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(74, 144, 226, 0.4);
         }
 
         .notes-field {
@@ -512,7 +537,10 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                         <input type="checkbox" id="notifyCustomer">
                         <label for="notifyCustomer">Notificar al cliente</label>
                     </div>
-                    <button id="btnConfirm" class="btn-confirm">Confirmar Entrega Física</button>
+                    <div class="action-buttons">
+                        <button id="btnConfirm" class="btn-confirm">Confirmar Entrega Física</button>
+                        <button id="btnPrint" class="btn-print" onclick="printTicket()">🖨️ Imprimir Ticket</button>
+                    </div>
                 </div>
             </div>
 
@@ -776,9 +804,9 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                     notifyCustomer.checked = false;
                     loadTicketDetails(folio); // Reload to show updated status
 
-                    // TODO: Implement notification if notify is checked
-                    if (notify) {
-                        console.log('Notificación al cliente pendiente de implementación');
+                    // Implement notification if notify is checked
+                    if (notify && currentTicket.email) {
+                        sendNotificationEmail(currentTicket, folio);
                     }
                 } else {
                     showAlert('error', data.message || 'Error al validar ticket');
@@ -791,6 +819,114 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                 btnConfirm.textContent = 'Confirmar Entrega Física';
             }
         });
+
+        async function sendNotificationEmail(ticket, folio) {
+            try {
+                const response = await fetch('api/ticket_validation.php?action=notify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': window.csrfToken || ''
+                    },
+                    body: JSON.stringify({
+                        folio: folio,
+                        email: ticket.email,
+                        customer_name: ticket.customer_name,
+                        csrf_token: window.csrfToken || ''
+                    })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showAlert('success', 'Notificación enviada al cliente');
+                } else {
+                    showAlert('warning', 'No se pudo enviar notificación: ' + (data.message || 'Error desconocido'));
+                }
+            } catch (error) {
+                console.error('Error sending notification:', error);
+                showAlert('warning', 'Error al enviar notificación');
+            }
+        }
+
+        function printTicket() {
+            if (!currentTicket) {
+                showAlert('warning', 'No hay ticket seleccionado para imprimir');
+                return;
+            }
+
+            const printContent = `
+                <html>
+                <head>
+                    <title>Ticket ${currentTicket.folio}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 20px; }
+                        .ticket-header { text-align: center; margin-bottom: 20px; }
+                        .ticket-info { margin-bottom: 15px; }
+                        .ticket-items { margin: 20px 0; }
+                        .ticket-items table { width: 100%; border-collapse: collapse; }
+                        .ticket-items th, .ticket-items td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                        .ticket-footer { margin-top: 30px; text-align: center; font-size: 12px; }
+                        .status-badge { padding: 5px 10px; border-radius: 5px; display: inline-block; }
+                    </style>
+                </head>
+                <body>
+                    <div class="ticket-header">
+                        <h1>TRUPER</h1>
+                        <h2>Ticket de Validación</h2>
+                        <p><strong>Folio:</strong> ${currentTicket.folio}</p>
+                        <p><strong>Fecha:</strong> ${new Date(currentTicket.issued_date).toLocaleDateString('es-MX')}</p>
+                    </div>
+                    
+                    <div class="ticket-info">
+                        <p><strong>Cliente:</strong> ${currentTicket.customer_name || 'N/A'}</p>
+                        <p><strong>Email:</strong> ${currentTicket.email || 'N/A'}</p>
+                        <p><strong>Teléfono:</strong> ${currentTicket.phone || 'N/A'}</p>
+                        <p><strong>Total:</strong> $${parseFloat(currentTicket.total_amount).toFixed(2)}</p>
+                        <p><strong>Estado de Pago:</strong> ${currentTicket.payment_status === 'completed' ? 'Pagado' : 'Pendiente'}</p>
+                        <p><strong>Estado de Entrega:</strong> 
+                            <span class="status-badge" style="background: ${currentTicket.pickup_status === 'picked_up' ? '#4caf50' : '#ffc107'}; color: white;">
+                                ${currentTicket.pickup_status === 'picked_up' ? 'Entregado' : 'Pendiente'}
+                            </span>
+                        </p>
+                    </div>
+                    
+                    <div class="ticket-items">
+                        <h3>Productos</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Cantidad</th>
+                                    <th>Precio Unitario</th>
+                                    <th>Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${currentTicket.items.map(item => `
+                                    <tr>
+                                        <td>${item.product_name || item.name || 'N/A'}</td>
+                                        <td>${item.quantity || 1}</td>
+                                        <td>$${parseFloat(item.unit_price || item.price || 0).toFixed(2)}</td>
+                                        <td>$${parseFloat((item.quantity || 1) * (item.unit_price || item.price || 0)).toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="ticket-footer">
+                        <p>Este documento es comprobante de validación de ticket.</p>
+                        <p>Fecha de impresión: ${new Date().toLocaleString('es-MX')}</p>
+                        <p>Truper Platform - Sistema de Gestión</p>
+                    </div>
+                </body>
+                </html>
+            `;
+
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(printContent);
+            printWindow.document.close();
+            printWindow.print();
+        }
 
         function showAlert(type, message) {
             const alertSuccess = document.getElementById('alertSuccess');
