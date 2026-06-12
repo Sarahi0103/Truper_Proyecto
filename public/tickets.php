@@ -103,6 +103,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                         <a href="cashier.php">Caja</a>
                         <a href="admin_supply.php?nocache=true">Abastecimiento</a>
                         <a href="tickets.php" class="active">Tickets</a>
+                        <a href="ticket_validation.php">Validación</a>
                         <a href="tasks.php">Tareas</a>
                         <a href="analytics.php">Estadísticas</a>
                     </div>
@@ -197,12 +198,12 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                                     <tr>
                                         <th>Folio</th>
                                         <th>Cliente</th>
-                                        <th>Emisor</th>
                                         <th>Tipo</th>
                                         <th>Total</th>
-                                        <th>Estado</th>
+                                        <th>Pago</th>
+                                        <th>Entrega</th>
                                         <th>Fecha</th>
-                                        <th style="text-align: center;">Artículos</th>
+                                        <th style="text-align: center;">Acción</th>
                                     </tr>
                                 </thead>
                                 <tbody id="ticketsTableBody">
@@ -369,15 +370,41 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                         'credit': '💳 Crédito'
                     }[ticket.ticket_type] || ticket.ticket_type;
 
+                    // Formatear estado de recolección física
+                    let pickupBadge = '';
+                    if (ticket.ticket_type === 'sale') {
+                        const pStatus = ticket.pickup_status || 'pending';
+                        const pickupColor = {
+                            'pending': 'var(--color-advertencia)',
+                            'picked_up': 'var(--color-exito)',
+                            'cancelled': 'var(--color-peligro, #dc3545)',
+                            'expired': '#6c757d'
+                        }[pStatus];
+                        const pickupText = {
+                            'pending': '⏳ Pendiente',
+                            'picked_up': '✓ Entregado',
+                            'cancelled': '✗ Cancelado',
+                            'expired': '⌛ Expirado'
+                        }[pStatus];
+                        pickupBadge = `<span style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: ${pickupColor}; color: white;">${pickupText}</span>`;
+                    } else {
+                        pickupBadge = '<span style="color:var(--theme-text-muted);">—</span>';
+                    }
+
+                    // Botón para validar
+                    let actionButton = '';
+                    if (ticket.ticket_type === 'sale') {
+                        actionButton = `<a href="ticket_validation.php?folio=${escapeHtml(ticket.folio)}" class="btn" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; text-decoration: none; border-radius: 6px; background: var(--color-naranja); border: none; color: white; display: inline-block; font-weight: 600;">🚚 Validar</a>`;
+                    } else {
+                        actionButton = '<span style="color:var(--theme-text-muted);">—</span>';
+                    }
+
                     html += `
                         <tr style="border-bottom: 1px solid var(--theme-border);">
                             <td style="padding: 1rem; font-family: monospace; font-weight: 700; color: var(--color-naranja);">${escapeHtml(ticket.folio)}</td>
                             <td style="padding: 1rem;">
                                 <div style="font-weight: 600;">${escapeHtml(ticket.customer_name || 'Mostrador')}</div>
                                 <div style="font-size: 0.8rem; color: var(--theme-text-muted);">${escapeHtml(ticket.email || '')}</div>
-                            </td>
-                            <td style="padding: 1rem; font-size: 0.85rem; color: var(--theme-text-muted);">
-                                ${ticket.issued_by_name ? escapeHtml(ticket.issued_by_name) : 'Admin'}
                             </td>
                             <td style="padding: 1rem;">${typeLabel}</td>
                             <td style="padding: 1rem; font-weight: 700; color: var(--color-naranja);">${formatAdminMoney(ticket.total_amount || 0)}</td>
@@ -386,10 +413,11 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                                     ${ticket.payment_status === 'completed' ? '✓ Pagado' : '⏳ Pendiente'}
                                 </span>
                             </td>
+                            <td style="padding: 1rem;">${pickupBadge}</td>
                             <td style="padding: 1rem; font-size: 0.9rem; color: var(--theme-text-muted);">
                                 ${new Date(ticket.issued_date).toLocaleDateString('es-MX')}
                             </td>
-                            <td style="padding: 1rem; text-align: center; font-weight: 600;">${ticket.item_count || 0}</td>
+                            <td style="padding: 1rem; text-align: center;">${actionButton}</td>
                         </tr>
                     `;
                 });
