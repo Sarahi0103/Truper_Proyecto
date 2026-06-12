@@ -400,6 +400,7 @@ class SalesTicket {
                     st.total_amount,
                     st.issued_date,
                     st.expiration_date,
+                    st.pickup_status,
                     u.email AS customer_email,
                     u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END AS customer_name,
                     u.phone,

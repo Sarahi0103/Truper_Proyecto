@@ -3,6 +3,12 @@ require_once '../../config/config.php';
 require_once '../../backend/models/SalesTicket.php';
 
 require_admin();
+
+// Validar CSRF para POST/PUT
+if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'PUT') {
+    require_csrf_token();
+}
+
 header('Content-Type: application/json');
 
 $pdo = $GLOBALS['pdo'];

@@ -527,6 +527,18 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
     <script src="js/main.js?v=2.7"></script>
     <script src="js/mobile-optimize.js"></script>
     <script>
+        window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, \'UTF-8\'); ?>';
+
+        function escapeHtml(text) {
+            if (text === null || text === undefined) return '';
+            return text.toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         let currentTicket = null;
         let searchTimeout = null;
 
@@ -579,10 +591,10 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
 
         function displaySuggestions(tickets) {
             searchSuggestions.innerHTML = tickets.map(ticket => `
-                <div class="suggestion-item" data-folio="${ticket.folio}">
-                    <div style="font-weight: bold; color: #ff7f00;">${ticket.folio}</div>
-                    <div style="color: #fff;">${ticket.customer_name}</div>
-                    <div style="font-size: 0.875rem; color: #888;">$${parseFloat(ticket.total_amount).toFixed(2)} - ${ticket.item_count} productos</div>
+                <div class="suggestion-item" data-folio="${escapeHtml(ticket.folio)}">
+                    <div style="font-weight: bold; color: #ff7f00;">${escapeHtml(ticket.folio)}</div>
+                    <div style="color: #fff;">${escapeHtml(ticket.customer_name)}</div>
+                    <div style="font-size: 0.875rem; color: #888;">$${parseFloat(ticket.total_amount).toFixed(2)} - ${escapeHtml(ticket.item_count)} productos</div>
                 </div>
             `).join('');
 
@@ -659,8 +671,8 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             const productsTableBody = document.getElementById('productsTableBody');
             productsTableBody.innerHTML = ticket.items.map(item => `
                 <tr>
-                    <td>${item.product_name}</td>
-                    <td>${item.quantity}</td>
+                    <td>${escapeHtml(item.product_name)}</td>
+                    <td>${escapeHtml(item.quantity)}</td>
                     <td>$${parseFloat(item.unit_price).toFixed(2)}</td>
                     <td>$${parseFloat(item.total).toFixed(2)}</td>
                 </tr>
@@ -708,12 +720,12 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             } else {
                 auditLogContent.innerHTML = logs.map(log => `
                     <div class="log-entry">
-                        <div class="log-action">${getActionText(log.action)}</div>
+                        <div class="log-action">${escapeHtml(getActionText(log.action))}</div>
                         <div class="log-meta">
-                            ${log.admin_name ? `Por: ${log.admin_name}` : ''} | 
+                            ${log.admin_name ? `Por: ${escapeHtml(log.admin_name)}` : ''} | 
                             ${new Date(log.created_at).toLocaleString('es-ES')}
                         </div>
-                        ${log.notes ? `<div style="margin-top: 0.5rem; color: #fff;">${log.notes}</div>` : ''}
+                        ${log.notes ? `<div style="margin-top: 0.5rem; color: #fff;">${escapeHtml(log.notes)}</div>` : ''}
                     </div>
                 `).join('');
             }
@@ -746,11 +758,13 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                 const response = await fetch('api/ticket_validation.php?action=validate', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': window.csrfToken || ''
                     },
                     body: JSON.stringify({
                         folio: folio,
-                        notes: notes
+                        notes: notes,
+                        csrf_token: window.csrfToken || ''
                     })
                 });
 
@@ -805,6 +819,16 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                 alertWarning.classList.remove('active');
             }, 5000);
         }
+
+        // Auto-load ticket if folio is in URL query parameters
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const folioParam = urlParams.get('folio');
+            if (folioParam) {
+                searchInput.value = folioParam;
+                loadTicketDetails(folioParam);
+            }
+        });
 
         // Close suggestions when clicking outside
         document.addEventListener('click', function(e) {
