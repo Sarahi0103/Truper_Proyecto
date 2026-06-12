@@ -17,7 +17,8 @@ $migrations = [
     'db/WHOLESALE_IMPROVEMENTS.sql',
     'db/TASKS_IMPROVEMENTS.sql',
     'db/SUPPLY_IMPROVEMENTS.sql',
-    'db/TICKETS_CORRECTIONS.sql'
+    'db/TICKETS_CORRECTIONS.sql',
+    'db/TICKET_PICKUP_VALIDATION.sql'
 ];
 
 foreach ($migrations as $migrationFile) {
