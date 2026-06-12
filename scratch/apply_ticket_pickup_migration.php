@@ -21,36 +21,22 @@ try {
     
     $sql = file_get_contents($migrationFile);
     
-    // Remover comentarios SQL de una línea y de varias líneas antes de procesar
-    $sql = preg_replace('/--.*$/m', '', $sql); // Línea simple
-    $sql = preg_replace('!/\*.*?\*/!s', '', $sql); // Bloques de comentarios
+    // Ejecutar el SQL completo en un solo bloque para evitar problemas con funciones $$
+    echo "Ejecutando migración completa...\n";
     
-    // Dividir statements por ';'
-    $statements = array_filter(array_map('trim', explode(';', $sql)));
-    
-    foreach ($statements as $stmt) {
-        if (empty($stmt)) {
-            continue;
-        }
-        
-        // Limpiar saltos de línea y espacios extras para el log
-        $cleanStmtForLog = preg_replace('/\s+/', ' ', $stmt);
-        echo "Ejecutando: " . substr($cleanStmtForLog, 0, 60) . "...\n";
-        
-        try {
-            $conn->exec($stmt);
-            echo "✓ Éxito\n";
-        } catch (PDOException $e) {
-            // Ignorar si las columnas o tablas ya existen
-            $msg = $e->getMessage();
-            if (strpos($msg, 'already exists') !== false || 
-                strpos($msg, 'duplicate') !== false ||
-                strpos($msg, 'already a relation') !== false) {
-                echo "⚠ Ya existía (ignorado)\n";
-            } else {
-                echo "✗ Error: " . $msg . "\n";
-                throw $e;
-            }
+    try {
+        $conn->exec($sql);
+        echo "✓ Migración aplicada exitosamente\n";
+    } catch (PDOException $e) {
+        // Ignorar si las columnas o tablas ya existen
+        $msg = $e->getMessage();
+        if (strpos($msg, 'already exists') !== false || 
+            strpos($msg, 'duplicate') !== false ||
+            strpos($msg, 'already a relation') !== false) {
+            echo "⚠ Algunos elementos ya existían (ignorado)\n";
+        } else {
+            echo "✗ Error: " . $msg . "\n";
+            throw $e;
         }
     }
     

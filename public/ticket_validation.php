@@ -527,7 +527,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
     <script src="js/main.js?v=2.7"></script>
     <script src="js/mobile-optimize.js"></script>
     <script>
-        window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, \'UTF-8\'); ?>';
+        window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8"); ?>';
 
         function escapeHtml(text) {
             if (text === null || text === undefined) return '';
