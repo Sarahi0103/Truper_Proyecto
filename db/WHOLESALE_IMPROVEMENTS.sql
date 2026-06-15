@@ -47,18 +47,22 @@ CREATE TABLE IF NOT EXISTS wholesale_purchase_history (
 CREATE INDEX IF NOT EXISTS idx_wholesale_history_client ON wholesale_purchase_history(client_id);
 CREATE INDEX IF NOT EXISTS idx_wholesale_history_date ON wholesale_purchase_history(purchase_date DESC);
 
+DROP FUNCTION IF EXISTS validate_rfc(TEXT);
+DROP FUNCTION IF EXISTS calculate_wholesale_discount(INTEGER, INTEGER);
+DROP FUNCTION IF EXISTS check_credit_limit(INTEGER, DECIMAL(12,2));
+
 -- Función para validar RFC mexicano
-CREATE OR REPLACE FUNCTION validate_rfc(rfc TEXT)
+CREATE OR REPLACE FUNCTION validate_rfc(p_rfc TEXT)
 RETURNS BOOLEAN AS $$
 BEGIN
     -- RFC debe tener 13 caracteres para personas morales o 12 para físicas
     -- Formato: 4 letras + 6 dígitos + 3 caracteres (homoclave)
-    IF rfc IS NULL OR LENGTH(rfc) NOT IN (12, 13) THEN
+    IF p_rfc IS NULL OR LENGTH(p_rfc) NOT IN (12, 13) THEN
         RETURN FALSE;
     END IF;
 
     -- Verificar que los primeros 4 caracteres sean letras
-    IF rfc ~ '^[A-Z]{4}' THEN
+    IF p_rfc ~ '^[A-Z]{4}' THEN
         RETURN TRUE;
     END IF;
 
@@ -67,7 +71,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Función para calcular descuento mayoreo
-CREATE OR REPLACE FUNCTION calculate_wholesale_discount(product_id INTEGER, quantity INTEGER)
+CREATE OR REPLACE FUNCTION calculate_wholesale_discount(p_product_id INTEGER, p_quantity INTEGER)
 RETURNS TABLE(
     discount_percent DECIMAL(5,2),
     discount_price DECIMAL(12,2),
@@ -79,25 +83,25 @@ BEGIN
         COALESCE(wp.discount_percent, 0) AS discount_percent,
         wp.price AS discount_price,
         CASE
-            WHEN wp.min_quantity >= 100 THEN 'wholesale_100_plus'
-            WHEN wp.min_quantity >= 50 THEN 'wholesale_50_99'
-            WHEN wp.min_quantity >= 10 THEN 'wholesale_10_49'
-            ELSE 'retail'
+            WHEN wp.min_quantity >= 100 THEN 'wholesale_100_plus'::VARCHAR(50)
+            WHEN wp.min_quantity >= 50 THEN 'wholesale_50_99'::VARCHAR(50)
+            WHEN wp.min_quantity >= 10 THEN 'wholesale_10_49'::VARCHAR(50)
+            ELSE 'retail'::VARCHAR(50)
         END AS pricing_tier
     FROM wholesale_pricing wp
-    WHERE wp.product_id = product_id
+    WHERE wp.product_id = p_product_id
         AND wp.is_active = true
         AND wp.valid_from <= CURRENT_DATE
         AND (wp.valid_until IS NULL OR wp.valid_until >= CURRENT_DATE)
-        AND quantity >= wp.min_quantity
-        AND (wp.max_quantity IS NULL OR quantity <= wp.max_quantity)
+        AND p_quantity >= wp.min_quantity
+        AND (wp.max_quantity IS NULL OR p_quantity <= wp.max_quantity)
     ORDER BY wp.min_quantity DESC
     LIMIT 1;
 END;
 $$ LANGUAGE plpgsql;
 
 -- Función para verificar límite de crédito
-CREATE OR REPLACE FUNCTION check_credit_limit(client_id INTEGER, amount DECIMAL(12,2))
+CREATE OR REPLACE FUNCTION check_credit_limit(p_client_id INTEGER, p_amount DECIMAL(12,2))
 RETURNS TABLE(
     can_purchase BOOLEAN,
     remaining_credit DECIMAL(12,2),
@@ -106,11 +110,11 @@ RETURNS TABLE(
 BEGIN
     RETURN QUERY
     SELECT
-        (c.credit_limit - c.current_balance) >= amount AS can_purchase,
+        (c.credit_limit - c.current_balance) >= p_amount AS can_purchase,
         (c.credit_limit - c.current_balance) AS remaining_credit,
         c.credit_status
     FROM clients c
-    WHERE c.id = client_id;
+    WHERE c.id = p_client_id;
 END;
 $$ LANGUAGE plpgsql;
 

@@ -368,7 +368,7 @@ function initMain() {
     setupTabs();
     
     // Agregar listener para formularios
-    const forms = document.querySelectorAll('form');
+    const forms = document.querySelectorAll('form[action]');
     forms.forEach(form => {
         form.addEventListener('submit', handleFormSubmit);
     });
