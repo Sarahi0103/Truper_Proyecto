@@ -274,6 +274,19 @@ class SalesTicket {
             // Verificar elegibilidad
             $eligibility = $this->checkTicketEligibility($ticket['id']);
             if (!$eligibility['eligible']) {
+                if ($eligibility['reason'] === 'Ticket ya fue entregado') {
+                    try {
+                        $logStmt = $this->pdo->prepare("INSERT INTO ticket_pickup_log (ticket_id, admin_id, action, notes, ip_address, created_at) VALUES (:ticket_id, :admin_id, 'attempt', :notes, :ip_address, NOW())");
+                        $logStmt->execute([
+                            ':ticket_id' => $ticket['id'],
+                            ':admin_id' => $adminId,
+                            ':notes' => 'Intento fallido: ' . ($notes ?: 'Ticket ya entregado'),
+                            ':ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
+                        ]);
+                    } catch (Exception $e) {
+                        // Ignorar errores de registro de log para no bloquear la respuesta
+                    }
+                }
                 return ['success' => false, 'message' => $eligibility['reason']];
             }
 
@@ -297,7 +310,7 @@ class SalesTicket {
             // Sincronizar con pedido relacionado (manejo de error si tabla no existe)
             if ($ticket['order_id']) {
                 try {
-                    $orderStmt = $this->pdo->prepare("UPDATE orders SET status = 'delivered', updated_at = NOW() WHERE id = :order_id AND payment_status = 'completed'");
+                    $orderStmt = $this->pdo->prepare("UPDATE orders SET status = 'delivered', updated_at = NOW() WHERE id = :order_id AND payment_status = 'paid'");
                     $orderStmt->execute([':order_id' => $ticket['order_id']]);
 
                     // Registrar sincronización en auditoría
