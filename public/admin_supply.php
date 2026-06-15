@@ -849,7 +849,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
 
         <section id="calendarTab" class="tab-content admin-tab-panel">
             <div class="calendar-layout-container">
-                <!-- Columna Izquierda: Registro y Listado de visitas -->
+                <!-- Columna Izquierda: Registro de visitas -->
                 <div class="calendar-sidebar">
                     <div class="card">
                         <div class="card-body">
@@ -870,12 +870,6 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                                 <span class="validation-error" id="errVisitNotes" style="color: #ef4444; font-size: 0.78rem; display: none; margin-top: 0.35rem; font-weight: 500;"></span>
                             </div>
                             <button class="btn btn-primary" onclick="createVisit()" style="width: 100%;">Guardar visita</button>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <div class="card-body">
-                            <div id="calendarList" class="text-muted">Cargando...</div>
                         </div>
                     </div>
                 </div>
@@ -902,6 +896,13 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                             <div id="calendarGrid" class="mt-2"></div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Listado de visitas a lo ancho abajo de las dos columnas -->
+            <div class="card mt-3">
+                <div class="card-body">
+                    <div id="calendarList" class="text-muted">Cargando...</div>
                 </div>
             </div>
         </section>
@@ -3679,7 +3680,7 @@ function renderVisitsList(filteredVisits, listTitleHtml) {
     pastVisits.sort((a, b) => parseDateTimeCompat(b.visit_datetime) - parseDateTimeCompat(a.visit_datetime));
 
     const renderVisitCard = (i, isUpcoming) => `
-        <div class="visit-item ${isUpcoming ? 'visit-upcoming' : 'visit-past'}" style="margin-bottom: 0.75rem;">
+        <div class="visit-item ${isUpcoming ? 'visit-upcoming' : 'visit-past'}" style="margin-bottom: 0 !important;">
             <div class="visit-header" style="display: flex; flex-direction: column; gap: 0.25rem;">
                 <span class="visit-supplier" style="font-weight: bold; color: var(--theme-text); font-size: 0.95rem;">${escapeHtml(i.supplier_name)}</span>
                 <div class="d-flex align-center" style="gap: 0.5rem; flex-wrap: wrap;">
@@ -3704,7 +3705,7 @@ function renderVisitsList(filteredVisits, listTitleHtml) {
                 </h4>
                 ${upcomingVisits.length === 0 
                     ? '<p class="text-muted" style="font-size:0.78rem; padding: 0.5rem; text-align: center; background: rgba(255,255,255,0.01); border: 1px dashed rgba(255,255,255,0.06); border-radius: 8px;">Ninguna próxima.</p>'
-                    : `<div class="visit-list-container" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    : `<div class="visit-list-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;">
                         ${upcomingVisits.map(i => renderVisitCard(i, true)).join('')}
                        </div>`
                 }
@@ -3716,7 +3717,7 @@ function renderVisitsList(filteredVisits, listTitleHtml) {
                 </h4>
                 ${pastVisits.length === 0 
                     ? '<p class="text-muted" style="font-size:0.78rem; padding: 0.5rem; text-align: center; background: rgba(255,255,255,0.01); border: 1px dashed rgba(255,255,255,0.06); border-radius: 8px;">Ninguna pasada.</p>'
-                    : `<div class="visit-list-container" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    : `<div class="visit-list-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;">
                         ${pastVisits.map(i => renderVisitCard(i, false)).join('')}
                        </div>`
                 }
