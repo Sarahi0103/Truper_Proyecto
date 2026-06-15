@@ -4763,6 +4763,22 @@ try {
             $response = ['success' => true, 'message' => 'Asignación producto-proveedor registrada'];
             break;
 
+        case 'supplier-product-delete':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+            $id = (int)($input['id'] ?? 0);
+            if ($id <= 0) {
+                $response = ['success' => false, 'message' => 'ID de asignación inválido'];
+                break;
+            }
+
+            $stmt = $pdo->prepare("DELETE FROM product_suppliers WHERE id = ?");
+            $stmt->execute([$id]);
+            $response = ['success' => true, 'message' => 'Asignación eliminada'];
+            break;
+
         case 'supplier-products-list':
             if ($method !== 'GET') {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];
@@ -5066,6 +5082,28 @@ try {
             $h->execute([json_encode(['status' => 'cancelled']), $_SESSION['user_id'], $id]);
 
             $response = ['success' => true, 'message' => 'Orden de compra cancelada'];
+            break;
+
+        case 'supplier-order-delete':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+            $id = (int)($input['id'] ?? 0);
+            if ($id <= 0) {
+                $response = ['success' => false, 'message' => 'ID de orden inválido'];
+                break;
+            }
+
+            // Log action in transaction history before deleting
+            $h = $pdo->prepare("INSERT INTO transaction_history (transaction_type, reference_folio, data_json, created_by) 
+                                SELECT 'supplier_order_delete', folio, ?, ? FROM supplier_orders WHERE id = ?");
+            $h->execute([json_encode(['status' => 'deleted']), $_SESSION['user_id'], $id]);
+
+            $stmt = $pdo->prepare("DELETE FROM supplier_orders WHERE id = ?");
+            $stmt->execute([$id]);
+
+            $response = ['success' => true, 'message' => 'Orden de compra eliminada'];
             break;
 
         case 'history':

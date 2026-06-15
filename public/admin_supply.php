@@ -3478,7 +3478,8 @@ async function loadSupplierProducts() {
                 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-top: 1rem;">
                     ${res.items.map((i) => `
                         <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 10px; padding: 1rem; position: relative; display: flex; flex-direction: column; gap: 0.4rem; transition: transform 0.2s, border-color 0.2s;" onmouseover="this.style.borderColor='rgba(255, 102, 0, 0.25)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='rgba(255, 255, 255, 0.05)'; this.style.transform='none'">
-                            <div style="font-weight: 700; color: #fff; font-size: 0.95rem;">${escapeHtml(i.supplier_name)}</div>
+                            <button onclick="deleteSupplierProductLink(${i.id})" style="position: absolute; top: 0.75rem; right: 0.75rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; cursor: pointer; transition: all 0.2s; z-index: 10;" onmouseover="this.style.background='#ef4444'; this.style.color='#fff'" onmouseout="this.style.background='rgba(239, 68, 68, 0.15)'; this.style.color='#ef4444'" title="Eliminar asignación">✕</button>
+                            <div style="font-weight: 700; color: #fff; font-size: 0.95rem; padding-right: 1.5rem;">${escapeHtml(i.supplier_name)}</div>
                             <div style="color: var(--color-naranja, #ff7f00); font-weight: 600; font-size: 0.85rem;">
                                 ${escapeHtml(i.product_name)}
                             </div>
@@ -3556,6 +3557,18 @@ async function createSupplierProductLink() {
     document.getElementById('spProduct').value = '';
     await loadSupplierProducts();
     await loadMappedProductsBySupplier();
+}
+
+async function deleteSupplierProductLink(id) {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta asignación producto-proveedor?')) return;
+    const res = await apiCall('/admin_supply.php?action=supplier-product-delete', 'POST', { id: id });
+    if (res && res.success) {
+        showAlert(res.message || 'Asignación eliminada correctamente', 'success');
+        await loadSupplierProducts();
+        await loadMappedProductsBySupplier();
+    } else {
+        showAlert(res?.message || 'Error al eliminar la asignación', 'error');
+    }
 }
 
 async function loadMappedProductsBySupplier() {
@@ -3657,6 +3670,10 @@ async function loadSupplierOrders() {
                 <button class="btn btn-small" onclick="receiveSupplierOrder(${i.id})" style="background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); color: #22c55e; border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; margin-left: 0.25rem; transition: all 0.2s;" onmouseover="this.style.background='#22c55e'; this.style.color='#fff'" onmouseout="this.style.background='rgba(34, 197, 94, 0.15)'; this.style.color='#22c55e'">✓ Recibir</button>
                 <button class="btn btn-small" onclick="cancelSupplierOrder(${i.id})" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; margin-left: 0.25rem; transition: all 0.2s;" onmouseover="this.style.background='#ef4444'; this.style.color='#fff'" onmouseout="this.style.background='rgba(239, 68, 68, 0.15)'; this.style.color='#ef4444'">✗ Cancelar</button>
             `;
+        } else if (status === 'cancelled') {
+            actionsHtml += `
+                <button class="btn btn-small" onclick="deleteSupplierOrder(${i.id})" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; margin-left: 0.25rem; transition: all 0.2s;" onmouseover="this.style.background='#ef4444'; this.style.color='#fff'" onmouseout="this.style.background='rgba(239, 68, 68, 0.15)'; this.style.color='#ef4444'">🗑️ Eliminar</button>
+            `;
         }
 
         return `
@@ -3699,6 +3716,18 @@ async function cancelSupplierOrder(id) {
         loadHistory();
     } else {
         showAlert(res?.message || 'Error al cancelar la orden', 'error');
+    }
+}
+
+async function deleteSupplierOrder(id) {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta orden de compra? Esta acción no se puede deshacer.')) return;
+    const res = await apiCall('/admin_supply.php?action=supplier-order-delete', 'POST', { id: id });
+    if (res && res.success) {
+        showAlert(res.message || 'Orden de compra eliminada correctamente', 'success');
+        loadSupplierOrders();
+        loadHistory();
+    } else {
+        showAlert(res?.message || 'Error al eliminar la orden de compra', 'error');
     }
 }
 
