@@ -399,6 +399,8 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
         }
     </style>
     <script>
+        window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8"); ?>';
+
         /* ── Logout ── */
         function logout() {
             if (confirm('¿Deseas cerrar sesión?')) {

@@ -625,12 +625,6 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                     </div>
                 </div>
             </div>
-
-            <!-- Audit Log -->
-            <div id="auditLog" class="audit-log">
-                <h3>Historial de Validaciones</h3>
-                <div id="auditLogContent"></div>
-            </div>
         </div>
     </main>
 
@@ -733,7 +727,8 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                 } else {
                     showAlert('error', data.message || 'Ticket no encontrado');
                     ticketDetailsPanel.classList.remove('active');
-                    document.getElementById('auditLog').classList.remove('active');
+                    const auditLog = document.getElementById('auditLog');
+                    if (auditLog) auditLog.classList.remove('active');
                 }
             } catch (error) {
                 console.error('Error loading ticket details:', error);
@@ -834,6 +829,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
 
         function displayAuditLog(logs) {
             const auditLogContent = document.getElementById('auditLogContent');
+            if (!auditLogContent) return;
 
             if (logs.length === 0) {
                 auditLogContent.innerHTML = '<div style="color: #888;">No hay historial de validaciones</div>';
@@ -850,7 +846,8 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                 `).join('');
             }
 
-            document.getElementById('auditLog').classList.add('active');
+            const auditLog = document.getElementById('auditLog');
+            if (auditLog) auditLog.classList.add('active');
         }
 
         function getActionText(action) {
