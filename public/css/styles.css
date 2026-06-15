@@ -1722,6 +1722,7 @@ footer {
     display: block;
     margin: 0 auto;
     transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
 }
 
 .promo-slide:hover .promo-image {
@@ -1731,7 +1732,7 @@ footer {
 @media (min-width: 768px) {
     .promo-slide-content.has-image {
         display: grid;
-        grid-template-columns: 1.3fr 0.7fr;
+        grid-template-columns: 1fr 1fr;
         align-items: center;
         gap: 1.5rem;
     }

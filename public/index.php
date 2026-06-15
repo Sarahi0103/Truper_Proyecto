@@ -1084,6 +1084,93 @@ function homepage_update_label($type) {
     <script>
         // Compartir por WhatsApp
         document.addEventListener('DOMContentLoaded', function() {
+            // Lightbox para imágenes de Portada
+            function openLightbox(src, alt) {
+                let lightbox = document.getElementById('promoLightbox');
+                if (!lightbox) {
+                    lightbox = document.createElement('div');
+                    lightbox.id = 'promoLightbox';
+                    lightbox.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100vw;
+                        height: 100vh;
+                        background: rgba(0, 0, 0, 0.85);
+                        backdrop-filter: blur(8px);
+                        -webkit-backdrop-filter: blur(8px);
+                        z-index: 9999;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        opacity: 0;
+                        transition: opacity 0.3s ease;
+                        cursor: zoom-out;
+                    `;
+                    lightbox.innerHTML = `
+                        <button type="button" style="
+                            position: absolute;
+                            top: 1.5rem;
+                            right: 1.5rem;
+                            background: rgba(255, 255, 255, 0.1);
+                            border: 1px solid rgba(255, 255, 255, 0.2);
+                            color: #fff;
+                            border-radius: 50%;
+                            width: 44px;
+                            height: 44px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 1.5rem;
+                            cursor: pointer;
+                            transition: all 0.2s;
+                            font-weight: bold;
+                        " onmouseover="this.style.background='rgba(255,255,255,0.2)'; this.style.transform='scale(1.05)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'; this.style.transform='none'">✕</button>
+                        <img id="promoLightboxImg" src="" alt="" style="
+                            max-width: 90%;
+                            max-height: 90%;
+                            object-fit: contain;
+                            border-radius: 8px;
+                            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+                            transform: scale(0.95);
+                            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                        ">
+                    `;
+                    document.body.appendChild(lightbox);
+                    
+                    const close = () => {
+                        lightbox.style.opacity = '0';
+                        lightbox.querySelector('img').style.transform = 'scale(0.95)';
+                        setTimeout(() => {
+                            lightbox.style.display = 'none';
+                        }, 300);
+                    };
+                    
+                    lightbox.addEventListener('click', close);
+                    lightbox.querySelector('button').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        close();
+                    });
+                }
+                
+                const img = document.getElementById('promoLightboxImg');
+                img.src = src;
+                img.alt = alt || '';
+                
+                lightbox.style.display = 'flex';
+                lightbox.offsetHeight;
+                lightbox.style.opacity = '1';
+                img.style.transform = 'scale(1)';
+            }
+
+            document.querySelectorAll('.promo-image').forEach(img => {
+                img.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openLightbox(this.src, this.alt);
+                });
+            });
+
             // Menú hamburguesa responsivo
             const hamburgerBtn = document.querySelector('.hamburger-btn');
             const navMenu = document.querySelector('.nav-menu');

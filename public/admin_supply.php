@@ -483,6 +483,63 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
             background: #1a1a1a;
             color: #fff;
         }
+
+        /* ===== Calendar Split-Pane & Aesthetics ===== */
+        .calendar-layout-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .calendar-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .calendar-main-view {
+            width: 100%;
+        }
+
+        #calendarList {
+            max-height: 420px;
+            overflow-y: auto;
+            padding-right: 0.25rem;
+        }
+        #calendarList::-webkit-scrollbar {
+            width: 6px;
+        }
+        #calendarList::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+        }
+        #calendarList::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+        }
+        #calendarList::-webkit-scrollbar-thumb:hover {
+            background: var(--theme-accent, #ff6600);
+        }
+
+        @media (min-width: 992px) {
+            .calendar-layout-container {
+                display: grid;
+                grid-template-columns: 360px 1fr;
+                align-items: start;
+            }
+            
+            .calendar-day {
+                min-height: 100px !important;
+                padding: 0.75rem !important;
+            }
+            
+            .calendar-day-visits {
+                font-size: 0.72rem !important;
+                padding: 3px 8px !important;
+                border-radius: 6px !important;
+                margin-top: 0.5rem !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -770,41 +827,53 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
         </section>
 
         <section id="calendarTab" class="tab-content admin-tab-panel">
-            <div class="grid grid-2">
-                <div class="card"><div class="card-body">
-                    <h3>Registrar visita de proveedor</h3>
-                    <div class="form-group">
-                        <label for="supplierName">Proveedor <span style="color: var(--theme-accent);">*</span></label>
-                        <input id="supplierName" type="text" placeholder="Ej. Proveedor Truper Centro" required minlength="2" maxlength="100" oninput="clearValidationError('supplierName')">
-                        <span class="validation-error" id="errSupplierName" style="color: #ef4444; font-size: 0.78rem; display: none; margin-top: 0.35rem; font-weight: 500;"></span>
+            <div class="calendar-layout-container">
+                <!-- Columna Izquierda: Registro y Listado de visitas -->
+                <div class="calendar-sidebar">
+                    <div class="card">
+                        <div class="card-body">
+                            <h3 style="margin-top: 0; margin-bottom: 1.25rem;">Registrar visita de proveedor</h3>
+                            <div class="form-group">
+                                <label for="supplierName">Proveedor <span style="color: var(--theme-accent);">*</span></label>
+                                <input id="supplierName" type="text" placeholder="Ej. Proveedor Truper Centro" required minlength="2" maxlength="100" oninput="clearValidationError('supplierName')">
+                                <span class="validation-error" id="errSupplierName" style="color: #ef4444; font-size: 0.78rem; display: none; margin-top: 0.35rem; font-weight: 500;"></span>
+                            </div>
+                            <div class="form-group">
+                                <label for="visitDate">Fecha y hora <span style="color: var(--theme-accent);">*</span></label>
+                                <input id="visitDate" type="datetime-local" required oninput="clearValidationError('visitDate')">
+                                <span class="validation-error" id="errVisitDate" style="color: #ef4444; font-size: 0.78rem; display: none; margin-top: 0.35rem; font-weight: 500;"></span>
+                            </div>
+                            <div class="form-group">
+                                <label for="visitNotes">Notas (opcional)</label>
+                                <textarea id="visitNotes" placeholder="Detalles u objetivos de la visita (máx. 500 caracteres)..." maxlength="500" oninput="clearValidationError('visitNotes')"></textarea>
+                                <span class="validation-error" id="errVisitNotes" style="color: #ef4444; font-size: 0.78rem; display: none; margin-top: 0.35rem; font-weight: 500;"></span>
+                            </div>
+                            <button class="btn btn-primary" onclick="createVisit()" style="width: 100%;">Guardar visita</button>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="visitDate">Fecha y hora <span style="color: var(--theme-accent);">*</span></label>
-                        <input id="visitDate" type="datetime-local" required oninput="clearValidationError('visitDate')">
-                        <span class="validation-error" id="errVisitDate" style="color: #ef4444; font-size: 0.78rem; display: none; margin-top: 0.35rem; font-weight: 500;"></span>
-                    </div>
-                    <div class="form-group">
-                        <label for="visitNotes">Notas (opcional)</label>
-                        <textarea id="visitNotes" placeholder="Detalles u objetivos de la visita (máx. 500 caracteres)..." maxlength="500" oninput="clearValidationError('visitNotes')"></textarea>
-                        <span class="validation-error" id="errVisitNotes" style="color: #ef4444; font-size: 0.78rem; display: none; margin-top: 0.35rem; font-weight: 500;"></span>
-                    </div>
-                    <button class="btn btn-primary" onclick="createVisit()">Guardar visita</button>
-                </div></div>
-                <div class="card"><div class="card-body">
-                    <h3>Calendario mensual</h3>
-                    <div class="d-flex justify-between align-center" style="margin-bottom: 1rem;">
-                        <button class="btn btn-small btn-ghost" onclick="changeCalendarMonth(-1)">Mes anterior</button>
-                        <strong id="calendarMonthLabel">Mes</strong>
-                        <button class="btn btn-small btn-ghost" onclick="changeCalendarMonth(1)">Mes siguiente</button>
-                    </div>
-                    <div id="calendarGrid" class="mt-2"></div>
-                </div></div>
-            </div>
 
-            <!-- Visitas agendadas a lo ancho abajo de las dos columnas -->
-            <div class="card mt-3"><div class="card-body">
-                <div id="calendarList" class="text-muted mt-2">Cargando...</div>
-            </div></div>
+                    <div class="card">
+                        <div class="card-body">
+                            <div id="calendarList" class="text-muted">Cargando...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Columna Derecha: Vista de calendario completo -->
+                <div class="calendar-main-view">
+                    <div class="card">
+                        <div class="card-body">
+                            <h3 style="margin-top: 0; margin-bottom: 1.25rem;">Calendario mensual</h3>
+                            <div class="d-flex justify-between align-center" style="margin-bottom: 1.25rem;">
+                                <button class="btn btn-small btn-ghost" onclick="changeCalendarMonth(-1)">Mes anterior</button>
+                                <strong id="calendarMonthLabel" style="font-size: 1.1rem; text-transform: capitalize;">Mes</strong>
+                                <button class="btn btn-small btn-ghost" onclick="changeCalendarMonth(1)">Mes siguiente</button>
+                            </div>
+                            <div id="calendarGrid" class="mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <section id="supplierOrderTab" class="tab-content admin-tab-panel">
