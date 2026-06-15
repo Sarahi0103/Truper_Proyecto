@@ -5026,6 +5026,48 @@ try {
             $response = ['success' => true, 'items' => $stmt->fetchAll()];
             break;
 
+        case 'supplier-order-receive':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+            $id = (int)($input['id'] ?? 0);
+            if ($id <= 0) {
+                $response = ['success' => false, 'message' => 'ID de orden inválido'];
+                break;
+            }
+            $stmt = $pdo->prepare("UPDATE supplier_orders SET status = 'completed' WHERE id = ?");
+            $stmt->execute([$id]);
+
+            // Log action in transaction history
+            $h = $pdo->prepare("INSERT INTO transaction_history (transaction_type, reference_folio, data_json, created_by) 
+                                SELECT 'supplier_order_receive', folio, ?, ? FROM supplier_orders WHERE id = ?");
+            $h->execute([json_encode(['status' => 'completed']), $_SESSION['user_id'], $id]);
+
+            $response = ['success' => true, 'message' => 'Mercancía recibida y orden completada'];
+            break;
+
+        case 'supplier-order-cancel':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+            $id = (int)($input['id'] ?? 0);
+            if ($id <= 0) {
+                $response = ['success' => false, 'message' => 'ID de orden inválido'];
+                break;
+            }
+            $stmt = $pdo->prepare("UPDATE supplier_orders SET status = 'cancelled' WHERE id = ?");
+            $stmt->execute([$id]);
+
+            // Log action in transaction history
+            $h = $pdo->prepare("INSERT INTO transaction_history (transaction_type, reference_folio, data_json, created_by) 
+                                SELECT 'supplier_order_cancel', folio, ?, ? FROM supplier_orders WHERE id = ?");
+            $h->execute([json_encode(['status' => 'cancelled']), $_SESSION['user_id'], $id]);
+
+            $response = ['success' => true, 'message' => 'Orden de compra cancelada'];
+            break;
+
         case 'history':
             if ($method !== 'GET') {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];

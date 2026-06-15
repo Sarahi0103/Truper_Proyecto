@@ -427,6 +427,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
             window._allClientTickets = tickets;
 
             renderClientTicketsRows(tickets);
+            renderSupplierTicketsRows(supplierTickets);
         }
 
         function renderClientTicketsRows(tickets) {
@@ -524,61 +525,78 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                 `;
             });
             tableBody.innerHTML = html;
+        }
 
-            // Supplier tickets rows
-            if (supplierSection) {
-                if (!Array.isArray(supplierTickets) || supplierTickets.length === 0) {
-                    supplierSection.innerHTML = `
-                        <div class="card">
-                            <div class="card-body">
-                                <h3>Órdenes de Proveedores</h3>
-                                <p class="text-muted" style="padding: 2rem; text-align: center;">No hay órdenes o tickets de proveedor en este período.</p>
-                            </div>
+        function renderSupplierTicketsRows(supplierTickets) {
+            const supplierSection = document.getElementById('supplierTicketsSection');
+            if (!supplierSection) return;
+
+            if (!Array.isArray(supplierTickets) || supplierTickets.length === 0) {
+                supplierSection.innerHTML = `
+                    <div class="card">
+                        <div class="card-body">
+                            <h3>Órdenes de Proveedores</h3>
+                            <p class="text-muted" style="padding: 2rem; text-align: center;">No hay órdenes o tickets de proveedor en este período.</p>
                         </div>
-                    `;
-                } else {
-                    let shtml = `
-                        <div class="card">
-                            <div class="card-body">
-                                <h3>Órdenes de Proveedores</h3>
-                                <p class="text-muted mb-2">Historial de ingresos de mercancía y cotizaciones.</p>
-                                <div class="table-responsive">
-                                    <table class="table" style="width:100%; border-collapse: collapse;">
-                                        <thead>
-                                            <tr>
-                                                <th>Folio</th>
-                                                <th>Proveedor</th>
-                                                <th>Fecha</th>
-                                                <th>Total</th>
-                                                <th style="text-align: center;">Artículos</th>
-                                                <th>Estado</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                    `;
-
-                    supplierTickets.forEach(st => {
-                        const status = st.payment_status || st.status || '';
-                        shtml += `
-                            <tr style="border-bottom: 1px solid var(--theme-border);">
-                                <td style="padding: 1rem; font-family: monospace; font-weight:700; color:var(--color-naranja);">${escapeHtml(st.folio)}</td>
-                                <td style="padding: 1rem;">${escapeHtml(st.customer_name || '—')}</td>
-                                <td style="padding: 1rem; color:var(--theme-text-muted);">${new Date(st.issued_date).toLocaleDateString('es-MX')}</td>
-                                <td style="padding: 1rem; font-weight:700; color:var(--color-naranja);">${formatAdminMoney(st.total_amount || 0)}</td>
-                                <td style="padding: 1rem; text-align:center; font-weight:600;">${st.item_count || 0}</td>
-                                <td style="padding: 1rem;">
-                                    <span style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: var(--color-exito); color: white;">
-                                        ${st.payment_status === 'completed' ? '✓ Recibido' : escapeHtml(st.payment_status || status)}
-                                    </span>
-                                </td>
-                            </tr>
-                        `;
-                    });
-
-                    shtml += `</tbody></table></div></div></div>`;
-                    supplierSection.innerHTML = shtml;
-                }
+                    </div>
+                `;
+                return;
             }
+
+            let shtml = `
+                <div class="card">
+                    <div class="card-body">
+                        <h3>Órdenes de Proveedores</h3>
+                        <p class="text-muted mb-2">Historial de ingresos de mercancía y cotizaciones.</p>
+                        <div class="table-responsive">
+                            <table class="table" style="width:100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr>
+                                        <th>Folio</th>
+                                        <th>Proveedor</th>
+                                        <th>Fecha</th>
+                                        <th>Total</th>
+                                        <th style="text-align: center;">Artículos</th>
+                                        <th>Estado</th>
+                                        <th style="text-align: center;">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+            `;
+
+            supplierTickets.forEach(st => {
+                const status = st.payment_status || st.status || 'pending';
+                let statusColor = 'var(--color-advertencia)';
+                let statusText = '⏳ Pendiente';
+                if (status === 'completed' || status === 'received') {
+                    statusColor = 'var(--color-exito)';
+                    statusText = '✓ Recibido';
+                } else if (status === 'cancelled') {
+                    statusColor = 'var(--color-peligro, #dc3545)';
+                    statusText = '✗ Cancelado';
+                }
+
+                shtml += `
+                    <tr style="border-bottom: 1px solid var(--theme-border);">
+                        <td style="padding: 1rem; font-family: monospace; font-weight:700; color:var(--color-naranja);">${escapeHtml(st.folio)}</td>
+                        <td style="padding: 1rem; font-weight: 600;">${escapeHtml(st.customer_name || '—')}</td>
+                        <td style="padding: 1rem; color:var(--theme-text-muted);">${new Date(st.issued_date).toLocaleDateString('es-MX')}</td>
+                        <td style="padding: 1rem; font-weight:700; color:var(--color-naranja);">${formatAdminMoney(st.total_amount || 0)}</td>
+                        <td style="padding: 1rem; text-align:center; font-weight:600;">${st.item_count || 0}</td>
+                        <td style="padding: 1rem;">
+                            <span style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: ${statusColor}; color: white;">
+                                ${statusText}
+                            </span>
+                        </td>
+                        <td style="padding: 1rem; text-align: center;">
+                            <a href="/ticket_supplier.php?id=${st.id}" target="_blank" class="btn" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; text-decoration: none; border-radius: 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: white; display: inline-block; font-weight: 600; cursor: pointer;">🖨️ Imprimir</a>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            shtml += `</tbody></table></div></div></div>`;
+            supplierSection.innerHTML = shtml;
         }
 
         function filterClientTickets(query) {

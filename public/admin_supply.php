@@ -462,6 +462,27 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
             border-color: #ff6600;
             outline: none;
         }
+        
+        #spProduct, #poMappedProduct, #poSupplier {
+            width: 100%;
+            padding: 0.65rem 0.75rem;
+            background: #121212;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.88rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+        #spProduct:focus, #poMappedProduct:focus, #poSupplier:focus {
+            border-color: var(--color-naranja, #ff6600);
+            box-shadow: 0 0 0 2px rgba(255, 102, 0, 0.2);
+        }
+        #spProduct option, #poMappedProduct option, #poSupplier option {
+            background: #1a1a1a;
+            color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -810,7 +831,12 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
             <div class="card"><div class="card-body">
                 <h3>Orden de Proveedor (ticket logistica)</h3>
                 <div class="grid grid-2">
-                    <div class="form-group"><label>Proveedor</label><input id="poSupplier" type="text"></div>
+                    <div class="form-group">
+                        <label>Proveedor</label>
+                        <select id="poSupplier" onchange="loadMappedProductsBySupplier()">
+                            <option value="">Seleccione un proveedor...</option>
+                        </select>
+                    </div>
                     <div class="form-group"><label>Fecha recepcion</label><input id="poDate" type="date"></div>
                 </div>
                 <div class="grid grid-4">
@@ -823,16 +849,29 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                     </div>
                     <div class="form-group"><label>Cantidad</label><input id="poQty" type="number" min="1" value="1"></div>
                     <div class="form-group"><label>Costo estimado</label><input id="poCost" type="number" min="0" step="0.01" value="0"></div>
-                    <div class="form-group"><label>&nbsp;</label><button class="btn btn-secondary" onclick="addMappedProductToOrder()">Agregar item</button></div>
+                    <div class="form-group"><label>&nbsp;</label><button class="btn btn-secondary" onclick="addMappedProductToOrder()" style="width: 100%; height: 38px; display: flex; align-items: center; justify-content: center;">Agregar item</button></div>
                 </div>
                 <div id="poItems" class="mt-2"></div>
                 <button class="btn btn-primary mt-2" onclick="createSupplierOrder()">Generar orden y ticket</button>
 
                 <h4 class="mt-4">Ordenes registradas</h4>
-                <table>
-                    <thead><tr><th>Folio</th><th>Proveedor</th><th>Recepcion</th><th>Total</th><th>Ticket</th></tr></thead>
-                    <tbody id="supplierRows"><tr><td colspan="5">Cargando...</td></tr></tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="table" style="width:100%; border-collapse: collapse; margin-top: 1rem;">
+                        <thead>
+                            <tr>
+                                <th>Folio</th>
+                                <th>Proveedor</th>
+                                <th>Recepción</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                                <th style="text-align: center;">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="supplierRows">
+                            <tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--theme-text-muted);">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div></div>
         </section>
 
@@ -3341,11 +3380,46 @@ function addMappedProductToOrder() {
 
 function renderPoItems() {
     const box = document.getElementById('poItems');
+    if (!box) return;
     if (supplierOrderItems.length === 0) {
-        box.innerHTML = '<p class="text-muted">No hay items</p>';
+        box.innerHTML = '<p class="text-muted" style="font-style: italic; margin: 0.5rem 0;">No hay ítems agregados a la orden.</p>';
         return;
     }
-    box.innerHTML = '<ul>' + supplierOrderItems.map((i, idx) => `<li>${escapeHtml(displayProductLabel(i.sku, i.product_name))} | ${i.quantity} | $${Number(i.estimated_cost || 0).toFixed(2)} <button class="btn btn-small btn-danger" onclick="removePoItem(${idx})">Quitar</button></li>`).join('') + '</ul>';
+    
+    let totalEstimated = 0;
+    let itemsHtml = supplierOrderItems.map((i, idx) => {
+        const itemTotal = (i.quantity || 1) * (i.estimated_cost || 0);
+        totalEstimated += itemTotal;
+        return `
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 0.5rem; gap: 1rem;">
+                <div style="flex: 1; min-width: 0;">
+                    <div style="font-weight: 600; color: #fff; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        ${escapeHtml(displayProductLabel(i.sku, i.product_name))}
+                    </div>
+                    <div style="font-size: 0.78rem; color: var(--theme-text-muted); margin-top: 0.15rem;">
+                        Cantidad: <strong style="color: #eee;">${i.quantity}</strong> • Costo Unitario: <strong style="color: #eee;">$${Number(i.estimated_cost || 0).toFixed(2)}</strong>
+                    </div>
+                </div>
+                <div style="text-align: right; display: flex; align-items: center; gap: 1rem;">
+                    <div style="font-weight: 700; color: var(--color-naranja, #ff6600); font-size: 0.95rem;">
+                        $${itemTotal.toFixed(2)}
+                    </div>
+                    <button class="btn btn-small" onclick="removePoItem(${idx})" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#ef4444'; this.style.color='#fff'" onmouseout="this.style.background='rgba(239, 68, 68, 0.15)'; this.style.color='#ef4444'">✕ Quitar</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    box.innerHTML = `
+        <div style="margin-top: 0.5rem; margin-bottom: 1rem;">
+            <h5 style="margin-bottom: 0.5rem; color: #aaa; font-size: 0.85rem; text-transform: uppercase;">Detalle de la Orden:</h5>
+            ${itemsHtml}
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08);">
+                <strong style="color: #aaa;">Total Estimado de la Orden:</strong>
+                <strong style="color: var(--color-naranja, #ff6600); font-size: 1.25rem;">$${totalEstimated.toFixed(2)}</strong>
+            </div>
+        </div>
+    `;
 }
 
 function removePoItem(index) {
@@ -3392,15 +3466,44 @@ async function loadSupplierProducts() {
     }
 
     if (!res || !res.success || !Array.isArray(res.items)) {
-        if (listBox) listBox.innerHTML = '<p class="text-muted">Sin asignaciones.</p>';
+        if (listBox) listBox.innerHTML = '<div style="padding: 1.5rem; text-align: center; color: var(--theme-text-muted); background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.06);">No hay asignaciones registradas.</div>';
         return;
     }
 
     if (listBox) {
         if (res.items.length === 0) {
-            listBox.innerHTML = '<p class="text-muted">Sin asignaciones.</p>';
+            listBox.innerHTML = '<div style="padding: 1.5rem; text-align: center; color: var(--theme-text-muted); background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.06);">No hay asignaciones registradas.</div>';
         } else {
-            listBox.innerHTML = '<ul>' + res.items.map((i) => `<li>${escapeHtml(i.supplier_name)} -> ${escapeHtml(displayProductLabel(i.sku, i.product_name))} (${escapeHtml(i.supplier_sku || 'sin SKU')}) $${Number(i.unit_cost || 0).toFixed(2)}</li>`).join('') + '</ul>';
+            listBox.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                    ${res.items.map((i) => `
+                        <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 10px; padding: 1rem; position: relative; display: flex; flex-direction: column; gap: 0.4rem; transition: transform 0.2s, border-color 0.2s;" onmouseover="this.style.borderColor='rgba(255, 102, 0, 0.25)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='rgba(255, 255, 255, 0.05)'; this.style.transform='none'">
+                            <div style="font-weight: 700; color: #fff; font-size: 0.95rem;">${escapeHtml(i.supplier_name)}</div>
+                            <div style="color: var(--color-naranja, #ff7f00); font-weight: 600; font-size: 0.85rem;">
+                                ${escapeHtml(i.product_name)}
+                            </div>
+                            <div style="font-size: 0.78rem; color: var(--theme-text-muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.25rem; border-top: 1px solid rgba(255, 255, 255, 0.04); padding-top: 0.4rem;">
+                                <span>SKU: <strong style="color: #eee;">${escapeHtml(i.sku)}</strong></span>
+                                <span>SKU Prov: <strong style="color: #eee;">${escapeHtml(i.supplier_sku || '—')}</strong></span>
+                            </div>
+                            <div style="font-size: 1rem; font-weight: 700; color: var(--color-naranja, #ff7f00); text-align: right; margin-top: 0.2rem;">
+                                Costo: $${Number(i.unit_cost || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+    }
+
+    const poSupplierSelect = document.getElementById('poSupplier');
+    if (poSupplierSelect) {
+        const currentVal = poSupplierSelect.value;
+        const suppliers = [...new Set(res.items.map(i => i.supplier_name.trim()))].sort();
+        poSupplierSelect.innerHTML = '<option value="">Seleccione un proveedor...</option>' + 
+            suppliers.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+        if (suppliers.includes(currentVal)) {
+            poSupplierSelect.value = currentVal;
         }
     }
 }
@@ -3465,7 +3568,7 @@ async function loadMappedProductsBySupplier() {
     if (!select) return;
 
     if (!supplier) {
-        select.innerHTML = '<option value="">Captura proveedor...</option>';
+        select.innerHTML = '<option value="">Seleccione un proveedor...</option>';
         window.allMappedProducts = [];
         return;
     }
@@ -3481,7 +3584,7 @@ async function loadMappedProductsBySupplier() {
 
     select.innerHTML = '<option value="">Selecciona producto...</option>' + res.items.map((i) => {
         const label = `${displayProductLabel(i.sku, i.product_name)} | ${i.supplier_sku || 'sin SKU prov.'}`;
-        return `<option value="${Number(i.id)}" data-product-name="${escapeHtml(i.product_name)}" data-sku="${escapeHtml(i.sku)}">${escapeHtml(label)}</option>`;
+        return `<option value="${Number(i.id)}" data-product-name="${escapeHtml(i.product_name)}" data-sku="${escapeHtml(i.sku)}" data-unit-cost="${Number(i.unit_cost || 0)}">${escapeHtml(label)}</option>`;
     }).join('');
 }
 
@@ -3533,16 +3636,70 @@ async function loadSupplierOrders() {
     const res = await apiCall('/admin_supply.php?action=supplier-order-list', 'GET', null, { silent: true });
     const body = document.getElementById('supplierRows');
     if (!res || !res.success || !Array.isArray(res.items) || res.items.length === 0) {
-        body.innerHTML = '<tr><td colspan="5">Sin ordenes</td></tr>';
+        body.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--theme-text-muted);">No hay órdenes registradas</td></tr>';
         return;
     }
-    body.innerHTML = res.items.map(i => `<tr>
-        <td>${escapeHtml(i.folio)}</td>
-        <td>${escapeHtml(i.supplier_name)}</td>
-        <td>${escapeHtml(i.expected_date)}</td>
-        <td>$${Number(i.total_estimated || 0).toFixed(2)}</td>
-        <td><a class="btn btn-small btn-primary" href="/ticket_supplier.php?id=${i.id}" target="_blank">Imprimir</a></td>
-    </tr>`).join('');
+    body.innerHTML = res.items.map(i => {
+        const status = i.status || 'pending';
+        let statusColor = 'var(--color-advertencia)';
+        let statusText = '⏳ Pendiente';
+        if (status === 'completed' || status === 'received') {
+            statusColor = 'var(--color-exito)';
+            statusText = '✓ Recibido';
+        } else if (status === 'cancelled') {
+            statusColor = 'var(--color-peligro, #dc3545)';
+            statusText = '✗ Cancelado';
+        }
+
+        let actionsHtml = `<a class="btn btn-small btn-primary" href="/ticket_supplier.php?id=${i.id}" target="_blank" style="padding: 0.3rem 0.6rem; font-size: 0.78rem; font-weight: 600; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;">🖨️ Imprimir</a>`;
+        if (status === 'pending' || status === 'created') {
+            actionsHtml += `
+                <button class="btn btn-small" onclick="receiveSupplierOrder(${i.id})" style="background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); color: #22c55e; border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; margin-left: 0.25rem; transition: all 0.2s;" onmouseover="this.style.background='#22c55e'; this.style.color='#fff'" onmouseout="this.style.background='rgba(34, 197, 94, 0.15)'; this.style.color='#22c55e'">✓ Recibir</button>
+                <button class="btn btn-small" onclick="cancelSupplierOrder(${i.id})" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; margin-left: 0.25rem; transition: all 0.2s;" onmouseover="this.style.background='#ef4444'; this.style.color='#fff'" onmouseout="this.style.background='rgba(239, 68, 68, 0.15)'; this.style.color='#ef4444'">✗ Cancelar</button>
+            `;
+        }
+
+        return `
+            <tr style="border-bottom: 1px solid var(--theme-border, rgba(255,255,255,0.06));">
+                <td style="padding: 1rem; font-family: monospace; font-weight: 700; color: var(--color-naranja, #ff6600);">${escapeHtml(i.folio)}</td>
+                <td style="padding: 1rem; font-weight: 600;">${escapeHtml(i.supplier_name)}</td>
+                <td style="padding: 1rem; color: var(--theme-text-muted);">${new Date(i.expected_date).toLocaleDateString('es-MX')}</td>
+                <td style="padding: 1rem; font-weight: 700; color: var(--color-naranja, #ff6600);">$${Number(i.total_estimated || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td style="padding: 1rem;">
+                    <span style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: ${statusColor}; color: white;">
+                        ${statusText}
+                    </span>
+                </td>
+                <td style="padding: 1rem; text-align: center; white-space: nowrap;">
+                    ${actionsHtml}
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+async function receiveSupplierOrder(id) {
+    if (!confirm('¿Estás seguro de que deseas marcar esta orden como RECIBIDA (completada)? Se registrará el ingreso de mercancía.')) return;
+    const res = await apiCall('/admin_supply.php?action=supplier-order-receive', 'POST', { id: id });
+    if (res && res.success) {
+        showAlert(res.message || 'Orden completada correctamente', 'success');
+        loadSupplierOrders();
+        loadHistory();
+    } else {
+        showAlert(res?.message || 'Error al completar la orden', 'error');
+    }
+}
+
+async function cancelSupplierOrder(id) {
+    if (!confirm('¿Estás seguro de que deseas CANCELAR esta orden de compra?')) return;
+    const res = await apiCall('/admin_supply.php?action=supplier-order-cancel', 'POST', { id: id });
+    if (res && res.success) {
+        showAlert(res.message || 'Orden cancelada', 'success');
+        loadSupplierOrders();
+        loadHistory();
+    } else {
+        showAlert(res?.message || 'Error al cancelar la orden', 'error');
+    }
 }
 
 async function loadHistory() {
@@ -6046,6 +6203,18 @@ document.addEventListener('DOMContentLoaded', function () {
         supplierInput.addEventListener('input', loadMappedProductsBySupplier);
         supplierInput.addEventListener('change', loadMappedProductsBySupplier);
         supplierInput.addEventListener('blur', loadMappedProductsBySupplier);
+    }
+
+    const poMappedProductSelect = document.getElementById('poMappedProduct');
+    if (poMappedProductSelect) {
+        poMappedProductSelect.addEventListener('change', function() {
+            const opt = this.options[this.selectedIndex];
+            const costInput = document.getElementById('poCost');
+            if (costInput && opt) {
+                const cost = opt.getAttribute('data-unit-cost') || '0';
+                costInput.value = cost;
+            }
+        });
     }
 
     const spSearchInput = document.getElementById('spProductSearch');
