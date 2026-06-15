@@ -903,6 +903,73 @@ try {
             echo $rawPdfData;
             exit;
 
+        case 'pickup-stats':
+            require_admin();
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            try {
+                // Tickets pendientes de recolección
+                $pendingStmt = $pdo->prepare("
+                    SELECT COUNT(*) as total
+                    FROM sales_tickets
+                    WHERE deleted_at IS NULL
+                    AND archived_at IS NULL
+                    AND ticket_type = 'sale'
+                    AND pickup_status = 'pending'
+                    AND payment_status = 'completed'
+                ");
+                $pendingStmt->execute();
+                $pendingCount = (int)$pendingStmt->fetchColumn();
+
+                // Tickets entregados este mes
+                $deliveredStmt = $pdo->prepare("
+                    SELECT COUNT(*) as total, COALESCE(SUM(total_amount), 0) as total_amount
+                    FROM sales_tickets
+                    WHERE deleted_at IS NULL
+                    AND ticket_type = 'sale'
+                    AND pickup_status = 'picked_up'
+                    AND EXTRACT(MONTH FROM pickup_date) = EXTRACT(MONTH FROM NOW())
+                    AND EXTRACT(YEAR FROM pickup_date) = EXTRACT(YEAR FROM NOW())
+                ");
+                $deliveredStmt->execute();
+                $deliveredRow = $deliveredStmt->fetch(PDO::FETCH_ASSOC);
+                $deliveredCount = (int)($deliveredRow['total'] ?? 0);
+                $deliveredAmount = (float)($deliveredRow['total_amount'] ?? 0);
+
+                // Total de tickets de venta del mes actual
+                $totalSaleStmt = $pdo->prepare("
+                    SELECT COUNT(*) as total
+                    FROM sales_tickets
+                    WHERE deleted_at IS NULL
+                    AND ticket_type = 'sale'
+                    AND payment_status = 'completed'
+                    AND EXTRACT(MONTH FROM issued_date) = EXTRACT(MONTH FROM NOW())
+                    AND EXTRACT(YEAR FROM issued_date) = EXTRACT(YEAR FROM NOW())
+                ");
+                $totalSaleStmt->execute();
+                $totalSale = (int)$totalSaleStmt->fetchColumn();
+
+                $deliveryRate = $totalSale > 0 ? round(($deliveredCount / $totalSale) * 100, 1) : 0;
+
+                $response = [
+                    'success' => true,
+                    'stats' => [
+                        'pending_pickup' => $pendingCount,
+                        'delivered_this_month' => $deliveredCount,
+                        'delivered_amount' => $deliveredAmount,
+                        'total_sale_tickets' => $totalSale,
+                        'delivery_rate' => $deliveryRate
+                    ]
+                ];
+            } catch (Exception $e) {
+                error_log('Error pickup-stats: ' . $e->getMessage());
+                $response = ['success' => false, 'message' => 'Error obteniendo estadísticas de recolección'];
+            }
+            break;
+
         default:
             $response = ['success' => false, 'message' => 'Acción no reconocida'];
     }

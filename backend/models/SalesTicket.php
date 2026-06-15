@@ -372,7 +372,7 @@ class SalesTicket {
     public function getPendingPickups($userId = null, $searchTerm = null, $page = 1, $perPage = 20) {
         try {
             $offset = max(0, ($page - 1) * $perPage);
-            $where = "WHERE st.status = 'active' AND st.pickup_status = 'pending' AND st.payment_status = 'completed'";
+            $where = "WHERE st.deleted_at IS NULL AND st.archived_at IS NULL AND st.ticket_type = 'sale' AND st.pickup_status IN ('pending', 'picked_up') AND st.payment_status = 'completed'";
             $params = [];
 
             if ($userId) {

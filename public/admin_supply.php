@@ -2350,27 +2350,59 @@ function renderClientPickupTickets(tickets) {
     tickets.forEach(ticket => {
         const pickupStatus = ticket.pickup_status || 'pending';
         const pickupBadge = pickupStatusMap[pickupStatus] || pickupStatusMap['pending'];
+        const isDelivered = pickupStatus === 'picked_up';
+
+        const actionBtn = isDelivered
+            ? `<button onclick="deleteClientTicket('${escapeHtml(ticket.folio)}')" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">🗑 Eliminar</button>`
+            : `<button onclick="window.location.href='ticket_validation.php?folio=${escapeHtml(ticket.folio)}'" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: var(--color-naranja); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">🚚 Validar</button>`;
 
         html += `
             <tr style="border-bottom: 1px solid var(--theme-border);">
                 <td style="padding: 1rem; font-family: monospace; font-weight: 700; color: var(--color-naranja);">${escapeHtml(ticket.folio)}</td>
                 <td style="padding: 1rem;">${escapeHtml(ticket.ticket_type)}</td>
-                <td style="padding: 1rem; font-weight: 700;">$${parseFloat(ticket.total_amount || 0).toFixed(2)}</td>
-                <td style="padding: 1rem; font-size: 0.9rem;">${new Date(ticket.issued_date).toLocaleDateString('es-MX')}</td>
+                <td style="padding: 1rem; font-weight: 700; color: var(--color-naranja);">$${parseFloat(ticket.total_amount || 0).toFixed(2)}</td>
+                <td style="padding: 1rem; font-size: 0.9rem; color: var(--theme-text-muted);">${new Date(ticket.issued_date).toLocaleDateString('es-MX')}</td>
                 <td style="padding: 1rem;">
                     <span style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: ${pickupBadge.color}; border: 1px solid ${pickupBadge.border}; color: white;">
                         ${pickupBadge.text}
                     </span>
                 </td>
-                <td style="padding: 1rem;">
-                    <button onclick="window.location.href='ticket_validation.php?folio=${escapeHtml(ticket.folio)}'" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: var(--color-naranja); color: white; border: none; border-radius: 4px; cursor: pointer;">Validar</button>
-                </td>
+                <td style="padding: 1rem;">${actionBtn}</td>
             </tr>
         `;
     });
 
     html += '</tbody></table>';
     resultBox.innerHTML = html;
+}
+
+async function deleteClientTicket(folio) {
+    if (!confirm(`¿Estás seguro de que deseas eliminar el ticket ${folio}? Esta acción no se puede deshacer.`)) return;
+
+    try {
+        const response = await fetch('api/ticket_validation.php?action=delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': window.csrfToken || ''
+            },
+            body: JSON.stringify({
+                folio: folio,
+                reason: 'Eliminado manualmente desde Abastecimiento',
+                csrf_token: window.csrfToken || ''
+            })
+        });
+        const data = await response.json();
+        if (data.success) {
+            showAlert('Ticket eliminado correctamente', 'success');
+            loadClientPickupTickets(); // Recargar lista
+        } else {
+            showAlert(data.message || 'Error al eliminar ticket', 'error');
+        }
+    } catch (err) {
+        console.error('Error eliminando ticket:', err);
+        showAlert('Error al eliminar ticket', 'error');
+    }
 }
 
 let stockCurrentPage = 1;

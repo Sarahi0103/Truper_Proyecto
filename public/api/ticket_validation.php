@@ -163,6 +163,47 @@ try {
             echo json_encode(['success' => true, 'message' => 'Notificación enviada']);
             break;
 
+        case 'delete':
+            if ($method !== 'POST') {
+                echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+                exit;
+            }
+
+            $folio = sanitize($input['folio'] ?? '');
+            $reason = sanitize($input['reason'] ?? 'Eliminado por administrador');
+            $adminId = $_SESSION['user_id'];
+
+            if (empty($folio)) {
+                echo json_encode(['success' => false, 'message' => 'Folio es requerido']);
+                exit;
+            }
+
+            // Obtener ticket
+            $stmt = $pdo->prepare("SELECT id, pickup_status FROM sales_tickets WHERE folio = :folio AND deleted_at IS NULL");
+            $stmt->execute([':folio' => $folio]);
+            $ticketRow = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$ticketRow) {
+                echo json_encode(['success' => false, 'message' => 'Ticket no encontrado']);
+                exit;
+            }
+
+            // Marcar como eliminado (soft delete)
+            $delStmt = $pdo->prepare("UPDATE sales_tickets SET deleted_at = NOW(), pickup_status = 'cancelled', updated_at = NOW() WHERE folio = :folio");
+            $delStmt->execute([':folio' => $folio]);
+
+            // Log de auditoría
+            $logStmt = $pdo->prepare("INSERT INTO ticket_pickup_log (ticket_id, admin_id, action, notes, ip_address, created_at) VALUES (:ticket_id, :admin_id, 'cancelled', :notes, :ip_address, NOW())");
+            $logStmt->execute([
+                ':ticket_id' => $ticketRow['id'],
+                ':admin_id'  => $adminId,
+                ':notes'     => $reason,
+                ':ip_address'=> $_SERVER['REMOTE_ADDR'] ?? 'unknown'
+            ]);
+
+            echo json_encode(['success' => true, 'message' => 'Ticket eliminado correctamente']);
+            break;
+
         default:
             echo json_encode(['success' => false, 'message' => 'Acción no válida']);
             break;

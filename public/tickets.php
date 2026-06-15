@@ -39,12 +39,12 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
 
         .tickets-split-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 2fr 1fr;
             gap: 1.5rem;
             margin-top: 1.5rem;
         }
 
-        @media (max-width: 1024px) {
+        @media (max-width: 1100px) {
             .tickets-split-grid {
                 grid-template-columns: 1fr;
             }
@@ -391,10 +391,17 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                         pickupBadge = '<span style="color:var(--theme-text-muted);">—</span>';
                     }
 
-                    // Botón para validar
+                    // Botón para validar o eliminar
                     let actionButton = '';
                     if (ticket.ticket_type === 'sale') {
-                        actionButton = `<a href="ticket_validation.php?folio=${escapeHtml(ticket.folio)}" class="btn" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; text-decoration: none; border-radius: 6px; background: var(--color-naranja); border: none; color: white; display: inline-block; font-weight: 600;">🚚 Validar</a>`;
+                        const pStatus = ticket.pickup_status || 'pending';
+                        if (pStatus === 'picked_up') {
+                            actionButton = `<button onclick="deleteTicketFromHistory('${escapeHtml(ticket.folio)}')" class="btn" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; border-radius: 6px; background: #dc3545; border: none; color: white; display: inline-block; font-weight: 600; cursor: pointer;">🗑 Eliminar</button>`;
+                        } else if (pStatus === 'pending') {
+                            actionButton = `<a href="ticket_validation.php?folio=${escapeHtml(ticket.folio)}" class="btn" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; text-decoration: none; border-radius: 6px; background: var(--color-naranja); border: none; color: white; display: inline-block; font-weight: 600;">🚚 Validar</a>`;
+                        } else {
+                            actionButton = '<span style="color:var(--theme-text-muted);">—</span>';
+                        }
                     } else {
                         actionButton = '<span style="color:var(--theme-text-muted);">—</span>';
                     }
@@ -855,6 +862,33 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
 
         // Auto-run filters initialization
         document.addEventListener('DOMContentLoaded', initTicketFilters);
+
+        async function deleteTicketFromHistory(folio) {
+            if (!confirm(`¿Eliminar el ticket ${folio}? Esta acción no se puede deshacer.`)) return;
+            try {
+                const response = await fetch('api/ticket_validation.php?action=delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': window.csrfToken || ''
+                    },
+                    body: JSON.stringify({
+                        folio: folio,
+                        reason: 'Eliminado desde historial de tickets',
+                        csrf_token: window.csrfToken || ''
+                    })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showAlert('Ticket eliminado correctamente', 'success');
+                    loadTicketHistory(); // Recargar tabla sin recargar la página
+                } else {
+                    showAlert(data.message || 'Error al eliminar ticket', 'error');
+                }
+            } catch (err) {
+                showAlert('Error al eliminar ticket', 'error');
+            }
+        }
     </script>
     <script src="js/mobile-optimize.js"></script>
 </body>

@@ -174,6 +174,34 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                     </div>
                 </div>
 
+                <?php if ($is_admin): ?>
+                <!-- Widget de Recolecciones de Tickets (mes actual) -->
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(190px,1fr)); gap:1rem; margin-bottom:2rem; padding:1.25rem 1.5rem; background:rgba(255,127,0,0.04); border:1px solid rgba(255,127,0,0.15); border-radius:12px;">
+                    <div style="display:flex; align-items:center; gap:0.65rem; grid-column:1/-1; margin-bottom:0.25rem;">
+                        <span style="font-size:1.1rem;">&#x1F69A;</span>
+                        <span style="font-weight:800; font-size:0.95rem; color:#fff;">Recolecciones de Tickets</span>
+                        <span style="font-size:0.75rem; color:#666; font-style:italic;">&nbsp;(mes actual)</span>
+                        <a href="ticket_validation.php" style="margin-left:auto; font-size:0.8rem; color:#ff7f00; text-decoration:none; font-weight:600;">Ir a validar &#8594;</a>
+                    </div>
+                    <div class="kpi-card" id="pickupPendingCard" style="background:rgba(255,193,7,0.08); border-color:rgba(255,193,7,0.3);">
+                        <div class="kpi-card-label">&#x23F3; Pendientes de Entrega</div>
+                        <div class="kpi-card-value" style="color:#ffc107;">&#8212;</div>
+                    </div>
+                    <div class="kpi-card" id="pickupDeliveredCard" style="background:rgba(76,175,80,0.08); border-color:rgba(76,175,80,0.3);">
+                        <div class="kpi-card-label">&#x2713; Entregados Este Mes</div>
+                        <div class="kpi-card-value" style="color:#4caf50;">&#8212;</div>
+                    </div>
+                    <div class="kpi-card" id="pickupRateCard" style="background:rgba(74,144,226,0.08); border-color:rgba(74,144,226,0.3);">
+                        <div class="kpi-card-label">&#x1F4CA; Tasa de Entrega</div>
+                        <div class="kpi-card-value" style="color:#4a90e2;">&#8212;</div>
+                    </div>
+                    <div class="kpi-card" id="pickupAmountCard" style="background:rgba(255,127,0,0.08); border-color:rgba(255,127,0,0.3);">
+                        <div class="kpi-card-label">&#x1F4B0; Monto Entregado</div>
+                        <div class="kpi-card-value" style="color:#ff7f00;">&#8212;</div>
+                    </div>
+                </div>
+                <?php endif; ?>
+
                 <!-- Contenedor de gráficos divididos en rejilla -->
                 <div class="analytics-charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
                     <!-- Chart card (bar/line) -->
@@ -481,6 +509,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                 setView('monthly');
                 <?php if ($is_admin): ?>
                 loadClientAnalytics();
+                loadPickupStats();
                 const goalMonth = document.getElementById('goalMonth');
                 if (goalMonth && !goalMonth.value) {
                     goalMonth.value = new Date().toISOString().slice(0, 7);
@@ -495,6 +524,29 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                 if (btn) btn.click();
             }
         });
+
+        <?php if ($is_admin): ?>
+        async function loadPickupStats() {
+            try {
+                const res = await apiCall('/analytics.php?action=pickup-stats');
+                if (!res || !res.success || !res.stats) return;
+                const s = res.stats;
+                const fmt = (v) => '$' + Number(v || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                const pending = document.querySelector('#pickupPendingCard .kpi-card-value');
+                const delivered = document.querySelector('#pickupDeliveredCard .kpi-card-value');
+                const rate = document.querySelector('#pickupRateCard .kpi-card-value');
+                const amount = document.querySelector('#pickupAmountCard .kpi-card-value');
+
+                if (pending) pending.textContent = s.pending_pickup;
+                if (delivered) delivered.textContent = s.delivered_this_month;
+                if (rate) rate.textContent = s.delivery_rate + '%';
+                if (amount) amount.textContent = fmt(s.delivered_amount);
+            } catch (e) {
+                console.error('Error cargando pickup stats:', e);
+            }
+        }
+        <?php endif; ?>
 
         /* ── Objetivos Mensuales (Lógica Reubicada) ── */
         async function saveMonthlyGoal() {
