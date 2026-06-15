@@ -350,7 +350,7 @@ class AnalyticsController {
                     st.pickup_status,
                     st.expiration_date,
                     COALESCE(st.customer_name, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END, 'Mostrador') as customer_name,
-                    u.email,
+                    CASE WHEN COALESCE(st.customer_name, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END, 'Mostrador') = 'Admin' THEN 'admin@truper.com' ELSE u.email END as email,
                     (SELECT COUNT(*) FROM ticket_items WHERE ticket_id = st.id) as item_count,
                     st.description,
                     ib.first_name || CASE WHEN ib.last_name IS NOT NULL AND ib.last_name <> '' THEN ' ' || ib.last_name ELSE '' END as issued_by_name

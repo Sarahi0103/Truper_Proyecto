@@ -29,10 +29,12 @@ class TicketIntegration {
                 return ['success' => false, 'message' => 'Orden no encontrada'];
             }
             
-            // Determinar customer_name según el rol del usuario
+            // Determinar customer_name y email según el rol del usuario
             $customerName = 'Admin';
+            $customerEmail = 'admin@truper.com';
             if ($order['role'] === 'client' && $order['first_name']) {
                 $customerName = trim($order['first_name'] . ' ' . ($order['last_name'] ?? ''));
+                $customerEmail = ''; // Se obtendrá del JOIN en consultas
             }
             
             // Crear ticket automático
@@ -40,6 +42,7 @@ class TicketIntegration {
                 'order_id' => $orderId,
                 'user_id' => $order['user_id'],
                 'customer_name' => $customerName,
+                'customer_email' => $customerEmail,
                 'ticket_type' => 'sale',
                 'subtotal' => $orderData['subtotal'] ?? ($order['total_amount'] - ($order['tax_amount'] ?? 0)),
                 'tax_amount' => $order['tax_amount'],

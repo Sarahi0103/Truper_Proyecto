@@ -71,7 +71,7 @@ try {
             
             // Obtener detalles del ticket
             $stmt = $pdo->prepare("
-                SELECT st.*, COALESCE(st.customer_name, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END) as customer_name, u.email
+                SELECT st.*, COALESCE(st.customer_name, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END) as customer_name, CASE WHEN st.customer_name = 'Admin' THEN 'admin@truper.com' ELSE u.email END as email
                 FROM sales_tickets st
                 LEFT JOIN users u ON st.user_id = u.id
                 WHERE st.id = :id

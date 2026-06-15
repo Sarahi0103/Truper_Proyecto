@@ -58,17 +58,19 @@ try {
                 break;
             }
             
-            // Determinar customer_name según el rol del usuario que crea
+            // Determinar customer_name y email según el rol del usuario que crea
             if (empty($input['customer_name'])) {
                 if ($_SESSION['role'] === 'admin') {
                     $input['customer_name'] = 'Admin';
+                    $input['customer_email'] = 'admin@truper.com';
                 } elseif (!empty($input['user_id'])) {
                     // Obtener nombre del cliente si se proporciona user_id
-                    $userStmt = $pdo->prepare("SELECT first_name, last_name FROM users WHERE id = :user_id");
+                    $userStmt = $pdo->prepare("SELECT first_name, last_name, email FROM users WHERE id = :user_id");
                     $userStmt->execute([':user_id' => $input['user_id']]);
                     $user = $userStmt->fetch(PDO::FETCH_ASSOC);
                     if ($user) {
                         $input['customer_name'] = trim($user['first_name'] . ' ' . ($user['last_name'] ?? ''));
+                        $input['customer_email'] = $user['email'] ?? '';
                     }
                 }
             }
