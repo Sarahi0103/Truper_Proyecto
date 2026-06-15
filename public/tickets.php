@@ -426,9 +426,6 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
             // Store tickets globally for search filter
             window._allClientTickets = tickets;
 
-            const countEl = document.getElementById('clientTicketsCount');
-            if (countEl) countEl.textContent = tickets.length > 0 ? `${tickets.length} ticket${tickets.length !== 1 ? 's' : ''}` : '';
-
             renderClientTicketsRows(tickets);
         }
 
@@ -436,13 +433,26 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
             const tableBody = document.getElementById('ticketsTableBody');
             if (!tableBody) return;
 
-            if (tickets.length === 0) {
+            // Excluir tickets cancelados/eliminados
+            const visible = tickets.filter(t => {
+                if (t.ticket_type === 'sale') {
+                    const ps = t.pickup_status || 'pending';
+                    return ps !== 'cancelled' && ps !== 'expired';
+                }
+                return true;
+            });
+
+            // Actualizar contador con los visibles
+            const countEl = document.getElementById('clientTicketsCount');
+            if (countEl) countEl.textContent = visible.length > 0 ? `${visible.length} ticket${visible.length !== 1 ? 's' : ''}` : '';
+
+            if (visible.length === 0) {
                 tableBody.innerHTML = '<tr><td colspan="8" style="padding: 2rem; text-align: center; color: var(--theme-text-muted);">No hay tickets en este período</td></tr>';
                 return;
             }
 
             let html = '';
-            tickets.forEach(ticket => {
+            visible.forEach(ticket => {
                 const pStatus = ticket.ticket_type === 'sale' ? (ticket.pickup_status || 'pending') : null;
 
                 // Pago: pendiente si no está validado, pagado si ya fue entregado
@@ -492,7 +502,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                 }
 
                 html += `
-                    <tr style="border-bottom: 1px solid var(--theme-border);" data-search="${escapeHtml((ticket.folio + ' ' + (ticket.customer_name || '') + ' ' + (ticket.email || '')).toLowerCase())}">
+                    <tr style="border-bottom: 1px solid var(--theme-border); transition: opacity 0.3s, transform 0.3s;" data-folio="${escapeHtml(ticket.folio)}" data-search="${escapeHtml((ticket.folio + ' ' + (ticket.customer_name || '') + ' ' + (ticket.email || '')).toLowerCase())}">
                         <td style="padding: 1rem; font-family: monospace; font-weight: 700; color: var(--color-naranja);">${escapeHtml(ticket.folio)}</td>
                         <td style="padding: 1rem;">
                             <div style="font-weight: 600;">${escapeHtml(ticket.customer_name || 'Mostrador')}</div>
@@ -967,6 +977,15 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
 
         async function deleteTicketFromHistory(folio) {
             if (!confirm(`¿Eliminar el ticket ${folio}? Esta acción no se puede deshacer.`)) return;
+
+            // Fade out inmediato para feedback visual
+            const row = document.querySelector(`tr[data-folio="${folio}"]`);
+            if (row) {
+                row.style.opacity = '0';
+                row.style.transform = 'translateX(30px)';
+                row.style.pointerEvents = 'none';
+            }
+
             try {
                 const response = await fetch('api/ticket_validation.php?action=delete', {
                     method: 'POST',
@@ -982,12 +1001,36 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                 });
                 const data = await response.json();
                 if (data.success) {
+                    // Quitar del DOM definitivamente
+                    setTimeout(() => { if (row) row.remove(); }, 310);
+
+                    // Actualizar array global y contador
+                    if (window._allClientTickets) {
+                        window._allClientTickets = window._allClientTickets.filter(t => t.folio !== folio);
+                        const visibleCount = window._allClientTickets.filter(t => {
+                            const ps = t.pickup_status || 'pending';
+                            return ps !== 'cancelled' && ps !== 'expired';
+                        }).length;
+                        const countEl = document.getElementById('clientTicketsCount');
+                        if (countEl) countEl.textContent = visibleCount > 0 ? `${visibleCount} ticket${visibleCount !== 1 ? 's' : ''}` : '';
+                    }
+
                     showAlert('Ticket eliminado correctamente', 'success');
-                    loadTicketHistory(); // Recargar tabla sin recargar la página
                 } else {
+                    // Revertir fade si hubo error
+                    if (row) {
+                        row.style.opacity = '1';
+                        row.style.transform = '';
+                        row.style.pointerEvents = '';
+                    }
                     showAlert(data.message || 'Error al eliminar ticket', 'error');
                 }
             } catch (err) {
+                if (row) {
+                    row.style.opacity = '1';
+                    row.style.transform = '';
+                    row.style.pointerEvents = '';
+                }
                 showAlert('Error al eliminar ticket', 'error');
             }
         }
