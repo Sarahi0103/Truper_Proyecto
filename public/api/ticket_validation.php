@@ -98,6 +98,44 @@ try {
             echo json_encode($result);
             break;
 
+        case 'global-history':
+            if ($method !== 'GET') {
+                echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+                exit;
+            }
+
+            try {
+                $stmt = $pdo->query("
+                    SELECT 
+                        tpl.id,
+                        tpl.ticket_id,
+                        tpl.admin_id,
+                        tpl.action,
+                        tpl.notes,
+                        tpl.ip_address,
+                        tpl.created_at,
+                        st.folio AS ticket_folio,
+                        COALESCE(st.customer_name, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END, u.email, 'Mostrador') AS ticket_customer_name,
+                        admin.first_name || CASE WHEN admin.last_name IS NOT NULL AND admin.last_name <> '' THEN ' ' || admin.last_name ELSE '' END AS admin_name
+                    FROM ticket_pickup_log tpl
+                    JOIN sales_tickets st ON tpl.ticket_id = st.id
+                    LEFT JOIN users u ON st.user_id = u.id
+                    LEFT JOIN users admin ON tpl.admin_id = admin.id
+                    ORDER BY tpl.created_at DESC 
+                    LIMIT 50
+                ");
+                $logs = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+                echo json_encode([
+                    'success' => true,
+                    'logs' => $logs
+                ]);
+            } catch (Exception $e) {
+                error_log('Error in global-history: ' . $e->getMessage());
+                echo json_encode(['success' => false, 'message' => 'Error al obtener historial global: ' . $e->getMessage()]);
+            }
+            break;
+
         case 'reactivate':
             if ($method !== 'POST') {
                 echo json_encode(['success' => false, 'message' => 'Método no permitido']);

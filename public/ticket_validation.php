@@ -437,6 +437,39 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             box-shadow: 0 0 12px rgba(255, 127, 0, 0.4);
             transform: translateX(-3px);
         }
+
+        /* Dashboard and global history styles */
+        .dashboard-panels {
+            margin-top: 2rem;
+            animation: slideIn 0.3s ease;
+        }
+        .dashboard-panels-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+        @media (min-width: 1200px) {
+            .dashboard-panels-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .spinner {
+            display: inline-block;
+            width: 1.5rem;
+            height: 1.5rem;
+            border: 3px solid rgba(255,127,0,0.3);
+            border-radius: 50%;
+            border-top-color: #ff7f00;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -486,7 +519,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
     <main>
         <div class="validation-container">
             <div style="display: flex; justify-content: flex-start; margin-bottom: 0.5rem;">
-                <button onclick="history.back()" class="btn-back">
+                <button onclick="goBack()" class="btn-back">
                     <span>←</span> Regresar
                 </button>
             </div>
@@ -502,6 +535,27 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                 <div class="search-input-wrapper">
                     <input type="text" id="searchInput" class="search-input" placeholder="Ingrese folio, nombre del cliente o teléfono..." autocomplete="off">
                     <div id="searchSuggestions" class="search-suggestions"></div>
+                </div>
+            </div>
+
+            <!-- Dashboard Overview (shown when no ticket is loaded) -->
+            <div id="dashboardPanels" class="dashboard-panels" style="display: none;">
+                <div class="dashboard-panels-grid">
+                    <!-- Pending Tickets Section -->
+                    <div class="card" style="background: #1a1a1a; border-radius: 12px; padding: 2rem; box-shadow: 0 8px 32px rgba(0,0,0,0.3); border: 1px solid #333;">
+                        <h3 style="color: #ff7f00; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; margin-top: 0;">
+                            ⏳ Tickets Pendientes de Validación
+                        </h3>
+                        <div id="pendingTicketsList" class="text-muted">Cargando...</div>
+                    </div>
+
+                    <!-- Global Validation History Section -->
+                    <div class="card" style="background: #1a1a1a; border-radius: 12px; padding: 2rem; box-shadow: 0 8px 32px rgba(0,0,0,0.3); border: 1px solid #333;">
+                        <h3 style="color: #ff7f00; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; margin-top: 0;">
+                            📋 Historial de Validaciones Recientes
+                        </h3>
+                        <div id="globalHistoryList" class="text-muted">Cargando...</div>
+                    </div>
                 </div>
             </div>
 
@@ -743,6 +797,16 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             }
 
             ticketDetailsPanel.classList.add('active');
+
+            // Hide dashboard overview
+            const dashboardPanels = document.getElementById('dashboardPanels');
+            if (dashboardPanels) {
+                dashboardPanels.style.display = 'none';
+            }
+            // Update search input value
+            if (searchInput) {
+                searchInput.value = ticket.folio;
+            }
         }
 
         function getStatusText(status) {
@@ -984,6 +1048,148 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             }, 5000);
         }
 
+        function goBack() {
+            const ticketDetailsPanel = document.getElementById('ticketDetailsPanel');
+            if (ticketDetailsPanel && ticketDetailsPanel.classList.contains('active')) {
+                ticketDetailsPanel.classList.remove('active');
+                const auditLog = document.getElementById('auditLog');
+                if (auditLog) auditLog.classList.remove('active');
+                
+                searchInput.value = '';
+                
+                const dashboardPanels = document.getElementById('dashboardPanels');
+                if (dashboardPanels) {
+                    dashboardPanels.style.display = 'block';
+                }
+                
+                const url = new URL(window.location.href);
+                url.searchParams.delete('folio');
+                window.history.pushState({}, '', url);
+                
+                loadDashboardOverview();
+            } else {
+                history.back();
+            }
+        }
+
+        async function loadDashboardOverview() {
+            const dashboardPanels = document.getElementById('dashboardPanels');
+            if (!dashboardPanels) return;
+            
+            dashboardPanels.style.display = 'block';
+            
+            const pendingList = document.getElementById('pendingTicketsList');
+            const historyList = document.getElementById('globalHistoryList');
+            
+            if (pendingList) pendingList.innerHTML = '<div style="text-align:center; padding:1.5rem;"><span class="spinner"></span> Cargando pendientes...</div>';
+            if (historyList) historyList.innerHTML = '<div style="text-align:center; padding:1.5rem;"><span class="spinner"></span> Cargando historial...</div>';
+            
+            // Load Pending Tickets
+            try {
+                const response = await fetch('api/ticket_validation.php?action=pending');
+                const data = await response.json();
+                
+                if (data.success && Array.isArray(data.tickets)) {
+                    const pending = data.tickets.filter(t => t.pickup_status === 'pending');
+                    
+                    if (pending.length === 0) {
+                        pendingList.innerHTML = '<p class="text-muted" style="text-align:center; padding:1.5rem; margin:0;">No hay tickets pendientes de validación.</p>';
+                    } else {
+                        pendingList.innerHTML = `
+                            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                                    <thead>
+                                        <tr style="border-bottom: 2px solid #333; text-align: left;">
+                                            <th style="padding: 0.75rem; color: #ff7f00;">Folio</th>
+                                            <th style="padding: 0.75rem; color: #ff7f00;">Cliente</th>
+                                            <th style="padding: 0.75rem; color: #ff7f00;">Fecha</th>
+                                            <th style="padding: 0.75rem; color: #ff7f00; text-align: right;">Total</th>
+                                            <th style="padding: 0.75rem; color: #ff7f00; text-align: center;">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${pending.map(t => `
+                                            <tr style="border-bottom: 1px solid #2d2d2d;">
+                                                <td style="padding: 0.75rem; font-family: monospace; font-weight: bold; color: #ff7f00; cursor: pointer;" onclick="loadTicketDetails('${escapeHtml(t.folio)}')">${escapeHtml(t.folio)}</td>
+                                                <td style="padding: 0.75rem;">${escapeHtml(t.customer_name || 'N/A')}</td>
+                                                <td style="padding: 0.75rem; color: #888;">${new Date(t.issued_date).toLocaleDateString('es-MX')}</td>
+                                                <td style="padding: 0.75rem; text-align: right; font-weight: bold;">$${parseFloat(t.total_amount || 0).toFixed(2)}</td>
+                                                <td style="padding: 0.75rem; text-align: center;">
+                                                    <button onclick="loadTicketDetails('${escapeHtml(t.folio)}')" class="btn btn-small" style="background: #ff7f00; color: #fff; border: none; padding: 0.35rem 0.75rem; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.8rem; transition: background 0.2s;">Validar</button>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                    }
+                } else {
+                    pendingList.innerHTML = '<p class="text-muted" style="text-align:center; padding:1.5rem; margin:0;">Error al cargar pendientes.</p>';
+                }
+            } catch (err) {
+                console.error('Error loading pending overview:', err);
+                if (pendingList) pendingList.innerHTML = '<p class="text-muted" style="text-align:center; padding:1.5rem; margin:0;">Error de conexión.</p>';
+            }
+            
+            // Load Global History Log
+            try {
+                const response = await fetch('api/ticket_validation.php?action=global-history');
+                const data = await response.json();
+                
+                if (data.success && Array.isArray(data.logs)) {
+                    if (data.logs.length === 0) {
+                        historyList.innerHTML = '<p class="text-muted" style="text-align:center; padding:1.5rem; margin:0;">No hay historial registrado.</p>';
+                    } else {
+                        historyList.innerHTML = `
+                            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                                    <thead>
+                                        <tr style="border-bottom: 2px solid #333; text-align: left;">
+                                            <th style="padding: 0.75rem; color: #ff7f00;">Folio</th>
+                                            <th style="padding: 0.75rem; color: #ff7f00;">Cliente</th>
+                                            <th style="padding: 0.75rem; color: #ff7f00;">Acción</th>
+                                            <th style="padding: 0.75rem; color: #ff7f00;">Admin</th>
+                                            <th style="padding: 0.75rem; color: #ff7f00; text-align: right;">Fecha/Hora</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${data.logs.map(log => {
+                                            let badgeColor = '#888';
+                                            let actionText = log.action;
+                                            if (log.action === 'validated') { badgeColor = '#4caf50'; actionText = 'Validado'; }
+                                            else if (log.action === 'cancelled') { badgeColor = '#f44336'; actionText = 'Cancelado'; }
+                                            else if (log.action === 'reactivated') { badgeColor = '#ffc107'; actionText = 'Reactivado'; }
+                                            else if (log.action === 'attempt') { badgeColor = '#2196f3'; actionText = 'Intento'; }
+                                            
+                                            return `
+                                                <tr style="border-bottom: 1px solid #2d2d2d;">
+                                                    <td style="padding: 0.75rem; font-family: monospace; font-weight: bold; color: #ff7f00; cursor: pointer;" onclick="loadTicketDetails('${escapeHtml(log.ticket_folio)}')">${escapeHtml(log.ticket_folio)}</td>
+                                                    <td style="padding: 0.75rem;">${escapeHtml(log.ticket_customer_name || 'N/A')}</td>
+                                                    <td style="padding: 0.75rem;">
+                                                        <span style="display: inline-block; padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold; background: ${badgeColor}22; border: 1px solid ${badgeColor}; color: ${badgeColor};">
+                                                            ${actionText}
+                                                        </span>
+                                                    </td>
+                                                    <td style="padding: 0.75rem;">${escapeHtml(log.admin_name || 'N/A')}</td>
+                                                    <td style="padding: 0.75rem; text-align: right; color: #888;">${new Date(log.created_at).toLocaleString('es-MX')}</td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                    }
+                } else {
+                    historyList.innerHTML = '<p class="text-muted" style="text-align:center; padding:1.5rem; margin:0;">Error al cargar historial.</p>';
+                }
+            } catch (err) {
+                console.error('Error loading global history overview:', err);
+                if (historyList) historyList.innerHTML = '<p class="text-muted" style="text-align:center; padding:1.5rem; margin:0;">Error de conexión.</p>';
+            }
+        }
+
         // Auto-load ticket if folio is in URL query parameters
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
@@ -991,6 +1197,8 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             if (folioParam) {
                 searchInput.value = folioParam;
                 loadTicketDetails(folioParam);
+            } else {
+                loadDashboardOverview();
             }
         });
 
