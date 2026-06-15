@@ -540,6 +540,27 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                 margin-top: 0.5rem !important;
             }
         }
+
+        .calendar-tab-btn {
+            background: transparent;
+            border: none;
+            color: #888888;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .calendar-tab-btn:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .calendar-tab-btn.active {
+            background: var(--theme-accent, #ff6600) !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 12px rgba(255, 102, 0, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -863,11 +884,20 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                 <div class="calendar-main-view">
                     <div class="card">
                         <div class="card-body">
-                            <h3 style="margin-top: 0; margin-bottom: 1.25rem;">Calendario mensual</h3>
-                            <div class="d-flex justify-between align-center" style="margin-bottom: 1.25rem;">
-                                <button class="btn btn-small btn-ghost" onclick="changeCalendarMonth(-1)">Mes anterior</button>
+                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem;">
+                                <h3 style="margin: 0;">Calendario</h3>
+                                <!-- Segment Control para Año, Mes, Semana, Día -->
+                                <div class="calendar-view-tabs" style="display: flex; gap: 0.25rem; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
+                                    <button class="calendar-tab-btn" type="button" data-mode="year" onclick="setCalendarView('year')">Año</button>
+                                    <button class="calendar-tab-btn active" type="button" data-mode="month" onclick="setCalendarView('month')">Mes</button>
+                                    <button class="calendar-tab-btn" type="button" data-mode="week" onclick="setCalendarView('week')">Semana</button>
+                                    <button class="calendar-tab-btn" type="button" data-mode="day" onclick="setCalendarView('day')">Día</button>
+                                </div>
+                            </div>
+                            <div id="calendarNavigation" class="d-flex justify-between align-center" style="margin-bottom: 1.25rem;">
+                                <button class="btn btn-small btn-ghost" type="button" onclick="changeCalendarMonth(-1)">Mes anterior</button>
                                 <strong id="calendarMonthLabel" style="font-size: 1.1rem; text-transform: capitalize;">Mes</strong>
-                                <button class="btn btn-small btn-ghost" onclick="changeCalendarMonth(1)">Mes siguiente</button>
+                                <button class="btn btn-small btn-ghost" type="button" onclick="changeCalendarMonth(1)">Mes siguiente</button>
                             </div>
                             <div id="calendarGrid" class="mt-2"></div>
                         </div>
@@ -3188,6 +3218,7 @@ function clearValidationError(id) {
 let calendarVisits = [];
 let calendarMonthCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let selectedCalendarDay = null; // Filter visits by day
+let calendarViewMode = 'month'; // 'year', 'month', 'week', 'day'
 
 function parseDateTimeCompat(dateStr) {
     if (!dateStr) return new Date(NaN);
@@ -3211,6 +3242,66 @@ function formatDateTimeLocal(dateValue) {
     });
 }
 
+function setCalendarView(mode) {
+    calendarViewMode = mode;
+    document.querySelectorAll('.calendar-tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    const activeBtn = document.querySelector(`.calendar-tab-btn[data-mode="${mode}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
+    
+    // Adjust header/navigation display based on mode
+    const navContainer = document.getElementById('calendarNavigation');
+    if (navContainer) {
+        if (mode === 'year') {
+            const yearVal = calendarMonthCursor.getFullYear();
+            navContainer.innerHTML = `
+                <button class="btn btn-small btn-ghost" type="button" onclick="changeCalendarYear(-1)">Año anterior</button>
+                <strong id="calendarMonthLabel" style="font-size: 1.1rem; text-transform: capitalize;">${yearVal}</strong>
+                <button class="btn btn-small btn-ghost" type="button" onclick="changeCalendarYear(1)">Año siguiente</button>
+            `;
+        } else if (mode === 'week') {
+            const startOfWeek = getStartOfWeek(calendarMonthCursor);
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 6);
+            const labelStr = `Semana: ${startOfWeek.getDate()} ${startOfWeek.toLocaleDateString('es-MX', {month:'short'})} - ${endOfWeek.getDate()} ${endOfWeek.toLocaleDateString('es-MX', {month:'short', year:'numeric'})}`;
+            navContainer.innerHTML = `
+                <button class="btn btn-small btn-ghost" type="button" onclick="changeCalendarWeek(-1)">Semana anterior</button>
+                <strong id="calendarMonthLabel" style="font-size: 1.1rem; text-transform: capitalize;">${labelStr}</strong>
+                <button class="btn btn-small btn-ghost" type="button" onclick="changeCalendarWeek(1)">Semana siguiente</button>
+            `;
+        } else if (mode === 'day') {
+            const labelStr = calendarMonthCursor.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            navContainer.innerHTML = `
+                <button class="btn btn-small btn-ghost" type="button" onclick="changeCalendarDayOffset(-1)">Día anterior</button>
+                <strong id="calendarMonthLabel" style="font-size: 1.1rem; text-transform: capitalize;">${labelStr}</strong>
+                <button class="btn btn-small btn-ghost" type="button" onclick="changeCalendarDayOffset(1)">Día siguiente</button>
+            `;
+        } else {
+            // Month view
+            navContainer.innerHTML = `
+                <button class="btn btn-small btn-ghost" type="button" onclick="changeCalendarMonth(-1)">Mes anterior</button>
+                <strong id="calendarMonthLabel" style="font-size: 1.1rem; text-transform: capitalize;">${calendarMonthCursor.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}</strong>
+                <button class="btn btn-small btn-ghost" type="button" onclick="changeCalendarMonth(1)">Mes siguiente</button>
+            `;
+        }
+    }
+
+    renderCalendar();
+}
+
+function renderCalendar() {
+    if (calendarViewMode === 'year') {
+        renderCalendarYear();
+    } else if (calendarViewMode === 'week') {
+        renderCalendarWeek();
+    } else if (calendarViewMode === 'day') {
+        renderCalendarDay();
+    } else {
+        renderCalendarMonth();
+    }
+}
+
 function selectCalendarDay(day) {
     if (selectedCalendarDay === day) {
         selectedCalendarDay = null;
@@ -3220,15 +3311,43 @@ function selectCalendarDay(day) {
     renderCalendarMonth();
 }
 
+function getStartOfWeek(d) {
+    const date = new Date(d);
+    const day = date.getDay();
+    const diff = date.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday (make Monday start of week)
+    return new Date(date.setDate(diff));
+}
+
+function changeCalendarYear(offset) {
+    calendarMonthCursor = new Date(calendarMonthCursor.getFullYear() + offset, calendarMonthCursor.getMonth(), 1);
+    setCalendarView('year');
+}
+
+function changeCalendarWeek(offset) {
+    const nextDate = new Date(calendarMonthCursor);
+    nextDate.setDate(nextDate.getDate() + (offset * 7));
+    calendarMonthCursor = nextDate;
+    setCalendarView('week');
+}
+
+function changeCalendarDayOffset(offset) {
+    const nextDate = new Date(calendarMonthCursor);
+    nextDate.setDate(nextDate.getDate() + offset);
+    calendarMonthCursor = nextDate;
+    setCalendarView('day');
+}
+
 function renderCalendarMonth() {
     const label = document.getElementById('calendarMonthLabel');
     const grid = document.getElementById('calendarGrid');
     const list = document.getElementById('calendarList');
-    if (!label || !grid || !list) return;
+    if (!grid || !list) return;
 
     const year = calendarMonthCursor.getFullYear();
     const month = calendarMonthCursor.getMonth();
-    label.textContent = calendarMonthCursor.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+    if (label && calendarViewMode === 'month') {
+        label.textContent = calendarMonthCursor.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+    }
 
     const firstDay = new Date(year, month, 1);
     const startWeekDay = (firstDay.getDay() + 6) % 7;
@@ -3280,7 +3399,7 @@ function renderCalendarMonth() {
                 <span style="font-weight: 700; font-size: 1.05rem; color: var(--theme-accent); display: flex; align-items: center; gap: 0.5rem;">
                     📅 Visitas del día ${selectedCalendarDay} de ${formattedMonthName}
                 </span>
-                <button class="btn btn-small btn-secondary" onclick="selectCalendarDay(null)">Ver todas las del mes</button>
+                <button class="btn btn-small btn-secondary" type="button" onclick="selectCalendarDay(null)">Ver todas las del mes</button>
             </div>
         `;
     } else {
@@ -3301,8 +3420,245 @@ function renderCalendarMonth() {
         });
     }
 
+    renderVisitsList(filteredVisits, listTitleHtml);
+}
+
+function renderCalendarYear() {
+    const grid = document.getElementById('calendarGrid');
+    if (!grid) return;
+    
+    const year = calendarMonthCursor.getFullYear();
+    const visitsByMonth = {};
+    for (let m = 0; m < 12; m++) visitsByMonth[m] = 0;
+    
+    calendarVisits.forEach(visit => {
+        const d = parseDateTimeCompat(visit.visit_datetime);
+        if (!Number.isNaN(d.getTime()) && d.getFullYear() === year) {
+            visitsByMonth[d.getMonth()]++;
+        }
+    });
+    
+    const monthNames = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    
+    let html = '<div class="calendar-year-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); gap: 1rem; margin-top: 1rem;">';
+    for (let m = 0; m < 12; m++) {
+        const count = visitsByMonth[m];
+        const hasVisitsClass = count > 0 ? 'year-month-card-has-visits' : '';
+        
+        html += `
+            <div class="year-month-card ${hasVisitsClass}" onclick="selectYearMonth(${m})" style="
+                background: var(--theme-surface);
+                border: 1px solid ${calendarMonthCursor.getMonth() === m ? 'var(--theme-accent)' : 'var(--theme-border)'};
+                border-radius: 12px;
+                padding: 1rem;
+                text-align: center;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            " onmouseover="this.style.borderColor='var(--theme-accent)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='${calendarMonthCursor.getMonth() === m ? 'var(--theme-accent)' : 'var(--theme-border)'}'; this.style.transform='none'">
+                <div style="font-weight: 700; font-size: 1rem; color: var(--theme-text);">${monthNames[m]}</div>
+                <div style="margin-top: 0.5rem; font-size: 0.8rem; color: ${count > 0 ? 'var(--theme-accent)' : 'var(--theme-text-muted)'}; font-weight: 600;">
+                    ${count > 0 ? `📅 ${count} visita${count > 1 ? 's' : ''}` : 'Sin visitas'}
+                </div>
+            </div>
+        `;
+    }
+    html += '</div>';
+    grid.innerHTML = html;
+    
+    const yearVisits = calendarVisits.filter(visit => {
+        const d = parseDateTimeCompat(visit.visit_datetime);
+        return !Number.isNaN(d.getTime()) && d.getFullYear() === year;
+    }).sort((a,b) => parseDateTimeCompat(a.visit_datetime) - parseDateTimeCompat(b.visit_datetime));
+    
+    let listTitleHtml = `
+        <div class="mb-3" style="border-bottom: 1px solid var(--theme-border); padding-bottom: 0.5rem;">
+            <span style="font-weight: 700; font-size: 1.05rem; color: var(--theme-text);">
+                📅 Todas las visitas de ${year}
+            </span>
+        </div>
+    `;
+    
+    renderVisitsList(yearVisits, listTitleHtml);
+}
+
+function selectYearMonth(m) {
+    calendarMonthCursor.setMonth(m);
+    setCalendarView('month');
+}
+
+function renderCalendarWeek() {
+    const grid = document.getElementById('calendarGrid');
+    if (!grid) return;
+    
+    const startOfWeek = getStartOfWeek(calendarMonthCursor);
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(startOfWeek);
+        d.setDate(startOfWeek.getDate() + i);
+        days.push(d);
+    }
+    
+    const weekNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    
+    let html = '<div class="calendar-week-view" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap: 0.75rem; margin-top: 1rem;">';
+    
+    days.forEach((day, index) => {
+        const dayNum = day.getDate();
+        const monthNum = day.getMonth();
+        const yearNum = day.getFullYear();
+        
+        const dayVisits = calendarVisits.filter(visit => {
+            const vd = parseDateTimeCompat(visit.visit_datetime);
+            return !Number.isNaN(vd.getTime()) && vd.getFullYear() === yearNum && vd.getMonth() === monthNum && vd.getDate() === dayNum;
+        });
+        
+        const isToday = new Date().toDateString() === day.toDateString();
+        const isSelected = calendarMonthCursor.getDate() === dayNum && calendarMonthCursor.getMonth() === monthNum && calendarMonthCursor.getFullYear() === yearNum;
+        
+        html += `
+            <div class="week-day-card" onclick="selectWeekDay(${dayNum}, ${monthNum}, ${yearNum})" style="
+                background: ${isSelected ? 'rgba(255, 127, 0, 0.15)' : 'var(--theme-surface)'};
+                border: 1px solid ${isSelected ? 'var(--theme-accent)' : 'var(--theme-border)'};
+                border-radius: 12px;
+                padding: 0.85rem;
+                cursor: pointer;
+                min-height: 120px;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                transition: all 0.2s ease;
+            " onmouseover="this.style.borderColor='var(--theme-accent)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='${isSelected ? 'var(--theme-accent)' : 'var(--theme-border)'}'; this.style.transform='none'">
+                <div>
+                    <div style="font-size: 0.75rem; color: var(--theme-text-muted); font-weight: bold; text-transform: uppercase;">${weekNames[index]}</div>
+                    <div style="font-size: 1.4rem; font-weight: 800; color: ${isToday ? 'var(--theme-accent)' : 'var(--theme-text)'}; margin-top: 0.2rem;">${dayNum}</div>
+                </div>
+                <div style="margin-top: 0.75rem;">
+                    ${dayVisits.length > 0 ? `
+                        <div style="font-size: 0.68rem; font-weight: 700; background: var(--theme-accent); color: #fff; padding: 2px 5px; border-radius: 4px; text-align: center;">
+                            📅 ${dayVisits.length} visita${dayVisits.length > 1 ? 's' : ''}
+                        </div>
+                    ` : `
+                        <div style="font-size: 0.68rem; color: var(--theme-text-muted); font-style: italic; text-align: center;">Sin visitas</div>
+                    `}
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    grid.innerHTML = html;
+    
+    const startWeekTime = new Date(startOfWeek.getFullYear(), startOfWeek.getMonth(), startOfWeek.getDate(), 0, 0, 0);
+    const endWeekTime = new Date(startOfWeek.getFullYear(), startOfWeek.getMonth(), startOfWeek.getDate() + 7, 0, 0, 0);
+    
+    const weekVisits = calendarVisits.filter(visit => {
+        const vd = parseDateTimeCompat(visit.visit_datetime);
+        return !Number.isNaN(vd.getTime()) && vd >= startWeekTime && vd < endWeekTime;
+    }).sort((a,b) => parseDateTimeCompat(a.visit_datetime) - parseDateTimeCompat(b.visit_datetime));
+    
+    const startFormatted = startOfWeek.getDate() + ' ' + startOfWeek.toLocaleDateString('es-MX', {month:'short'});
+    const endOfWeekDate = new Date(startOfWeek);
+    endOfWeekDate.setDate(startOfWeek.getDate() + 6);
+    const endFormatted = endOfWeekDate.getDate() + ' ' + endOfWeekDate.toLocaleDateString('es-MX', {month:'short', year:'numeric'});
+
+    let listTitleHtml = `
+        <div class="mb-3" style="border-bottom: 1px solid var(--theme-border); padding-bottom: 0.5rem;">
+            <span style="font-weight: 700; font-size: 1.05rem; color: var(--theme-text);">
+                📅 Visitas de la semana (${startFormatted} - ${endFormatted})
+            </span>
+        </div>
+    `;
+    
+    renderVisitsList(weekVisits, listTitleHtml);
+}
+
+function selectWeekDay(day, month, year) {
+    calendarMonthCursor = new Date(year, month, day);
+    setCalendarView('day');
+}
+
+function renderCalendarDay() {
+    const grid = document.getElementById('calendarGrid');
+    if (!grid) return;
+    
+    const year = calendarMonthCursor.getFullYear();
+    const month = calendarMonthCursor.getMonth();
+    const date = calendarMonthCursor.getDate();
+    
+    const dayVisits = calendarVisits.filter(visit => {
+        const vd = parseDateTimeCompat(visit.visit_datetime);
+        return !Number.isNaN(vd.getTime()) && vd.getFullYear() === year && vd.getMonth() === month && vd.getDate() === date;
+    }).sort((a,b) => parseDateTimeCompat(a.visit_datetime) - parseDateTimeCompat(b.visit_datetime));
+    
+    let html = `
+        <div class="calendar-day-details-container" style="margin-top: 1rem;">
+            <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--theme-border); border-radius: 12px; padding: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--theme-border); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+                    <span style="font-weight: bold; font-size: 1.1rem; color: var(--theme-text); display:flex; align-items:center; gap:0.5rem;">
+                        🕒 Horarios agendados
+                    </span>
+                    <span style="background: var(--theme-accent); color: #fff; padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 0.8rem;">
+                        ${dayVisits.length} Visita${dayVisits.length !== 1 ? 's' : ''}
+                    </span>
+                </div>
+    `;
+    
+    if (dayVisits.length === 0) {
+        html += `
+            <div style="text-align: center; padding: 3rem 1rem; color: var(--theme-text-muted);">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">📅</div>
+                <div style="font-size: 1rem; font-weight: 600;">No hay visitas programadas</div>
+                <div style="font-size: 0.85rem; margin-top: 0.25rem; color: #777;">Usa el formulario de la izquierda para programar una visita hoy.</div>
+            </div>
+        `;
+    } else {
+        html += `<div style="display: flex; flex-direction: column; gap: 1rem;">`;
+        dayVisits.forEach(visit => {
+            const timeStr = parseDateTimeCompat(visit.visit_datetime).toLocaleTimeString('es-MX', {hour: '2-digit', minute: '2-digit'});
+            html += `
+                <div style="display: flex; gap: 1rem; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 1rem; align-items: start;">
+                    <div style="font-size: 1.1rem; font-weight: 800; color: var(--theme-accent); background: var(--theme-accent-soft); padding: 6px 12px; border-radius: 6px; min-width: 80px; text-align: center;">
+                        ${timeStr}
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: bold; font-size: 1.05rem; color: var(--theme-text);">${escapeHtml(visit.supplier_name)}</div>
+                        ${visit.notes ? `<div style="margin-top: 0.4rem; font-size: 0.88rem; color: var(--theme-text-muted); line-height: 1.4; background: rgba(0,0,0,0.15); padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.04);">${escapeHtml(visit.notes)}</div>` : ''}
+                    </div>
+                    <div>
+                        <button class="btn btn-ghost btn-small" type="button" onclick="deleteCalendarVisit(${visit.id})" style="color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 4px 8px; border-radius: 6px; font-weight: 600;">🗑️ Eliminar</button>
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+    }
+    
+    html += `
+            </div>
+        </div>
+    `;
+    grid.innerHTML = html;
+    
+    let listTitleHtml = `
+        <div class="mb-3" style="border-bottom: 1px solid var(--theme-border); padding-bottom: 0.5rem;">
+            <span style="font-weight: 700; font-size: 1.05rem; color: var(--theme-text);">
+                📅 Visitas del día
+            </span>
+        </div>
+    `;
+    
+    renderVisitsList(dayVisits, listTitleHtml);
+}
+
+function renderVisitsList(filteredVisits, listTitleHtml) {
+    const list = document.getElementById('calendarList');
+    if (!list) return;
+
     if (filteredVisits.length === 0) {
-        list.innerHTML = listTitleHtml + '<p class="text-muted" style="padding: 1.5rem; text-align: center; background: var(--theme-surface-strong); border-radius: 8px; border: 1px solid var(--theme-border);">No hay visitas agendadas para la selección.</p>';
+        list.innerHTML = listTitleHtml + '<p class="text-muted" style="padding: 1.5rem; text-align: center; background: var(--theme-surface-strong); border-radius: 8px; border: 1px solid var(--theme-border); font-size: 0.85rem;">No hay visitas agendadas para la selección.</p>';
         return;
     }
 
@@ -3320,52 +3676,47 @@ function renderCalendarMonth() {
         }
     });
 
-    // Sort past visits by date descending (latest past first)
     pastVisits.sort((a, b) => parseDateTimeCompat(b.visit_datetime) - parseDateTimeCompat(a.visit_datetime));
 
     const renderVisitCard = (i, isUpcoming) => `
-        <div class="visit-item ${isUpcoming ? 'visit-upcoming' : 'visit-past'}">
-            <div class="visit-header">
-                <span class="visit-supplier">${escapeHtml(i.supplier_name)}</span>
+        <div class="visit-item ${isUpcoming ? 'visit-upcoming' : 'visit-past'}" style="margin-bottom: 0.75rem;">
+            <div class="visit-header" style="display: flex; flex-direction: column; gap: 0.25rem;">
+                <span class="visit-supplier" style="font-weight: bold; color: var(--theme-text); font-size: 0.95rem;">${escapeHtml(i.supplier_name)}</span>
                 <div class="d-flex align-center" style="gap: 0.5rem; flex-wrap: wrap;">
-                    <span class="visit-status-badge ${isUpcoming ? 'badge-upcoming' : 'badge-past'}">
+                    <span class="visit-status-badge ${isUpcoming ? 'badge-upcoming' : 'badge-past'}" style="font-size: 0.68rem; padding: 2px 6px;">
                         ${isUpcoming ? '⏰ Próxima' : '✅ Pasada'}
                     </span>
-                    <span class="visit-time" style="font-size: 0.78rem;">${escapeHtml(formatDateTimeLocal(i.visit_datetime))}</span>
+                    <span class="visit-time" style="font-size: 0.75rem; color: var(--theme-text-muted);">${escapeHtml(formatDateTimeLocal(i.visit_datetime))}</span>
                 </div>
             </div>
-            ${i.notes ? `<div class="visit-notes">${escapeHtml(i.notes)}</div>` : ''}
-            ${!isUpcoming ? `
+            ${i.notes ? `<div class="visit-notes" style="margin-top: 0.4rem; font-size: 0.82rem; color: var(--theme-text-muted); line-height: 1.4; background: rgba(0,0,0,0.15); padding: 0.5rem; border-radius: 6px;">${escapeHtml(i.notes)}</div>` : ''}
             <div style="display:flex; justify-content:flex-end; margin-top:0.6rem; padding-top:0.4rem; border-top:1px solid rgba(255,255,255,0.04);">
                 <button class="btn btn-small btn-danger" type="button" style="font-size:10px; padding:2px 8px; font-weight:600; border-radius:4px; opacity:0.85; transition:all 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.85" onclick="deleteCalendarVisit(${i.id})">Eliminar</button>
             </div>
-            ` : ''}
         </div>
     `;
 
     let splitHtml = `
-        <div class="visits-split-container" style="display: flex; flex-direction: column; gap: 1.5rem;">
-            <!-- Próximas Visitas -->
+        <div class="visits-split-container" style="display: flex; flex-direction: column; gap: 1rem;">
             <div class="visits-section-upcoming">
-                <h4 style="color: var(--color-naranja, #ff6600); border-bottom: 2px solid rgba(255, 102, 0, 0.15); padding-bottom: 0.4rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; margin-top: 0; margin-bottom: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;">
-                    🚀 Próximas Visitas (${upcomingVisits.length})
+                <h4 style="color: var(--color-naranja, #ff6600); border-bottom: 1px solid rgba(255, 102, 0, 0.15); padding-bottom: 0.4rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; margin-top: 0; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                    🚀 Próximas (${upcomingVisits.length})
                 </h4>
                 ${upcomingVisits.length === 0 
-                    ? '<p class="text-muted" style="font-size:0.85rem; padding: 1rem; text-align: center; background: rgba(255,255,255,0.01); border: 1px dashed rgba(255,255,255,0.06); border-radius: 8px;">No hay visitas próximas agendadas.</p>'
-                    : `<div class="visit-list-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;">
+                    ? '<p class="text-muted" style="font-size:0.78rem; padding: 0.5rem; text-align: center; background: rgba(255,255,255,0.01); border: 1px dashed rgba(255,255,255,0.06); border-radius: 8px;">Ninguna próxima.</p>'
+                    : `<div class="visit-list-container" style="display: flex; flex-direction: column; gap: 0.5rem;">
                         ${upcomingVisits.map(i => renderVisitCard(i, true)).join('')}
                        </div>`
                 }
             </div>
 
-            <!-- Visitas Pasadas -->
             <div class="visits-section-past">
-                <h4 style="color: #888888; border-bottom: 2px solid rgba(255, 255, 255, 0.08); padding-bottom: 0.4rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; margin-top: 0; margin-bottom: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;">
-                    ✓ Historial / Visitas Pasadas (${pastVisits.length})
+                <h4 style="color: #888888; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 0.4rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; margin-top: 0; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                    ✓ Historial (${pastVisits.length})
                 </h4>
                 ${pastVisits.length === 0 
-                    ? '<p class="text-muted" style="font-size:0.85rem; padding: 1rem; text-align: center; background: rgba(255,255,255,0.01); border: 1px dashed rgba(255,255,255,0.06); border-radius: 8px;">No hay registro de visitas pasadas.</p>'
-                    : `<div class="visit-list-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;">
+                    ? '<p class="text-muted" style="font-size:0.78rem; padding: 0.5rem; text-align: center; background: rgba(255,255,255,0.01); border: 1px dashed rgba(255,255,255,0.06); border-radius: 8px;">Ninguna pasada.</p>'
+                    : `<div class="visit-list-container" style="display: flex; flex-direction: column; gap: 0.5rem;">
                         ${pastVisits.map(i => renderVisitCard(i, false)).join('')}
                        </div>`
                 }
@@ -3379,18 +3730,18 @@ function renderCalendarMonth() {
 function changeCalendarMonth(offset) {
     calendarMonthCursor = new Date(calendarMonthCursor.getFullYear(), calendarMonthCursor.getMonth() + offset, 1);
     selectedCalendarDay = null;
-    renderCalendarMonth();
+    setCalendarView('month');
 }
 
 async function loadCalendar() {
     const res = await apiCall('/admin_supply.php?action=calendar-list', 'GET', null, { silent: true });
     if (!res || !res.success || !Array.isArray(res.items)) {
         calendarVisits = [];
-        renderCalendarMonth();
+        setCalendarView(calendarViewMode);
         return;
     }
     calendarVisits = res.items;
-    renderCalendarMonth();
+    setCalendarView(calendarViewMode);
 }
 
 async function deleteCalendarVisit(id) {

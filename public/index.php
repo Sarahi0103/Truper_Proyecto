@@ -1163,12 +1163,14 @@ function homepage_update_label($type) {
                 img.style.transform = 'scale(1)';
             }
 
-            document.querySelectorAll('.promo-image').forEach(img => {
-                img.addEventListener('click', function(e) {
+            // Event delegation for promo images (handles cloned slides in infinite loop carousels)
+            document.addEventListener('click', function(e) {
+                const img = e.target.closest('.promo-image');
+                if (img) {
                     e.preventDefault();
                     e.stopPropagation();
-                    openLightbox(this.src, this.alt);
-                });
+                    openLightbox(img.src, img.alt);
+                }
             });
 
             // Menú hamburguesa responsivo

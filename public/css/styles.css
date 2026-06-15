@@ -1717,7 +1717,7 @@ footer {
     width: 100%;
     max-width: 100%;
     height: auto;
-    aspect-ratio: 16 / 9;
+    max-height: 280px;
     object-fit: contain;
     display: block;
     margin: 0 auto;
@@ -1735,6 +1735,9 @@ footer {
         grid-template-columns: 1fr 1fr;
         align-items: center;
         gap: 1.5rem;
+    }
+    .promo-image {
+        max-height: 380px;
     }
 }
 

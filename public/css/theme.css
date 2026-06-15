@@ -1057,10 +1057,6 @@ header .nav-dropdown:hover .arrow {
     transform: rotate(180deg) !important;
 }
 
-/* ===== Responsive Header Navigation ===== */
-@media (max-width: 768px) {
-
-
 /* ===== Beautiful Calendar Grid Styles ===== */
 .calendar-weekdays {
     display: grid !important;
