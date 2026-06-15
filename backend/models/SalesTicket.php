@@ -103,7 +103,7 @@ class SalesTicket {
 
     public function getTicketByFolio($folio) {
         try {
-            $stmt = $this->pdo->prepare("SELECT st.*, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END AS customer_name, u.email FROM sales_tickets st LEFT JOIN users u ON st.user_id = u.id WHERE st.folio = :folio");
+            $stmt = $this->pdo->prepare("SELECT st.*, COALESCE(st.customer_name, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END) AS customer_name, u.email FROM sales_tickets st LEFT JOIN users u ON st.user_id = u.id WHERE st.folio = :folio");
             $stmt->execute([':folio' => $folio]);
             $ticket = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -158,7 +158,7 @@ class SalesTicket {
             $countResult = $countStmt->fetch(PDO::FETCH_ASSOC);
             $total = (int)($countResult['total'] ?? 0);
 
-            $stmt = $this->pdo->prepare("SELECT st.*, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END AS customer_name, COUNT(sti.id) as item_count FROM sales_tickets st LEFT JOIN users u ON st.user_id = u.id LEFT JOIN ticket_items sti ON st.id = sti.ticket_id $where GROUP BY st.id, u.first_name, u.last_name, u.email ORDER BY st.issued_date DESC LIMIT :limit OFFSET :offset");
+            $stmt = $this->pdo->prepare("SELECT st.*, COALESCE(st.customer_name, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END) AS customer_name, COUNT(sti.id) as item_count FROM sales_tickets st LEFT JOIN users u ON st.user_id = u.id LEFT JOIN ticket_items sti ON st.id = sti.ticket_id $where GROUP BY st.id, st.customer_name, u.first_name, u.last_name, u.email ORDER BY st.issued_date DESC LIMIT :limit OFFSET :offset");
             foreach ($params as $key => $value) {
                 $stmt->bindValue($key, $value);
             }
@@ -348,7 +348,7 @@ class SalesTicket {
             $stmt = $this->pdo->prepare("
                 SELECT
                     st.*,
-                    u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END AS customer_name,
+                    COALESCE(st.customer_name, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END) AS customer_name,
                     u.email,
                     u.phone,
                     admin.first_name || CASE WHEN admin.last_name IS NOT NULL AND admin.last_name <> '' THEN ' ' || admin.last_name ELSE '' END AS pickup_admin_name
@@ -415,14 +415,14 @@ class SalesTicket {
                     st.expiration_date,
                     st.pickup_status,
                     u.email AS customer_email,
-                    u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END AS customer_name,
+                    COALESCE(st.customer_name, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END) AS customer_name,
                     u.phone,
                     COUNT(sti.id) as item_count
                 FROM sales_tickets st
                 LEFT JOIN users u ON st.user_id = u.id
                 LEFT JOIN ticket_items sti ON st.id = sti.ticket_id
                 $where
-                GROUP BY st.id, u.email, u.first_name, u.last_name, u.phone
+                GROUP BY st.id, st.customer_name, u.email, u.first_name, u.last_name, u.phone
                 ORDER BY st.issued_date DESC
                 LIMIT :limit OFFSET :offset
             ";

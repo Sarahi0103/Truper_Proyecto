@@ -20,8 +20,8 @@ class TicketIntegration {
      */
     public function onOrderCompleted($orderId, $orderData) {
         try {
-            // Obtener datos de la orden
-            $stmt = $this->pdo->prepare("SELECT o.id, o.client_id AS user_id, o.total_amount, 0 AS tax_amount, 0 AS discount_amount, NULL AS payment_method, o.created_at FROM orders o WHERE o.id = :order_id");
+            // Obtener datos de la orden con información del usuario
+            $stmt = $this->pdo->prepare("SELECT o.id, o.client_id AS user_id, o.total_amount, 0 AS tax_amount, 0 AS discount_amount, NULL AS payment_method, o.created_at, u.role, u.first_name, u.last_name FROM orders o LEFT JOIN users u ON o.client_id = u.id WHERE o.id = :order_id");
             $stmt->execute([':order_id' => $orderId]);
             $order = $stmt->fetch(PDO::FETCH_ASSOC);
             
@@ -29,10 +29,17 @@ class TicketIntegration {
                 return ['success' => false, 'message' => 'Orden no encontrada'];
             }
             
+            // Determinar customer_name según el rol del usuario
+            $customerName = 'Admin';
+            if ($order['role'] === 'client' && $order['first_name']) {
+                $customerName = trim($order['first_name'] . ' ' . ($order['last_name'] ?? ''));
+            }
+            
             // Crear ticket automático
             $ticketData = [
                 'order_id' => $orderId,
                 'user_id' => $order['user_id'],
+                'customer_name' => $customerName,
                 'ticket_type' => 'sale',
                 'subtotal' => $orderData['subtotal'] ?? ($order['total_amount'] - ($order['tax_amount'] ?? 0)),
                 'tax_amount' => $order['tax_amount'],
@@ -40,7 +47,7 @@ class TicketIntegration {
                 'total_amount' => $order['total_amount'],
                 'payment_method' => $order['payment_method'],
                 'payment_status' => 'completed',
-                'issued_by' => $order['user_id'],
+                'issued_by' => $_SESSION['user_id'] ?? $order['user_id'],
                 'notes' => 'Generado automáticamente de orden #' . $orderId
             ];
             

@@ -58,11 +58,19 @@ try {
                 break;
             }
             
-            // Para ventas de mostrador, customer_name es opcional
-            // Para ventas de clientes, user_id es opcional (se puede usar customer_name)
-            if (empty($input['user_id']) && empty($input['customer_name'])) {
-                $response = ['success' => false, 'message' => 'Se requiere user_id o customer_name'];
-                break;
+            // Determinar customer_name según el rol del usuario que crea
+            if (empty($input['customer_name'])) {
+                if ($_SESSION['role'] === 'admin') {
+                    $input['customer_name'] = 'Admin';
+                } elseif (!empty($input['user_id'])) {
+                    // Obtener nombre del cliente si se proporciona user_id
+                    $userStmt = $pdo->prepare("SELECT first_name, last_name FROM users WHERE id = :user_id");
+                    $userStmt->execute([':user_id' => $input['user_id']]);
+                    $user = $userStmt->fetch(PDO::FETCH_ASSOC);
+                    if ($user) {
+                        $input['customer_name'] = trim($user['first_name'] . ' ' . ($user['last_name'] ?? ''));
+                    }
+                }
             }
             
             $input['issued_by'] = $_SESSION['user_id'];
