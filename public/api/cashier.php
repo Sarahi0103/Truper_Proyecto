@@ -250,7 +250,11 @@ try {
                 break;
             }
 
-            // Usar función de conciliación automática
+            // 1. Guardar el monto de cierre en la sesión primero para que la función stored procedida lea el valor correcto
+            $stmt = $pdo->prepare("UPDATE cash_drawer_sessions SET closing_amount=? WHERE id=?");
+            $stmt->execute([$closing, $session['id']]);
+
+            // 2. Usar función de conciliación automática
             $stmt = $pdo->prepare("SELECT * FROM reconcile_cash_drawer(?)");
             $stmt->execute([$session['id']]);
             $reconcile = $stmt->fetch();
@@ -264,8 +268,9 @@ try {
             $ipAddress = $_SERVER['REMOTE_ADDR'] ?? null;
             $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? null;
 
-            $stmt = $pdo->prepare("UPDATE cash_drawer_sessions SET closed_by=?, closed_at=NOW(), closing_amount=?, expected_amount=?, difference_amount=?, status='closed', notes=?, ip_address=?, user_agent=? WHERE id=?");
-            $stmt->execute([$_SESSION['user_id'], $closing, $expected, $difference, sanitize($input['notes'] ?? ''), $ipAddress, $userAgent, $session['id']]);
+            // 3. Completar el cierre de la sesión
+            $stmt = $pdo->prepare("UPDATE cash_drawer_sessions SET closed_by=?, closed_at=NOW(), expected_amount=?, difference_amount=?, status='closed', notes=?, ip_address=?, user_agent=? WHERE id=?");
+            $stmt->execute([$_SESSION['user_id'], $expected, $difference, sanitize($input['notes'] ?? ''), $ipAddress, $userAgent, $session['id']]);
 
             // Invalidar caché del cajón
             $cacheService->invalidateCashierStatus($_SESSION['user_id']);
