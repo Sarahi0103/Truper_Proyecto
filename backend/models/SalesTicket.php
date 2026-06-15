@@ -532,8 +532,8 @@ class SalesTicket {
                 return ['eligible' => false, 'reason' => 'Ticket no encontrado'];
             }
 
-            if ($ticket['status'] !== 'active') {
-                return ['eligible' => false, 'reason' => 'Ticket no está activo'];
+            if (isset($ticket['deleted_at']) && $ticket['deleted_at'] !== null) {
+                return ['eligible' => false, 'reason' => 'Ticket fue eliminado'];
             }
 
             if ($ticket['payment_status'] !== 'completed') {

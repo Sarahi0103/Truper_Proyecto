@@ -37,17 +37,37 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
             margin-bottom: 1.5rem;
         }
 
-        .tickets-split-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
+        .tickets-stacked {
+            display: flex;
+            flex-direction: column;
             gap: 1.5rem;
             margin-top: 1.5rem;
         }
 
-        @media (max-width: 1100px) {
-            .tickets-split-grid {
-                grid-template-columns: 1fr;
-            }
+        .client-tickets-table-wrap {
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 540px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .client-tickets-table-wrap::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .client-tickets-table-wrap::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        .client-tickets-table-wrap::-webkit-scrollbar-thumb {
+            background: rgba(255, 127, 0, 0.5);
+            border-radius: 4px;
+        }
+
+        .client-tickets-table-wrap::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 127, 0, 0.75);
         }
 
         .table-responsive {
@@ -71,6 +91,41 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
 
         .table-responsive::-webkit-scrollbar-thumb:hover {
             background: rgba(255, 127, 0, 0.7);
+        }
+
+        .ticket-search-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 0.45rem 0.85rem;
+            margin-bottom: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        .ticket-search-bar:focus-within {
+            border-color: var(--color-naranja);
+            box-shadow: 0 0 0 3px rgba(255,127,0,0.12);
+        }
+
+        .ticket-search-bar input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #fff;
+            font-size: 0.95rem;
+        }
+
+        .ticket-search-bar input::placeholder {
+            color: rgba(255,255,255,0.35);
+        }
+
+        .ticket-search-bar span {
+            color: rgba(255,255,255,0.35);
+            font-size: 1.1rem;
         }
     </style>
 </head>
@@ -186,15 +241,26 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
             </div>
 
             <!-- Tablas de Historial -->
-            <div class="tickets-split-grid">
-                <!-- CLIENTES -->
+            <div class="tickets-stacked">
+                <!-- CLIENTES (full-width, scrollable) -->
                 <div class="card">
                     <div class="card-body">
-                        <h3>Tickets de Clientes</h3>
-                        <p class="text-muted mb-2">Historial de ventas y movimientos de caja en este período.</p>
-                        <div class="table-responsive">
-                            <table class="table" style="width:100%; border-collapse: collapse;">
-                                <thead>
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 0.5rem;">
+                            <div>
+                                <h3 style="margin:0;">Tickets de Clientes</h3>
+                                <p class="text-muted" style="margin: 0.2rem 0 0;">Historial de ventas y movimientos de caja en este período.</p>
+                            </div>
+                            <span id="clientTicketsCount" style="font-size: 0.82rem; color: var(--color-naranja); font-weight: 600;"></span>
+                        </div>
+                        <!-- Buscador -->
+                        <div class="ticket-search-bar">
+                            <span>🔍</span>
+                            <input type="text" id="clientTicketSearch" placeholder="Buscar por folio, cliente o email..." oninput="filterClientTickets(this.value)">
+                            <button onclick="document.getElementById('clientTicketSearch').value=''; filterClientTickets('');" style="background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:1rem;padding:0;" title="Limpiar">✕</button>
+                        </div>
+                        <div class="client-tickets-table-wrap">
+                            <table class="table" style="width:100%; min-width: 820px; border-collapse: collapse;">
+                                <thead style="position: sticky; top: 0; background: var(--theme-card-bg, #1a1a1a); z-index: 2;">
                                     <tr>
                                         <th>Folio</th>
                                         <th>Cliente</th>
@@ -214,7 +280,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                     </div>
                 </div>
 
-                <!-- PROVEEDORES -->
+                <!-- PROVEEDORES (below, full-width) -->
                 <div id="supplierTicketsSection">
                     <div class="card">
                         <div class="card-body">
@@ -357,79 +423,97 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
             }
 
             // Client tickets rows
+            // Store tickets globally for search filter
+            window._allClientTickets = tickets;
+
+            const countEl = document.getElementById('clientTicketsCount');
+            if (countEl) countEl.textContent = tickets.length > 0 ? `${tickets.length} ticket${tickets.length !== 1 ? 's' : ''}` : '';
+
+            renderClientTicketsRows(tickets);
+        }
+
+        function renderClientTicketsRows(tickets) {
+            const tableBody = document.getElementById('ticketsTableBody');
+            if (!tableBody) return;
+
             if (tickets.length === 0) {
                 tableBody.innerHTML = '<tr><td colspan="8" style="padding: 2rem; text-align: center; color: var(--theme-text-muted);">No hay tickets en este período</td></tr>';
-            } else {
-                let html = '';
-                tickets.forEach(ticket => {
-                    const statusColor = ticket.payment_status === 'completed' ? 'var(--color-exito)' : 'var(--color-advertencia)';
-                    const typeLabel = {
-                        'sale': '💰 Venta',
-                        'return': '🔄 Devolución',
-                        'adjustment': '⚙️ Ajuste',
-                        'credit': '💳 Crédito'
-                    }[ticket.ticket_type] || ticket.ticket_type;
+                return;
+            }
 
-                    // Formatear estado de recolección física
-                    let pickupBadge = '';
-                    if (ticket.ticket_type === 'sale') {
-                        const pStatus = ticket.pickup_status || 'pending';
-                        const pickupColor = {
-                            'pending': 'var(--color-advertencia)',
-                            'picked_up': 'var(--color-exito)',
-                            'cancelled': 'var(--color-peligro, #dc3545)',
-                            'expired': '#6c757d'
-                        }[pStatus];
-                        const pickupText = {
-                            'pending': '⏳ Pendiente',
-                            'picked_up': '✓ Entregado',
-                            'cancelled': '✗ Cancelado',
-                            'expired': '⌛ Expirado'
-                        }[pStatus];
-                        pickupBadge = `<span style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: ${pickupColor}; color: white;">${pickupText}</span>`;
-                    } else {
-                        pickupBadge = '<span style="color:var(--theme-text-muted);">—</span>';
-                    }
+            let html = '';
+            tickets.forEach(ticket => {
+                const pStatus = ticket.ticket_type === 'sale' ? (ticket.pickup_status || 'pending') : null;
 
-                    // Botón para validar o eliminar
-                    let actionButton = '';
-                    if (ticket.ticket_type === 'sale') {
-                        const pStatus = ticket.pickup_status || 'pending';
-                        if (pStatus === 'picked_up') {
-                            actionButton = `<button onclick="deleteTicketFromHistory('${escapeHtml(ticket.folio)}')" class="btn" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; border-radius: 6px; background: #dc3545; border: none; color: white; display: inline-block; font-weight: 600; cursor: pointer;">🗑 Eliminar</button>`;
-                        } else if (pStatus === 'pending') {
-                            actionButton = `<a href="ticket_validation.php?folio=${escapeHtml(ticket.folio)}" class="btn" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; text-decoration: none; border-radius: 6px; background: var(--color-naranja); border: none; color: white; display: inline-block; font-weight: 600;">🚚 Validar</a>`;
-                        } else {
-                            actionButton = '<span style="color:var(--theme-text-muted);">—</span>';
-                        }
+                // Pago: pendiente si no está validado, pagado si ya fue entregado
+                const isPaymentDone = pStatus === 'picked_up' || (ticket.ticket_type !== 'sale' && ticket.payment_status === 'completed');
+                const paymentColor = isPaymentDone ? 'var(--color-exito)' : 'var(--color-advertencia)';
+                const paymentText = isPaymentDone ? '✓ Pagado' : '⏳ Pendiente';
+
+                const typeLabel = {
+                    'sale': '💰 Venta',
+                    'return': '🔄 Devolución',
+                    'adjustment': '⚙️ Ajuste',
+                    'credit': '💳 Crédito'
+                }[ticket.ticket_type] || ticket.ticket_type;
+
+                // Formatear estado de recolección física
+                let pickupBadge = '';
+                if (ticket.ticket_type === 'sale') {
+                    const pickupColor = {
+                        'pending': 'var(--color-advertencia)',
+                        'picked_up': 'var(--color-exito)',
+                        'cancelled': 'var(--color-peligro, #dc3545)',
+                        'expired': '#6c757d'
+                    }[pStatus];
+                    const pickupText = {
+                        'pending': '⏳ Pendiente',
+                        'picked_up': '✓ Entregado',
+                        'cancelled': '✗ Cancelado',
+                        'expired': '⌛ Expirado'
+                    }[pStatus];
+                    pickupBadge = `<span style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: ${pickupColor}; color: white;">${pickupText}</span>`;
+                } else {
+                    pickupBadge = '<span style="color:var(--theme-text-muted);">—</span>';
+                }
+
+                // Botón para validar o eliminar
+                let actionButton = '';
+                if (ticket.ticket_type === 'sale') {
+                    if (pStatus === 'picked_up') {
+                        actionButton = `<button onclick="deleteTicketFromHistory('${escapeHtml(ticket.folio)}')" class="btn" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; border-radius: 6px; background: #dc3545; border: none; color: white; display: inline-block; font-weight: 600; cursor: pointer;">🗑 Eliminar</button>`;
+                    } else if (pStatus === 'pending') {
+                        actionButton = `<a href="ticket_validation.php?folio=${escapeHtml(ticket.folio)}" class="btn" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; text-decoration: none; border-radius: 6px; background: var(--color-naranja); border: none; color: white; display: inline-block; font-weight: 600;">🚚 Validar</a>`;
                     } else {
                         actionButton = '<span style="color:var(--theme-text-muted);">—</span>';
                     }
+                } else {
+                    actionButton = '<span style="color:var(--theme-text-muted);">—</span>';
+                }
 
-                    html += `
-                        <tr style="border-bottom: 1px solid var(--theme-border);">
-                            <td style="padding: 1rem; font-family: monospace; font-weight: 700; color: var(--color-naranja);">${escapeHtml(ticket.folio)}</td>
-                            <td style="padding: 1rem;">
-                                <div style="font-weight: 600;">${escapeHtml(ticket.customer_name || 'Mostrador')}</div>
-                                <div style="font-size: 0.8rem; color: var(--theme-text-muted);">${escapeHtml(ticket.email || '')}</div>
-                            </td>
-                            <td style="padding: 1rem;">${typeLabel}</td>
-                            <td style="padding: 1rem; font-weight: 700; color: var(--color-naranja);">${formatAdminMoney(ticket.total_amount || 0)}</td>
-                            <td style="padding: 1rem;">
-                                <span style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: ${statusColor}; color: white;">
-                                    ${ticket.payment_status === 'completed' ? '✓ Pagado' : '⏳ Pendiente'}
-                                </span>
-                            </td>
-                            <td style="padding: 1rem;">${pickupBadge}</td>
-                            <td style="padding: 1rem; font-size: 0.9rem; color: var(--theme-text-muted);">
-                                ${new Date(ticket.issued_date).toLocaleDateString('es-MX')}
-                            </td>
-                            <td style="padding: 1rem; text-align: center;">${actionButton}</td>
-                        </tr>
-                    `;
-                });
-                tableBody.innerHTML = html;
-            }
+                html += `
+                    <tr style="border-bottom: 1px solid var(--theme-border);" data-search="${escapeHtml((ticket.folio + ' ' + (ticket.customer_name || '') + ' ' + (ticket.email || '')).toLowerCase())}">
+                        <td style="padding: 1rem; font-family: monospace; font-weight: 700; color: var(--color-naranja);">${escapeHtml(ticket.folio)}</td>
+                        <td style="padding: 1rem;">
+                            <div style="font-weight: 600;">${escapeHtml(ticket.customer_name || 'Mostrador')}</div>
+                            <div style="font-size: 0.8rem; color: var(--theme-text-muted);">${escapeHtml(ticket.email || '')}</div>
+                        </td>
+                        <td style="padding: 1rem;">${typeLabel}</td>
+                        <td style="padding: 1rem; font-weight: 700; color: var(--color-naranja);">${formatAdminMoney(ticket.total_amount || 0)}</td>
+                        <td style="padding: 1rem;">
+                            <span style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: ${paymentColor}; color: white;">
+                                ${paymentText}
+                            </span>
+                        </td>
+                        <td style="padding: 1rem;">${pickupBadge}</td>
+                        <td style="padding: 1rem; font-size: 0.9rem; color: var(--theme-text-muted);">
+                            ${new Date(ticket.issued_date).toLocaleDateString('es-MX')}
+                        </td>
+                        <td style="padding: 1rem; text-align: center;">${actionButton}</td>
+                    </tr>
+                `;
+            });
+            tableBody.innerHTML = html;
 
             // Supplier tickets rows
             if (supplierSection) {
@@ -485,6 +569,24 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                     supplierSection.innerHTML = shtml;
                 }
             }
+        }
+
+        function filterClientTickets(query) {
+            const all = window._allClientTickets || [];
+            if (!query || query.trim() === '') {
+                renderClientTicketsRows(all);
+                return;
+            }
+            const q = query.toLowerCase().trim();
+            const filtered = all.filter(t => {
+                const haystack = [
+                    t.folio || '',
+                    t.customer_name || '',
+                    t.email || ''
+                ].join(' ').toLowerCase();
+                return haystack.includes(q);
+            });
+            renderClientTicketsRows(filtered);
         }
 
         function generateMonthlyReportPdf(year, month, data) {
