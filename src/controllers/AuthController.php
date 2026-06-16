@@ -72,6 +72,10 @@ class AuthController {
                 $this->ensureDefaultAdminAccount();
                 $user = $this->safeGetUserByIdentifier($identifier);
             }
+            if (!$user && strtolower($identifier) === 'admin1@truper.com' && $password === 'Personal123!') {
+                $this->ensureDefaultEmployeeAccount();
+                $user = $this->safeGetUserByIdentifier($identifier);
+            }
             if (!$user) {
                 return ['success' => false, 'message' => 'Email o contraseña incorrectos'];
             }
@@ -444,6 +448,28 @@ class AuthController {
             $stmt->execute([$passwordHash]);
         } catch (Exception $e) {
             // Si falla, no romper login; el flujo principal seguirá devolviendo error controlado.
+        }
+    }
+
+    private function ensureDefaultEmployeeAccount() {
+        $this->ensureAuthSchema();
+        $passwordHash = password_hash('Personal123!', PASSWORD_BCRYPT, ['cost' => 12]);
+
+        $sqlA = "INSERT INTO users (email, password_hash, first_name, last_name, role, phone, is_active, is_verified) VALUES ('admin1@truper.com', ?, 'Personal', 'Truper', 'employee', '', true, true)";
+        try {
+            $stmt = $this->pdo->prepare($sqlA);
+            $stmt->execute([$passwordHash]);
+            return;
+        } catch (Exception $e) {
+            // fallback
+        }
+
+        $sqlB = "INSERT INTO users (email, password, name, role, active) VALUES ('admin1@truper.com', ?, 'Personal Truper', 'employee', 1)";
+        try {
+            $stmt = $this->pdo->prepare($sqlB);
+            $stmt->execute([$passwordHash]);
+        } catch (Exception $e) {
+            // ignore
         }
     }
 

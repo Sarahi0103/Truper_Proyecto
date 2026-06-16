@@ -360,12 +360,68 @@ document.addEventListener('click', function(e) {
 });
 
 /**
+ * Configurar navegación y visibilidad de elementos para el personal (employee)
+ */
+function setupEmployeeNavigation() {
+    const userRoleEl = document.querySelector('.user-role');
+    if (!userRoleEl) return;
+
+    const role = userRoleEl.textContent.trim().toUpperCase();
+
+    if (role === 'EMPLOYEE') {
+        // Find the nav menu container
+        const navMenu = document.querySelector('.nav-menu');
+        if (navMenu) {
+            // Check if Administration dropdown already exists
+            let adminDropdown = Array.from(navMenu.querySelectorAll('.nav-dropdown')).find(dropdown => {
+                const btn = dropdown.querySelector('.nav-dropdown-btn');
+                return btn && btn.textContent.includes('Administración');
+            });
+
+            if (!adminDropdown) {
+                // Create the Administration dropdown for employee (without Estadísticas)
+                adminDropdown = document.createElement('div');
+                adminDropdown.className = 'nav-dropdown';
+                adminDropdown.innerHTML = `
+                    <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content">
+                        <a href="/cashier.php">Caja</a>
+                        <a href="/admin_supply.php?nocache=true">Abastecimiento</a>
+                        <a href="/tickets.php">Tickets</a>
+                        <a href="/tasks.php">Tareas</a>
+                        <a href="/gastos.php">Gastos</a>
+                    </div>
+                `;
+                navMenu.appendChild(adminDropdown);
+            } else {
+                // If it already exists, remove the Estadísticas link
+                const statsLink = adminDropdown.querySelector('a[href*="analytics.php"]');
+                if (statsLink) statsLink.remove();
+            }
+        }
+
+        // Hide quick actions and direct links to analytics.php
+        const dashboardStatsLink = document.querySelector('a[href*="analytics.php"], #qa-stats');
+        if (dashboardStatsLink) {
+            dashboardStatsLink.remove();
+        }
+
+        // Hide "Estadísticas" link from db-admin-links if it exists
+        const adminLinksStats = document.querySelector('.db-admin-links a[href*="analytics.php"]');
+        if (adminLinksStats) {
+            adminLinksStats.remove();
+        }
+    }
+}
+
+/**
  * Inicializar cuando el DOM está listo
  */
 function initMain() {
     initThemeSystem();
     loadUserData();
     setupTabs();
+    setupEmployeeNavigation();
     
     // Agregar listener para formularios
     const forms = document.querySelectorAll('form[action]');

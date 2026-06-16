@@ -2,6 +2,11 @@
 require_once '../config/config.php';
 require_login();
 
+if (($_SESSION['role'] ?? '') === 'employee') {
+    header('Location: dashboard.php?error=unauthorized');
+    exit;
+}
+
 $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8');
 $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8');
 $is_admin = (($_SESSION['role'] ?? '') === 'admin');

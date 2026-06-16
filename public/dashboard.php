@@ -5,6 +5,7 @@ require_login();
 $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8');
 $user_role  = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8');
 $is_admin   = (($_SESSION['role'] ?? '') === 'admin');
+$is_staff   = ($is_admin || ($_SESSION['role'] ?? '') === 'employee');
 $first_name = explode(' ', $user_name)[0];
 
 // Greeting is rendered client-side (JS) to use the user's local timezone
@@ -178,9 +179,9 @@ $first_name = explode(' ', $user_name)[0];
         }
 
         .db-role-chip {
-            background: <?php echo $is_admin ? 'rgba(255,127,0,.12)' : 'rgba(52,152,219,.12)'; ?>;
-            border: 1px solid <?php echo $is_admin ? 'rgba(255,127,0,.25)' : 'rgba(52,152,219,.25)'; ?>;
-            color: <?php echo $is_admin ? '#ff9a33' : '#3498db'; ?>;
+            background: <?php echo $is_staff ? 'rgba(255,127,0,.12)' : 'rgba(52,152,219,.12)'; ?>;
+            border: 1px solid <?php echo $is_staff ? 'rgba(255,127,0,.25)' : 'rgba(52,152,219,.25)'; ?>;
+            color: <?php echo $is_staff ? '#ff9a33' : '#3498db'; ?>;
             border-radius: 999px;
             padding: .3rem .9rem;
             font-size: .78rem;
@@ -529,7 +530,7 @@ $first_name = explode(' ', $user_name)[0];
                         <a href="profile.php">Perfil</a>
                     </div>
                 </div>
-                <?php if ($is_admin): ?>
+                <?php if ($is_staff): ?>
                     <div class="nav-dropdown">
                         <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>
                         <div class="nav-dropdown-content">
@@ -538,7 +539,9 @@ $first_name = explode(' ', $user_name)[0];
                             <a href="tickets.php">Tickets</a>
                             <a href="tasks.php">Tareas</a>
                             <a href="gastos.php">Gastos</a>
+                            <?php if ($is_admin): ?>
                             <a href="analytics.php">Estadísticas</a>
+                            <?php endif; ?>
                         </div>
                     </div>
                 <?php endif; ?>
@@ -591,13 +594,13 @@ $first_name = explode(' ', $user_name)[0];
                         </div>
                     </div>
                     <div class="db-role-chip">
-                        <?php echo $is_admin ? 'Administrador' : ucfirst($user_role); ?>
+                        <?php echo $is_admin ? 'Administrador' : (($user_role === 'employee') ? 'Personal' : ucfirst($user_role)); ?>
                     </div>
                 </div>
             </div>
 
             <!-- ── Admin Quick-access bar ── -->
-            <?php if ($is_admin): ?>
+            <?php if ($is_staff): ?>
             <div class="db-admin-bar">
                 <div class="db-admin-bar-section">
                     <span class="db-admin-bar-label">Acceso Rápido</span>
@@ -605,7 +608,9 @@ $first_name = explode(' ', $user_name)[0];
                         <a href="admin_supply.php?nocache=true" class="db-admin-link">Abastecimiento</a>
                         <a href="cashier.php" class="db-admin-link">Caja</a>
                         <a href="gastos.php" class="db-admin-link">Gastos</a>
+                        <?php if ($is_admin): ?>
                         <a href="analytics.php" class="db-admin-link">Estadísticas</a>
+                        <?php endif; ?>
                         <a href="tickets.php" class="db-admin-link">Tickets</a>
                         <a href="wholesale.php" class="db-admin-link">Mayoreo</a>
                         <a href="tasks.php" class="db-admin-link">Tareas</a>
@@ -628,7 +633,7 @@ $first_name = explode(' ', $user_name)[0];
                     <div class="db-kpi-value db-skeleton" id="monthlyRevenue">—</div>
                     <div class="db-kpi-helper">Mes actual</div>
                 </div>
-                <?php if ($is_admin): ?>
+                <?php if ($is_staff): ?>
                 <div class="db-kpi" id="kpiExpenses" style="--kpi-accent: linear-gradient(90deg, #e74c3c, transparent); cursor: pointer;" onclick="location.href='gastos.php'">
                     <span class="db-kpi-icon">💸</span>
                     <div class="db-kpi-label">Gastos este mes</div>
@@ -734,9 +739,11 @@ $first_name = explode(' ', $user_name)[0];
                         <a href="tasks.php" class="db-action-btn" id="qa-tasks">
                             <span class="db-action-icon">✅</span>Tareas
                         </a>
+                        <?php if ($user_role !== 'employee'): ?>
                         <a href="analytics.php" class="db-action-btn" id="qa-stats">
                             <span class="db-action-icon">📊</span>Estadísticas
                         </a>
+                        <?php endif; ?>
                         <a href="profile.php" class="db-action-btn" id="qa-profile">
                             <span class="db-action-icon">👤</span>Mi Perfil
                         </a>
@@ -749,7 +756,7 @@ $first_name = explode(' ', $user_name)[0];
                         <a href="index.php" class="db-action-btn" id="qa-catalog">
                             <span class="db-action-icon">🛍️</span>Catálogo
                         </a>
-                        <?php if ($is_admin): ?>
+                        <?php if ($is_staff): ?>
                         <a href="cashier.php" class="db-action-btn" id="qa-cashier">
                             <span class="db-action-icon">🧾</span>Caja
                         </a>
@@ -765,7 +772,7 @@ $first_name = explode(' ', $user_name)[0];
             </div>
 
             <!-- ── Admin info widgets ── -->
-            <?php if ($is_admin): ?>
+            <?php if ($is_staff): ?>
             <div class="db-grid-2">
                 <div class="db-card">
                     <div class="db-card-header">
@@ -811,7 +818,11 @@ $first_name = explode(' ', $user_name)[0];
                                 ['🛍️','Catálogo','index.php'],
                                 ['💸','Gastos','gastos.php'],
                             ];
-                            foreach ($modules as $m): ?>
+                            foreach ($modules as $m): 
+                                if ($m[2] === 'analytics.php' && ($_SESSION['role'] ?? '') === 'employee') {
+                                    continue;
+                                }
+                            ?>
                             <a href="<?php echo $m[2]; ?>" style="display:flex; align-items:center; gap:.5rem; padding:.55rem .7rem; background:#111; border:1px solid #1f1f1f; border-radius:9px; text-decoration:none; color:#ccc; font-size:.8rem; font-weight:600; transition:all .2s;" onmouseover="this.style.borderColor='#ff7f00';this.style.color='#fff'" onmouseout="this.style.borderColor='#1f1f1f';this.style.color='#ccc'">
                                 <span><?php echo $m[0]; ?></span>
                                 <span><?php echo $m[1]; ?></span>
@@ -874,6 +885,7 @@ $first_name = explode(' ', $user_name)[0];
     </style>
     <script>
         const isAdmin = <?php echo json_encode($is_admin); ?>;
+        const isStaff = <?php echo json_encode($is_staff); ?>;
         /* ── Clock + Greeting (uses browser local time, NOT server UTC) ── */
         function updateClock() {
             const now  = new Date();
@@ -934,7 +946,7 @@ $first_name = explode(' ', $user_name)[0];
         }
 
         async function loadExpensesMetricsDirectly(expEl, netEl, revEl) {
-            if (isAdmin && expEl && netEl) {
+            if (isStaff && expEl && netEl) {
                 try {
                     const today = new Date();
                     const monthStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
@@ -985,7 +997,7 @@ $first_name = explode(' ', $user_name)[0];
                 const data = JSON.parse(cached);
                 if (Date.now() - data.timestamp < 300000) { // 5 minutes
                     animateCount(ordEl, data.orders);
-                    if (!isAdmin && revEl) {
+                    if (!isStaff && revEl) {
                         revEl.classList.remove('db-skeleton');
                         revEl.style.animation = 'countUp .4s ease';
                         revEl.textContent = '$' + data.revenue.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -1021,14 +1033,14 @@ $first_name = explode(' ', $user_name)[0];
                 }));
 
                 animateCount(ordEl, orders);
-                if (!isAdmin && revEl) {
+                if (!isStaff && revEl) {
                     revEl.classList.remove('db-skeleton');
                     revEl.style.animation = 'countUp .4s ease';
                     revEl.textContent = '$' + revenue.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                 }
             } else {
                 if (ordEl) { ordEl.classList.remove('db-skeleton'); ordEl.textContent = '0'; }
-                if (!isAdmin && revEl) { revEl.classList.remove('db-skeleton'); revEl.textContent = '$0'; }
+                if (!isStaff && revEl) { revEl.classList.remove('db-skeleton'); revEl.textContent = '$0'; }
                 [pendEl, taskEl].forEach(el => {
                     if (el) { el.classList.remove('db-skeleton'); el.textContent = '0'; }
                 });

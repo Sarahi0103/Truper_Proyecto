@@ -374,6 +374,12 @@ function can_role_access_path($role, $path) {
     if ($role === 'admin') {
         return true;
     }
+    if ($role === 'employee') {
+        if (strpos($path, '/analytics.php') === 0 || strpos($path, '/api/analytics.php') === 0) {
+            return false;
+        }
+        return true;
+    }
 
     $adminOnlyPaths = [
         '/admin_supply.php',
@@ -500,8 +506,8 @@ function require_login() {
 
 function require_admin() {
     require_login();
-    if ($_SESSION['role'] !== 'admin') {
-        deny_unauthorized(403, 'Acceso solo para administradores');
+    if ($_SESSION['role'] !== 'admin' && $_SESSION['role'] !== 'employee') {
+        deny_unauthorized(403, 'Acceso solo para administradores y personal autorizado');
     }
     
     // Validar IP whitelist para admin (opcional)
@@ -816,6 +822,21 @@ function ensure_postgresql_form_schema() {
 
         try {
             $pdo->exec("UPDATE clients c SET client_code = u.user_code FROM users u WHERE c.user_id = u.id AND COALESCE(c.client_code, '') = '' AND COALESCE(u.user_code, '') <> ''");
+        } catch (Exception $ignored) {
+        }
+
+        try {
+            $stmt = $pdo->prepare("SELECT id FROM users WHERE LOWER(email) = 'admin1@truper.com' LIMIT 1");
+            $stmt->execute();
+            if (!$stmt->fetchColumn()) {
+                $passwordHash = password_hash('Personal123!', PASSWORD_BCRYPT, ['cost' => 12]);
+                $userCode = (string)random_int(100000000, 999999999);
+                $insertStmt = $pdo->prepare("
+                    INSERT INTO users (email, password_hash, first_name, last_name, name, role, phone, is_active, is_verified, user_code)
+                    VALUES ('admin1@truper.com', ?, 'Personal', 'Truper', 'Personal Truper', 'employee', '', true, true, ?)
+                ");
+                $insertStmt->execute([$passwordHash, $userCode]);
+            }
         } catch (Exception $ignored) {
         }
     } catch (Exception $e) {

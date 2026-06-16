@@ -9,6 +9,13 @@ require_once '../../src/Services/AnalyticsCacheService.php';
 
 require_login();
 
+if (($_SESSION['role'] ?? '') === 'employee') {
+    http_response_code(403);
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Acceso denegado']);
+    exit;
+}
+
 $action = $_GET['action'] ?? null;
 $method = $_SERVER['REQUEST_METHOD'];
 
