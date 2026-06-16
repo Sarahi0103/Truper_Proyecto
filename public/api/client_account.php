@@ -175,15 +175,29 @@ try {
                 break;
             }
 
-            $stmt = $pdo->prepare("SELECT * FROM client_credit_balance WHERE user_id = ? LIMIT 1");
-            $stmt->execute([$user_id]);
-            $credit = $stmt->fetch();
-
-            if (!$credit) {
-                // Create default if not exists
-                $stmt = $pdo->prepare("INSERT INTO client_credit_balance (user_id, credit_limit, credit_available) VALUES (?, 0, 0)");
+            $isAdminOrEmployee = (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee');
+            if ($isAdminOrEmployee) {
+                $stmt = $pdo->prepare("
+                    SELECT 
+                        0::decimal as credit_limit, 
+                        0::decimal as credit_available, 
+                        COALESCE(SUM(total_owed), 0) as total_owed, 
+                        0 as days_overdue
+                    FROM client_credit_balance
+                ");
+                $stmt->execute();
+                $credit = $stmt->fetch();
+            } else {
+                $stmt = $pdo->prepare("SELECT * FROM client_credit_balance WHERE user_id = ? LIMIT 1");
                 $stmt->execute([$user_id]);
-                $credit = ['credit_limit' => 0, 'credit_available' => 0, 'total_owed' => 0, 'days_overdue' => 0];
+                $credit = $stmt->fetch();
+
+                if (!$credit) {
+                    // Create default if not exists
+                    $stmt = $pdo->prepare("INSERT INTO client_credit_balance (user_id, credit_limit, credit_available) VALUES (?, 0, 0)");
+                    $stmt->execute([$user_id]);
+                    $credit = ['credit_limit' => 0, 'credit_available' => 0, 'total_owed' => 0, 'days_overdue' => 0];
+                }
             }
 
             $response = ['success' => true, 'credit' => $credit];
@@ -200,46 +214,67 @@ try {
             $weekStart = date('Y-m-d', strtotime('monday this week'));
             $weekEnd = date('Y-m-d', strtotime('sunday this week'));
 
-            // Calculate from orders in this week dynamically
-            $stmt = $pdo->prepare("
-                SELECT 
-                    COALESCE(SUM(o.total_amount), 0) AS total_consumed, 
-                    COALESCE(SUM(CASE WHEN o.payment_status IN ('pending','partial') THEN COALESCE(o.balance, 0) ELSE 0 END), 0) AS total_owed,
-                    CASE 
-                        WHEN COALESCE(SUM(o.total_amount), 0) = 0 THEN 'pending'
-                        WHEN COALESCE(SUM(CASE WHEN o.payment_status IN ('pending','partial') THEN COALESCE(o.balance, 0) ELSE 0 END), 0) = 0 THEN 'paid'
-                        WHEN COALESCE(SUM(CASE WHEN o.payment_status IN ('pending','partial') THEN COALESCE(o.balance, 0) ELSE 0 END), 0) < COALESCE(SUM(o.total_amount), 0) THEN 'partial'
-                        ELSE 'pending'
-                    END AS payment_status
-                FROM orders o 
-                INNER JOIN clients c ON c.id = o.client_id 
-                WHERE c.user_id = ? 
-                  AND o.created_at::date >= ? 
-                  AND o.created_at::date <= ?
-            ");
-            $stmt->execute([$user_id, $weekStart, $weekEnd]);
+            $isAdminOrEmployee = (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee');
+            
+            if ($isAdminOrEmployee) {
+                $stmt = $pdo->prepare("
+                    SELECT 
+                        COALESCE(SUM(o.total_amount), 0) AS total_consumed, 
+                        COALESCE(SUM(CASE WHEN o.payment_status IN ('pending','partial') THEN COALESCE(o.balance, 0) ELSE 0 END), 0) AS total_owed,
+                        CASE 
+                            WHEN COALESCE(SUM(o.total_amount), 0) = 0 THEN 'pending'
+                            WHEN COALESCE(SUM(CASE WHEN o.payment_status IN ('pending','partial') THEN COALESCE(o.balance, 0) ELSE 0 END), 0) = 0 THEN 'paid'
+                            WHEN COALESCE(SUM(CASE WHEN o.payment_status IN ('pending','partial') THEN COALESCE(o.balance, 0) ELSE 0 END), 0) < COALESCE(SUM(o.total_amount), 0) THEN 'partial'
+                            ELSE 'pending'
+                        END AS payment_status
+                    FROM orders o 
+                    WHERE o.created_at::date >= ? 
+                      AND o.created_at::date <= ?
+                ");
+                $stmt->execute([$weekStart, $weekEnd]);
+            } else {
+                $stmt = $pdo->prepare("
+                    SELECT 
+                        COALESCE(SUM(o.total_amount), 0) AS total_consumed, 
+                        COALESCE(SUM(CASE WHEN o.payment_status IN ('pending','partial') THEN COALESCE(o.balance, 0) ELSE 0 END), 0) AS total_owed,
+                        CASE 
+                            WHEN COALESCE(SUM(o.total_amount), 0) = 0 THEN 'pending'
+                            WHEN COALESCE(SUM(CASE WHEN o.payment_status IN ('pending','partial') THEN COALESCE(o.balance, 0) ELSE 0 END), 0) = 0 THEN 'paid'
+                            WHEN COALESCE(SUM(CASE WHEN o.payment_status IN ('pending','partial') THEN COALESCE(o.balance, 0) ELSE 0 END), 0) < COALESCE(SUM(o.total_amount), 0) THEN 'partial'
+                            ELSE 'pending'
+                        END AS payment_status
+                    FROM orders o 
+                    INNER JOIN clients c ON c.id = o.client_id 
+                    WHERE c.user_id = ? 
+                      AND o.created_at::date >= ? 
+                      AND o.created_at::date <= ?
+                ");
+                $stmt->execute([$user_id, $weekStart, $weekEnd]);
+            }
             $calc = $stmt->fetch();
 
-            // Store/sync current week status in weekly_consumption_summary for other processes/indexes
-            $stmt = $pdo->prepare("
-                INSERT INTO weekly_consumption_summary (user_id, week_start, week_end, total_consumed, total_owed, payment_status) 
-                VALUES (?, ?, ?, ?, ?, ?) 
-                ON CONFLICT (user_id, week_start) 
-                DO UPDATE SET 
-                    week_end = EXCLUDED.week_end, 
-                    total_consumed = EXCLUDED.total_consumed, 
-                    total_owed = EXCLUDED.total_owed, 
-                    payment_status = EXCLUDED.payment_status,
-                    updated_at = CURRENT_TIMESTAMP
-            ");
-            $stmt->execute([
-                $user_id,
-                $weekStart,
-                $weekEnd,
-                (float)($calc['total_consumed'] ?? 0),
-                (float)($calc['total_owed'] ?? 0),
-                $calc['payment_status']
-            ]);
+            if (!$isAdminOrEmployee) {
+                // Store/sync current week status in weekly_consumption_summary for other processes/indexes
+                $stmt = $pdo->prepare("
+                    INSERT INTO weekly_consumption_summary (user_id, week_start, week_end, total_consumed, total_owed, payment_status) 
+                    VALUES (?, ?, ?, ?, ?, ?) 
+                    ON CONFLICT (user_id, week_start) 
+                    DO UPDATE SET 
+                        week_end = EXCLUDED.week_end, 
+                        total_consumed = EXCLUDED.total_consumed, 
+                        total_owed = EXCLUDED.total_owed, 
+                        payment_status = EXCLUDED.payment_status,
+                        updated_at = CURRENT_TIMESTAMP
+                ");
+                $stmt->execute([
+                    $user_id,
+                    $weekStart,
+                    $weekEnd,
+                    (float)($calc['total_consumed'] ?? 0),
+                    (float)($calc['total_owed'] ?? 0),
+                    $calc['payment_status']
+                ]);
+            }
 
             $weekly = [
                 'total_consumed' => (float)($calc['total_consumed'] ?? 0),
@@ -259,57 +294,89 @@ try {
                 break;
             }
 
-            // Generate last 12 weeks dynamically and fetch stats directly from orders table (100% accurate)
-            $sql = "
-                WITH weeks AS (
+            $isAdminOrEmployee = (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee');
+
+            if ($isAdminOrEmployee) {
+                $sql = "
+                    WITH weeks AS (
+                        SELECT 
+                            (date_trunc('week', current_date) - (i * interval '1 week'))::date AS week_start,
+                            (date_trunc('week', current_date) - (i * interval '1 week') + interval '6 days')::date AS week_end
+                        FROM generate_series(0, 11) AS i
+                    )
                     SELECT 
-                        (date_trunc('week', current_date) - (i * interval '1 week'))::date AS week_start,
-                        (date_trunc('week', current_date) - (i * interval '1 week') + interval '6 days')::date AS week_end
-                    FROM generate_series(0, 11) AS i
-                )
-                SELECT 
-                    w.week_start,
-                    w.week_end,
-                    COALESCE(SUM(o.total_amount), 0) AS total_consumed,
-                    COALESCE(SUM(CASE WHEN o.payment_status IN ('pending','partial') THEN COALESCE(o.balance, 0) ELSE 0 END), 0) AS total_owed,
-                    CASE 
-                        WHEN COALESCE(SUM(o.total_amount), 0) = 0 THEN 'pending'
-                        WHEN COALESCE(SUM(CASE WHEN o.payment_status IN ('pending','partial') THEN COALESCE(o.balance, 0) ELSE 0 END), 0) = 0 THEN 'paid'
-                        WHEN COALESCE(SUM(CASE WHEN o.payment_status IN ('pending','partial') THEN COALESCE(o.balance, 0) ELSE 0 END), 0) < COALESCE(SUM(o.total_amount), 0) THEN 'partial'
-                        ELSE 'pending'
-                    END AS payment_status
-                FROM weeks w
-                LEFT JOIN orders o ON o.created_at::date >= w.week_start 
-                                  AND o.created_at::date <= w.week_end
-                                  AND o.client_id = (SELECT id FROM clients WHERE user_id = ? LIMIT 1)
-                GROUP BY w.week_start, w.week_end
-                ORDER BY w.week_start DESC
-            ";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$user_id]);
+                        w.week_start,
+                        w.week_end,
+                        COALESCE(SUM(o.total_amount), 0) AS total_consumed,
+                        COALESCE(SUM(CASE WHEN o.payment_status IN ('pending','partial') THEN COALESCE(o.balance, 0) ELSE 0 END), 0) AS total_owed,
+                        CASE 
+                            WHEN COALESCE(SUM(o.total_amount), 0) = 0 THEN 'pending'
+                            WHEN COALESCE(SUM(CASE WHEN o.payment_status IN ('pending','partial') THEN COALESCE(o.balance, 0) ELSE 0 END), 0) = 0 THEN 'paid'
+                            WHEN COALESCE(SUM(CASE WHEN o.payment_status IN ('pending','partial') THEN COALESCE(o.balance, 0) ELSE 0 END), 0) < COALESCE(SUM(o.total_amount), 0) THEN 'partial'
+                            ELSE 'pending'
+                        END AS payment_status
+                    FROM weeks w
+                    LEFT JOIN orders o ON o.created_at::date >= w.week_start 
+                                      AND o.created_at::date <= w.week_end
+                    GROUP BY w.week_start, w.week_end
+                    ORDER BY w.week_start DESC
+                ";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute();
+            } else {
+                $sql = "
+                    WITH weeks AS (
+                        SELECT 
+                            (date_trunc('week', current_date) - (i * interval '1 week'))::date AS week_start,
+                            (date_trunc('week', current_date) - (i * interval '1 week') + interval '6 days')::date AS week_end
+                        FROM generate_series(0, 11) AS i
+                    )
+                    SELECT 
+                        w.week_start,
+                        w.week_end,
+                        COALESCE(SUM(o.total_amount), 0) AS total_consumed,
+                        COALESCE(SUM(CASE WHEN o.payment_status IN ('pending','partial') THEN COALESCE(o.balance, 0) ELSE 0 END), 0) AS total_owed,
+                        CASE 
+                            WHEN COALESCE(SUM(o.total_amount), 0) = 0 THEN 'pending'
+                            WHEN COALESCE(SUM(CASE WHEN o.payment_status IN ('pending','partial') THEN COALESCE(o.balance, 0) ELSE 0 END), 0) = 0 THEN 'paid'
+                            WHEN COALESCE(SUM(CASE WHEN o.payment_status IN ('pending','partial') THEN COALESCE(o.balance, 0) ELSE 0 END), 0) < COALESCE(SUM(o.total_amount), 0) THEN 'partial'
+                            ELSE 'pending'
+                        END AS payment_status
+                    FROM weeks w
+                    LEFT JOIN orders o ON o.created_at::date >= w.week_start 
+                                      AND o.created_at::date <= w.week_end
+                                      AND o.client_id = (SELECT id FROM clients WHERE user_id = ? LIMIT 1)
+                    GROUP BY w.week_start, w.week_end
+                    ORDER BY w.week_start DESC
+                ";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$user_id]);
+            }
             $weeks = $stmt->fetchAll();
 
-            // Synchronize historical weeks in weekly_consumption_summary for compliance/indexes
-            foreach ($weeks as $w) {
-                $syncStmt = $pdo->prepare("
-                    INSERT INTO weekly_consumption_summary (user_id, week_start, week_end, total_consumed, total_owed, payment_status) 
-                    VALUES (?, ?, ?, ?, ?, ?) 
-                    ON CONFLICT (user_id, week_start) 
-                    DO UPDATE SET 
-                        week_end = EXCLUDED.week_end, 
-                        total_consumed = EXCLUDED.total_consumed, 
-                        total_owed = EXCLUDED.total_owed, 
-                        payment_status = EXCLUDED.payment_status,
-                        updated_at = CURRENT_TIMESTAMP
-                ");
-                $syncStmt->execute([
-                    $user_id,
-                    $w['week_start'],
-                    $w['week_end'],
-                    (float)$w['total_consumed'],
-                    (float)$w['total_owed'],
-                    $w['payment_status']
-                ]);
+            if (!$isAdminOrEmployee) {
+                // Synchronize historical weeks in weekly_consumption_summary for compliance/indexes
+                foreach ($weeks as $w) {
+                    $syncStmt = $pdo->prepare("
+                        INSERT INTO weekly_consumption_summary (user_id, week_start, week_end, total_consumed, total_owed, payment_status) 
+                        VALUES (?, ?, ?, ?, ?, ?) 
+                        ON CONFLICT (user_id, week_start) 
+                        DO UPDATE SET 
+                            week_end = EXCLUDED.week_end, 
+                            total_consumed = EXCLUDED.total_consumed, 
+                            total_owed = EXCLUDED.total_owed, 
+                            payment_status = EXCLUDED.payment_status,
+                            updated_at = CURRENT_TIMESTAMP
+                    ");
+                    $syncStmt->execute([
+                        $user_id,
+                        $w['week_start'],
+                        $w['week_end'],
+                        (float)$w['total_consumed'],
+                        (float)$w['total_owed'],
+                        $w['payment_status']
+                    ]);
+                }
             }
 
             $response = ['success' => true, 'weeks' => $weeks];
@@ -610,14 +677,26 @@ try {
                 break;
             }
 
-            $stmt = $pdo->prepare("
-                SELECT id, order_id, payment_amount, payment_date, payment_method, reference_number, notes
-                FROM credit_payments
-                WHERE user_id = ?
-                ORDER BY payment_date DESC
-                LIMIT 50
-            ");
-            $stmt->execute([$user_id]);
+            $isAdminOrEmployee = (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee');
+            
+            if ($isAdminOrEmployee) {
+                $stmt = $pdo->prepare("
+                    SELECT id, order_id, payment_amount, payment_date, payment_method, reference_number, notes
+                    FROM credit_payments
+                    ORDER BY payment_date DESC
+                    LIMIT 50
+                ");
+                $stmt->execute();
+            } else {
+                $stmt = $pdo->prepare("
+                    SELECT id, order_id, payment_amount, payment_date, payment_method, reference_number, notes
+                    FROM credit_payments
+                    WHERE user_id = ?
+                    ORDER BY payment_date DESC
+                    LIMIT 50
+                ");
+                $stmt->execute([$user_id]);
+            }
             $payments = $stmt->fetchAll();
 
             $response = ['success' => true, 'payments' => $payments];
@@ -629,25 +708,36 @@ try {
                 break;
             }
 
-            // Fetch records created directly by this user
-            // OR client_order records linked to an order owned by this user
-            $stmt = $pdo->prepare("
-                SELECT th.id, th.transaction_type, th.reference_folio, th.data_json,
-                       th.created_at
-                FROM transaction_history th
-                WHERE th.created_by = ?
-                UNION
-                SELECT th.id, th.transaction_type, th.reference_folio, th.data_json,
-                       th.created_at
-                FROM transaction_history th
-                INNER JOIN orders o ON o.order_number = th.reference_folio
-                INNER JOIN clients c ON c.id = o.client_id
-                WHERE c.user_id = ?
-                  AND th.transaction_type = 'client_order'
-                ORDER BY created_at DESC
-                LIMIT 200
-            ");
-            $stmt->execute([$user_id, $user_id]);
+            $isAdminOrEmployee = (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee');
+
+            if ($isAdminOrEmployee) {
+                $stmt = $pdo->prepare("
+                    SELECT th.id, th.transaction_type, th.reference_folio, th.data_json,
+                           th.created_at
+                    FROM transaction_history th
+                    ORDER BY th.created_at DESC
+                    LIMIT 200
+                ");
+                $stmt->execute();
+            } else {
+                $stmt = $pdo->prepare("
+                    SELECT th.id, th.transaction_type, th.reference_folio, th.data_json,
+                           th.created_at
+                    FROM transaction_history th
+                    WHERE th.created_by = ?
+                    UNION
+                    SELECT th.id, th.transaction_type, th.reference_folio, th.data_json,
+                           th.created_at
+                    FROM transaction_history th
+                    INNER JOIN orders o ON o.order_number = th.reference_folio
+                    INNER JOIN clients c ON c.id = o.client_id
+                    WHERE c.user_id = ?
+                      AND th.transaction_type = 'client_order'
+                    ORDER BY created_at DESC
+                    LIMIT 200
+                ");
+                $stmt->execute([$user_id, $user_id]);
+            }
             $items = $stmt->fetchAll();
 
             $response = ['success' => true, 'items' => $items];
