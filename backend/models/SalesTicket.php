@@ -153,6 +153,10 @@ class SalesTicket {
                 $params[':end_date'] = $filters['end_date'];
             }
 
+            // Excluir tickets creados por admin en vista de tickets de clientes
+            $where .= ' AND st.customer_name != :exclude_admin';
+            $params[':exclude_admin'] = 'Admin';
+
             $countStmt = $this->pdo->prepare("SELECT COUNT(*) as total FROM sales_tickets st $where");
             $countStmt->execute($params);
             $countResult = $countStmt->fetch(PDO::FETCH_ASSOC);
@@ -397,6 +401,10 @@ class SalesTicket {
                 $where .= " AND (st.folio ILIKE :search OR u.email ILIKE :search OR u.phone ILIKE :search)";
                 $params[':search'] = '%' . $searchTerm . '%';
             }
+
+            // Excluir tickets creados por admin en vista de tickets de clientes
+            $where .= " AND st.customer_name != :exclude_admin";
+            $params[':exclude_admin'] = 'Admin';
 
             // Contar total
             $countSql = "SELECT COUNT(*) as total FROM sales_tickets st LEFT JOIN users u ON st.user_id = u.id $where";

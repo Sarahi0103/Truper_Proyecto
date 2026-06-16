@@ -359,6 +359,7 @@ class AnalyticsController {
                 LEFT JOIN users ib ON st.issued_by = ib.id
                 WHERE EXTRACT(YEAR FROM st.issued_date) = ?
                 AND EXTRACT(MONTH FROM st.issued_date) = ?
+                AND COALESCE(st.customer_name, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END, 'Mostrador') != 'Admin'
                 ORDER BY st.issued_date DESC, st.folio DESC
             ");
             
