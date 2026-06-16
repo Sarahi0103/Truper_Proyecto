@@ -160,6 +160,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                         <a href="tickets.php" class="active">Tickets</a>
                         <a href="ticket_validation.php">Validación</a>
                         <a href="tasks.php">Tareas</a>
+                        <a href="gastos.php">Gastos</a>
                         <a href="analytics.php">Estadísticas</a>
                     </div>
                 </div>

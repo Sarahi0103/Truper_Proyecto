@@ -52,6 +52,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                         <?php if ($is_admin): ?><a href="admin_supply.php?nocache=true">Abastecimiento</a><?php endif; ?>
                         <?php if ($is_admin): ?><a href="tickets.php">Tickets</a><?php endif; ?>
                         <a href="tasks.php">Tareas</a>
+                        <?php if ($is_admin): ?><a href="gastos.php">Gastos</a><?php endif; ?>
                         <a href="analytics.php" class="active">Estadísticas</a>
                     </div>
                 </div>
@@ -107,6 +108,9 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                 </button>
                 <button class="analytics-tab-btn" data-tab="goalsTab" role="tab" aria-selected="false">
                     <span class="tab-icon">🎯</span> Objetivos Mensuales
+                </button>
+                <button class="analytics-tab-btn" data-tab="gastosTab" role="tab" aria-selected="false">
+                    <span class="tab-icon">💸</span> Gastos
                 </button>
                 <?php endif; ?>
             </div>
@@ -347,6 +351,48 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                 </div>
             </div>
 
+            <!-- ══════════════════════════════════
+                 TAB 6: GASTOS
+            ══════════════════════════════════ -->
+            <div id="gastosTab" class="analytics-tab-panel">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+                    <div>
+                        <h2 style="margin:0 0 .35rem; font-size:1.3rem; font-weight:900; color:#fff;">💸 Control de Gastos</h2>
+                        <p style="margin:0; color:#666; font-size:.9rem;">Resumen de egresos del negocio vs ingresos acumulados.</p>
+                    </div>
+                    <a href="gastos.php" style="display:inline-flex; align-items:center; gap:0.5rem; background:#ff7f00; color:#fff; padding:0.65rem 1.25rem; border-radius:8px; font-weight:700; font-size:0.88rem; text-decoration:none; transition:background 0.2s;" onmouseover="this.style.background='#e67300'" onmouseout="this.style.background='#ff7f00'">
+                        ➕ Gestionar Gastos
+                    </a>
+                </div>
+
+                <!-- KPIs de gastos -->
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:1rem; margin-bottom:2rem;">
+                    <div class="kpi-card" style="background:rgba(46,204,113,0.05); border-color:rgba(46,204,113,0.25);">
+                        <div class="kpi-card-label">💰 Ingresos del Mes</div>
+                        <div class="kpi-card-value" style="color:#2ecc71;" id="gKpiIncome">—</div>
+                    </div>
+                    <div class="kpi-card" style="background:rgba(231,76,60,0.05); border-color:rgba(231,76,60,0.25);">
+                        <div class="kpi-card-label">💸 Gastos del Mes</div>
+                        <div class="kpi-card-value" style="color:#e74c3c;" id="gKpiExp">—</div>
+                        <div class="kpi-card-sub" id="gKpiExpSub" style="font-size:0.75rem; color:#555; margin-top:0.3rem;"></div>
+                    </div>
+                    <div class="kpi-card" id="gKpiNetCard" style="border-color:rgba(255,127,0,0.25);">
+                        <div class="kpi-card-label">📊 Ganancia Neta</div>
+                        <div class="kpi-card-value" style="color:#ff7f00;" id="gKpiNet">—</div>
+                    </div>
+                    <div class="kpi-card" style="border-color:#222;">
+                        <div class="kpi-card-label">📅 Total Año</div>
+                        <div class="kpi-card-value" style="color:#aaa;" id="gKpiYear">—</div>
+                    </div>
+                </div>
+
+                <!-- Top categorías -->
+                <div style="background:#1a1a1a; border:1px solid #222; border-radius:14px; padding:1.5rem;">
+                    <div style="font-size:0.8rem; font-weight:700; color:#555; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:1rem;">Gastos por Categoría (mes actual)</div>
+                    <div id="gCatList"><div style="color:#444; font-size:0.9rem;">Cargando...</div></div>
+                </div>
+            </div>
+
             <?php endif; ?>
 
             <!-- ── Info widgets (only admin) ── -->
@@ -436,6 +482,11 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                 if (target === 'goalsTab') {
                     loadGoalSummary();
                 }
+
+                // Auto-load gastos tab
+                if (target === 'gastosTab') {
+                    loadGastosStats();
+                }
             });
         });
 
@@ -517,6 +568,8 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                     goalMonth.value = new Date().toISOString().slice(0, 7);
                 }
                 loadGoalSummary();
+                // Pre-carga datos de gastos (para cuando abran el tab)
+                loadGastosStats();
                 <?php endif; ?>
             });
 
@@ -547,6 +600,64 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
             } catch (e) {
                 console.error('Error cargando pickup stats:', e);
             }
+        }
+        <?php endif; ?>
+
+        <?php if ($is_admin): ?>
+        /* ── Gastos Stats ── */
+        async function loadGastosStats() {
+            const month = new Date().toISOString().slice(0,7);
+            const year  = new Date().getFullYear();
+            try {
+                const res = await fetch(`api/expenses.php?action=stats&month=${month}&year=${year}`);
+                const data = await res.json();
+                if (!data.success) return;
+
+                const fmt = v => '$' + Number(v||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+                const inc  = document.getElementById('gKpiIncome');
+                const exp  = document.getElementById('gKpiExp');
+                const sub  = document.getElementById('gKpiExpSub');
+                const net  = document.getElementById('gKpiNet');
+                const year_el = document.getElementById('gKpiYear');
+
+                if (inc)  inc.textContent  = fmt(data.total_income);
+                if (exp)  exp.textContent  = fmt(data.total_expenses);
+                if (sub)  sub.textContent  = data.count_month + ' registro(s)';
+                if (year_el) year_el.textContent = fmt(data.total_year);
+
+                const netVal = data.net_profit;
+                if (net) {
+                    net.textContent  = fmt(netVal);
+                    net.style.color  = netVal >= 0 ? '#2ecc71' : '#e74c3c';
+                }
+                const netCard = document.getElementById('gKpiNetCard');
+                if (netCard) netCard.style.borderColor = netVal >= 0 ? 'rgba(46,204,113,0.3)' : 'rgba(231,76,60,0.3)';
+
+                // Categorías
+                const catList = document.getElementById('gCatList');
+                if (catList) {
+                    if (!data.by_category.length) {
+                        catList.innerHTML = '<div style="color:#444; font-size:0.9rem;">Sin gastos este mes.</div>';
+                    } else {
+                        const maxCat = Math.max(...data.by_category.map(c => parseFloat(c.total)));
+                        catList.innerHTML = data.by_category.map(c => {
+                            const pct = maxCat > 0 ? (parseFloat(c.total)/maxCat*100) : 0;
+                            return `
+                                <div style="margin-bottom:0.75rem;">
+                                    <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem; font-size:0.85rem;">
+                                        <span style="font-weight:600; color:#fff;">${c.category}</span>
+                                        <span style="color:#e74c3c; font-weight:700;">${fmt(c.total)} <span style="color:#555; font-weight:400;">(${c.cnt})</span></span>
+                                    </div>
+                                    <div style="height:6px; background:#111; border-radius:999px; overflow:hidden;">
+                                        <div style="width:${pct.toFixed(1)}%; height:100%; background:linear-gradient(90deg,#e74c3c,#ff7f00); border-radius:999px;"></div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                }
+            } catch(e) { console.error('Error cargando gastos stats:', e); }
         }
         <?php endif; ?>
 

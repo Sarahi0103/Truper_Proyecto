@@ -500,8 +500,9 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                     <div class="nav-dropdown-content">
                         <a href="cashier.php">Caja</a>
                         <a href="admin_supply.php?nocache=true">Abastecimiento</a>
-                        <a href="tickets.php" class="active">Tickets</a>
+                        <a href="tickets.php">Tickets</a>
                         <a href="tasks.php">Tareas</a>
+                        <a href="gastos.php">Gastos</a>
                         <a href="analytics.php">Estadísticas</a>
                     </div>
                 </div>
