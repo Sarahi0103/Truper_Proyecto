@@ -1100,23 +1100,30 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                                         <tr style="border-bottom: 2px solid #333; text-align: left;">
                                             <th style="padding: 0.75rem; color: #ff7f00;">Folio</th>
                                             <th style="padding: 0.75rem; color: #ff7f00;">Cliente</th>
+                                            <th style="padding: 0.75rem; color: #ff7f00;">Pago</th>
                                             <th style="padding: 0.75rem; color: #ff7f00;">Fecha</th>
                                             <th style="padding: 0.75rem; color: #ff7f00; text-align: right;">Total</th>
                                             <th style="padding: 0.75rem; color: #ff7f00; text-align: center;">Acción</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        ${pending.map(t => `
+                                        ${pending.map(t => {
+                                            const isPaid = t.payment_status === 'completed' || t.payment_status === 'paid';
+                                            const payBadge = isPaid
+                                                ? `<span style="background:#0f9a0044; border:1px solid #0f9a00; color:#4caf50; padding:0.15rem 0.5rem; border-radius:4px; font-size:0.75rem; font-weight:bold;">Pagado</span>`
+                                                : `<span style="background:#ffc10722; border:1px solid #ffc107; color:#ffc107; padding:0.15rem 0.5rem; border-radius:4px; font-size:0.75rem; font-weight:bold;">Pendiente</span>`;
+                                            return `
                                             <tr style="border-bottom: 1px solid #2d2d2d;">
                                                 <td style="padding: 0.75rem; font-family: monospace; font-weight: bold; color: #ff7f00; cursor: pointer;" onclick="loadTicketDetails('${escapeHtml(t.folio)}')">${escapeHtml(t.folio)}</td>
                                                 <td style="padding: 0.75rem;">${escapeHtml(t.customer_name || 'N/A')}</td>
+                                                <td style="padding: 0.75rem;">${payBadge}</td>
                                                 <td style="padding: 0.75rem; color: #888;">${new Date(t.issued_date).toLocaleDateString('es-MX')}</td>
                                                 <td style="padding: 0.75rem; text-align: right; font-weight: bold;">$${parseFloat(t.total_amount || 0).toFixed(2)}</td>
                                                 <td style="padding: 0.75rem; text-align: center;">
                                                     <button onclick="loadTicketDetails('${escapeHtml(t.folio)}')" class="btn btn-small" style="background: #ff7f00; color: #fff; border: none; padding: 0.35rem 0.75rem; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.8rem; transition: background 0.2s;">Validar</button>
                                                 </td>
                                             </tr>
-                                        `).join('')}
+                                        `}).join('')}
                                     </tbody>
                                 </table>
                             </div>

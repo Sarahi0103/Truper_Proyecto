@@ -389,7 +389,9 @@ class SalesTicket {
     public function getPendingPickups($userId = null, $searchTerm = null, $page = 1, $perPage = 20) {
         try {
             $offset = max(0, ($page - 1) * $perPage);
-            $where = "WHERE st.deleted_at IS NULL AND st.archived_at IS NULL AND st.ticket_type = 'sale' AND st.pickup_status IN ('pending', 'picked_up') AND st.payment_status = 'completed'";
+            // Panel de validación admin: mostrar todos los tickets pendientes de entrega
+            // sin filtrar por payment_status (el check de elegibilidad lo maneja al validar)
+            $where = "WHERE st.deleted_at IS NULL AND st.archived_at IS NULL AND st.ticket_type = 'sale' AND st.pickup_status IN ('pending', 'picked_up')";
             $params = [];
 
             if ($userId) {
@@ -398,13 +400,9 @@ class SalesTicket {
             }
 
             if ($searchTerm) {
-                $where .= " AND (st.folio ILIKE :search OR u.email ILIKE :search OR u.phone ILIKE :search)";
+                $where .= " AND (st.folio ILIKE :search OR u.email ILIKE :search OR u.phone ILIKE :search OR st.customer_name ILIKE :search)";
                 $params[':search'] = '%' . $searchTerm . '%';
             }
-
-            // Excluir tickets creados por admin en vista de tickets de clientes
-            $where .= " AND st.customer_name != :exclude_admin";
-            $params[':exclude_admin'] = 'Admin';
 
             // Contar total
             $countSql = "SELECT COUNT(*) as total FROM sales_tickets st LEFT JOIN users u ON st.user_id = u.id $where";
