@@ -483,9 +483,23 @@ $is_admin  = (($_SESSION['role'] ?? '') === 'admin');
         /* ── Month picker ── */
         function initMonthPicker() {
             const sel = document.getElementById('monthPicker');
+            if (!sel) return;
+            sel.innerHTML = '';
             const now = new Date();
-            for (let i = 0; i < 12; i++) {
-                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const startYear = 2026;
+            const startMonth = 5; // June is index 5
+            
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth();
+            
+            let totalMonths = (currentYear - startYear) * 12 + (currentMonth - startMonth);
+            if (totalMonths < 0) totalMonths = 0;
+            
+            for (let i = 0; i <= totalMonths; i++) {
+                const d = new Date(currentYear, currentMonth - i, 1);
+                if (d.getFullYear() < startYear || (d.getFullYear() === startYear && d.getMonth() < startMonth)) {
+                    continue;
+                }
                 const val = d.toISOString().slice(0, 7);
                 const label = d.toLocaleDateString('es-MX', { year: 'numeric', month: 'long' });
                 const opt = document.createElement('option');

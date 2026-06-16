@@ -933,6 +933,32 @@ $first_name = explode(' ', $user_name)[0];
             window.requestAnimationFrame(step);
         }
 
+        async function loadExpensesMetricsDirectly(expEl, netEl) {
+            if (isAdmin && expEl && netEl) {
+                try {
+                    const today = new Date();
+                    const monthStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+                    const expResp = await apiCall(`/api/expenses.php?action=stats&month=${monthStr}`);
+                    if (expResp && expResp.success) {
+                        animateCount(expEl, expResp.total_expenses, '$');
+                        netEl.classList.remove('db-skeleton');
+                        netEl.style.animation = 'countUp .4s ease';
+                        const netVal = expResp.net_profit;
+                        const prefix = netVal < 0 ? '-$' : '$';
+                        const absNet = Math.abs(netVal);
+                        netEl.textContent = prefix + absNet.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                        netEl.style.color = netVal < 0 ? '#e74c3c' : '#2ecc71';
+                    } else {
+                        expEl.classList.remove('db-skeleton'); expEl.textContent = '$0';
+                        netEl.classList.remove('db-skeleton'); netEl.textContent = '$0';
+                    }
+                } catch (e) {
+                    expEl.classList.remove('db-skeleton'); expEl.textContent = '—';
+                    netEl.classList.remove('db-skeleton'); netEl.textContent = '—';
+                }
+            }
+        }
+
         /* ── KPI Metrics ── */
         async function loadDashboardMetrics() {
             const ordEl  = document.getElementById('monthlyOrders');
@@ -943,6 +969,9 @@ $first_name = explode(' ', $user_name)[0];
             const netEl  = document.getElementById('netIncome');
 
             if (!ordEl || !revEl || !pendEl || !taskEl) return;
+
+            // Load expenses stats asynchronously, bypassing metrics cache
+            loadExpensesMetricsDirectly(expEl, netEl);
 
             // Check cache first (5 min TTL) - Mejora de caché de métricas
             const cacheKey = 'dash_metrics_' + (<?php echo $_SESSION['user_id'] ?? 0; ?>);
@@ -1010,31 +1039,6 @@ $first_name = explode(' ', $user_name)[0];
                 localStorage.setItem(cacheKey, JSON.stringify(cachedData));
             } else {
                 if (taskEl) { taskEl.classList.remove('db-skeleton'); taskEl.textContent = '0'; }
-            }
-
-            // Load expenses stats if admin
-            if (isAdmin && expEl && netEl) {
-                try {
-                    const today = new Date();
-                    const monthStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
-                    const expResp = await apiCall(`/api/expenses.php?action=stats&month=${monthStr}`);
-                    if (expResp && expResp.success) {
-                        animateCount(expEl, expResp.total_expenses, '$');
-                        netEl.classList.remove('db-skeleton');
-                        netEl.style.animation = 'countUp .4s ease';
-                        const netVal = expResp.net_profit;
-                        const prefix = netVal < 0 ? '-$' : '$';
-                        const absNet = Math.abs(netVal);
-                        netEl.textContent = prefix + absNet.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-                        netEl.style.color = netVal < 0 ? '#e74c3c' : '#2ecc71';
-                    } else {
-                        expEl.classList.remove('db-skeleton'); expEl.textContent = '$0';
-                        netEl.classList.remove('db-skeleton'); netEl.textContent = '$0';
-                    }
-                } catch (e) {
-                    expEl.classList.remove('db-skeleton'); expEl.textContent = '—';
-                    netEl.classList.remove('db-skeleton'); netEl.textContent = '—';
-                }
             }
         }
 
