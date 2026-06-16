@@ -933,7 +933,7 @@ $first_name = explode(' ', $user_name)[0];
             window.requestAnimationFrame(step);
         }
 
-        async function loadExpensesMetricsDirectly(expEl, netEl) {
+        async function loadExpensesMetricsDirectly(expEl, netEl, revEl) {
             if (isAdmin && expEl && netEl) {
                 try {
                     const today = new Date();
@@ -941,6 +941,11 @@ $first_name = explode(' ', $user_name)[0];
                     const expResp = await apiCall(`/expenses.php?action=stats&month=${monthStr}`);
                     if (expResp && expResp.success) {
                         animateCount(expEl, expResp.total_expenses, '$');
+                        if (revEl) {
+                            revEl.classList.remove('db-skeleton');
+                            revEl.style.animation = 'countUp .4s ease';
+                            revEl.textContent = '$' + Number(expResp.total_income || 0).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                        }
                         netEl.classList.remove('db-skeleton');
                         netEl.style.animation = 'countUp .4s ease';
                         const netVal = expResp.net_profit;
@@ -971,7 +976,7 @@ $first_name = explode(' ', $user_name)[0];
             if (!ordEl || !revEl || !pendEl || !taskEl) return;
 
             // Load expenses stats asynchronously, bypassing metrics cache
-            loadExpensesMetricsDirectly(expEl, netEl);
+            loadExpensesMetricsDirectly(expEl, netEl, revEl);
 
             // Check cache first (5 min TTL) - Mejora de caché de métricas
             const cacheKey = 'dash_metrics_' + (<?php echo $_SESSION['user_id'] ?? 0; ?>);
@@ -980,21 +985,34 @@ $first_name = explode(' ', $user_name)[0];
                 const data = JSON.parse(cached);
                 if (Date.now() - data.timestamp < 300000) { // 5 minutes
                     animateCount(ordEl, data.orders);
-                    revEl.classList.remove('db-skeleton');
-                    revEl.style.animation = 'countUp .4s ease';
-                    revEl.textContent = '$' + data.revenue.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                    if (!isAdmin && revEl) {
+                        revEl.classList.remove('db-skeleton');
+                        revEl.style.animation = 'countUp .4s ease';
+                        revEl.textContent = '$' + data.revenue.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                    }
                     animateCount(pendEl, data.pending);
                     animateCount(taskEl, data.tasks);
                     return;
                 }
             }
 
-            const response = await apiCall('/analytics.php?action=yearly-stats');
+            const currentYear = new Date().getFullYear();
+            const currentMonth = new Date().getMonth() + 1;
+            const response = await apiCall(`/analytics.php?action=purchase-stats&year=${currentYear}`);
             if (response && response.stats && Array.isArray(response.stats)) {
-                const currentYear = new Date().getFullYear();
-                const yearData = response.stats.find(s => Number(s.year_val) === currentYear) || {};
-                const orders  = Number(yearData.total_orders  || 0);
-                const revenue = Number(yearData.total_amount  || 0);
+                // Find stats for the current month
+                const monthNamesShort = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                const monthNamesLong = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+                const monthData = response.stats.find(s => {
+                    const mNum = Number(s.month_num ?? s.MesNum ?? 0);
+                    if (mNum > 0) return mNum === currentMonth;
+                    const mesStr = String(s.Mes || '').toLowerCase();
+                    return mesStr === monthNamesLong[currentMonth - 1].toLowerCase() || 
+                           mesStr === monthNamesShort[currentMonth - 1].toLowerCase();
+                }) || {};
+
+                const orders  = Number(monthData.total_orders  ?? monthData.Pedidos ?? 0);
+                const revenue = Number(monthData.total_amount  ?? monthData.Total ?? 0);
                 
                 // Cache the results
                 localStorage.setItem(cacheKey, JSON.stringify({
@@ -1003,13 +1021,15 @@ $first_name = explode(' ', $user_name)[0];
                 }));
 
                 animateCount(ordEl, orders);
-                if (revEl) {
+                if (!isAdmin && revEl) {
                     revEl.classList.remove('db-skeleton');
                     revEl.style.animation = 'countUp .4s ease';
                     revEl.textContent = '$' + revenue.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                 }
             } else {
-                [ordEl, revEl, pendEl, taskEl].forEach(el => {
+                if (ordEl) { ordEl.classList.remove('db-skeleton'); ordEl.textContent = '0'; }
+                if (!isAdmin && revEl) { revEl.classList.remove('db-skeleton'); revEl.textContent = '$0'; }
+                [pendEl, taskEl].forEach(el => {
                     if (el) { el.classList.remove('db-skeleton'); el.textContent = '0'; }
                 });
                 return;
