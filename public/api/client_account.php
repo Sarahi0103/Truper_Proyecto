@@ -298,11 +298,19 @@ try {
 
             if ($isAdminOrEmployee) {
                 $sql = "
-                    WITH weeks AS (
+                    WITH date_bounds AS (
+                        SELECT 
+                            COALESCE(
+                                (SELECT date_trunc('week', MIN(created_at))::date FROM orders), 
+                                date_trunc('week', current_date)::date
+                            ) AS min_week
+                    ),
+                    weeks AS (
                         SELECT 
                             (date_trunc('week', current_date) - (i * interval '1 week'))::date AS week_start,
                             (date_trunc('week', current_date) - (i * interval '1 week') + interval '6 days')::date AS week_end
-                        FROM generate_series(0, 11) AS i
+                        FROM date_bounds db,
+                             generate_series(0, LEAST(52, EXTRACT(day FROM (date_trunc('week', current_date) - db.min_week))::int / 7)) AS i
                     )
                     SELECT 
                         w.week_start,
@@ -325,11 +333,22 @@ try {
                 $stmt->execute();
             } else {
                 $sql = "
-                    WITH weeks AS (
+                    WITH date_bounds AS (
+                        SELECT 
+                            COALESCE(
+                                (SELECT date_trunc('week', MIN(o.created_at))::date 
+                                 FROM orders o
+                                 INNER JOIN clients c ON c.id = o.client_id
+                                 WHERE c.user_id = ?), 
+                                date_trunc('week', current_date)::date
+                            ) AS min_week
+                    ),
+                    weeks AS (
                         SELECT 
                             (date_trunc('week', current_date) - (i * interval '1 week'))::date AS week_start,
                             (date_trunc('week', current_date) - (i * interval '1 week') + interval '6 days')::date AS week_end
-                        FROM generate_series(0, 11) AS i
+                        FROM date_bounds db,
+                             generate_series(0, LEAST(52, EXTRACT(day FROM (date_trunc('week', current_date) - db.min_week))::int / 7)) AS i
                     )
                     SELECT 
                         w.week_start,
@@ -350,7 +369,7 @@ try {
                     ORDER BY w.week_start DESC
                 ";
                 $stmt = $pdo->prepare($sql);
-                $stmt->execute([$user_id]);
+                $stmt->execute([$user_id, $user_id]);
             }
             $weeks = $stmt->fetchAll();
 
