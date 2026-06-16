@@ -32,7 +32,8 @@ class TicketIntegration {
             // Determinar customer_name y email según el rol del usuario
             $customerName = 'Admin';
             $customerEmail = 'admin@truper.com';
-            if ($order['role'] === 'client' && $order['first_name']) {
+            // Solo usar nombre del cliente si el rol es 'client' explícitamente
+            if (isset($order['role']) && $order['role'] === 'client' && $order['first_name']) {
                 $customerName = trim($order['first_name'] . ' ' . ($order['last_name'] ?? ''));
                 $customerEmail = ''; // Se obtendrá del JOIN en consultas
             }
