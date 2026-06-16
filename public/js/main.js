@@ -394,9 +394,17 @@ function setupEmployeeNavigation() {
                 `;
                 navMenu.appendChild(adminDropdown);
             } else {
-                // If it already exists, remove the Estadísticas link
-                const statsLink = adminDropdown.querySelector('a[href*="analytics.php"]');
-                if (statsLink) statsLink.remove();
+                // If it already exists, overwrite its content to ensure it has all allowed administrative links for employee
+                const contentEl = adminDropdown.querySelector('.nav-dropdown-content');
+                if (contentEl) {
+                    contentEl.innerHTML = `
+                        <a href="/cashier.php">Caja</a>
+                        <a href="/admin_supply.php?nocache=true">Abastecimiento</a>
+                        <a href="/tickets.php">Tickets</a>
+                        <a href="/tasks.php">Tareas</a>
+                        <a href="/gastos.php">Gastos</a>
+                    `;
+                }
             }
         }
 
