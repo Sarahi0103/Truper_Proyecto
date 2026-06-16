@@ -24,6 +24,26 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
+// Sincronizar rol de usuario en cookie no-HttpOnly legible por JS
+if (isset($_SESSION['role'])) {
+    setcookie('user_role', $_SESSION['role'], [
+        'expires' => time() + 86400,
+        'path' => '/',
+        'secure' => $is_https,
+        'httponly' => false,
+        'samesite' => 'Strict'
+    ]);
+} else {
+    setcookie('user_role', '', [
+        'expires' => time() - 3600,
+        'path' => '/',
+        'secure' => $is_https,
+        'httponly' => false,
+        'samesite' => 'Strict'
+    ]);
+}
+
+
 // ===== COMPATIBILIDAD CON ENVIROS SIN APCu (COMO RENDER) =====
 require_once __DIR__ . '/apcu_compatibility.php';
 

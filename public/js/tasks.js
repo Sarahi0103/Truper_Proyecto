@@ -3,7 +3,7 @@
  */
 
 const TASKS_ROLE = (window.TRUPER_TASKS_ROLE || 'client').toLowerCase();
-const TASKS_IS_ADMIN = TASKS_ROLE === 'admin';
+const TASKS_IS_ADMIN = TASKS_ROLE === 'admin' || TASKS_ROLE === 'employee';
 
 // Estado global
 let CURRENT_PRIORITY_FILTER = 'all';

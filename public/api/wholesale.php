@@ -293,7 +293,7 @@ try {
             break;
 
         case 'list':
-            $isAdmin = (($_SESSION['role'] ?? '') === 'admin');
+            $isAdmin = (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee');
             if ($isAdmin) {
                 $stmt = $pdo->prepare("SELECT w.*, u.first_name, u.last_name
                                        FROM wholesalers w
@@ -397,7 +397,7 @@ try {
 } catch (Exception $e) {
     error_log('Wholesale API error: ' . $e->getMessage());
     $response = ['success' => false, 'message' => 'Error del servidor'];
-    if (($_SESSION['role'] ?? '') === 'admin') {
+    if (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee') {
         $response['debug'] = [
             'action' => (string)$action,
             'detail' => (string)$e->getMessage()

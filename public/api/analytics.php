@@ -13,7 +13,17 @@ $action = $_GET['action'] ?? null;
 $method = $_SERVER['REQUEST_METHOD'];
 
 if (($_SESSION['role'] ?? '') === 'employee') {
-    $allowed_employee_actions = ['purchase-stats', 'export'];
+    $allowed_employee_actions = [
+        'purchase-stats',
+        'export',
+        'ticket-history',
+        'save-monthly-pdf',
+        'archive-tickets',
+        'list-monthly-pdfs',
+        'get-monthly-pdf',
+        'ticket-export',
+        'ticket-years'
+    ];
     if (!in_array($action, $allowed_employee_actions, true)) {
         http_response_code(403);
         header('Content-Type: application/json');
@@ -51,7 +61,8 @@ try {
 
 
 function is_admin_user(): bool {
-    return (($_SESSION['role'] ?? '') === 'admin');
+    $role = $_SESSION['role'] ?? '';
+    return ($role === 'admin' || $role === 'employee');
 }
 
 function get_current_client_id($pdo): ?int {

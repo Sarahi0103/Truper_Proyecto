@@ -17,7 +17,7 @@ $input = is_array($decodedInput) ? $decodedInput : (is_array($_POST) ? $_POST : 
 
 $taskController = new TaskController($pdo);
 $response = [];
-$isAdmin = (($_SESSION['role'] ?? '') === 'admin');
+$isAdmin = (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee');
 
 try {
     switch ($action) {

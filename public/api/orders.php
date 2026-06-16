@@ -127,7 +127,7 @@ try {
                 break;
             }
 
-            if (($_SESSION['role'] ?? '') === 'admin') {
+            if (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee') {
                 $stmt = $pdo->prepare("SELECT * FROM orders ORDER BY created_at DESC LIMIT 100");
                 $stmt->execute();
                 $response = ['success' => true, 'orders' => $stmt->fetchAll()];

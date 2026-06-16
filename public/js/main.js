@@ -360,15 +360,47 @@ document.addEventListener('click', function(e) {
 });
 
 /**
+ * Obtener valor de una cookie por su nombre
+ */
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
+
+/**
  * Configurar navegación y visibilidad de elementos para el personal (employee)
  */
 function setupEmployeeNavigation() {
+    const roleCookie = getCookie('user_role');
+    let role = roleCookie ? roleCookie.toLowerCase() : '';
+
     const userRoleEl = document.querySelector('.user-role');
-    if (!userRoleEl) return;
+    if (!role && userRoleEl) {
+        role = userRoleEl.textContent.trim().toLowerCase();
+    }
 
-    const role = userRoleEl.textContent.trim().toUpperCase();
+    if (role === 'employee') {
+        // Asegurar que el rol se muestre como PERSONAL en el DOM en vez de ADMIN
+        const roleElements = document.querySelectorAll('.user-role');
+        roleElements.forEach(el => {
+            if (el.textContent.trim().toUpperCase() === 'ADMIN') {
+                el.textContent = 'PERSONAL';
+            }
+        });
 
-    if (role === 'EMPLOYEE') {
+        // Si no existe el elemento de rol, inyectarlo en .user-info para consistencia
+        if (roleElements.length === 0) {
+            const userInfo = document.querySelector('.user-info');
+            if (userInfo) {
+                const newRoleEl = document.createElement('div');
+                newRoleEl.className = 'user-role';
+                newRoleEl.textContent = 'PERSONAL';
+                userInfo.appendChild(newRoleEl);
+            }
+        }
+
         // Find the nav menu container
         const navMenu = document.querySelector('.nav-menu');
         if (navMenu) {
