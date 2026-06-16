@@ -334,14 +334,14 @@ $is_admin  = (($_SESSION['role'] ?? '') === 'admin');
         <div class="expenses-shell">
 
             <!-- Hero -->
-            <div class="expenses-hero">
-                <div>
-                    <div class="hero-badge"><span class="dot"></span> Control de Gastos</div>
-                    <h1>💸 <span>Gastos</span> del Negocio</h1>
-                    <p>Registra y controla todos los gastos. Visualiza la ganancia neta descontando los egresos acumulados.</p>
+            <div class="page-hero" style="display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 280px;">
+                    <div class="module-badge module-admin" style="margin-bottom: 1rem !important;"><span class="module-glyph">AD</span> Módulo administrativo</div>
+                    <h1 style="margin-top: 0; color: #fff !important; font-size: 2.5rem !important; font-weight: 900 !important;">💸 <span>Gastos</span> del Negocio</h1>
+                    <p style="color: #888888 !important; font-size: 1.15rem !important; max-width: 700px; margin-bottom: 0;">Registra y controla todos los gastos. Visualiza la ganancia neta descontando los egresos acumulados.</p>
                 </div>
-                <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
-                    <select id="monthPicker" onchange="loadAll()" style="padding:0.6rem 1rem; background:#1a1a1a; border:1px solid #333; border-radius:8px; color:#fff; font-weight:600; cursor:pointer;">
+                <div style="display:flex; gap:0.75rem; flex-wrap:wrap; z-index: 5;">
+                    <select id="monthPicker" onchange="loadAll()" style="padding:0.6rem 1.2rem; background:#111 !important; border:1.5px solid #333 !important; border-radius:10px !important; color:#fff !important; font-weight:600; cursor:pointer; font-size:0.9rem;">
                         <!-- months filled by JS -->
                     </select>
                 </div>
