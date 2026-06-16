@@ -938,7 +938,7 @@ $first_name = explode(' ', $user_name)[0];
                 try {
                     const today = new Date();
                     const monthStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
-                    const expResp = await apiCall(`/api/expenses.php?action=stats&month=${monthStr}`);
+                    const expResp = await apiCall(`/expenses.php?action=stats&month=${monthStr}`);
                     if (expResp && expResp.success) {
                         animateCount(expEl, expResp.total_expenses, '$');
                         netEl.classList.remove('db-skeleton');

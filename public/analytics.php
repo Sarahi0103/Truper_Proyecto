@@ -239,7 +239,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                             </div>
                         </div>
                         <div class="chart-card-body">
-                            <div class="chart-canvas-wrap" style="height: 350px; position: relative; display: flex; align-items: center; justify-content: center;">
+                            <div class="chart-canvas-wrap" style="height: 350px; position: relative;">
                                 <canvas id="categoryChart"></canvas>
                             </div>
                         </div>
