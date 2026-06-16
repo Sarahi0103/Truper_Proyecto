@@ -557,6 +557,7 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
                             <a href="/admin_supply.php?nocache=true">Abastecimiento</a>
                             <a href="/tickets.php">Tickets</a>
                             <a href="/tasks.php">Tareas</a>
+                            <a href="/gastos.php">Gastos</a>
                             <a href="/analytics.php">Estadísticas</a>
                         </div>
                     </div>

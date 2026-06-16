@@ -224,6 +224,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
                         <?php if ($is_admin): ?><a href="admin_supply.php?nocache=true">Abastecimiento</a><?php endif; ?>
                         <?php if ($is_admin): ?><a href="tickets.php">Tickets</a><?php endif; ?>
                         <a href="tasks.php" class="active">Tareas</a>
+                        <?php if ($is_admin): ?><a href="gastos.php">Gastos</a><?php endif; ?>
                         <a href="analytics.php">Estadísticas</a>
                     </div>
                 </div>

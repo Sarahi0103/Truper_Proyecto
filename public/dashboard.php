@@ -537,6 +537,7 @@ $first_name = explode(' ', $user_name)[0];
                             <a href="admin_supply.php?nocache=true">Abastecimiento</a>
                             <a href="tickets.php">Tickets</a>
                             <a href="tasks.php">Tareas</a>
+                            <a href="gastos.php">Gastos</a>
                             <a href="analytics.php">Estadísticas</a>
                         </div>
                     </div>
@@ -603,6 +604,7 @@ $first_name = explode(' ', $user_name)[0];
                     <div class="db-admin-links">
                         <a href="admin_supply.php?nocache=true" class="db-admin-link">Abastecimiento</a>
                         <a href="cashier.php" class="db-admin-link">Caja</a>
+                        <a href="gastos.php" class="db-admin-link">Gastos</a>
                         <a href="analytics.php" class="db-admin-link">Estadísticas</a>
                         <a href="tickets.php" class="db-admin-link">Tickets</a>
                         <a href="wholesale.php" class="db-admin-link">Mayoreo</a>
@@ -626,6 +628,20 @@ $first_name = explode(' ', $user_name)[0];
                     <div class="db-kpi-value db-skeleton" id="monthlyRevenue">—</div>
                     <div class="db-kpi-helper">Mes actual</div>
                 </div>
+                <?php if ($is_admin): ?>
+                <div class="db-kpi" id="kpiExpenses" style="--kpi-accent: linear-gradient(90deg, #e74c3c, transparent); cursor: pointer;" onclick="location.href='gastos.php'">
+                    <span class="db-kpi-icon">💸</span>
+                    <div class="db-kpi-label">Gastos este mes</div>
+                    <div class="db-kpi-value db-skeleton" id="monthlyExpenses">—</div>
+                    <div class="db-kpi-helper">Ver gastos</div>
+                </div>
+                <div class="db-kpi" id="kpiNetIncome" style="--kpi-accent: linear-gradient(90deg, #2ecc71, transparent); cursor: pointer;" onclick="location.href='gastos.php'">
+                    <span class="db-kpi-icon">📈</span>
+                    <div class="db-kpi-label">Ganancia Neta</div>
+                    <div class="db-kpi-value db-skeleton" id="netIncome">—</div>
+                    <div class="db-kpi-helper">Ingresos - Gastos</div>
+                </div>
+                <?php endif; ?>
                 <div class="db-kpi" id="kpiPending">
                     <span class="db-kpi-icon">⏳</span>
                     <div class="db-kpi-label">Pagos pendientes</div>
@@ -740,6 +756,9 @@ $first_name = explode(' ', $user_name)[0];
                         <a href="admin_supply.php?nocache=true" class="db-action-btn" id="qa-supply">
                             <span class="db-action-icon">📦</span>Abastecimiento
                         </a>
+                        <a href="gastos.php" class="db-action-btn" id="qa-gastos">
+                            <span class="db-action-icon">💸</span>Gastos
+                        </a>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -790,6 +809,7 @@ $first_name = explode(' ', $user_name)[0];
                                 ['🏷️','Mayoreo','wholesale.php'],
                                 ['✅','Tareas','tasks.php'],
                                 ['🛍️','Catálogo','index.php'],
+                                ['💸','Gastos','gastos.php'],
                             ];
                             foreach ($modules as $m): ?>
                             <a href="<?php echo $m[2]; ?>" style="display:flex; align-items:center; gap:.5rem; padding:.55rem .7rem; background:#111; border:1px solid #1f1f1f; border-radius:9px; text-decoration:none; color:#ccc; font-size:.8rem; font-weight:600; transition:all .2s;" onmouseover="this.style.borderColor='#ff7f00';this.style.color='#fff'" onmouseout="this.style.borderColor='#1f1f1f';this.style.color='#ccc'">
@@ -853,6 +873,7 @@ $first_name = explode(' ', $user_name)[0];
         }
     </style>
     <script>
+        const isAdmin = <?php echo json_encode($is_admin); ?>;
         /* ── Clock + Greeting (uses browser local time, NOT server UTC) ── */
         function updateClock() {
             const now  = new Date();
@@ -918,6 +939,8 @@ $first_name = explode(' ', $user_name)[0];
             const revEl  = document.getElementById('monthlyRevenue');
             const pendEl = document.getElementById('pendingPayments');
             const taskEl = document.getElementById('pendingTasks');
+            const expEl  = document.getElementById('monthlyExpenses');
+            const netEl  = document.getElementById('netIncome');
 
             if (!ordEl || !revEl || !pendEl || !taskEl) return;
 
@@ -987,6 +1010,31 @@ $first_name = explode(' ', $user_name)[0];
                 localStorage.setItem(cacheKey, JSON.stringify(cachedData));
             } else {
                 if (taskEl) { taskEl.classList.remove('db-skeleton'); taskEl.textContent = '0'; }
+            }
+
+            // Load expenses stats if admin
+            if (isAdmin && expEl && netEl) {
+                try {
+                    const today = new Date();
+                    const monthStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+                    const expResp = await apiCall(`/api/expenses.php?action=stats&month=${monthStr}`);
+                    if (expResp && expResp.success) {
+                        animateCount(expEl, expResp.total_expenses, '$');
+                        netEl.classList.remove('db-skeleton');
+                        netEl.style.animation = 'countUp .4s ease';
+                        const netVal = expResp.net_profit;
+                        const prefix = netVal < 0 ? '-$' : '$';
+                        const absNet = Math.abs(netVal);
+                        netEl.textContent = prefix + absNet.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                        netEl.style.color = netVal < 0 ? '#e74c3c' : '#2ecc71';
+                    } else {
+                        expEl.classList.remove('db-skeleton'); expEl.textContent = '$0';
+                        netEl.classList.remove('db-skeleton'); netEl.textContent = '$0';
+                    }
+                } catch (e) {
+                    expEl.classList.remove('db-skeleton'); expEl.textContent = '—';
+                    netEl.classList.remove('db-skeleton'); netEl.textContent = '—';
+                }
             }
         }
 

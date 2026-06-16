@@ -749,6 +749,7 @@ $stock = (int)($product['stock_quantity'] ?? 0);
                         <a href="admin_supply.php?nocache=true">Abastecimiento</a>
                         <a href="tickets.php">Tickets</a>
                         <a href="tasks.php">Tareas</a>
+                        <a href="gastos.php">Gastos</a>
                         <a href="analytics.php">Estadísticas</a>
                     </div>
                 </div>

@@ -255,6 +255,7 @@ $company_whatsapp = htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8
                         <a href="admin_supply.php?nocache=true">Abastecimiento</a>
                         <a href="tickets.php">Tickets</a>
                         <a href="tasks.php">Tareas</a>
+                        <a href="gastos.php">Gastos</a>
                         <a href="analytics.php">Estadísticas</a>
                     </div>
                 </div>
