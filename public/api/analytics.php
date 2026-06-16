@@ -9,15 +9,18 @@ require_once '../../src/Services/AnalyticsCacheService.php';
 
 require_login();
 
-if (($_SESSION['role'] ?? '') === 'employee') {
-    http_response_code(403);
-    header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Acceso denegado']);
-    exit;
-}
-
 $action = $_GET['action'] ?? null;
 $method = $_SERVER['REQUEST_METHOD'];
+
+if (($_SESSION['role'] ?? '') === 'employee') {
+    $allowed_employee_actions = ['purchase-stats', 'export'];
+    if (!in_array($action, $allowed_employee_actions, true)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Acceso denegado']);
+        exit;
+    }
+}
 
 // Inicializar servicio de caché para validaciones de seguridad
 $cacheService = new AnalyticsCacheService($pdo);
