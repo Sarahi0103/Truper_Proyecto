@@ -13,8 +13,9 @@ $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
     || (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443);
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
+    ini_set('session.gc_maxlifetime', '315360000'); // 10 años
     session_set_cookie_params([
-        'lifetime' => (defined('SESSION_TIMEOUT') ? SESSION_TIMEOUT : 2400),
+        'lifetime' => 0, // 0 = hasta que el navegador se cierre (sin límite fijo)
         'path' => '/',
         'domain' => '',
         'secure' => $is_https,
@@ -27,7 +28,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 // Sincronizar rol de usuario en cookie no-HttpOnly legible por JS
 if (isset($_SESSION['role'])) {
     setcookie('user_role', $_SESSION['role'], [
-        'expires' => time() + 86400,
+        'expires' => time() + 315360000, // 10 años
         'path' => '/',
         'secure' => $is_https,
         'httponly' => false,
