@@ -855,6 +855,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                 'attempt': 'Intento de validación',
                 'validated': 'Validado',
                 'cancelled': 'Cancelado',
+                'deleted': 'Eliminado',
                 'reactivated': 'Reactivado'
             };
             return actionMap[action] || action;
@@ -1155,6 +1156,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                                             let badgeColor = '#888';
                                             let actionText = log.action;
                                             if (log.action === 'validated') { badgeColor = '#4caf50'; actionText = 'Validado'; }
+                                            else if (log.action === 'deleted') { badgeColor = '#f44336'; actionText = 'Eliminado'; }
                                             else if (log.action === 'cancelled') { badgeColor = '#f44336'; actionText = 'Cancelado'; }
                                             else if (log.action === 'reactivated') { badgeColor = '#ffc107'; actionText = 'Reactivado'; }
                                             else if (log.action === 'attempt') { badgeColor = '#2196f3'; actionText = 'Intento'; }

@@ -115,11 +115,16 @@ try {
                         tpl.ip_address,
                         tpl.created_at,
                         st.folio AS ticket_folio,
-                        COALESCE(st.customer_name, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END, u.email, 'Mostrador') AS ticket_customer_name,
+                        CASE
+                            WHEN st.customer_name = 'Admin' THEN 'Admin'
+                            WHEN issued_user.role = 'admin' THEN 'Admin'
+                            ELSE COALESCE(st.customer_name, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END, u.email, 'Mostrador')
+                        END AS ticket_customer_name,
                         admin.first_name || CASE WHEN admin.last_name IS NOT NULL AND admin.last_name <> '' THEN ' ' || admin.last_name ELSE '' END AS admin_name
                     FROM ticket_pickup_log tpl
                     JOIN sales_tickets st ON tpl.ticket_id = st.id
                     LEFT JOIN users u ON st.user_id = u.id
+                    LEFT JOIN users issued_user ON st.issued_by = issued_user.id
                     LEFT JOIN users admin ON tpl.admin_id = admin.id
                     ORDER BY tpl.created_at DESC 
                     LIMIT 50
@@ -230,8 +235,8 @@ try {
             $delStmt = $pdo->prepare("UPDATE sales_tickets SET deleted_at = NOW(), pickup_status = 'cancelled', updated_at = NOW() WHERE folio = :folio");
             $delStmt->execute([':folio' => $folio]);
 
-            // Log de auditoría
-            $logStmt = $pdo->prepare("INSERT INTO ticket_pickup_log (ticket_id, admin_id, action, notes, ip_address, created_at) VALUES (:ticket_id, :admin_id, 'cancelled', :notes, :ip_address, NOW())");
+            // Log de auditoría — usar 'deleted' para distinguir eliminaciones de cancelaciones
+            $logStmt = $pdo->prepare("INSERT INTO ticket_pickup_log (ticket_id, admin_id, action, notes, ip_address, created_at) VALUES (:ticket_id, :admin_id, 'deleted', :notes, :ip_address, NOW())");
             $logStmt->execute([
                 ':ticket_id' => $ticketRow['id'],
                 ':admin_id'  => $adminId,
