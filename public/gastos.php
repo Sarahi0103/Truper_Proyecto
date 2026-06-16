@@ -337,7 +337,7 @@ $is_admin  = (($_SESSION['role'] ?? '') === 'admin');
             <div class="page-hero" style="display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap;">
                 <div style="flex: 1; min-width: 280px;">
                     <div class="module-badge module-admin" style="margin-bottom: 1rem !important;"><span class="module-glyph">AD</span> Módulo administrativo</div>
-                    <h1 style="margin-top: 0; color: #fff !important; font-size: 2.5rem !important; font-weight: 900 !important;">💸 <span>Gastos</span> del Negocio</h1>
+                    <h1 style="margin-top: 0; color: #fff !important; font-size: 2.5rem !important; font-weight: 900 !important;"><span>Gastos</span> del Negocio</h1>
                     <p style="color: #888888 !important; font-size: 1.15rem !important; max-width: 700px; margin-bottom: 0;">Registra y controla todos los gastos. Visualiza la ganancia neta descontando los egresos acumulados.</p>
                 </div>
                 <div style="display:flex; gap:0.75rem; flex-wrap:wrap; z-index: 5;">
