@@ -224,32 +224,6 @@ try {
                     }
                 }
                 
-                // Verificar límite de crédito solo si el cliente tiene uno configurado
-                try {
-                    $creditLimitStmt = $pdo->prepare("SELECT credit_limit FROM clients WHERE id = ?");
-                    $creditLimitStmt->execute([$clientId]);
-                    $creditLimit = $creditLimitStmt->fetchColumn();
-                    
-                    // Solo verificar si tiene límite de crédito configurado y es mayor a 0
-                    if ($creditLimit && $creditLimit > 0) {
-                        $creditStmt = $pdo->prepare("SELECT * FROM check_credit_limit(?, ?)");
-                        $creditStmt->execute([$clientId, $totalAmount]);
-                        $creditCheck = $creditStmt->fetch();
-                        
-                        if ($creditCheck && !$creditCheck['can_purchase']) {
-                            $pdo->rollBack();
-                            $response = [
-                                'success' => false, 
-                                'message' => 'Límite de crédito excedido. Crédito disponible: $' . number_format($creditCheck['remaining_credit'], 2),
-                                'remaining_credit' => $creditCheck['remaining_credit']
-                            ];
-                            break;
-                        }
-                    }
-                } catch (Exception $ignored) {
-                    // Si la función no existe o hay error, continuar sin verificación
-                }
-                
                 $pdo->commit();
                 $response = ['success' => true, 'message' => 'Solicitud de mayoreo enviada con éxito', 'total_amount' => $totalAmount];
             } catch (Exception $e) {
