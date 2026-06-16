@@ -723,7 +723,7 @@ function renderHistoryTable(items) {
         if (i.transaction_type === 'payment') {
             badgeClass = 'badge-payment';
             typeLabel  = 'Pago';
-        } else if (i.transaction_type === 'supplier_order') {
+        } else if (i.transaction_type === 'supplier_order' || i.transaction_type.startsWith('supplier_order')) {
             badgeClass = 'badge-supply';
             typeLabel  = 'Orden Prov.';
         }
@@ -738,6 +738,22 @@ function renderHistoryTable(items) {
             detailHtml = `Monto total: <strong>${formatMoney(parsedData.total || 0)}</strong>`;
         } else if (i.transaction_type === 'payment') {
             detailHtml = `Abono: <strong>${formatMoney(parsedData.amount || 0)}</strong> (${escapeHtml(parsedData.method || 'efectivo')})`;
+        } else if (i.transaction_type.startsWith('supplier_order')) {
+            if (parsedData.status) {
+                const statusLabels = {
+                    'completed': 'Completada: Mercancía recibida',
+                    'cancelled': 'Cancelada',
+                    'deleted': 'Eliminada',
+                    'pending': 'Pendiente'
+                };
+                const statusText = statusLabels[parsedData.status] || parsedData.status;
+                detailHtml = `Estado: <strong>${escapeHtml(statusText)}</strong>`;
+            } else {
+                const supplier = parsedData.supplier_name || 'N/A';
+                const totalVal = formatMoney(parsedData.total || 0);
+                const dateVal = parsedData.expected_date || 'N/A';
+                detailHtml = `Prov: <strong>${escapeHtml(supplier)}</strong> | Total: <strong>${totalVal}</strong> | Entrega: <strong>${escapeHtml(dateVal)}</strong>`;
+            }
         } else {
             detailHtml = `<small>${escapeHtml(i.data_json || '')}</small>`;
         }

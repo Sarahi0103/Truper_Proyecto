@@ -658,14 +658,26 @@ try {
                 break;
             }
 
-            $stmt = $pdo->prepare("
-                SELECT id, quote_data, total_amount, items_count, status, created_at
-                FROM whatsapp_quotes
-                WHERE user_id = ?
-                ORDER BY created_at DESC
-                LIMIT 20
-            ");
-            $stmt->execute([$user_id]);
+            $isAdminOrEmployee = (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee');
+
+            if ($isAdminOrEmployee) {
+                $stmt = $pdo->prepare("
+                    SELECT id, quote_data, total_amount, items_count, status, created_at
+                    FROM whatsapp_quotes
+                    ORDER BY created_at DESC
+                    LIMIT 40
+                ");
+                $stmt->execute();
+            } else {
+                $stmt = $pdo->prepare("
+                    SELECT id, quote_data, total_amount, items_count, status, created_at
+                    FROM whatsapp_quotes
+                    WHERE user_id = ?
+                    ORDER BY created_at DESC
+                    LIMIT 20
+                ");
+                $stmt->execute([$user_id]);
+            }
             $quotes = $stmt->fetchAll();
 
             $response = ['success' => true, 'quotes' => $quotes];
