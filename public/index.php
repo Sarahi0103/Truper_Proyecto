@@ -300,7 +300,7 @@ try {
 }
 
 $isLogged = is_logged_in();
-$isAdmin = (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee');
+$isAdmin = (($_SESSION['role'] ?? '') === 'admin');
 $showSessionExpiredNotice = (($_GET['error'] ?? '') === 'expired');
 $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre los productos y cotizaciones.');
 $clientTicketCode = 'PUBLICO';
@@ -814,25 +814,25 @@ function homepage_update_label($type) {
 <body class="catalog-minimal" data-client-code="<?php echo htmlspecialchars($clientTicketCode, ENT_QUOTES, 'UTF-8'); ?>" data-client-number="<?php echo htmlspecialchars($clientTicketNumber, ENT_QUOTES, 'UTF-8'); ?>">
     <header>
         <div class="header-content">
-            <a href="index.php" class="logo"><img src="img/logo_truper.1.1.png" alt="Truper" style="height: 40px; width: auto; object-fit: contain;"></a>
+            <a href="/" class="logo"><img src="img/logo_truper.1.1.png" alt="Truper" style="height: 40px; width: auto; object-fit: contain;"></a>
             <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
                 <span></span>
             </button>
             <nav class="nav-menu">
-                <a href="index.php" class="active">Productos</a>
-                <a href="marketplace_ce.php">Marketplace CE</a>
-                <a href="cart.php">Carrito</a>
+                <a href="/" class="active">Productos</a>
+                <a href="/marketplace_ce.php">Marketplace CE</a>
+                <a href="/cart.php">Carrito</a>
                 <?php if ($isLogged): ?>
                     <div class="nav-dropdown">
                         <button class="nav-dropdown-btn">Mi Cuenta <span class="arrow">▼</span></button>
                         <div class="nav-dropdown-content">
-                            <a href="dashboard.php">Dashboard</a>
-                            <a href="orders.php">Pedidos</a>
-                            <a href="wholesale.php">Mayoreo</a>
-                            <a href="account.php#historyTab">Historial</a>
-                            <a href="profile.php">Perfil</a>
+                            <a href="/dashboard.php">Dashboard</a>
+                            <a href="/orders.php">Pedidos</a>
+                            <a href="/wholesale.php">Mayoreo</a>
+                            <a href="/account.php#historyTab">Historial</a>
+                            <a href="/profile.php">Perfil</a>
                         </div>
                     </div>
                 <?php endif; ?>
@@ -840,14 +840,12 @@ function homepage_update_label($type) {
                     <div class="nav-dropdown">
                         <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>
                         <div class="nav-dropdown-content">
-                            <a href="cashier.php">Caja</a>
-                            <a href="admin_supply.php?nocache=true">Abastecimiento</a>
-                            <a href="tickets.php">Tickets</a>
-                            <a href="tasks.php">Tareas</a>
-                            <a href="gastos.php">Gastos</a>
-                            <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
-                                <a href="analytics.php">Estadísticas</a>
-                            <?php endif; ?>
+                            <a href="/cashier.php">Caja</a>
+                            <a href="/admin_supply.php?nocache=true">Abastecimiento</a>
+                            <a href="/tickets.php">Tickets</a>
+                            <a href="/tasks.php">Tareas</a>
+                            <a href="/gastos.php">Gastos</a>
+                            <a href="/analytics.php">Estadísticas</a>
                         </div>
                     </div>
                 <?php endif; ?>
@@ -855,7 +853,7 @@ function homepage_update_label($type) {
             <div class="header-actions">
                 <a href="<?php echo htmlspecialchars($whatsappHelpUrl, ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener" class="btn btn-secondary btn-small">Dudas por WhatsApp</a>
                 <?php if (!$isLogged): ?>
-                    <a href="admin_login.php" class="btn btn-primary btn-small">Solo para administradores</a>
+                    <a href="/admin_login.php" class="btn btn-primary btn-small">Solo para administradores</a>
                 <?php endif; ?>
             </div>
         </div>

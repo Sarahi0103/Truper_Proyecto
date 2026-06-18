@@ -503,9 +503,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                         <a href="tickets.php">Tickets</a>
                         <a href="tasks.php">Tareas</a>
                         <a href="gastos.php">Gastos</a>
-                        <?php if ($user_role === 'admin'): ?>
-                            <a href="analytics.php">Estadísticas</a>
-                        <?php endif; ?>
+                        <a href="analytics.php">Estadísticas</a>
                     </div>
                 </div>
             </nav>
@@ -513,7 +511,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
         <div class="user-menu">
             <div class="user-info">
                 <div class="user-name"><?php echo $user_name; ?></div>
-                <div class="user-role"><?php echo $user_role === 'employee' ? 'PERSONAL' : 'ADMIN'; ?></div>
+                <div class="user-role"><?php echo strtoupper($user_role); ?></div>
             </div>
             <a href="../admin_logout.php" class="btn-logout">Cerrar Sesión</a>
         </div>

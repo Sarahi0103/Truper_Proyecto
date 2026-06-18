@@ -266,12 +266,14 @@ async function apiCall(endpoint, method = 'GET', data = null, options = {}) {
  * Formatear moneda
  */
 function formatCurrency(amount) {
+    const val = Number(amount);
+    const num = Number.isFinite(val) ? val : 0;
     return new Intl.NumberFormat('es-MX', {
         style: 'currency',
         currency: 'MXN',
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
-    }).format(amount);
+    }).format(num);
 }
 
 /**

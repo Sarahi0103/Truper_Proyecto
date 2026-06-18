@@ -39,7 +39,7 @@ class OrderController {
                     throw new Exception('Producto no encontrado: ' . $productId);
                 }
 
-                $isAdmin = (($_SESSION['role'] ?? '') === 'admin');
+                $isAdmin = (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee');
                 $customPrice = ($isAdmin && isset($item['price'])) ? (float)$item['price'] : null;
 
                 if ($customPrice !== null) {

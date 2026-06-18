@@ -4,7 +4,7 @@ require_login();
 
 $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8');
 $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8');
-$is_admin = (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee');
+$is_admin = (($_SESSION['role'] ?? '') === 'admin');
 ?>
 <!DOCTYPE html>
 <html lang="es">

@@ -605,7 +605,7 @@ try {
 } catch (Exception $e) {
     error_log('Cashier API error: ' . $e->getMessage());
     $response = ['success' => false, 'message' => 'Error del servidor'];
-    if (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee') {
+    if (($_SESSION['role'] ?? '') === 'admin') {
         $response['debug'] = [
             'action' => (string)$action,
             'detail' => (string)$e->getMessage()

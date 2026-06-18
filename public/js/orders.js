@@ -179,11 +179,11 @@ function updateCartUI() {
                     </td>
                     <td>
                         <input type="number" step="0.01" min="0" value="${parseFloat(item.price).toFixed(2)}" 
-                               onchange="updateCartItemPrice(${item.productId}, this.value, 'retail')" style="width: 90px; background:#121212; border:1px solid rgba(255,255,255,0.12); color:#fff; border-radius:4px; padding:2px 4px;">
+                               onchange="updateCartItemPrice(${item.productId}, this.value, 'retail')" style="width: 105px; background:#121212; border:1px solid rgba(255,255,255,0.12); color:#fff; border-radius:4px; padding:2px 4px;">
                     </td>
                     <td>
                         <input type="number" step="0.01" min="0" value="${parseFloat(item.wholesalePrice).toFixed(2)}" 
-                               onchange="updateCartItemPrice(${item.productId}, this.value, 'wholesale')" style="width: 90px; background:#121212; border:1px solid rgba(255,255,255,0.12); color:#fff; border-radius:4px; padding:2px 4px;">
+                               onchange="updateCartItemPrice(${item.productId}, this.value, 'wholesale')" style="width: 105px; background:#121212; border:1px solid rgba(255,255,255,0.12); color:#fff; border-radius:4px; padding:2px 4px;">
                     </td>
                     <td>${formatCurrency(subtotal)}</td>
                     <td>${discount > 0 ? formatCurrency(discount) : 'N/A'}</td>
@@ -741,7 +741,7 @@ function addToCartFromList(productId) {
 }
 
 async function loadProducts() {
-    const response = await apiCall('/api/products_lazy.php?page=1&limit=50');
+    const response = await apiCall('/products_lazy.php?page=1&limit=50');
     const productsList = document.getElementById('productsList');
     const categoryFilter = document.getElementById('productCategoryFilter');
     const selectedCategory = categoryFilter?.value || '';

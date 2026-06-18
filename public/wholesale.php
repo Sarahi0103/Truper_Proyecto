@@ -162,9 +162,7 @@ $column_count = $is_admin ? 7 : 6;
                         <a href="tickets.php">Tickets</a>
                         <a href="tasks.php">Tareas</a>
                         <a href="gastos.php">Gastos</a>
-                        <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
-                            <a href="analytics.php">Estadísticas</a>
-                        <?php endif; ?>
+                        <a href="analytics.php">Estadísticas</a>
                     </div>
                 </div>
             <?php endif; ?>
@@ -173,7 +171,7 @@ $column_count = $is_admin ? 7 : 6;
     <div class="user-menu">
         <div class="user-info">
             <div class="user-name"><?php echo $user_name; ?></div>
-            <div class="user-role"><?php echo $user_role === 'employee' ? 'PERSONAL' : 'ADMIN'; ?></div>
+            <div class="user-role"><?php echo strtoupper($user_role); ?></div>
         </div>
         <button class="btn-logout" onclick="window.location.href='api/auth.php?action=logout'">Cerrar Sesion</button>
     </div>

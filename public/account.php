@@ -247,10 +247,7 @@ $company_whatsapp = htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8
                     <a href="profile.php">Perfil</a>
                 </div>
             </div>
-            <?php 
-            $nav_role = $_SESSION['role'] ?? 'client';
-            if ($nav_role === 'admin' || $nav_role === 'employee'): 
-            ?>
+            <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
                 <div class="nav-dropdown">
                     <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>
                     <div class="nav-dropdown-content">
@@ -259,9 +256,7 @@ $company_whatsapp = htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8
                         <a href="tickets.php">Tickets</a>
                         <a href="tasks.php">Tareas</a>
                         <a href="gastos.php">Gastos</a>
-                        <?php if ($nav_role === 'admin'): ?>
-                            <a href="analytics.php">Estadísticas</a>
-                        <?php endif; ?>
+                        <a href="analytics.php">Estadísticas</a>
                     </div>
                 </div>
             <?php endif; ?>
