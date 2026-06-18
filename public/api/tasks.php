@@ -331,7 +331,7 @@ try {
 } catch (Exception $e) {
     error_log("Tasks API Error: " . $e->getMessage());
     $response = ['success' => false, 'message' => 'Error del servidor'];
-    if (($_SESSION['role'] ?? '') === 'admin') {
+    if (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee') {
         $response['debug'] = [
             'action' => (string)$action,
             'detail' => (string)$e->getMessage()

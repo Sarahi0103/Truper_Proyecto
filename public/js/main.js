@@ -266,9 +266,11 @@ async function apiCall(endpoint, method = 'GET', data = null, options = {}) {
  * Formatear moneda
  */
 function formatCurrency(amount) {
-    return new Intl.NumberFormat('es-CL', {
+    return new Intl.NumberFormat('es-MX', {
         style: 'currency',
-        currency: 'CLP'
+        currency: 'MXN',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
     }).format(amount);
 }
 
@@ -277,7 +279,7 @@ function formatCurrency(amount) {
  */
 function formatDate(dateString) {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString('es-CL', options);
+    return new Date(dateString).toLocaleDateString('es-MX', options);
 }
 
 /**
@@ -417,11 +419,11 @@ function setupEmployeeNavigation() {
                 adminDropdown.innerHTML = `
                     <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>
                     <div class="nav-dropdown-content">
-                        <a href="/cashier.php">Caja</a>
-                        <a href="/admin_supply.php?nocache=true">Abastecimiento</a>
-                        <a href="/tickets.php">Tickets</a>
-                        <a href="/tasks.php">Tareas</a>
-                        <a href="/gastos.php">Gastos</a>
+                        <a href="cashier.php">Caja</a>
+                        <a href="admin_supply.php?nocache=true">Abastecimiento</a>
+                        <a href="tickets.php">Tickets</a>
+                        <a href="tasks.php">Tareas</a>
+                        <a href="gastos.php">Gastos</a>
                     </div>
                 `;
                 navMenu.appendChild(adminDropdown);
@@ -430,11 +432,11 @@ function setupEmployeeNavigation() {
                 const contentEl = adminDropdown.querySelector('.nav-dropdown-content');
                 if (contentEl) {
                     contentEl.innerHTML = `
-                        <a href="/cashier.php">Caja</a>
-                        <a href="/admin_supply.php?nocache=true">Abastecimiento</a>
-                        <a href="/tickets.php">Tickets</a>
-                        <a href="/tasks.php">Tareas</a>
-                        <a href="/gastos.php">Gastos</a>
+                        <a href="cashier.php">Caja</a>
+                        <a href="admin_supply.php?nocache=true">Abastecimiento</a>
+                        <a href="tickets.php">Tickets</a>
+                        <a href="tasks.php">Tareas</a>
+                        <a href="gastos.php">Gastos</a>
                     `;
                 }
             }

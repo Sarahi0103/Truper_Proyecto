@@ -27,7 +27,7 @@ if (!$order) {
     exit;
 }
 
-if (($_SESSION['role'] ?? '') !== 'admin' && (int)$order['user_id'] !== (int)$_SESSION['user_id']) {
+if (($_SESSION['role'] ?? '') !== 'admin' && ($_SESSION['role'] ?? '') !== 'employee' && (int)$order['user_id'] !== (int)$_SESSION['user_id']) {
     http_response_code(403);
     echo 'No autorizado';
     exit;

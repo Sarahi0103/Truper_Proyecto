@@ -3,6 +3,7 @@ require_once '../config/config.php';
 require_admin();
 
 $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8');
+$user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8');
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -161,7 +162,9 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                         <a href="ticket_validation.php">Validación</a>
                         <a href="tasks.php">Tareas</a>
                         <a href="gastos.php">Gastos</a>
-                        <a href="analytics.php">Estadísticas</a>
+                        <?php if ($user_role === 'admin'): ?>
+                            <a href="analytics.php">Estadísticas</a>
+                        <?php endif; ?>
                     </div>
                 </div>
             </nav>
@@ -169,7 +172,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
         <div class="user-menu">
             <div class="user-info">
                 <div class="user-name"><?php echo $user_name; ?></div>
-                <div class="user-role">ADMIN</div>
+                <div class="user-role"><?php echo $user_role === 'employee' ? 'PERSONAL' : 'ADMIN'; ?></div>
             </div>
             <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
         </div>

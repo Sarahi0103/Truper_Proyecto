@@ -7,7 +7,7 @@ let loadedProducts = [];
 let currentTotal = 0;
 const COMPANY_WHATSAPP = String(window.TRUPER_COMPANY_WHATSAPP || '3312482297');
 const ORDERS_ROLE = String(window.TRUPER_ORDERS_ROLE || 'client').toLowerCase();
-const ORDERS_IS_ADMIN = ORDERS_ROLE === 'admin';
+const ORDERS_IS_ADMIN = ORDERS_ROLE === 'admin' || ORDERS_ROLE === 'employee';
 const ORDER_STATUS_OPTIONS = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
 
 // Historial de búsqueda y autocompletado
@@ -249,7 +249,7 @@ function updateCartItem(productId, quantity) {
 }
 
 /**
- * Actualizar precio de minoría o mayoreo de un item (solo administrador)
+ * Actualizar precio de minoría o mayoreo de un item (solo administrador o personal)
  */
 function updateCartItemPrice(productId, newPrice, priceType) {
     const item = currentCart.find(i => i.productId == productId);

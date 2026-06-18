@@ -70,6 +70,7 @@ if (db_table_exists('clients') && db_column_exists('clients', 'company_name')) {
 $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8');
 $is_client = (($_SESSION['role'] ?? 'client') === 'client');
 $is_admin = (($_SESSION['role'] ?? '') === 'admin');
+$is_staff = ($is_admin || ($_SESSION['role'] ?? '') === 'employee');
 $loyalty_points = (int)($profile['loyalty_points'] ?? 0);
 $current_discount_rate = calculateDiscountByPoints($loyalty_points);
 
@@ -468,7 +469,7 @@ if (!empty($profile['birthdate'])) {
                         <a href="profile.php" class="active">Perfil</a>
                     </div>
                 </div>
-                <?php if ($is_admin): ?>
+                <?php if ($is_staff): ?>
                     <div class="nav-dropdown">
                         <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>
                         <div class="nav-dropdown-content">
@@ -477,7 +478,9 @@ if (!empty($profile['birthdate'])) {
                             <a href="tickets.php">Tickets</a>
                             <a href="tasks.php">Tareas</a>
                             <a href="gastos.php">Gastos</a>
-                            <a href="analytics.php">Estadísticas</a>
+                            <?php if ($is_admin): ?>
+                                <a href="analytics.php">Estadísticas</a>
+                            <?php endif; ?>
                         </div>
                     </div>
                 <?php endif; ?>
@@ -486,6 +489,7 @@ if (!empty($profile['birthdate'])) {
         <div class="user-menu">
             <div class="user-info">
                 <div class="user-name"><?php echo $user_name; ?></div>
+                <div class="user-role"><?php echo ($_SESSION['role'] ?? '') === 'employee' ? 'PERSONAL' : 'ADMIN'; ?></div>
             </div>
             <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
         </div>

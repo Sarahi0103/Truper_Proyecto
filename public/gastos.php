@@ -5,6 +5,7 @@ require_admin();
 $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8');
 $user_role = htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8');
 $is_admin  = (($_SESSION['role'] ?? '') === 'admin');
+$is_admin_or_employee = ($is_admin || $user_role === 'employee');
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -311,12 +312,14 @@ $is_admin  = (($_SESSION['role'] ?? '') === 'admin');
                 <div class="nav-dropdown">
                     <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>
                     <div class="nav-dropdown-content">
-                        <?php if ($is_admin): ?><a href="cashier.php">Caja</a><?php endif; ?>
-                        <?php if ($is_admin): ?><a href="admin_supply.php?nocache=true">Abastecimiento</a><?php endif; ?>
-                        <?php if ($is_admin): ?><a href="tickets.php">Tickets</a><?php endif; ?>
+                        <?php if ($is_admin_or_employee): ?><a href="cashier.php">Caja</a><?php endif; ?>
+                        <?php if ($is_admin_or_employee): ?><a href="admin_supply.php?nocache=true">Abastecimiento</a><?php endif; ?>
+                        <?php if ($is_admin_or_employee): ?><a href="tickets.php">Tickets</a><?php endif; ?>
                         <a href="tasks.php">Tareas</a>
-                        <?php if ($is_admin): ?><a href="gastos.php" class="active">Gastos</a><?php endif; ?>
-                        <a href="analytics.php">Estadísticas</a>
+                        <?php if ($is_admin_or_employee): ?><a href="gastos.php" class="active">Gastos</a><?php endif; ?>
+                        <?php if ($is_admin): ?>
+                            <a href="analytics.php">Estadísticas</a>
+                        <?php endif; ?>
                     </div>
                 </div>
             </nav>
@@ -324,7 +327,7 @@ $is_admin  = (($_SESSION['role'] ?? '') === 'admin');
         <div class="user-menu">
             <div class="user-info">
                 <div class="user-name"><?php echo $user_name; ?></div>
-                <div class="user-role"><?php echo strtoupper($user_role); ?></div>
+                <div class="user-role"><?php echo ($user_role === 'employee') ? 'PERSONAL' : strtoupper($user_role); ?></div>
             </div>
             <button class="btn-logout" onclick="if(confirm('¿Cerrar sesión?')) window.location.href='api/auth.php?action=logout'">Cerrar Sesión</button>
         </div>

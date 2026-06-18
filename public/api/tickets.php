@@ -63,6 +63,9 @@ try {
                 if ($_SESSION['role'] === 'admin') {
                     $input['customer_name'] = 'Admin';
                     $input['customer_email'] = 'admin@truper.com';
+                } elseif ($_SESSION['role'] === 'employee') {
+                    $input['customer_name'] = 'Personal';
+                    $input['customer_email'] = 'employee@truper.com';
                 } elseif (!empty($input['user_id'])) {
                     // Obtener nombre del cliente si se proporciona user_id
                     $userStmt = $pdo->prepare("SELECT first_name, last_name, email FROM users WHERE id = :user_id");

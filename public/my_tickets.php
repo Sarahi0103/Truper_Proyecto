@@ -208,7 +208,7 @@ function renderTickets(tickets) {
                 </div>
                 <div class="ticket-info-item">
                     <span class="ticket-info-label">Fecha</span>
-                    <span class="ticket-info-value">${new Date(ticket.issued_date).toLocaleDateString('es-CL')}</span>
+                    <span class="ticket-info-value">${new Date(ticket.issued_date).toLocaleDateString('es-MX')}</span>
                 </div>
             </div>
             <div class="ticket-actions">
@@ -261,7 +261,7 @@ async function viewTicketDetails(ticketId) {
                 <p><strong>Email:</strong> ${ticket.email || 'N/A'}</p>
             </div>
             <div>
-                <p><strong>Fecha:</strong> ${new Date(ticket.issued_date).toLocaleDateString('es-CL')} ${new Date(ticket.issued_date).toLocaleTimeString('es-CL')}</p>
+                <p><strong>Fecha:</strong> ${new Date(ticket.issued_date).toLocaleDateString('es-MX')} ${new Date(ticket.issued_date).toLocaleTimeString('es-MX')}</p>
                 <p><strong>Estado:</strong> <span class="ticket-status status-${ticket.payment_status}">${ticket.payment_status}</span></p>
             </div>
         </div>
@@ -305,7 +305,7 @@ async function viewTicketDetails(ticketId) {
                     <div class="history-icon">${getHistoryIcon(event.type)}</div>
                     <div class="history-info">
                         <div class="history-action">${event.action}: ${event.description || ''}</div>
-                        <div class="history-time">${new Date(event.timestamp).toLocaleString('es-CL')}</div>
+                        <div class="history-time">${new Date(event.timestamp).toLocaleString('es-MX')}</div>
                     </div>
                 </div>
             `).join('')}
