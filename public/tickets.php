@@ -375,13 +375,16 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             const supplierTickets = data.supplier_tickets || [];
             const stats = data.stats || {};
 
+            currentPaymentFilter = 'all';
+
             // Render stats summary cards
             if (summaryContainer) {
                 let statHTML = `
-                    <div class="card">
+                    <div class="card" data-card-type="all" onclick="filterByPaymentStatus('all')" style="cursor:pointer; border: 1px solid rgba(255,255,255,0.05); transition: all 0.2s;" title="Mostrar todos los tickets">
                         <div class="card-body">
                             <span class="text-muted text-uppercase" style="font-size:0.75rem; font-weight:700; display:block; letter-spacing: 0.04em;">Tickets Este Mes</span>
                             <strong style="display:block; font-size:1.5rem; margin-top:0.25rem; color:var(--color-naranja);">${stats.total_tickets || 0}</strong>
+                            <div style="font-size: 0.65rem; color: var(--theme-text-muted); margin-top: 0.2rem;">👉 Clic para ver todos</div>
                         </div>
                     </div>
                     <div class="card">
@@ -391,16 +394,11 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                             <div style="font-size: 0.72rem; color: var(--theme-text-muted); margin-top: 0.2rem;">Promedio: ${formatAdminMoney(stats.avg_ticket || 0)}</div>
                         </div>
                     </div>
-                    <div class="card">
-                        <div class="card-body">
-                            <span class="text-muted text-uppercase" style="font-size:0.75rem; font-weight:700; display:block; letter-spacing: 0.04em;">Devoluciones</span>
-                            <strong style="display:block; font-size:1.5rem; margin-top:0.25rem; color:var(--color-naranja);">${stats.return_count || 0}</strong>
-                        </div>
-                    </div>
-                    <div class="card">
+                    <div class="card" data-card-type="pending" onclick="filterByPaymentStatus('pending')" style="cursor:pointer; border: 1px solid rgba(255,255,255,0.05); transition: all 0.2s;" title="Mostrar solo pagos pendientes">
                         <div class="card-body">
                             <span class="text-muted text-uppercase" style="font-size:0.75rem; font-weight:700; display:block; letter-spacing: 0.04em;">Pagos Pendientes</span>
                             <strong style="display:block; font-size:1.5rem; margin-top:0.25rem; color:var(--color-naranja);">${stats.payment_pending || 0}</strong>
+                            <div style="font-size: 0.65rem; color: var(--color-naranja); margin-top: 0.2rem; font-weight: 600;">👉 Clic para ver pendientes</div>
                         </div>
                     </div>
                 `;
@@ -430,8 +428,8 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             // Store tickets globally for search filter
             window._allClientTickets = tickets;
 
-            renderClientTicketsRows(tickets);
             renderSupplierTicketsRows(supplierTickets);
+            applyAllFilters();
         }
 
         function renderClientTicketsRows(tickets) {
@@ -603,22 +601,67 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             supplierSection.innerHTML = shtml;
         }
 
-        function filterClientTickets(query) {
-            const all = window._allClientTickets || [];
-            if (!query || query.trim() === '') {
-                renderClientTicketsRows(all);
-                return;
-            }
-            const q = query.toLowerCase().trim();
-            const filtered = all.filter(t => {
-                const haystack = [
-                    t.folio || '',
-                    t.customer_name || '',
-                    t.email || ''
-                ].join(' ').toLowerCase();
-                return haystack.includes(q);
+        let currentPaymentFilter = 'all';
+
+        function filterByPaymentStatus(status) {
+            currentPaymentFilter = status;
+            applyAllFilters();
+            
+            // Highlight active card visual feedback
+            const cards = document.querySelectorAll('#ticketsSummary .card');
+            cards.forEach(card => {
+                card.style.boxShadow = '';
+                card.style.borderColor = 'rgba(255,255,255,0.05)';
             });
+            
+            // Highlight clicked card
+            if (status === 'pending') {
+                const pendingCard = document.querySelector('[data-card-type="pending"]');
+                if (pendingCard) {
+                    pendingCard.style.borderColor = 'var(--color-naranja)';
+                    pendingCard.style.boxShadow = '0 0 10px rgba(255,102,0,0.1)';
+                }
+            } else {
+                const allCard = document.querySelector('[data-card-type="all"]');
+                if (allCard) {
+                    allCard.style.borderColor = 'var(--color-naranja)';
+                    allCard.style.boxShadow = '0 0 10px rgba(255,102,0,0.1)';
+                }
+            }
+        }
+
+        function applyAllFilters() {
+            const all = window._allClientTickets || [];
+            const query = document.getElementById('clientTicketSearch')?.value.toLowerCase().trim() || '';
+            
+            let filtered = all;
+            
+            // Text search
+            if (query !== '') {
+                filtered = filtered.filter(t => {
+                    const haystack = [
+                        t.folio || '',
+                        t.customer_name || '',
+                        t.email || ''
+                    ].join(' ').toLowerCase();
+                    return haystack.includes(query);
+                });
+            }
+            
+            // Payment status filter
+            if (currentPaymentFilter === 'pending') {
+                filtered = filtered.filter(t => {
+                    const pStatus = t.ticket_type === 'sale' ? (t.pickup_status || 'pending') : null;
+                    const isPaymentDone = pStatus === 'picked_up' || (t.ticket_type !== 'sale' && t.payment_status === 'completed');
+                    return !isPaymentDone;
+                });
+            }
+            
             renderClientTicketsRows(filtered);
+        }
+
+        function filterClientTickets(query) {
+            applyAllFilters();
         }
 
         function generateMonthlyReportPdf(year, month, data) {
