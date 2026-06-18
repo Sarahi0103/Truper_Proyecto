@@ -16,7 +16,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') 
     <link rel="stylesheet" href="css/styles.css?v=4.1">
     <link rel="stylesheet" href="css/theme.css?v=4.1">
     <link rel="stylesheet" href="css/dashboard.css">
-    <link rel="stylesheet" href="css/responsive-complete.css?v=4.1">
+    <link rel="stylesheet" href="css/responsive-complete.css?v=5.0">
     <style>
     /* Order Management Premium Styles */
     .order-layout {

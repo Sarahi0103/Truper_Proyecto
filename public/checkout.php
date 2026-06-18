@@ -21,7 +21,7 @@ if ($isLogged) {
     <title>Checkout - Truper Platform</title>
     <link rel="stylesheet" href="css/styles.css?v=4.1">
     <link rel="stylesheet" href="css/theme.css?v=4.1">
-    <link rel="stylesheet" href="css/responsive-complete.css?v=4.1">
+    <link rel="stylesheet" href="css/responsive-complete.css?v=5.0">
     <style>
         .checkout-page { padding: 2rem 1rem; }
         .checkout-header {

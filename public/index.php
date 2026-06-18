@@ -385,7 +385,7 @@ function homepage_update_label($type) {
     <title>Truper - Catálogo de Productos</title>
     <link rel="stylesheet" href="css/styles.css?v=4.1">
     <link rel="stylesheet" href="css/theme.css?v=4.1">
-    <link rel="stylesheet" href="css/responsive-complete.css?v=4.1">
+    <link rel="stylesheet" href="css/responsive-complete.css?v=5.0">
     <link rel="stylesheet" href="css/dark-mode-auto.css?v=1.1">
     <link rel="stylesheet" href="css/onboarding.css?v=1.1">
     <style>

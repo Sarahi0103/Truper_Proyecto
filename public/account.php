@@ -15,7 +15,7 @@ $company_whatsapp = htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <link rel="stylesheet" href="css/styles.css?v=4.1">
     <link rel="stylesheet" href="css/theme.css?v=4.1">
-    <link rel="stylesheet" href="css/responsive-complete.css?v=4.1">
+    <link rel="stylesheet" href="css/responsive-complete.css?v=5.0">
     <style>
         /* =============================================
            MÉTRICAS Y CAJAS DE RESUMEN

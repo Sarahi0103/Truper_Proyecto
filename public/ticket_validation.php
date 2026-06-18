@@ -15,7 +15,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
     <link rel="stylesheet" href="css/styles.css?v=2.2">
     <link rel="stylesheet" href="css/theme.css?v=2.5">
     <link rel="stylesheet" href="css/dashboard.css">
-    <link rel="stylesheet" href="css/responsive-complete.css?v=2.2">
+    <link rel="stylesheet" href="css/responsive-complete.css?v=5.0">
     <style>
         .validation-container {
             max-width: 1400px;

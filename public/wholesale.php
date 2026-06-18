@@ -17,7 +17,7 @@ $column_count = $is_admin ? 7 : 6;
     <link rel="stylesheet" href="css/styles.css?v=4.1">
     <link rel="stylesheet" href="css/theme.css?v=4.1">
     <link rel="stylesheet" href="css/dashboard.css">
-    <link rel="stylesheet" href="css/responsive-complete.css?v=4.1">
+    <link rel="stylesheet" href="css/responsive-complete.css?v=5.0">
     <!-- jsPDF Library for PDF Generation -->
     <script src="js/jspdf.umd.min.js"></script>
     <style>

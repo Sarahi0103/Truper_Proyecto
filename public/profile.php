@@ -112,7 +112,7 @@ if (!empty($profile['birthdate'])) {
     <title>Perfil - Truper Platform</title>
     <link rel="stylesheet" href="css/styles.css?v=4.1">
     <link rel="stylesheet" href="css/theme.css?v=4.1">
-    <link rel="stylesheet" href="css/responsive-complete.css?v=4.1">
+    <link rel="stylesheet" href="css/responsive-complete.css?v=5.0">
     <style>
         /* ===== Profile Page — Premium Redesign ===== */
         body {

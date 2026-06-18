@@ -28,7 +28,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
     <title>Mi Carrito - Truper Platform</title>
     <link rel="stylesheet" href="css/styles.css?v=4.1">
     <link rel="stylesheet" href="css/theme.css?v=4.1">
-    <link rel="stylesheet" href="css/responsive-complete.css?v=4.1">
+    <link rel="stylesheet" href="css/responsive-complete.css?v=5.0">
     <style>
         /* ===== Cart Page — Premium Redesign ===== */
         body {

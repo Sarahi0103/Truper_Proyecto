@@ -18,7 +18,7 @@ $is_admin_or_employee = ($is_admin || $user_role === 'employee');
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css?v=4.1">
     <link rel="stylesheet" href="css/theme.css?v=4.1">
-    <link rel="stylesheet" href="css/responsive-complete.css?v=4.1">
+    <link rel="stylesheet" href="css/responsive-complete.css?v=5.0">
     <link rel="stylesheet" href="css/dashboard.css?v=3.0">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
