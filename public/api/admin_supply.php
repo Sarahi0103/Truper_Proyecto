@@ -5460,7 +5460,7 @@ try {
 } catch (Throwable $e) {
     error_log('admin_supply API error: ' . $e->getMessage());
     $response = ['success' => false, 'message' => 'Error interno del servidor'];
-    if (($_SESSION['role'] ?? '') === 'admin') {
+    if (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee') {
         $response['debug'] = [
             'action' => (string)$action,
             'detail' => (string)$e->getMessage()

@@ -584,21 +584,26 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                     <a href="profile.php">Perfil</a>
                 </div>
             </div>
+            <?php 
+            $nav_role = $_SESSION['role'] ?? 'client';
+            ?>
             <div class="nav-dropdown">
                 <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>
                 <div class="nav-dropdown-content">
                     <a href="cashier.php">Caja</a>
                     <a href="admin_supply.php?nocache=true" class="active">Abastecimiento</a>
-                    <?php if (($_SESSION['role'] ?? '') === 'admin'): ?><a href="tickets.php">Tickets</a><?php endif; ?>
+                    <a href="tickets.php">Tickets</a>
                     <a href="tasks.php">Tareas</a>
                     <a href="gastos.php">Gastos</a>
-                    <a href="analytics.php">Estadísticas</a>
+                    <?php if ($nav_role === 'admin'): ?>
+                        <a href="analytics.php">Estadísticas</a>
+                    <?php endif; ?>
                 </div>
             </div>
         </nav>
     </div>
     <div class="user-menu">
-        <div class="user-info"><div class="user-name"><?php echo $user_name; ?></div><div class="user-role">ADMIN</div></div>
+        <div class="user-info"><div class="user-name"><?php echo $user_name; ?></div><div class="user-role"><?php echo $nav_role === 'employee' ? 'PERSONAL' : 'ADMIN'; ?></div></div>
         <button class="btn-logout" onclick="window.location.href='api/auth.php?action=logout'">Cerrar Sesion</button>
     </div>
 </header>

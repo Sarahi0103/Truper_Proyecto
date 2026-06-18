@@ -2,7 +2,7 @@
 require_once '../config/config.php';
 
 $isLogged  = isset($_SESSION['user_id']);
-$isAdmin   = $isLogged && (($_SESSION['role'] ?? '') === 'admin');
+$isAdmin   = $isLogged && (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee');
 
 $clientTicketCode   = 'PUBLICO';
 $clientTicketNumber = $isLogged ? (string)($_SESSION['user_id'] ?? '0') : '0';
@@ -528,24 +528,24 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
 
     <header>
         <div class="header-content">
-            <a href="/" class="logo"><img src="img/logo_truper.1.1.png" alt="Truper" style="height: 40px; width: auto; object-fit: contain;"></a>
+            <a href="index.php" class="logo"><img src="img/logo_truper.1.1.png" alt="Truper" style="height: 40px; width: auto; object-fit: contain;"></a>
                         <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
                 <span></span>
             </button>
             <nav class="nav-menu">
-                <a href="/">Productos</a>
-                <a href="/marketplace_ce.php" class="active">Marketplace CE</a>
+                <a href="index.php">Productos</a>
+                <a href="marketplace_ce.php" class="active">Marketplace CE</a>
                 <?php if ($isLogged): ?>
                     <div class="nav-dropdown">
                         <button class="nav-dropdown-btn">Mi Cuenta <span class="arrow">▼</span></button>
                         <div class="nav-dropdown-content">
-                            <a href="/dashboard.php">Dashboard</a>
-                            <a href="/orders.php">Pedidos</a>
-                            <a href="/wholesale.php">Mayoreo</a>
-                            <a href="/account.php#historyTab">Historial</a>
-                            <a href="/profile.php">Perfil</a>
+                            <a href="dashboard.php">Dashboard</a>
+                            <a href="orders.php">Pedidos</a>
+                            <a href="wholesale.php">Mayoreo</a>
+                            <a href="account.php#historyTab">Historial</a>
+                            <a href="profile.php">Perfil</a>
                         </div>
                     </div>
                 <?php endif; ?>
@@ -553,12 +553,14 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
                     <div class="nav-dropdown">
                         <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>
                         <div class="nav-dropdown-content">
-                            <a href="/cashier.php">Caja</a>
-                            <a href="/admin_supply.php?nocache=true">Abastecimiento</a>
-                            <a href="/tickets.php">Tickets</a>
-                            <a href="/tasks.php">Tareas</a>
-                            <a href="/gastos.php">Gastos</a>
-                            <a href="/analytics.php">Estadísticas</a>
+                            <a href="cashier.php">Caja</a>
+                            <a href="admin_supply.php?nocache=true">Abastecimiento</a>
+                            <a href="tickets.php">Tickets</a>
+                            <a href="tasks.php">Tareas</a>
+                            <a href="gastos.php">Gastos</a>
+                            <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
+                                <a href="analytics.php">Estadísticas</a>
+                            <?php endif; ?>
                         </div>
                     </div>
                 <?php endif; ?>
@@ -568,7 +570,7 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
                 <a href="https://wa.me/<?php echo htmlspecialchars($whatsappPhone,ENT_QUOTES,'UTF-8'); ?>?text=Hola%2C+me+interesa+un+art%C3%ADculo+del+Marketplace+CE"
                    target="_blank" rel="noopener" class="btn btn-secondary btn-small">Dudas por WhatsApp</a>
                 <?php if (!$isLogged): ?>
-                    <a href="/admin_login.php" class="btn btn-primary btn-small">Solo para administradores</a>
+                    <a href="admin_login.php" class="btn btn-primary btn-small">Solo para administradores</a>
                 <?php endif; ?>
                 <?php endif; ?>
             </div>

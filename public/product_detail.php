@@ -2,7 +2,7 @@
 require_once '../config/config.php';
 
 $isLogged = isset($_SESSION['user_id']);
-$isAdmin = $isLogged && (($_SESSION['role'] ?? '') === 'admin');
+$isAdmin = $isLogged && (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee');
 
 $product_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $source = strtolower(trim((string)($_GET['source'] ?? '')));
@@ -750,7 +750,9 @@ $stock = (int)($product['stock_quantity'] ?? 0);
                         <a href="tickets.php">Tickets</a>
                         <a href="tasks.php">Tareas</a>
                         <a href="gastos.php">Gastos</a>
-                        <a href="analytics.php">Estadísticas</a>
+                        <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
+                            <a href="analytics.php">Estadísticas</a>
+                        <?php endif; ?>
                     </div>
                 </div>
             <?php endif; ?>

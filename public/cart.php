@@ -2,7 +2,7 @@
 require_once '../config/config.php';
 
 $isLogged = isset($_SESSION['user_id']);
-$isAdmin = $isLogged && (($_SESSION['role'] ?? '') === 'admin');
+$isAdmin = $isLogged && (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee');
 $is_admin = $isAdmin;
 
 $clientTicketCode = 'PUBLICO';
@@ -436,7 +436,9 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                             <a href="tickets.php">Tickets</a>
                             <a href="tasks.php">Tareas</a>
                             <a href="gastos.php">Gastos</a>
-                            <a href="analytics.php">Estadísticas</a>
+                            <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
+                                <a href="analytics.php">Estadísticas</a>
+                            <?php endif; ?>
                         </div>
                     </div>
                 <?php endif; ?>
