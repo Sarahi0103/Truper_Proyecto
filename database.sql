@@ -57,6 +57,17 @@ CREATE TABLE IF NOT EXISTS products (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Tabla de Categorías de Productos
+CREATE TABLE IF NOT EXISTS product_categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(120) NOT NULL UNIQUE,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    context VARCHAR(20) NOT NULL DEFAULT 'stock',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Tabla de Órdenes/Pedidos
 CREATE TABLE IF NOT EXISTS orders (
     id SERIAL PRIMARY KEY,
@@ -393,7 +404,8 @@ CREATE INDEX IF NOT EXISTS idx_homepage_updates_active ON homepage_updates(is_ac
 CREATE INDEX IF NOT EXISTS idx_marketplace_ce_sku ON marketplace_ce_products(sku);
 CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);
 CREATE INDEX IF NOT EXISTS idx_products_active ON products(is_active);
-CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
+CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
+CREATE INDEX IF NOT EXISTS idx_product_categories_active ON product_categories(is_active);
 CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_order_items_product ON order_items(product_id);
 CREATE INDEX IF NOT EXISTS idx_payments_order ON payments(order_id);

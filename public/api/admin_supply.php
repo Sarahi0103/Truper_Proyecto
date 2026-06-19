@@ -179,6 +179,42 @@ function is_valid_sku_for_deletion_admin_supply(string $sku): bool {
     return strlen($sku) > 0 && !preg_match('/[<>"%{}|\\^`\[\]]/', $sku);
 }
 
+// Marketplace (CE) codes are user-defined and preserved as typed: alphanumeric,
+// uppercase, dashes allowed. They are NOT forced into the 5-6 digit catalog SKU
+// format so the admin can keep custom codes.
+function normalize_marketplace_code_admin_supply($value): string {
+    $raw = strtoupper(trim((string)$value));
+    $clean = preg_replace('/[^A-Z0-9\-]/', '', $raw);
+    return substr((string)$clean, 0, 32);
+}
+
+function is_valid_marketplace_code_admin_supply(string $code): bool {
+    return (bool)preg_match('/^[A-Z0-9\-]{3,32}$/', trim($code));
+}
+
+function marketplace_code_exists_admin_supply($pdo, string $code, int $excludeId = 0): bool {
+    $code = normalize_marketplace_code_admin_supply($code);
+    if ($code === '') {
+        return false;
+    }
+    $skuColumn = sku_column_for_table_admin_supply('marketplace_ce_products');
+    if ($skuColumn === null) {
+        return false;
+    }
+    try {
+        if ($excludeId > 0) {
+            $stmt = $pdo->prepare("SELECT 1 FROM marketplace_ce_products WHERE UPPER({$skuColumn}) = ? AND id <> ? LIMIT 1");
+            $stmt->execute([$code, $excludeId]);
+        } else {
+            $stmt = $pdo->prepare("SELECT 1 FROM marketplace_ce_products WHERE UPPER({$skuColumn}) = ? LIMIT 1");
+            $stmt->execute([$code]);
+        }
+        return $stmt->fetchColumn() !== false;
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
 function normalize_category_admin_supply($value): string {
     $text = trim((string)$value);
     $text = mb_strtolower($text, 'UTF-8');
@@ -1126,37 +1162,48 @@ function ensure_marketplace_integrity_admin_supply($pdo): void {
             $rows = ($pdo->query($sql) ?: null);
             $rows = $rows ? $rows->fetchAll() : [];
 
-            $used = [];
-            foreach ($rows as $row) {
-                $existing = normalize_sku_admin_supply($row['current_sku'] ?? '');
-                if (is_valid_numeric_sku_admin_supply($existing) && !isset($used[$existing])) {
-                    $used[$existing] = true;
-                }
-            }
-
             $upd = $pdo->prepare('UPDATE marketplace_ce_products SET ' . $skuColumn . ' = ? WHERE id = ?');
+
+            // Pass 1: keep every valid (user-defined) code untouched and reserve it.
+            // Only rows with empty/invalid codes are queued for a generated fallback.
+            $used = [];
+            $rowsNeedingCode = [];
             foreach ($rows as $row) {
                 $id = (int)($row['id'] ?? 0);
                 if ($id <= 0) {
                     continue;
                 }
 
-                $current = normalize_sku_admin_supply($row['current_sku'] ?? '');
-                if (is_valid_numeric_sku_admin_supply($current) && !isset($used[$current])) {
+                $rawCurrent = (string)($row['current_sku'] ?? '');
+                $current = normalize_marketplace_code_admin_supply($rawCurrent);
+                if (is_valid_marketplace_code_admin_supply($current) && !isset($used[$current])) {
                     $used[$current] = true;
+                    // Persist only if normalization changed it (e.g. lowercase -> uppercase).
+                    if ($current !== $rawCurrent) {
+                        try {
+                            $upd->execute([$current, $id]);
+                        } catch (Exception $ignored) {
+                        }
+                    }
                     continue;
                 }
 
-                $candidate = normalize_sku_admin_supply($row['source_sku'] ?? '');
-                if (!is_valid_numeric_sku_admin_supply($candidate)) {
-                    $candidate = str_pad((string)((90000 + $id) % 100000), 5, '0', STR_PAD_LEFT);
+                $rowsNeedingCode[] = $row;
+            }
+
+            // Pass 2: assign a generated fallback code only to rows that lacked a valid one.
+            foreach ($rowsNeedingCode as $row) {
+                $id = (int)($row['id'] ?? 0);
+
+                $candidate = normalize_marketplace_code_admin_supply($row['source_sku'] ?? '');
+                if (!is_valid_marketplace_code_admin_supply($candidate) || isset($used[$candidate])) {
+                    $candidate = 'CE' . str_pad((string)($id % 100000), 5, '0', STR_PAD_LEFT);
                 }
 
                 $attempts = 0;
                 while (isset($used[$candidate]) && $attempts < 100000) {
-                    $next = (((int)$candidate) + 1) % 100000;
-                    $candidate = str_pad((string)$next, 5, '0', STR_PAD_LEFT);
                     $attempts += 1;
+                    $candidate = 'CE' . str_pad((string)(($id + $attempts) % 100000), 5, '0', STR_PAD_LEFT);
                 }
 
                 if (isset($used[$candidate])) {
@@ -2713,38 +2760,28 @@ try {
                 break;
             }
 
-            $sku = normalize_sku_admin_supply($_GET['sku'] ?? '');
+            $sku = normalize_marketplace_code_admin_supply($_GET['sku'] ?? '');
             $id = (int)($_GET['id'] ?? 0);
             if ($sku === '') {
                 $response = ['success' => false, 'message' => 'SKU requerido'];
                 break;
             }
 
-            if (!is_valid_numeric_sku_admin_supply($sku)) {
+            if (!is_valid_marketplace_code_admin_supply($sku)) {
                 $response = [
                     'success' => true,
                     'available' => false,
-                    'message' => 'El código debe tener 5 o 6 números',
+                    'message' => 'El código debe tener de 3 a 32 caracteres (letras, números o guiones)',
                     'sku' => $sku
                 ];
                 break;
             }
 
-
-            $usage = sku_usage_admin_supply($pdo, $sku, $id);
-            $sameRecord = record_matches_normalized_sku_admin_supply($pdo, 'marketplace_ce_products', $id, $sku);
-            $seedConflict = $usage['in_seed'] && !$sameRecord;
-            $exists = $usage['in_marketplace'] || $seedConflict;
-            $message = 'Código disponible';
-            if ($exists) {
-                $message = $usage['in_marketplace']
-                    ? 'Ya existe un artículo CE con ese código'
-                    : 'Ese código ya existe en el catálogo base';
-            }
+            $exists = marketplace_code_exists_admin_supply($pdo, $sku, $id);
             $response = [
                 'success' => true,
                 'available' => !$exists,
-                'message' => $message,
+                'message' => $exists ? 'Ya existe un artículo CE con ese código' : 'Código disponible',
                 'sku' => $sku
             ];
             break;
@@ -4307,7 +4344,7 @@ try {
             }
 
             $id = (int)($_POST['id'] ?? ($input['id'] ?? 0));
-            $sku = normalize_sku_admin_supply(sanitize($_POST['sku'] ?? ($input['sku'] ?? '')));
+            $sku = normalize_marketplace_code_admin_supply(sanitize($_POST['sku'] ?? ($input['sku'] ?? '')));
             $name = sanitize($_POST['name'] ?? ($input['name'] ?? ''));
             $category = sanitize($_POST['category'] ?? ($input['category'] ?? 'Marketplace CE'));
             $description = trim((string)($_POST['description'] ?? ($input['description'] ?? '')));
@@ -4341,8 +4378,8 @@ try {
                 $response = ['success' => false, 'message' => 'SKU y nombre son obligatorios'];
                 break;
             }
-            if (!is_valid_numeric_sku_admin_supply($sku)) {
-                $response = ['success' => false, 'message' => 'El código SKU CE debe tener 5 o 6 números'];
+            if (!is_valid_marketplace_code_admin_supply($sku)) {
+                $response = ['success' => false, 'message' => 'El código CE debe tener de 3 a 32 caracteres (letras, números o guiones)'];
                 break;
             }
 
@@ -4360,15 +4397,10 @@ try {
                 $description = 'Sin descripción';
             }
 
-            $usage = sku_usage_admin_supply($pdo, $sku, $id);
-            $sameRecord = record_matches_normalized_sku_admin_supply($pdo, 'marketplace_ce_products', $id, $sku);
-            $seedConflict = $usage['in_seed'] && !$sameRecord;
-            if ($usage['in_marketplace'] || $seedConflict) {
+            if (marketplace_code_exists_admin_supply($pdo, $sku, $id)) {
                 $response = [
                     'success' => false,
-                    'message' => $usage['in_marketplace']
-                        ? 'Ya existe un artículo CE con ese código'
-                        : 'Ese código ya existe en el catálogo base'
+                    'message' => 'Ya existe un artículo CE con ese código'
                 ];
                 break;
             }
