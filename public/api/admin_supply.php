@@ -1195,9 +1195,26 @@ function ensure_marketplace_integrity_admin_supply($pdo): void {
             foreach ($rowsNeedingCode as $row) {
                 $id = (int)($row['id'] ?? 0);
 
-                $candidate = normalize_marketplace_code_admin_supply($row['source_sku'] ?? '');
-                if (!is_valid_marketplace_code_admin_supply($candidate) || isset($used[$candidate])) {
-                    $candidate = 'CE' . str_pad((string)($id % 100000), 5, '0', STR_PAD_LEFT);
+                // Check if user already has a manual code in current_sku
+                $rawCurrent = (string)($row['current_sku'] ?? '');
+                $current = normalize_marketplace_code_admin_supply($rawCurrent);
+                
+                // If current_sku is not empty and valid, preserve it
+                if (!empty($rawCurrent) && trim($rawCurrent) !== '') {
+                    $candidate = $current;
+                    if (!is_valid_marketplace_code_admin_supply($candidate) || isset($used[$candidate])) {
+                        // Only generate automatic code if current_sku is invalid
+                        $candidate = 'CE' . str_pad((string)($id % 100000), 5, '0', STR_PAD_LEFT);
+                    }
+                } else {
+                    // Use source_sku if current_sku is empty
+                    $candidate = normalize_marketplace_code_admin_supply($row['source_sku'] ?? '');
+                    // Only generate automatic code if source_sku is empty or invalid
+                    if (empty($row['source_sku']) || trim($row['source_sku']) === '') {
+                        if (!is_valid_marketplace_code_admin_supply($candidate) || isset($used[$candidate])) {
+                            $candidate = 'CE' . str_pad((string)($id % 100000), 5, '0', STR_PAD_LEFT);
+                        }
+                    }
                 }
 
                 $attempts = 0;
@@ -2254,10 +2271,10 @@ function create_product_compatible($pdo, array $payload): void {
 
     if (db_column_exists('products', 'unit_price')) {
         $columns[] = 'unit_price';
-        $values[] = (float)$payload['price'];
+        $values[] = round((float)$payload['price'], 2);
     } elseif (db_column_exists('products', 'sell_price')) {
         $columns[] = 'sell_price';
-        $values[] = (float)$payload['price'];
+        $values[] = round((float)$payload['price'], 2);
     }
 
     if (db_column_exists('products', 'is_active')) {
@@ -2322,8 +2339,8 @@ function update_product_compatible($pdo, int $id, array $payload): void {
         if (db_column_exists('products', 'variants_json')) { $sets[] = 'variants_json = ?'; $values[] = $payload['variants_json'] ?? '[]'; }
     if (db_column_exists('products', 'stock_quantity')) { $sets[] = 'stock_quantity = ?'; $values[] = (int)$payload['stock_quantity']; }
     if (db_column_exists('products', 'reorder_level')) { $sets[] = 'reorder_level = ?'; $values[] = (int)$payload['reorder_level']; }
-    if (db_column_exists('products', 'unit_price')) { $sets[] = 'unit_price = ?'; $values[] = (float)$payload['price']; }
-    elseif (db_column_exists('products', 'sell_price')) { $sets[] = 'sell_price = ?'; $values[] = (float)$payload['price']; }
+    if (db_column_exists('products', 'unit_price')) { $sets[] = 'unit_price = ?'; $values[] = round((float)$payload['price'], 2); }
+    elseif (db_column_exists('products', 'sell_price')) { $sets[] = 'sell_price = ?'; $values[] = round((float)$payload['price'], 2); }
     if (db_column_exists('products', 'updated_at')) { $sets[] = 'updated_at = CURRENT_TIMESTAMP'; }
     
     if (empty($sets)) {
@@ -4349,7 +4366,7 @@ try {
             $category = sanitize($_POST['category'] ?? ($input['category'] ?? 'Marketplace CE'));
             $description = trim((string)($_POST['description'] ?? ($input['description'] ?? '')));
             $conditionLabel = sanitize($_POST['condition_label'] ?? ($input['condition_label'] ?? 'Seminuevo'));
-            $unitPrice = (float)($_POST['unit_price'] ?? ($input['unit_price'] ?? 0));
+            $unitPrice = round((float)($_POST['unit_price'] ?? ($input['unit_price'] ?? 0)), 2);
             $stockQuantity = (int)($_POST['stock_quantity'] ?? ($input['stock_quantity'] ?? 1));
             $isActive = isset($_POST['is_active']) ? !empty($_POST['is_active']) : (isset($input['is_active']) ? !empty($input['is_active']) : true);
 
@@ -5419,7 +5436,7 @@ try {
                         $update->execute([$new_stock, $target_id]);
                         $successful_targets++;
                     } elseif ($operation_type === 'update_price' && $target_type === 'products') {
-                        $new_price = (float)($input['operation_data']['unit_price'] ?? 0);
+                        $new_price = round((float)($input['operation_data']['unit_price'] ?? 0), 2);
                         $update = $pdo->prepare("UPDATE products SET unit_price = ? WHERE id = ?");
                         $update->execute([$new_price, $target_id]);
                         $successful_targets++;
