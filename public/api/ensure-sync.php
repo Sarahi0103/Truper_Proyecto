@@ -45,18 +45,6 @@ function auto_sync_stock_after_change($pdo, $sku = null) {
 
 // Función para limpiar registros huérfanos (productos eliminados)
 function cleanup_orphaned_records($pdo) {
-    try {
-        // Eliminar marketplace_ce_products que no tienen producto principal
-        $pdo->exec("
-            DELETE FROM marketplace_ce_products 
-            WHERE sku NOT IN (SELECT sku FROM products WHERE sku IS NOT NULL)
-                AND sku NOT LIKE '%temp%'
-                AND sku NOT LIKE '%test%'
-        ");
-        
-        return true;
-    } catch (Exception $e) {
-        error_log("Error en cleanup_orphaned_records: " . $e->getMessage());
-        return false;
-    }
+    // Desactivado para permitir productos independientes en Marketplace CE
+    return true;
 }

@@ -421,16 +421,12 @@ function set_marketplace_visibility_compatible($pdo, int $id, bool $isVisible): 
     try {
         $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET is_active = ? WHERE id = ?');
         $stmt->execute([$isVisible, $id]);
-        if ($stmt->rowCount() > 0) {
-            return;
-        }
+        return;
     } catch (Exception $e) {
         try {
             $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET is_active = ? WHERE id = ?');
             $stmt->execute([$isVisible ? 1 : 0, $id]);
-            if ($stmt->rowCount() > 0) {
-                return;
-            }
+            return;
         } catch (Exception $e2) {
             // Column may not exist or error, try next candidate
         }
@@ -440,16 +436,12 @@ function set_marketplace_visibility_compatible($pdo, int $id, bool $isVisible): 
     try {
         $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET active = ? WHERE id = ?');
         $stmt->execute([$isVisible, $id]);
-        if ($stmt->rowCount() > 0) {
-            return;
-        }
+        return;
     } catch (Exception $e) {
         try {
             $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET active = ? WHERE id = ?');
             $stmt->execute([$isVisible ? 1 : 0, $id]);
-            if ($stmt->rowCount() > 0) {
-                return;
-            }
+            return;
         } catch (Exception $e2) {
             // Column may not exist, try next candidate
         }
@@ -459,16 +451,12 @@ function set_marketplace_visibility_compatible($pdo, int $id, bool $isVisible): 
     try {
         $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET is_visible = ? WHERE id = ?');
         $stmt->execute([$isVisible, $id]);
-        if ($stmt->rowCount() > 0) {
-            return;
-        }
+        return;
     } catch (Exception $e) {
         try {
             $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET is_visible = ? WHERE id = ?');
             $stmt->execute([$isVisible ? 1 : 0, $id]);
-            if ($stmt->rowCount() > 0) {
-                return;
-            }
+            return;
         } catch (Exception $e2) {
         }
     }
@@ -476,16 +464,12 @@ function set_marketplace_visibility_compatible($pdo, int $id, bool $isVisible): 
     try {
         $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET visible = ? WHERE id = ?');
         $stmt->execute([$isVisible, $id]);
-        if ($stmt->rowCount() > 0) {
-            return;
-        }
+        return;
     } catch (Exception $e) {
         try {
             $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET visible = ? WHERE id = ?');
             $stmt->execute([$isVisible ? 1 : 0, $id]);
-            if ($stmt->rowCount() > 0) {
-                return;
-            }
+            return;
         } catch (Exception $e2) {
         }
     }
@@ -501,16 +485,12 @@ function set_product_visibility_compatible($pdo, int $id, bool $isVisible): void
     try {
         $stmt = $pdo->prepare('UPDATE products SET is_active = ? WHERE id = ?');
         $stmt->execute([$isVisible, $id]);
-        if ($stmt->rowCount() > 0) {
-            return;
-        }
+        return;
     } catch (Exception $e) {
         try {
             $stmt = $pdo->prepare('UPDATE products SET is_active = ? WHERE id = ?');
             $stmt->execute([$isVisible ? 1 : 0, $id]);
-            if ($stmt->rowCount() > 0) {
-                return;
-            }
+            return;
         } catch (Exception $e2) {
         }
     }
@@ -518,16 +498,12 @@ function set_product_visibility_compatible($pdo, int $id, bool $isVisible): void
     try {
         $stmt = $pdo->prepare('UPDATE products SET active = ? WHERE id = ?');
         $stmt->execute([$isVisible, $id]);
-        if ($stmt->rowCount() > 0) {
-            return;
-        }
+        return;
     } catch (Exception $e) {
         try {
             $stmt = $pdo->prepare('UPDATE products SET active = ? WHERE id = ?');
             $stmt->execute([$isVisible ? 1 : 0, $id]);
-            if ($stmt->rowCount() > 0) {
-                return;
-            }
+            return;
         } catch (Exception $e2) {
         }
     }
@@ -535,16 +511,12 @@ function set_product_visibility_compatible($pdo, int $id, bool $isVisible): void
     try {
         $stmt = $pdo->prepare('UPDATE products SET is_visible = ? WHERE id = ?');
         $stmt->execute([$isVisible, $id]);
-        if ($stmt->rowCount() > 0) {
-            return;
-        }
+        return;
     } catch (Exception $e) {
         try {
             $stmt = $pdo->prepare('UPDATE products SET is_visible = ? WHERE id = ?');
             $stmt->execute([$isVisible ? 1 : 0, $id]);
-            if ($stmt->rowCount() > 0) {
-                return;
-            }
+            return;
         } catch (Exception $e2) {
         }
     }
@@ -552,16 +524,12 @@ function set_product_visibility_compatible($pdo, int $id, bool $isVisible): void
     try {
         $stmt = $pdo->prepare('UPDATE products SET visible = ? WHERE id = ?');
         $stmt->execute([$isVisible, $id]);
-        if ($stmt->rowCount() > 0) {
-            return;
-        }
+        return;
     } catch (Exception $e) {
         try {
             $stmt = $pdo->prepare('UPDATE products SET visible = ? WHERE id = ?');
             $stmt->execute([$isVisible ? 1 : 0, $id]);
-            if ($stmt->rowCount() > 0) {
-                return;
-            }
+            return;
         } catch (Exception $e2) {
         }
     }
@@ -2720,14 +2688,12 @@ try {
                 ];
                 break;
             }
-            $exists = $usage['in_products'] || $usage['in_marketplace'] || $seedConflict;
+            $exists = $usage['in_products'] || $seedConflict;
             $message = 'Código disponible';
             if ($exists) {
                 $message = $usage['in_products']
                     ? 'Ya existe un producto con ese código'
-                        : ($usage['in_marketplace']
-                            ? 'Ya existe un artículo CE con ese código'
-                            : 'Ese código ya existe en el catálogo base');
+                    : 'Ese código ya existe en el catálogo base';
             }
             $response = [
                 'success' => true,
@@ -2768,14 +2734,12 @@ try {
             $usage = sku_usage_admin_supply($pdo, $sku, $id);
             $sameRecord = record_matches_normalized_sku_admin_supply($pdo, 'marketplace_ce_products', $id, $sku);
             $seedConflict = $usage['in_seed'] && !$sameRecord;
-            $exists = $usage['in_products'] || $usage['in_marketplace'] || $seedConflict;
+            $exists = $usage['in_marketplace'] || $seedConflict;
             $message = 'Código disponible';
             if ($exists) {
                 $message = $usage['in_marketplace']
                     ? 'Ya existe un artículo CE con ese código'
-                        : ($usage['in_products']
-                        ? 'Ya existe un producto con ese código'
-                        : 'Ese código ya existe en el catálogo base');
+                    : 'Ese código ya existe en el catálogo base';
             }
             $response = [
                 'success' => true,
@@ -2815,14 +2779,12 @@ try {
             }
 
             $usage = sku_usage_admin_supply($pdo, $sku, 0, 0);
-            if ($usage['in_products'] || $usage['in_marketplace'] || ($usage['in_seed'] && !$allowSeedSku)) {
+            if ($usage['in_products'] || ($usage['in_seed'] && !$allowSeedSku)) {
                 $response = [
                     'success' => false,
                     'message' => $usage['in_products']
                         ? 'Ya existe un producto con ese código'
-                        : ($usage['in_marketplace']
-                            ? 'Ese código ya está registrado en Marketplace CE'
-                            : 'Ese código ya existe en el catálogo base')
+                        : 'Ese código ya existe en el catálogo base'
                 ];
                 break;
             }
@@ -2950,14 +2912,12 @@ try {
             $usage = sku_usage_admin_supply($pdo, $sku, 0, $id);
             $sameRecord = record_matches_normalized_sku_admin_supply($pdo, 'products', $id, $sku);
             $seedConflict = $usage['in_seed'] && !$sameRecord && !$allowSeedSku;
-            if ($usage['in_products'] || $usage['in_marketplace'] || $seedConflict) {
+            if ($usage['in_products'] || $seedConflict) {
                 $response = [
                     'success' => false,
                     'message' => $usage['in_products']
                         ? 'Ya existe un producto con ese código'
-                        : ($usage['in_marketplace']
-                            ? 'Ese código ya está registrado en Marketplace CE'
-                            : 'Ese código ya existe en el catálogo base')
+                        : 'Ese código ya existe en el catálogo base'
                 ];
                 break;
             }
@@ -4403,14 +4363,12 @@ try {
             $usage = sku_usage_admin_supply($pdo, $sku, $id);
             $sameRecord = record_matches_normalized_sku_admin_supply($pdo, 'marketplace_ce_products', $id, $sku);
             $seedConflict = $usage['in_seed'] && !$sameRecord;
-            if ($usage['in_products'] || $usage['in_marketplace'] || $seedConflict) {
+            if ($usage['in_marketplace'] || $seedConflict) {
                 $response = [
                     'success' => false,
                     'message' => $usage['in_marketplace']
                         ? 'Ya existe un artículo CE con ese código'
-                        : ($usage['in_products']
-                            ? 'Ese código ya está registrado en productos'
-                            : 'Ese código ya existe en el catálogo base')
+                        : 'Ese código ya existe en el catálogo base'
                 ];
                 break;
             }
