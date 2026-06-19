@@ -775,6 +775,17 @@ function ensure_postgresql_form_schema() {
             CHECK (update_type IN ('noticia', 'promocion', 'evento'))
         )");
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS product_categories (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(120) NOT NULL UNIQUE,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            is_active BOOLEAN NOT NULL DEFAULT true,
+            context VARCHAR(20) NOT NULL DEFAULT 'stock',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )");
+        $pdo->exec("ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS context VARCHAR(20) DEFAULT 'stock'");
+
         $usersAlters = [
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255)",

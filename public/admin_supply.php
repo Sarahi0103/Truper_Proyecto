@@ -1092,7 +1092,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                 <input type="hidden" id="marketplaceEditId" value="">
 
                 <div class="grid grid-3">
-                    <div class="form-group"><label>SKU CE (5 o 6 números)</label><input id="marketplaceSku" type="text" maxlength="6" inputmode="numeric" pattern="\d{5,6}" placeholder="Ej. 24061"><small id="marketplaceSkuStatus" class="text-muted">Debe ser único y de 5 o 6 números.</small></div>
+                    <div class="form-group"><label>Código CE (3 a 32 caracteres)</label><input id="marketplaceSku" type="text" maxlength="32" placeholder="Ej. CE-2024-01"><small id="marketplaceSkuStatus" class="text-muted">Debe ser único (letras, números o guiones).</small></div>
                     <div class="form-group"><label>Nombre</label><input id="marketplaceName" type="text" maxlength="220"></div>
                     <div class="form-group">
                         <label>Condición</label>
@@ -1312,6 +1312,15 @@ function isValidNumericSku(sku) {
     return /^\d{5,6}$/.test(String(sku || '').trim());
 }
 
+// Marketplace (CE) codes are user-defined: alphanumeric, uppercase, dashes allowed.
+function normalizeMarketplaceCode(rawValue) {
+    return String(rawValue || '').toUpperCase().replace(/[^A-Z0-9\-]/g, '').slice(0, 32);
+}
+
+function isValidMarketplaceCode(code) {
+    return /^[A-Z0-9\-]{3,32}$/.test(String(code || '').trim());
+}
+
 function formatAdminMoney(value) {
     const amount = Number(value || 0);
     return `$${amount.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -1364,15 +1373,15 @@ function upsertStockCache(product) {
 // Helper: upsert a CE item into the marketplace cache and re-render quickly
 function upsertMarketplaceCache(item) {
     if (!item) return;
-    const normalizedSku = normalizeNumericSku(item.sku || '');
+    const normalizedSku = normalizeMarketplaceCode(item.sku || '');
     let idx = -1;
 
     if (Number(item.id) > 0) {
         idx = marketplaceItemsCache.findIndex((p) => Number(p.id) === Number(item.id));
     }
 
-    if (idx < 0 && /^\d{5,6}$/.test(normalizedSku)) {
-        idx = marketplaceItemsCache.findIndex((p) => normalizeNumericSku(p.sku || '') === normalizedSku);
+    if (idx < 0 && isValidMarketplaceCode(normalizedSku)) {
+        idx = marketplaceItemsCache.findIndex((p) => normalizeMarketplaceCode(p.sku || '') === normalizedSku);
     }
 
     if (idx >= 0) {
@@ -1503,7 +1512,7 @@ function updateStockPreview() {
 function updateMarketplacePreview() {
     const host = document.getElementById('marketplacePreviewHost');
     if (!host) return;
-    const sku = normalizeNumericSku(document.getElementById('marketplaceSku')?.value || '');
+    const sku = normalizeMarketplaceCode(document.getElementById('marketplaceSku')?.value || '');
     const selectedCategoryOptions = Array.from(document.getElementById('marketplaceCategory')?.selectedOptions || []);
     const selectedCategories = selectedCategoryOptions.map((option) => option.value).filter(Boolean);
     const rawImg = document.getElementById('marketplaceImageRef')?.value || 'images/products/default-product.svg';
@@ -1598,7 +1607,8 @@ async function validateSkuAvailability(kind, options = {}) {
     const isMarketplace = kind === 'marketplace';
     const skuInput = document.getElementById(isMarketplace ? 'marketplaceSku' : 'newProductSku');
     const statusId = isMarketplace ? 'marketplaceSkuStatus' : 'newProductSkuStatus';
-    const sku = normalizeNumericSku(skuInput?.value || '');
+    const normalizeCode = isMarketplace ? normalizeMarketplaceCode : normalizeNumericSku;
+    const sku = normalizeCode(skuInput?.value || '');
     if (skuInput) skuInput.value = sku;
 
     if (!sku) {
@@ -1606,8 +1616,8 @@ async function validateSkuAvailability(kind, options = {}) {
         return false;
     }
 
-    if (!/^\d{5,6}$/.test(sku)) {
-        setSkuStatus(statusId, 'El código debe tener 5 o 6 números.', 'warning');
+    if (isMarketplace ? !isValidMarketplaceCode(sku) : !/^\d{5,6}$/.test(sku)) {
+        setSkuStatus(statusId, isMarketplace ? 'El código debe tener de 3 a 32 caracteres (letras, números o guiones).' : 'El código debe tener 5 o 6 números.', 'warning');
         return false;
     }
 
@@ -1619,7 +1629,7 @@ async function validateSkuAvailability(kind, options = {}) {
     if (currentId > 0) {
         const cache = isMarketplace ? marketplaceItemsCache : stockItemsCache;
         const item = cache.find((row) => Number(row.id) === currentId);
-        if (item && normalizeNumericSku(item.sku || '') === sku) {
+        if (item && normalizeCode(item.sku || '') === sku) {
             setSkuStatus(statusId, isMarketplace ? 'Editando artículo CE existente.' : 'Editando producto existente.', 'muted');
             return true;
         }
@@ -4522,7 +4532,7 @@ function getCurrentStockSkuForGallery() {
 }
 
 function getCurrentMarketplaceSkuForGallery() {
-    return normalizeNumericSku(document.getElementById('marketplaceSku')?.value || '');
+    return normalizeMarketplaceCode(document.getElementById('marketplaceSku')?.value || '');
 }
 
 function showGalleryResult(mode, message, tone = 'success') {
@@ -4596,8 +4606,9 @@ function getGalleryImagesForMode(mode, sku) {
 
 function primeGalleryFromCurrentForm(mode) {
     const isMarketplace = mode === 'marketplace';
-    const sku = normalizeNumericSku(document.getElementById(isMarketplace ? 'marketplaceSku' : 'newProductSku')?.value || '');
-    if (!/^\d{5,6}$/.test(sku)) {
+    const normalizeCode = isMarketplace ? normalizeMarketplaceCode : normalizeNumericSku;
+    const sku = normalizeCode(document.getElementById(isMarketplace ? 'marketplaceSku' : 'newProductSku')?.value || '');
+    if (isMarketplace ? !isValidMarketplaceCode(sku) : !/^\d{5,6}$/.test(sku)) {
         return;
     }
 
@@ -5666,7 +5677,7 @@ function resetMarketplaceForm() {
     if (saveBtn) saveBtn.textContent = 'Guardar artículo CE';
     const box = document.getElementById('marketplaceResult');
     if (box) box.innerHTML = '';
-    setSkuStatus('marketplaceSkuStatus', 'Debe ser único y de 5 o 6 números.', 'muted');
+    setSkuStatus('marketplaceSkuStatus', 'Debe ser único (letras, números o guiones).', 'muted');
     updateMarketplacePreview();
     loadMarketplaceGalleryForCurrentSku();
 }
@@ -5701,12 +5712,12 @@ async function fillMarketplaceForm(item) {
     const marketplaceImageRef = document.getElementById('marketplaceImageRef');
     if (marketplaceImageRef && item.image_url) marketplaceImageRef.value = item.image_url;
 
-    const skuForGallery = normalizeNumericSku(item.sku || '');
+    const skuForGallery = normalizeMarketplaceCode(item.sku || '');
     const fastImages = extractGalleryImagesFromItem(item);
     if (fastImages.length === 0 && item.image_url && !String(item.image_url).includes('default-product.svg')) {
         fastImages.push(String(item.image_url));
     }
-    if (/^\d{5,6}$/.test(skuForGallery) && fastImages.length > 0) {
+    if (isValidMarketplaceCode(skuForGallery) && fastImages.length > 0) {
         setGalleryState('marketplace', skuForGallery, fastImages, fastImages[0] || '');
         renderProductGallery(fastImages, skuForGallery, 'marketplace');
         const galleryStatus = document.getElementById('marketplaceGalleryStatus');
@@ -5920,7 +5931,7 @@ function renderMarketplacePagination() {
 
 async function saveMarketplaceCeByAdmin() {
     const skuInput = document.getElementById('marketplaceSku');
-    const normalizedSku = normalizeNumericSku(skuInput?.value || '');
+    const normalizedSku = normalizeMarketplaceCode(skuInput?.value || '');
     const marketplaceName = document.getElementById('marketplaceName')?.value?.trim() || '';
     const price = Number(document.getElementById('marketplacePrice')?.value || 0);
     const stock = Number(document.getElementById('marketplaceStock')?.value || 0);
@@ -5931,10 +5942,10 @@ async function saveMarketplaceCeByAdmin() {
     }
 
     // Validation
-    if (!/^\d{5,6}$/.test(normalizedSku)) {
-        if (box) box.innerHTML = '<div class="alert alert-error">El código SKU CE debe tener exactamente 5 números.</div>';
-        setSkuStatus('marketplaceSkuStatus', 'El código debe tener 5 o 6 números.', 'warning');
-        showAlert('SKU inválido', 'warning');
+    if (!isValidMarketplaceCode(normalizedSku)) {
+        if (box) box.innerHTML = '<div class="alert alert-error">El código CE debe tener de 3 a 32 caracteres (letras, números o guiones).</div>';
+        setSkuStatus('marketplaceSkuStatus', 'El código debe tener de 3 a 32 caracteres (letras, números o guiones).', 'warning');
+        showAlert('Código inválido', 'warning');
         return;
     }
 
@@ -6748,9 +6759,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (marketplaceSkuInput) {
         let marketplaceSkuDebounce = null;
         marketplaceSkuInput.addEventListener('input', function () {
-            marketplaceSkuInput.value = normalizeNumericSku(marketplaceSkuInput.value);
+            marketplaceSkuInput.value = normalizeMarketplaceCode(marketplaceSkuInput.value);
             updateMarketplacePreview();
-            setSkuStatus('marketplaceSkuStatus', 'Debe ser único y de 5 o 6 números.', 'muted');
+            setSkuStatus('marketplaceSkuStatus', 'Debe ser único (letras, números o guiones).', 'muted');
             if (marketplaceSkuDebounce) window.clearTimeout(marketplaceSkuDebounce);
             marketplaceSkuDebounce = window.setTimeout(() => {
                 validateSkuAvailability('marketplace');
@@ -6764,7 +6775,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     setSkuStatus('newProductSkuStatus', 'Código listo para guardar.', 'muted');
-    setSkuStatus('marketplaceSkuStatus', 'Debe ser único y de 5 o 6 números.', 'muted');
+    setSkuStatus('marketplaceSkuStatus', 'Debe ser único (letras, números o guiones).', 'muted');
 
     const stockSearch = document.getElementById('stockSearch');
     if (stockSearch) {
