@@ -42,7 +42,7 @@ class NotificationService {
         try {
             $stmt = $this->pdo->prepare("
                 INSERT INTO notifications (user_id, type, title, message, data_json)
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?) RETURNING id
             ");
             $stmt->execute([
                 $userId,
@@ -51,7 +51,7 @@ class NotificationService {
                 $message,
                 $data ? json_encode($data) : null
             ]);
-            return $this->pdo->lastInsertId();
+            return (int)$stmt->fetchColumn();
         } catch (Exception $e) {
             error_log("Error creating notification: " . $e->getMessage());
             return false;

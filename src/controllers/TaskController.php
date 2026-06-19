@@ -85,14 +85,15 @@ class TaskController {
                 $params[] = 'pending';
             }
 
-            $sql = "INSERT INTO tasks (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $values) . ")";
+            $sql = "INSERT INTO tasks (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $values) . ") RETURNING id";
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute($params);
+            $task_id = (int)$stmt->fetchColumn();
             
             return [
                 'success' => true,
                 'message' => 'Tarea creada exitosamente',
-                'task_id' => $this->pdo->lastInsertId(),
+                'task_id' => $task_id,
                 'task_number' => $task_number
             ];
         } catch (PDOException $e) {

@@ -608,7 +608,7 @@ try {
             try {
                 $stmt = $pdo->prepare("
                     INSERT INTO whatsapp_quotes (user_id, quote_data, total_amount, items_count, whatsapp_phone, status)
-                    VALUES (?, ?, ?, ?, ?, 'converted_to_order')
+                    VALUES (?, ?, ?, ?, ?, 'converted_to_order') RETURNING id
                 ");
                 $stmt->execute([
                     $user_id,
@@ -617,7 +617,7 @@ try {
                     count($messageItems),
                     $whatsapp_phone
                 ]);
-                $quote_id = (int)$pdo->lastInsertId();
+                $quote_id = (int)$stmt->fetchColumn();
             } catch (Exception $quoteError) {
                 error_log('Client account whatsapp quote persistence error: ' . $quoteError->getMessage());
             }

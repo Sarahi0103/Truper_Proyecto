@@ -87,7 +87,8 @@ class OrderController {
             // Crear orden
             $stmt = $this->pdo->prepare("
                 INSERT INTO orders (client_id, order_number, total_amount, balance, is_wholesale, status, notes)
-                VALUES (?, ?, ?, ?, ?::boolean, 'pending', ?)
+                VALUES (?, ?, ?, ?, ?, 'pending', ?)
+                RETURNING id
             ");
             
             $stmt->execute([
@@ -95,11 +96,11 @@ class OrderController {
                 $order_number,
                 $total_amount,
                 $total_amount,
-                $is_wholesale ? 1 : 0,
+                $is_wholesale ? true : false,
                 $context['notes'] ?? null
             ]);
             
-            $order_id = $this->pdo->lastInsertId();
+            $order_id = (int)$stmt->fetchColumn();
             
             // Agregar items a la orden
             $hasDiscountPercentage = $this->columnExists('order_items', 'discount_percentage');

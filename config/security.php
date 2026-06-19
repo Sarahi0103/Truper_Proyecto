@@ -4,44 +4,76 @@
  * Implementa múltiples capas de protección
  */
 
-// ===== RATE LIMITING =====
+// ===== RATE LIMITING (DB-backed) =====
+// BE-07: Rate limiting stored in database table instead of session to prevent bypass
 class RateLimiter {
     private $pdo;
-    private $prefix = 'rate_limit_';
+    private $tableName = 'rate_limit_entries';
     
     public function __construct($pdo) {
         $this->pdo = $pdo;
+        $this->ensureTable();
+    }
+
+    private function ensureTable() {
+        try {
+            $this->pdo->exec("
+                CREATE TABLE IF NOT EXISTS {$this->tableName} (
+                    id SERIAL PRIMARY KEY,
+                    rate_key VARCHAR(255) NOT NULL,
+                    attempts INTEGER NOT NULL DEFAULT 0,
+                    window_start TIMESTAMP NOT NULL DEFAULT NOW(),
+                    UNIQUE(rate_key)
+                )
+            ");
+        } catch (Exception $e) {
+            error_log('RateLimiter: could not create table: ' . $e->getMessage());
+        }
     }
     
     public function checkLimit($key, $max_attempts = 5, $time_window = 300) {
-        $cache_key = $this->prefix . md5($key);
-        $attempts_key = $cache_key . '_attempts';
-        $reset_key = $cache_key . '_reset';
+        $cache_key = 'rl_' . md5($key);
         
-        // Usar session para almacenar temporalmente
-        if (!isset($_SESSION[$attempts_key])) {
-            $_SESSION[$attempts_key] = 0;
-            $_SESSION[$reset_key] = time() + $time_window;
+        try {
+            // Clean expired entries and get current count
+            $stmt = $this->pdo->prepare("SELECT attempts, window_start FROM {$this->tableName} WHERE rate_key = ? LIMIT 1");
+            $stmt->execute([$cache_key]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$row) {
+                // First attempt — insert
+                $insert = $this->pdo->prepare("INSERT INTO {$this->tableName} (rate_key, attempts, window_start) VALUES (?, 1, NOW()) ON CONFLICT (rate_key) DO UPDATE SET attempts = 1, window_start = NOW()");
+                $insert->execute([$cache_key]);
+                return true;
+            }
+            
+            $windowStart = strtotime($row['window_start']);
+            $elapsed = time() - $windowStart;
+            
+            if ($elapsed > $time_window) {
+                // Window expired — reset
+                $reset = $this->pdo->prepare("UPDATE {$this->tableName} SET attempts = 1, window_start = NOW() WHERE rate_key = ?");
+                $reset->execute([$cache_key]);
+                return true;
+            }
+            
+            if ((int)$row['attempts'] >= $max_attempts) {
+                return false;
+            }
+            
+            // Increment
+            $inc = $this->pdo->prepare("UPDATE {$this->tableName} SET attempts = attempts + 1 WHERE rate_key = ?");
+            $inc->execute([$cache_key]);
+            return true;
+            
+        } catch (Exception $e) {
+            error_log('RateLimiter DB error, falling back to allow: ' . $e->getMessage());
+            return true; // Fail open to avoid blocking legitimate users
         }
-        
-        // Reset si pasó el tiempo
-        if (time() > $_SESSION[$reset_key]) {
-            $_SESSION[$attempts_key] = 0;
-            $_SESSION[$reset_key] = time() + $time_window;
-        }
-        
-        $_SESSION[$attempts_key]++;
-        
-        if ($_SESSION[$attempts_key] > $max_attempts) {
-            return false;
-        }
-        
-        return true;
     }
     
     public function isBlocked($key) {
-        $cache_key = $this->prefix . md5($key);
-        return ($_SESSION[$cache_key . '_attempts'] ?? 0) > 10;
+        return !$this->checkLimit($key, 0, 0);
     }
 }
 
@@ -182,20 +214,46 @@ class IPSecurity {
 // ===== ENCRYPTION =====
 class CryptoHelper {
     
+    // BE-08: Throw if no encryption key is configured
+    private static function getKey($key = null) {
+        $resolved = $key ?? getenv('ENCRYPTION_KEY');
+        if (empty($resolved) || $resolved === false) {
+            throw new RuntimeException('ENCRYPTION_KEY is not configured. Set it in .env or environment variables.');
+        }
+        // Ensure key is 32 bytes for AES-256
+        return hash('sha256', $resolved, true);
+    }
+
+    // BE-09: Fixed encrypt/decrypt to correctly handle binary IV + ciphertext
     public static function encryptData($data, $key = null) {
-        $key = $key ?? (getenv('ENCRYPTION_KEY') ?: hash('sha256', 'default-key'));
-        $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('aes-256-cbc'));
-        $encrypted = openssl_encrypt($data, 'aes-256-cbc', $key, 0, $iv);
+        $keyBytes = self::getKey($key);
+        $ivLength = openssl_cipher_iv_length('aes-256-cbc');
+        $iv = openssl_random_pseudo_bytes($ivLength);
+        // Use OPENSSL_RAW_DATA to get raw binary ciphertext
+        $encrypted = openssl_encrypt($data, 'aes-256-cbc', $keyBytes, OPENSSL_RAW_DATA, $iv);
+        if ($encrypted === false) {
+            throw new RuntimeException('Encryption failed');
+        }
+        // Concatenate IV + ciphertext and base64-encode
         return base64_encode($iv . $encrypted);
     }
     
     public static function decryptData($data, $key = null) {
         try {
-            $key = $key ?? (getenv('ENCRYPTION_KEY') ?: hash('sha256', 'default-key'));
-            $data = base64_decode($data);
-            $iv = substr($data, 0, openssl_cipher_iv_length('aes-256-cbc'));
-            $encrypted = substr($data, openssl_cipher_iv_length('aes-256-cbc'));
-            return openssl_decrypt($encrypted, 'aes-256-cbc', $key, 0, $iv);
+            $keyBytes = self::getKey($key);
+            $raw = base64_decode($data, true);
+            if ($raw === false) {
+                return false;
+            }
+            $ivLength = openssl_cipher_iv_length('aes-256-cbc');
+            if (strlen($raw) < $ivLength) {
+                return false;
+            }
+            $iv = substr($raw, 0, $ivLength);
+            $ciphertext = substr($raw, $ivLength);
+            // Use OPENSSL_RAW_DATA since we stored raw ciphertext
+            $decrypted = openssl_decrypt($ciphertext, 'aes-256-cbc', $keyBytes, OPENSSL_RAW_DATA, $iv);
+            return $decrypted !== false ? $decrypted : false;
         } catch (Exception $e) {
             return false;
         }
@@ -305,95 +363,9 @@ class FileUploadSecurity {
     }
 }
 
-// ===== SECURITY HEADERS =====
+// BE-10: Security headers are already set in config.php. This function is kept
+// for backward compatibility but does nothing to avoid duplicate headers.
 function setSecurityHeaders() {
-    // Prevenir clickjacking
-    header("X-Frame-Options: SAMEORIGIN");
-    
-    // Prevenir MIME sniffing
-    header("X-Content-Type-Options: nosniff");
-    
-    // XSS Protection
-    header("X-XSS-Protection: 1; mode=block");
-    
-    // Content Security Policy
-    // header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'");
-    
-    // Referrer Policy
-    header("Referrer-Policy: strict-origin-when-cross-origin");
-    
-    // Permissions Policy
-    header("Permissions-Policy: camera=(), microphone=(), geolocation=()");
-    
-    // HSTS (1 año)
-    if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
-        header("Strict-Transport-Security: max-age=31536000; includeSubDomains; preload");
-    }
+    // Headers are centralized in config.php — this is intentionally a no-op.
+    // Keeping the function signature to avoid breaking existing callers.
 }
-
-// ===== ADMIN SUPERIOR VALIDATION =====
-function isAdminSuper(): bool {
-    // Verificar si el usuario es admin
-    if (($_SESSION['role'] ?? '') !== 'admin') {
-        return false;
-    }
-
-    // Verificar si el usuario tiene permisos de super admin
-    // Esto puede basarse en un campo en la tabla users o en una lista de IDs específicos
-    $userId = $_SESSION['user_id'] ?? 0;
-    if ($userId <= 0) {
-        return false;
-    }
-
-    // Lista de IDs de super admins (configurable)
-    $superAdminIds = [1]; // ID 1 es super admin por defecto
-
-    return in_array($userId, $superAdminIds, true);
-}
-
-// ===== TWO-FACTOR AUTHENTICATION =====
-class TwoFactorAuth {
-
-    public static function generateSecret() {
-        return bin2hex(random_bytes(16));
-    }
-
-    public static function generateTOTP($secret) {
-        $time = floor(time() / 30);
-        $code = 0;
-
-        for ($i = 0; $i < 64; $i++) {
-            $hmac = hash_hmac('sha1', pack('N*', 0, $time), $secret, true);
-            $offset = ord($hmac[19]) & 0xf;
-            $code = (ord($hmac[$offset]) & 0x7f) << 24;
-            $code |= (ord($hmac[$offset+1]) & 0xff) << 16;
-            $code |= (ord($hmac[$offset+2]) & 0xff) << 8;
-            $code |= ord($hmac[$offset+3]) & 0xff;
-            $code = $code % 1000000;
-        }
-        
-        return str_pad($code, 6, '0', STR_PAD_LEFT);
-    }
-    
-    public static function verifyTOTP($secret, $code) {
-        for ($i = -1; $i <= 1; $i++) {
-            $time = floor((time() + ($i * 30)) / 30);
-            $hmac = hash_hmac('sha1', pack('N*', 0, $time), $secret, true);
-            $offset = ord($hmac[19]) & 0xf;
-            $test_code = (ord($hmac[$offset]) & 0x7f) << 24;
-            $test_code |= (ord($hmac[$offset+1]) & 0xff) << 16;
-            $test_code |= (ord($hmac[$offset+2]) & 0xff) << 8;
-            $test_code |= ord($hmac[$offset+3]) & 0xff;
-            $test_code = $test_code % 1000000;
-            $test_code = str_pad($test_code, 6, '0', STR_PAD_LEFT);
-            
-            if ($test_code === (string)$code) {
-                return true;
-            }
-        }
-        return false;
-    }
-}
-
-// ===== INICIALIZAR =====
-setSecurityHeaders();

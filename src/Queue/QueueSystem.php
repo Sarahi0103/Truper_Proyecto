@@ -44,14 +44,14 @@ class QueueSystem {
         try {
             $stmt = $this->pdo->prepare("
                 INSERT INTO {$this->table} (job, data, max_attempts, status)
-                VALUES (?, ?, ?, 'pending')
+                VALUES (?, ?, ?, 'pending') RETURNING id
             ");
             $stmt->execute([
                 $job,
                 $data ? json_encode($data) : null,
                 $maxAttempts
             ]);
-            return $this->pdo->lastInsertId();
+            return (int)$stmt->fetchColumn();
         } catch (Exception $e) {
             error_log("Error dispatching job: " . $e->getMessage());
             return false;

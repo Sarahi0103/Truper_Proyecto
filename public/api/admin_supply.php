@@ -5017,9 +5017,9 @@ try {
             }
 
             $folio = 'PROV-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
-            $stmt = $pdo->prepare("INSERT INTO supplier_orders (folio, supplier_name, expected_date, items_json, total_estimated, created_by) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt = $pdo->prepare("INSERT INTO supplier_orders (folio, supplier_name, expected_date, items_json, total_estimated, created_by) VALUES (?, ?, ?, ?, ?, ?) RETURNING id");
             $stmt->execute([$folio, $supplier_name, $expected_date, json_encode($normalizedItems, JSON_UNESCAPED_UNICODE), $total, $_SESSION['user_id']]);
-            $orderId = (int)$pdo->lastInsertId();
+            $orderId = (int)$stmt->fetchColumn();
 
             $h = $pdo->prepare("INSERT INTO transaction_history (transaction_type, reference_folio, data_json, created_by) VALUES ('supplier_order', ?, ?, ?)");
             $h->execute([$folio, json_encode(['supplier_name' => $supplier_name, 'expected_date' => $expected_date, 'total' => $total], JSON_UNESCAPED_UNICODE), $_SESSION['user_id']]);

@@ -25,16 +25,9 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
-// Sincronizar rol de usuario en cookie no-HttpOnly legible por JS
-if (isset($_SESSION['role'])) {
-    setcookie('user_role', $_SESSION['role'], [
-        'expires' => time() + 315360000, // 10 años
-        'path' => '/',
-        'secure' => $is_https,
-        'httponly' => false,
-        'samesite' => 'Strict'
-    ]);
-} else {
+// FE-09: Role is now injected via inline JS script tag instead of a readable cookie.
+// Remove the old user_role cookie if it exists.
+if (isset($_COOKIE['user_role'])) {
     setcookie('user_role', '', [
         'expires' => time() - 3600,
         'path' => '/',
@@ -82,8 +75,7 @@ if (!ob_get_level() || ob_get_status()['name'] === 'default output handler') {
     }
 }
 
-// Headers de compresión para navegadores
-header('Accept-Encoding: gzip, deflate, br');
+// BE-15: Only send Vary header (Accept-Encoding is a request header, not response)
 header('Vary: Accept-Encoding');
 
 // Headers de caché para navegadores (cliente-side caching)
@@ -209,13 +201,33 @@ require_once __DIR__ . '/catalog_images.php';
 // Contacto principal para cotizaciones y dudas por WhatsApp.
 define('COMPANY_WHATSAPP_PHONE', getenv('COMPANY_WHATSAPP_PHONE') ?: '3312482297');
 
+/**
+ * Auto-versioning asset helper (FE-08)
+ * Returns the path with a dynamic modification timestamp query string parameter.
+ */
+function asset_url($path) {
+    $realPath = __DIR__ . '/../public/' . ltrim($path, '/');
+    if (file_exists($realPath)) {
+        return '/' . ltrim($path, '/') . '?v=' . filemtime($realPath);
+    }
+    return '/' . ltrim($path, '/') . '?v=1.0';
+}
+
 // Funciones de utilidad
+/**
+ * Sanitize input data — trim and remove control characters.
+ * BE-05: This function is for INPUT sanitization (cleaning dangerous chars).
+ * For OUTPUT escaping in HTML, always use htmlspecialchars() at render time.
+ */
 function sanitize($data) {
     if (is_array($data)) {
         return array_map('sanitize', $data);
     }
 
-    return trim((string)$data);
+    $clean = trim((string)$data);
+    // Remove null bytes and control characters (except newline/tab)
+    $clean = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $clean);
+    return $clean;
 }
 
 function decode_legacy_entities($value, int $passes = 3) {
@@ -290,6 +302,17 @@ function csrf_token() {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     }
     return $_SESSION['csrf_token'];
+}
+
+// FE-02: Set CSRF token cookie so it is automatically available to JS on all pages.
+if (session_status() === PHP_SESSION_ACTIVE) {
+    setcookie('csrf_token', csrf_token(), [
+        'expires' => 0, // Session cookie
+        'path' => '/',
+        'secure' => isset($is_https) ? $is_https : false,
+        'httponly' => false, // Must be readable by JavaScript
+        'samesite' => 'Strict'
+    ]);
 }
 
 function verify_csrf_token($token) {
@@ -737,6 +760,21 @@ function ensure_postgresql_form_schema() {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )");
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS homepage_updates (
+            id SERIAL PRIMARY KEY,
+            update_type VARCHAR(20) NOT NULL DEFAULT 'noticia',
+            title VARCHAR(220) NOT NULL,
+            body TEXT NOT NULL,
+            image_url TEXT,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            is_active BOOLEAN NOT NULL DEFAULT true,
+            created_by INTEGER REFERENCES users(id),
+            updated_by INTEGER REFERENCES users(id),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            CHECK (update_type IN ('noticia', 'promocion', 'evento'))
+        )");
+
         $usersAlters = [
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255)",
@@ -846,17 +884,20 @@ function ensure_postgresql_form_schema() {
         } catch (Exception $ignored) {
         }
 
+        // DB-02: Auto-bootstrap employee user with a RANDOM password (not hardcoded)
         try {
             $stmt = $pdo->prepare("SELECT id FROM users WHERE LOWER(email) = 'admin1@truper.com' LIMIT 1");
             $stmt->execute();
             if (!$stmt->fetchColumn()) {
-                $passwordHash = password_hash('Personal123!', PASSWORD_BCRYPT, ['cost' => 12]);
+                $randomPassword = bin2hex(random_bytes(12)); // 24-char random password
+                $passwordHash = password_hash($randomPassword, PASSWORD_BCRYPT, ['cost' => 12]);
                 $userCode = (string)random_int(100000000, 999999999);
                 $insertStmt = $pdo->prepare("
                     INSERT INTO users (email, password_hash, first_name, last_name, name, role, phone, is_active, is_verified, user_code)
                     VALUES ('admin1@truper.com', ?, 'Personal', 'Truper', 'Personal Truper', 'employee', '', true, true, ?)
                 ");
                 $insertStmt->execute([$passwordHash, $userCode]);
+                error_log("[TRUPER SETUP] Employee user created: admin1@truper.com with temporary password: {$randomPassword} — CHANGE IT IMMEDIATELY");
             }
         } catch (Exception $ignored) {
         }
@@ -866,13 +907,8 @@ function ensure_postgresql_form_schema() {
 }
 
 
+// BE-16: All roles go to dashboard; simplified.
 function route_by_role($role) {
-    if ($role === 'admin') {
-        return '/dashboard.php';
-    }
-    if ($role === 'employee') {
-        return '/dashboard.php';
-    }
     return '/dashboard.php';
 }
 
@@ -946,5 +982,19 @@ function apply_login_engagement_rules($user_id) {
     }
 }
 
-ensure_postgresql_form_schema();
+// DB-08: Only run schema initialization once, tracked via system_config
+try {
+    $schemaCheckStmt = $pdo->prepare("SELECT config_value FROM system_config WHERE config_key = 'schema_form_initialized' LIMIT 1");
+    $schemaCheckStmt->execute();
+    $schemaInitialized = $schemaCheckStmt->fetchColumn();
+    if ($schemaInitialized !== 'true') {
+        ensure_postgresql_form_schema();
+        try {
+            $pdo->exec("INSERT INTO system_config (config_key, config_value) VALUES ('schema_form_initialized', 'true') ON CONFLICT (config_key) DO UPDATE SET config_value = 'true', updated_at = NOW()");
+        } catch (Exception $ignored) {}
+    }
+} catch (Exception $e) {
+    // system_config table might not exist yet on first run
+    ensure_postgresql_form_schema();
+}
 ?>

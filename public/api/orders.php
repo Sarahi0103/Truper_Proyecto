@@ -248,15 +248,9 @@ try {
     }
 
 } catch (Throwable $e) {
-    error_log("Orders API Error: " . $e->getMessage());
+    // BE-17: Log full error details to server logs, don't expose traces to client
+    error_log("Orders API Error [{$action}]: " . $e->getMessage() . "\n" . $e->getTraceAsString());
     $response = ['success' => false, 'message' => 'Error del servidor: ' . $e->getMessage()];
-    if (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee') {
-        $response['debug'] = [
-            'action' => (string)$action,
-            'detail' => (string)$e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ];
-    }
 }
 
 echo json_encode($response);

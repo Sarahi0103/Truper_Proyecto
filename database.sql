@@ -282,17 +282,10 @@ CREATE INDEX idx_supplier_calendar_visit ON supplier_calendar(visit_datetime);
 CREATE INDEX idx_supplier_orders_created ON supplier_orders(created_at);
 CREATE INDEX idx_transaction_history_created ON transaction_history(created_at);
 
--- Crear usuario administrador por defecto
-INSERT INTO users (email, password_hash, first_name, last_name, role, is_active, is_verified)
-VALUES (
-    'admin@truper.com',
-    '$2y$12$GQvLh9xH4Hs6ZL2J5V8N8uY7K6P2M3L5N9O1Q9R7S5T3U1V9W7X5Y3', -- Contraseña: Admin123!
-    'Administrador',
-    'Truper',
-    'admin',
-    true,
-    true
-) ON CONFLICT DO NOTHING;
+-- DB-02: Admin user seed removed. Use the setup wizard or run:
+--   INSERT INTO users (email, password_hash, first_name, last_name, role, is_active, is_verified)
+--   VALUES ('admin@truper.com', '<bcrypt_hash_of_your_password>', 'Admin', 'Truper', 'admin', true, true);
+-- Generate a bcrypt hash with: php -r "echo password_hash('YourSecurePassword', PASSWORD_BCRYPT);"
 
 -- Crear tabla de configuración del sistema
 CREATE TABLE IF NOT EXISTS system_config (
@@ -302,14 +295,14 @@ CREATE TABLE IF NOT EXISTS system_config (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insertar configuraciones por defecto
+-- DB-07: Configuración correcta para México
 INSERT INTO system_config (config_key, config_value) VALUES
 ('company_name', 'Truper'),
 ('support_email', 'soporte@truper.com'),
-('phone', '+56 2 1234 5678'),
+('phone', '+52 33 1248 2297'),
 ('address', 'Dirección de Truper'),
-('currency', 'CLP'),
-('timezone', 'America/Santiago')
+('currency', 'MXN'),
+('timezone', 'America/Mexico_City')
 ON CONFLICT DO NOTHING;
 
 -- ============================================================
@@ -395,3 +388,58 @@ CREATE INDEX IF NOT EXISTS idx_cash_notes_status ON cash_control_notes(status);
 CREATE INDEX IF NOT EXISTS idx_cash_notes_due ON cash_control_notes(due_date);
 CREATE INDEX IF NOT EXISTS idx_cash_note_payments_note ON cash_note_payments(note_id);
 
+-- DB-06: Missing indexes for high-traffic queries
+CREATE INDEX IF NOT EXISTS idx_homepage_updates_active ON homepage_updates(is_active);
+CREATE INDEX IF NOT EXISTS idx_marketplace_ce_sku ON marketplace_ce_products(sku);
+CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);
+CREATE INDEX IF NOT EXISTS idx_products_active ON products(is_active);
+CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_product ON order_items(product_id);
+CREATE INDEX IF NOT EXISTS idx_payments_order ON payments(order_id);
+CREATE INDEX IF NOT EXISTS idx_clients_user ON clients(user_id);
+
+-- DB-09: Auto-update trigger for updated_at columns
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Apply trigger to main tables
+DO $$ 
+DECLARE
+    tbl TEXT;
+BEGIN
+    FOR tbl IN SELECT unnest(ARRAY[
+        'users', 'products', 'orders', 'clients', 'system_config',
+        'homepage_updates', 'marketplace_ce_products', 'cash_monthly_goals',
+        'cash_control_notes', 'product_categories'
+    ])
+    LOOP
+        EXECUTE format(
+            'DROP TRIGGER IF EXISTS trg_update_%I_updated_at ON %I; '
+            'CREATE TRIGGER trg_update_%I_updated_at BEFORE UPDATE ON %I '
+            'FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();',
+            tbl, tbl, tbl, tbl
+        );
+    END LOOP;
+END $$;
+
+-- DB-10: Migrations tracking table
+CREATE TABLE IF NOT EXISTS migrations (
+    id SERIAL PRIMARY KEY,
+    migration_name VARCHAR(255) NOT NULL UNIQUE,
+    applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    description TEXT
+);
+
+-- Rate limiting table (BE-07)
+CREATE TABLE IF NOT EXISTS rate_limit_entries (
+    id SERIAL PRIMARY KEY,
+    rate_key VARCHAR(255) NOT NULL UNIQUE,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    window_start TIMESTAMP NOT NULL DEFAULT NOW()
+);

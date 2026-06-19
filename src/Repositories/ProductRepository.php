@@ -91,7 +91,7 @@ class ProductRepository {
     public function create($data) {
         $sql = "INSERT INTO products (sku, name, category, description, unit_price, stock_quantity, 
                                         reorder_level, image_url, is_active, variants_json)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id";
         
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
@@ -107,7 +107,7 @@ class ProductRepository {
             $data['variants_json'] ?? null
         ]);
         
-        return $this->pdo->lastInsertId();
+        return (int)$stmt->fetchColumn();
     }
 
     /**

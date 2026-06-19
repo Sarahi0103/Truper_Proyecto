@@ -276,6 +276,11 @@ class AuthController {
         return ['success' => true, 'message' => 'Sesión cerrada exitosamente'];
     }
     
+    /**
+     * BE-14: Email verification is currently a NO-OP.
+     * This function auto-marks the user as verified without actually sending an email.
+     * TODO: Implement real email verification with SMTP/SendGrid/Mailgun when ready.
+     */
     private function sendVerificationEmail($email, $user_id) {
         if ($this->columnExists('users', 'is_verified')) {
             $stmt = $this->pdo->prepare("UPDATE users SET is_verified = true WHERE id = ?");
@@ -283,6 +288,11 @@ class AuthController {
         }
     }
     
+    /**
+     * BE-14: Email verification is currently a NO-OP.
+     * This function auto-verifies any user without validating the token.
+     * TODO: Implement real token validation when email sending is implemented.
+     */
     public function verifyEmail($user_id, $token) {
         try {
             if ($this->columnExists('users', 'is_verified')) {
@@ -371,31 +381,36 @@ class AuthController {
     }
 
     private function registerWithFallbackStrategies($email, $passwordHash, $firstName, $lastName, $fullName, $phone, $birthDate) {
+        // DB-03: Use RETURNING id for PostgreSQL compatibility
         // Estrategia 1: esquema PostgreSQL actual
-        $sqlA = "INSERT INTO users (email, password_hash, first_name, last_name, role, phone, birthdate, loyalty_points, is_active, is_verified) VALUES (?, ?, ?, ?, 'client', ?, ?, 0, true, true)";
+        $sqlA = "INSERT INTO users (email, password_hash, first_name, last_name, role, phone, birthdate, loyalty_points, is_active, is_verified) VALUES (?, ?, ?, ?, 'client', ?, ?, 0, true, true) RETURNING id";
         try {
             $stmt = $this->pdo->prepare($sqlA);
             $stmt->execute([$email, $passwordHash, $firstName, $lastName, $phone, $birthDate]);
-            return $this->pdo->lastInsertId();
+            $id = $stmt->fetchColumn();
+            if ($id) return (int)$id;
         } catch (Exception $e) {
             // fallback
         }
 
         // Estrategia 2: esquema legado MySQL-like
-        $sqlB = "INSERT INTO users (email, password, name, phone, birthday, role, points, active) VALUES (?, ?, ?, ?, ?, 'client', 0, 1)";
+        $sqlB = "INSERT INTO users (email, password, name, phone, birthday, role, points, active) VALUES (?, ?, ?, ?, ?, 'client', 0, 1) RETURNING id";
         try {
             $stmt = $this->pdo->prepare($sqlB);
             $stmt->execute([$email, $passwordHash, ($fullName !== '' ? $fullName : $email), $phone, $birthDate]);
-            return $this->pdo->lastInsertId();
+            $id = $stmt->fetchColumn();
+            if ($id) return (int)$id;
         } catch (Exception $e) {
             // fallback
         }
 
         // Estrategia 3: mínima
-        $sqlC = "INSERT INTO users (email, password, name, role) VALUES (?, ?, ?, 'client')";
+        $sqlC = "INSERT INTO users (email, password, name, role) VALUES (?, ?, ?, 'client') RETURNING id";
         $stmt = $this->pdo->prepare($sqlC);
         $stmt->execute([$email, $passwordHash, ($fullName !== '' ? $fullName : $email)]);
-        return $this->pdo->lastInsertId();
+        $id = $stmt->fetchColumn();
+        if ($id) return (int)$id;
+        return (int)$this->pdo->lastInsertId();
     }
 
     private function createClientIfPossible($userId, $companyName) {

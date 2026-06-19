@@ -105,13 +105,28 @@ function showAlert(message, type = 'info') {
 
     toast.style.borderColor = borderColor;
     
-    toast.innerHTML = `
-        <div style="display:flex; align-items:center; gap:12px; flex:1;">
-            <span style="font-size:1.3rem; color:${accentColor}; display:flex; align-items:center; justify-content:center;">${icon}</span>
-            <span style="font-weight:600; font-size:0.92rem; line-height:1.4; color:#ffffff;">${message}</span>
-        </div>
-        <span class="close-alert" onclick="this.parentElement.remove()" style="cursor:pointer; font-size:1.25rem; opacity:0.5; transition:opacity 0.2s; padding:2px; display:flex; align-items:center; justify-content:center; color:#ffffff;">×</span>
-    `;
+    // FE-01: Use textContent to prevent XSS — message must not contain HTML
+    const iconSpan = document.createElement('span');
+    iconSpan.style.cssText = `font-size:1.3rem; color:${accentColor}; display:flex; align-items:center; justify-content:center;`;
+    iconSpan.textContent = icon;
+
+    const msgSpan = document.createElement('span');
+    msgSpan.style.cssText = `font-weight:600; font-size:0.92rem; line-height:1.4; color:#ffffff;`;
+    msgSpan.textContent = message;
+
+    const contentDiv = document.createElement('div');
+    contentDiv.style.cssText = `display:flex; align-items:center; gap:12px; flex:1;`;
+    contentDiv.appendChild(iconSpan);
+    contentDiv.appendChild(msgSpan);
+
+    const closeBtn = document.createElement('span');
+    closeBtn.className = 'close-alert';
+    closeBtn.style.cssText = `cursor:pointer; font-size:1.25rem; opacity:0.5; transition:opacity 0.2s; padding:2px; display:flex; align-items:center; justify-content:center; color:#ffffff;`;
+    closeBtn.textContent = '\u00d7';
+    closeBtn.addEventListener('click', () => toast.remove());
+
+    toast.appendChild(contentDiv);
+    toast.appendChild(closeBtn);
 
     // Inyectar animación keyframes al documento si no está agregada
     if (!document.getElementById('toast-animation-styles')) {
@@ -229,7 +244,7 @@ async function apiCall(endpoint, method = 'GET', data = null, options = {}) {
             headers: {
                 'Content-Type': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-Token': window.csrfToken || ''
+                'X-CSRF-Token': window.csrfToken || getCookie('csrf_token') || ''
             }
         };
         
@@ -237,7 +252,7 @@ async function apiCall(endpoint, method = 'GET', data = null, options = {}) {
         if (bodyData && (method === 'POST' || method === 'PUT' || method === 'DELETE')) {
             // Add CSRF token to request data
             if (typeof bodyData === 'object' && bodyData !== null) {
-                bodyData.csrf_token = window.csrfToken || '';
+                bodyData.csrf_token = window.csrfToken || getCookie('csrf_token') || '';
             }
             fetchOptions.body = JSON.stringify(bodyData);
         }
@@ -377,8 +392,8 @@ function getCookie(name) {
  * Configurar navegación y visibilidad de elementos para el personal (employee)
  */
 function setupEmployeeNavigation() {
-    const roleCookie = getCookie('user_role');
-    let role = roleCookie ? roleCookie.toLowerCase() : '';
+    // FE-09: Read role from window.userRole (injected by PHP) instead of cookie
+    let role = (window.userRole || '').toLowerCase();
 
     const userRoleEl = document.querySelector('.user-role');
     if (!role && userRoleEl) {
@@ -467,10 +482,18 @@ function initMain() {
     setupTabs();
     setupEmployeeNavigation();
     
-    // Agregar listener para formularios
-    const forms = document.querySelectorAll('form[action]');
+    // FE-03: Only intercept forms explicitly marked for AJAX submission
+    const forms = document.querySelectorAll('form[action][data-ajax="true"]');
     forms.forEach(form => {
         form.addEventListener('submit', handleFormSubmit);
+    });
+
+    // Also intercept login/register forms by ID for backward compatibility
+    ['loginForm', 'registerForm'].forEach(formId => {
+        const form = document.getElementById(formId);
+        if (form && form.getAttribute('action')) {
+            form.addEventListener('submit', handleFormSubmit);
+        }
     });
 }
 
@@ -673,22 +696,11 @@ class KeyboardShortcuts {
             }
         }, 'Nuevo producto (admin)');
 
-        // Ctrl+F: Búsqueda avanzada
-        this.register('ctrl+f', (e) => {
-            e.preventDefault();
-            const searchInput = document.getElementById('searchInput');
-            if (searchInput) {
-                searchInput.focus();
-                searchInput.select();
-            }
-        }, 'Búsqueda avanzada');
+        // FE-07: Ctrl+F — do NOT intercept, let browser handle native find
+        // (Removed Ctrl+F override)
 
-        // Ctrl+D: Dashboard
-        this.register('ctrl+d', () => {
-            if (window.location.pathname !== '/dashboard.php') {
-                window.location.href = '/dashboard.php';
-            }
-        }, 'Ir al dashboard');
+        // FE-07: Ctrl+D — do NOT intercept, let browser handle native bookmark
+        // (Removed Ctrl+D override)
     }
 
     handleKeyDown(e) {

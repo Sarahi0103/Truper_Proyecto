@@ -34,14 +34,15 @@ class BarcodeReader {
         }
         
         // Registrar escaneo
-        $query = "INSERT INTO barcode_scans (product_id, barcode, scanned_at) VALUES (?, ?, NOW())";
+        $query = "INSERT INTO barcode_scans (product_id, barcode, scanned_at) VALUES (?, ?, NOW()) RETURNING id";
         $stmt = $this->conn->prepare($query);
         $stmt->execute([$product['id'], $barcode]);
+        $scan_id = (int)$stmt->fetchColumn();
         
         return [
             'success' => true,
             'product' => $product,
-            'scan_id' => $this->conn->lastInsertId()
+            'scan_id' => $scan_id
         ];
     }
 
@@ -147,11 +148,12 @@ class PaymentTracker {
         $payment_date = $payment_date ?? date('Y-m-d H:i:s');
         
         $query = "INSERT INTO payment_tracking (order_id, amount_paid, payment_method, payment_date, created_at) 
-                  VALUES (?, ?, ?, ?, NOW())";
+                  VALUES (?, ?, ?, ?, NOW()) RETURNING id";
         $stmt = $this->conn->prepare($query);
         if ($stmt->execute([$order_id, $amount, $payment_method, $payment_date])) {
+            $payment_id = (int)$stmt->fetchColumn();
             $this->updateOrderPaymentStatus($order_id);
-            return ['success' => true, 'payment_id' => $this->conn->lastInsertId()];
+            return ['success' => true, 'payment_id' => $payment_id];
         }
         
         return ['success' => false];

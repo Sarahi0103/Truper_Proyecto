@@ -39,7 +39,7 @@ class SalesTicket {
                 return ['success' => false, 'message' => 'Error generando folio'];
             }
 
-            $stmt = $this->pdo->prepare("INSERT INTO sales_tickets (folio, order_id, user_id, customer_name, ticket_type, description, subtotal_amount, tax_amount, discount_amount, total_amount, payment_method, payment_status, issued_by, notes, issued_date, created_at, updated_at) VALUES (:folio, :order_id, :user_id, :customer_name, :ticket_type, :description, :subtotal_amount, :tax_amount, :discount_amount, :total_amount, :payment_method, :payment_status, :issued_by, :notes, NOW(), NOW(), NOW())");
+            $stmt = $this->pdo->prepare("INSERT INTO sales_tickets (folio, order_id, user_id, customer_name, ticket_type, description, subtotal_amount, tax_amount, discount_amount, total_amount, payment_method, payment_status, issued_by, notes, issued_date, created_at, updated_at) VALUES (:folio, :order_id, :user_id, :customer_name, :ticket_type, :description, :subtotal_amount, :tax_amount, :discount_amount, :total_amount, :payment_method, :payment_status, :issued_by, :notes, NOW(), NOW(), NOW()) RETURNING id");
 
             $ok = $stmt->execute([
                 ':folio' => $folio,
@@ -62,7 +62,7 @@ class SalesTicket {
                 return ['success' => false, 'message' => 'Error creando ticket'];
             }
 
-            $ticketId = (int)$this->pdo->lastInsertId();
+            $ticketId = (int)$stmt->fetchColumn();
 
             if (!empty($data['items']) && is_array($data['items'])) {
                 foreach ($data['items'] as $item) {

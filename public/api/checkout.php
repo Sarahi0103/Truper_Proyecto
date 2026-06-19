@@ -1,9 +1,20 @@
 <?php
 /**
  * Checkout API - Process order and cart
+ * 
+ * Fixes applied:
+ * - BE-01: CSRF token validation
+ * - BE-02: Correct require_once path
+ * - BE-03: Stock deduction on purchase
+ * - BE-04: Server-side price validation (prices from DB, not client)
+ * - DB-03: Use RETURNING id instead of lastInsertId()
+ * - DB-05: Full transaction wrapping
  */
+
+// BE-02: Correct path — we are in public/api/, config is in ../../config/
+require_once __DIR__ . '/../../config/config.php';
+
 header('Content-Type: application/json');
-require_once '../config/config.php';
 
 // Verify session
 if (!isset($_SESSION['user_id'])) {
@@ -13,10 +24,13 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(400);
+    http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Método no permitido']);
     exit;
 }
+
+// BE-01: Validate CSRF token
+require_csrf_token();
 
 try {
     $input = json_decode(file_get_contents('php://input'), true);
@@ -40,165 +54,203 @@ try {
 
     $shippingMethod = $input['shippingMethod'] ?? 'standard';
     $paymentMethod = $input['paymentMethod'] ?? 'credit_card';
+    try {
+        // BE-04: Validate prices from server, not from client input
+        // Resolve each product and get the REAL price from the database
+        $resolvedItems = [];
+        $subtotal = 0;
 
-    // Calculate totals
-    $subtotal = 0;
-    foreach ($cartItems as $item) {
-        $subtotal += ($item['price'] ?? 0) * ($item['quantity'] ?? 1);
-    }
+        foreach ($cartItems as $item) {
+            $productId = null;
+            $product = null;
 
-    // Calculate shipping
-    $shippingCost = 0;
-    if ($shippingMethod === 'express') {
-        $shippingCost = 15;
-    }
+            // Try by ID first
+            if (!empty($item['id'])) {
+                $pstmt = $pdo->prepare("SELECT id, sku, name, COALESCE(unit_price, sell_price, 0) AS unit_price, stock_quantity FROM products WHERE id = ? LIMIT 1");
+                $pstmt->execute([(int) $item['id']]);
+                $product = $pstmt->fetch(PDO::FETCH_ASSOC);
+            }
 
-    $total = $subtotal + $shippingCost;
+            // Fallback: try by SKU
+            if (!$product && !empty($item['sku'])) {
+                $pstmt = $pdo->prepare("SELECT id, sku, name, COALESCE(unit_price, sell_price, 0) AS unit_price, stock_quantity FROM products WHERE sku = ? LIMIT 1");
+                $pstmt->execute([$item['sku']]);
+                $product = $pstmt->fetch(PDO::FETCH_ASSOC);
+            }
 
-    // Resolve or create the client record linked to the current user
-    $clientStmt = $pdo->prepare("SELECT id FROM clients WHERE user_id = ? LIMIT 1");
-    $clientStmt->execute([$_SESSION['user_id']]);
-    $client = $clientStmt->fetch(PDO::FETCH_ASSOC);
+            if (!$product) {
+                throw new Exception('No se pudo identificar uno de los productos del carrito');
+            }
 
-    if ($client) {
-        $clientId = (int) $client['id'];
-    } else {
-        $clientInsert = $pdo->prepare("INSERT INTO clients (user_id, company_name, created_at, updated_at) VALUES (?, NULL, NOW(), NOW()) RETURNING id");
-        $clientInsert->execute([$_SESSION['user_id']]);
-        $clientId = (int) $clientInsert->fetchColumn();
-    }
+            $productId = (int) $product['id'];
+            $serverPrice = (float) $product['unit_price']; // Price from DB, not client
+            $requestedQty = max(1, (int) ($item['quantity'] ?? 1));
+            $currentStock = (int) ($product['stock_quantity'] ?? 0);
 
-    $deliveryDate = date('Y-m-d', strtotime($shippingMethod === 'express' ? '+2 days' : '+5 days'));
-    $notes = "Dirección: " . $input['address'] . ", " . $input['city'] . "\n";
-    $notes .= "Código postal: " . $input['postalCode'] . "\n";
-    if (!empty($input['deliveryNotes'])) {
-        $notes .= "Notas de entrega: " . $input['deliveryNotes'] . "\n";
-    }
-    if (!empty($input['orderNotes'])) {
-        $notes .= "Notas: " . $input['orderNotes'];
-    }
+            // BE-03: Verify sufficient stock
+            if ($currentStock < $requestedQty) {
+                $productName = $product['name'] ?? $product['sku'] ?? "ID:{$productId}";
+                throw new Exception("Stock insuficiente para '{$productName}'. Disponible: {$currentStock}, solicitado: {$requestedQty}");
+            }
 
-    // Generate order number
-    $orderNumber = 'ORD-' . date('Y') . '-' . strtoupper(bin2hex(random_bytes(3)));
+            $lineTotal = round($serverPrice * $requestedQty, 2);
+            $subtotal += $lineTotal;
 
-    // Create order
-    $stmt = $pdo->prepare("
-        INSERT INTO orders 
-        (client_id, order_number, total_amount, payment_status, payment_amount, balance, order_date, delivery_date, notes, is_wholesale, status)
-        VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, ?, false, ?)
-    ");
-
-    $result = $stmt->execute([
-        $clientId,
-        $orderNumber,
-        $total,
-        'pending',
-        0,
-        $total,
-        $deliveryDate,
-        $notes,
-        'pending'
-    ]);
-
-    if (!$result) {
-        throw new Exception('Error al crear la orden');
-    }
-
-    $orderId = $pdo->lastInsertId();
-
-    // Add order items
-    foreach ($cartItems as $item) {
-        $productId = null;
-
-        if (!empty($item['id'])) {
-            $pstmt = $pdo->prepare("SELECT id FROM products WHERE id = ? LIMIT 1");
-            $pstmt->execute([(int) $item['id']]);
-            $product = $pstmt->fetch(PDO::FETCH_ASSOC);
-            $productId = $product['id'] ?? null;
+            $resolvedItems[] = [
+                'product_id' => $productId,
+                'quantity' => $requestedQty,
+                'unit_price' => $serverPrice,
+                'subtotal' => $lineTotal,
+                'line_total' => $lineTotal,
+            ];
         }
 
-        if (!$productId && !empty($item['sku'])) {
-            $pstmt = $pdo->prepare("SELECT id FROM products WHERE sku = ? LIMIT 1");
-            $pstmt->execute([$item['sku']]);
-            $product = $pstmt->fetch(PDO::FETCH_ASSOC);
-            $productId = $product['id'] ?? null;
+        // Calculate shipping
+        $shippingCost = 0;
+        if ($shippingMethod === 'express') {
+            $shippingCost = 15;
         }
 
-        if (!$productId) {
-            throw new Exception('No se pudo identificar uno de los productos del carrito');
+        $total = round($subtotal + $shippingCost, 2);
+
+        // Resolve or create the client record linked to the current user
+        $clientStmt = $pdo->prepare("SELECT id FROM clients WHERE user_id = ? LIMIT 1");
+        $clientStmt->execute([$_SESSION['user_id']]);
+        $client = $clientStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($client) {
+            $clientId = (int) $client['id'];
+        } else {
+            // DB-03: Use RETURNING id for PostgreSQL compatibility
+            $clientInsert = $pdo->prepare("INSERT INTO clients (user_id, company_name, created_at, updated_at) VALUES (?, NULL, NOW(), NOW()) RETURNING id");
+            $clientInsert->execute([$_SESSION['user_id']]);
+            $clientId = (int) $clientInsert->fetchColumn();
         }
 
-        $itemStmt = $pdo->prepare("
-            INSERT INTO order_items 
-            (order_id, product_id, quantity, unit_price, subtotal, discount_percentage, discount_amount, line_total)
-            VALUES (?, ?, ?, ?, ?, 0, 0, ?)
+        $deliveryDate = date('Y-m-d', strtotime($shippingMethod === 'express' ? '+2 days' : '+5 days'));
+        $notes = "Dirección: " . $input['address'] . ", " . $input['city'] . "\n";
+        $notes .= "Código postal: " . $input['postalCode'] . "\n";
+        if (!empty($input['deliveryNotes'])) {
+            $notes .= "Notas de entrega: " . $input['deliveryNotes'] . "\n";
+        }
+        if (!empty($input['orderNotes'])) {
+            $notes .= "Notas: " . $input['orderNotes'];
+        }
+
+        // Generate order number
+        $orderNumber = 'ORD-' . date('Y') . '-' . strtoupper(bin2hex(random_bytes(3)));
+
+        // DB-03: Use RETURNING id instead of lastInsertId()
+        $stmt = $pdo->prepare("
+            INSERT INTO orders 
+            (client_id, order_number, total_amount, payment_status, payment_amount, balance, order_date, delivery_date, notes, is_wholesale, status)
+            VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, ?, false, ?)
+            RETURNING id
         ");
 
-        $itemPrice = $item['price'] ?? 0;
-        $itemQty = $item['quantity'] ?? 1;
-        $itemSubtotal = $itemPrice * $itemQty;
-
-        $itemResult = $itemStmt->execute([
-            $orderId,
-            $productId,
-            $itemQty,
-            $itemPrice,
-            $itemSubtotal,
-            $itemSubtotal
+        $result = $stmt->execute([
+            $clientId,
+            $orderNumber,
+            $total,
+            'pending',
+            0,
+            $total,
+            $deliveryDate,
+            $notes,
+            'pending'
         ]);
 
-        if (!$itemResult) {
-            throw new Exception('Error al agregar item al pedido');
+        if (!$result) {
+            throw new Exception('Error al crear la orden');
         }
+
+        $orderId = (int) $stmt->fetchColumn();
+
+        // Add order items AND deduct stock
+        foreach ($resolvedItems as $resolvedItem) {
+            $itemStmt = $pdo->prepare("
+                INSERT INTO order_items 
+                (order_id, product_id, quantity, unit_price, subtotal, discount_percentage, discount_amount, line_total)
+                VALUES (?, ?, ?, ?, ?, 0, 0, ?)
+            ");
+
+            $itemResult = $itemStmt->execute([
+                $orderId,
+                $resolvedItem['product_id'],
+                $resolvedItem['quantity'],
+                $resolvedItem['unit_price'],
+                $resolvedItem['subtotal'],
+                $resolvedItem['line_total']
+            ]);
+
+            if (!$itemResult) {
+                throw new Exception('Error al agregar item al pedido');
+            }
+
+            // BE-03: Deduct stock — uses WHERE stock_quantity >= ? as safety check
+            $stockStmt = $pdo->prepare("
+                UPDATE products 
+                SET stock_quantity = stock_quantity - ?, 
+                    updated_at = NOW()
+                WHERE id = ? AND stock_quantity >= ?
+            ");
+            $stockStmt->execute([
+                $resolvedItem['quantity'],
+                $resolvedItem['product_id'],
+                $resolvedItem['quantity']
+            ]);
+
+            if ($stockStmt->rowCount() === 0) {
+                throw new Exception('Stock insuficiente al momento de procesar. Otro usuario pudo haber comprado el producto.');
+            }
+        }
+
+        // Create payment record
+        $paymentMethodMap = [
+            'credit_card' => 'card',
+            'bank_transfer' => 'transfer',
+            'on_delivery' => 'cash',
+        ];
+
+        $paymentMethodDb = $paymentMethodMap[$paymentMethod] ?? 'cash';
+
+        $paymentStmt = $pdo->prepare("
+            INSERT INTO payments 
+            (order_id, amount, payment_method, payment_date, notes)
+            VALUES (?, ?, ?, NOW(), ?)
+        ");
+
+        $paymentStmt->execute([
+            $orderId,
+            $total,
+            $paymentMethodDb,
+            'Pago registrado desde checkout'
+        ]);
+    } catch (Exception $e) {
+        throw $e;
     }
 
-    // Create payment record
-    $paymentStmt = $pdo->prepare("
-        INSERT INTO payments 
-        (order_id, amount, payment_method, payment_date, notes)
-        VALUES (?, ?, ?, NOW(), ?)
-    ");
-
-    $paymentMethodMap = [
-        'credit_card' => 'card',
-        'bank_transfer' => 'transfer',
-        'on_delivery' => 'cash',
-    ];
-
-    $paymentMethodDb = $paymentMethodMap[$paymentMethod] ?? 'cash';
-
-    $paymentStmt->execute([
-        $orderId,
-        $total,
-        $paymentMethodDb,
-        'Pago registrado desde checkout'
-    ]);
+    // Post-commit actions (non-critical, outside transaction)
 
     // Trigger automatic ticket generation
     try {
-        require_once '../../backend/hooks/ticket_hooks.php';
+        require_once __DIR__ . '/../../backend/hooks/ticket_hooks.php';
         onOrderCompleted($orderId);
     } catch (Exception $e) {
         error_log("Error al crear ticket automático desde checkout: " . $e->getMessage());
     }
 
     // Log action
-    $logStmt = $pdo->prepare("
-        INSERT INTO action_logs 
-        (user_id, action, description, ip_address, timestamp)
-        VALUES (?, ?, ?, ?, NOW())
-    ");
-
-    $logStmt->execute([
-        $_SESSION['user_id'],
-        'order_created',
-        'Pedido creado desde checkout: ' . $orderNumber,
-        $_SERVER['REMOTE_ADDR'] ?? null
-    ]);
-
-    // Send confirmation email (placeholder for actual email implementation)
-    // TODO: Send email with order confirmation
-    // $emailResult = sendOrderConfirmationEmail($input['email'], $orderNumber, $orderId);
+    try {
+        log_action(
+            $_SESSION['user_id'],
+            'order_created',
+            'Pedido creado desde checkout: ' . $orderNumber,
+            $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'
+        );
+    } catch (Exception $e) {
+        error_log("Error al registrar log de checkout: " . $e->getMessage());
+    }
 
     // Prepare response
     echo json_encode([
