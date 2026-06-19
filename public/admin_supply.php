@@ -1092,7 +1092,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                 <input type="hidden" id="marketplaceEditId" value="">
 
                 <div class="grid grid-3">
-                    <div class="form-group"><label>Código CE (3 a 32 caracteres)</label><input id="marketplaceSku" type="text" maxlength="32" placeholder="Ej. CE-2024-01"><small id="marketplaceSkuStatus" class="text-muted">Debe ser único (letras, números o guiones).</small></div>
+                    <div class="form-group"><label>Código del producto (5 o 6 números)</label><input id="marketplaceSku" type="text" maxlength="6" inputmode="numeric" pattern="\d{5,6}" placeholder="Ej. 23032"><small id="marketplaceSkuStatus" class="text-muted">Se valida en la base de datos y debe ser único.</small></div>
                     <div class="form-group"><label>Nombre</label><input id="marketplaceName" type="text" maxlength="220"></div>
                     <div class="form-group">
                         <label>Condición</label>
