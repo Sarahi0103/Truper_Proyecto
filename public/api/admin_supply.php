@@ -346,6 +346,54 @@ function first_existing_column_admin_supply(string $table, array $candidates): ?
     return null;
 }
 
+function reorder_homepage_updates(PDO $pdo, int $targetId = 0, int $newPosition = 0) {
+    $sortCol = first_existing_column_admin_supply('homepage_updates', ['sort_order', 'display_order', 'order_index', 'position']);
+    if ($sortCol === null) return;
+
+    $stmt = $pdo->query("SELECT id, COALESCE({$sortCol}, 0) as sort_order FROM homepage_updates ORDER BY {$sortCol} ASC, id DESC");
+    $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if ($targetId > 0 && $newPosition > 0) {
+        $targetItem = null;
+        $otherItems = [];
+        foreach ($items as $item) {
+            if ((int)$item['id'] === $targetId) {
+                $targetItem = $item;
+                $targetItem['sort_order'] = $newPosition;
+            } else {
+                $otherItems[] = $item;
+            }
+        }
+        
+        $inserted = false;
+        $newItems = [];
+        $index = 1;
+        
+        foreach ($otherItems as $item) {
+            if ($index === $newPosition) {
+                if ($targetItem) {
+                    $newItems[] = $targetItem;
+                    $inserted = true;
+                }
+            }
+            $newItems[] = $item;
+            $index++;
+        }
+        
+        if (!$inserted && $targetItem) {
+            $newItems[] = $targetItem;
+        }
+        $items = $newItems;
+    }
+
+    $pos = 1;
+    $updateStmt = $pdo->prepare("UPDATE homepage_updates SET {$sortCol} = ? WHERE id = ?");
+    foreach ($items as $item) {
+        $updateStmt->execute([$pos, (int)$item['id']]);
+        $pos++;
+    }
+}
+
 function force_delete_product_dependencies_admin_supply(PDO $pdo, int $productId): int {
     if ($productId <= 0) {
         return 0;
@@ -4610,6 +4658,8 @@ try {
                 break;
             }
 
+            reorder_homepage_updates($pdo);
+
             $activeCol = homepage_updates_active_column_admin_supply();
             $sortCol = first_existing_column_admin_supply('homepage_updates', ['sort_order', 'display_order', 'order_index', 'position']);
             $imageCol = first_existing_column_admin_supply('homepage_updates', ['image_url', 'image', 'photo_url']);
@@ -4752,6 +4802,7 @@ try {
                 $values[] = $id;
                 $stmt = $pdo->prepare('UPDATE homepage_updates SET ' . implode(', ', $sets) . ' WHERE id = ?');
                 $stmt->execute($values);
+                reorder_homepage_updates($pdo, $id, $sortOrder);
                 $msg = $imageWarning ? ('Publicacion actualizada (sin imagen: ' . $imageWarning . ')') : 'Publicacion actualizada';
                 $response = ['success' => true, 'message' => $msg];
             } else {
@@ -4787,6 +4838,8 @@ try {
 
                 $stmt = $pdo->prepare('INSERT INTO homepage_updates (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ')');
                 $stmt->execute($values);
+                $newId = (int)$pdo->lastInsertId();
+                reorder_homepage_updates($pdo, $newId, $sortOrder);
                 $msg = $imageWarning ? ('Publicacion creada (sin imagen: ' . $imageWarning . ')') : 'Publicacion creada';
                 $response = ['success' => true, 'message' => $msg];
             }
@@ -4806,6 +4859,7 @@ try {
 
             $stmt = $pdo->prepare("DELETE FROM homepage_updates WHERE id = ?");
             $stmt->execute([$id]);
+            reorder_homepage_updates($pdo);
             $response = ['success' => true, 'message' => 'Publicacion eliminada'];
             break;
 
