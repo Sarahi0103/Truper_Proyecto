@@ -199,39 +199,71 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
         .registration-cta-box {
             margin-top: 3rem;
             padding: 2.25rem 2rem;
-            background: linear-gradient(135deg, rgba(255, 127, 0, 0.08) 0%, rgba(255, 127, 0, 0.02) 100%);
-            border: 1px solid rgba(255, 127, 0, 0.25);
-            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(255, 102, 0, 0.08) 0%, rgba(255, 102, 0, 0.02) 50%, rgba(12, 12, 15, 0.65) 100%);
+            border: 1px solid rgba(255, 102, 0, 0.28);
+            border-radius: 18px;
             text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-            backdrop-filter: blur(10px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.35), inset 0 1px 1px rgba(255,255,255,0.06);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+        }
+        .registration-cta-box:hover {
+            border-color: rgba(255, 102, 0, 0.45);
+            box-shadow: 0 20px 45px rgba(0,0,0,0.45), 0 0 20px rgba(255, 102, 0, 0.08);
+            transform: translateY(-2px);
         }
         .registration-cta-box h4 {
-            margin: 0 0 0.5rem;
+            margin: 0 0 0.65rem;
             color: var(--theme-accent, #ff7f00);
-            font-size: 1.35rem;
-            font-weight: 700;
+            font-size: 1.3rem;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-shadow: 0 2px 10px rgba(255, 102, 0, 0.15);
         }
         .registration-cta-box p {
             margin: 0 0 1.5rem;
-            font-size: 0.95rem;
-            color: var(--theme-text-muted, #888);
+            font-size: 0.92rem;
+            line-height: 1.5;
+            color: rgba(255, 255, 255, 0.7);
         }
         .registration-cta-box .btn-cta {
-            padding: 0.85rem 2.25rem;
-            font-size: 1rem;
+            padding: 0.85rem 2rem;
+            font-size: 0.92rem;
             font-weight: 800;
             border-radius: 12px;
             display: inline-flex;
             align-items: center;
-            gap: 10px;
-            box-shadow: 0 6px 20px rgba(255,127,0,0.3);
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            justify-content: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #ff6600, #ff8c00);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            box-shadow: 0 6px 20px rgba(255,102,0,0.25);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            cursor: pointer;
+            text-decoration: none;
+            max-width: 280px;
+            width: 100%;
+            box-sizing: border-box;
+            margin: 0 auto;
         }
         .registration-cta-box .btn-cta:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(255,127,0,0.4);
+            background: linear-gradient(135deg, #ff8c00, #ffaa00);
+            transform: translateY(-2px) scale(1.01);
+            box-shadow: 0 8px 25px rgba(255, 102, 0, 0.4), 0 0 0 4px rgba(255, 102, 0, 0.15);
+            color: #ffffff;
         }
+        .registration-cta-box .btn-cta:active {
+            transform: translateY(1px);
+        }
+
 
         /* ============================================================
            TEMPLATE 1: CLASSIC (🏛️ Clásica)
