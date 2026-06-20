@@ -90,11 +90,16 @@ function removeFromCart(productId) {
  * Limpiar carrito
  */
 function clearCart() {
-    if (confirm('¿Deseas limpiar todo el pedido?')) {
-        currentCart = [];
-        updateCartUI();
-        showAlert('Pedido limpiado', 'info');
-    }
+    confirmAction(
+        'Limpiar Pedido',
+        '¿Deseas limpiar todo el pedido? Todos los artículos seleccionados se removerán.',
+        '🗑️',
+        function() {
+            currentCart = [];
+            updateCartUI();
+            showAlert('Pedido limpiado', 'info');
+        }
+    );
 }
 
 /**
@@ -646,20 +651,19 @@ async function updateOrderStatus(orderId, newStatus) {
 async function deleteOrder(orderId, orderNumber) {
     if (!ORDERS_IS_ADMIN) return;
 
-    const confirmed = confirm(`¿Estás seguro de que deseas eliminar el pedido ${orderNumber}? Esta acción no se puede deshacer.`);
-    if (!confirmed) return;
+    confirmDelete(`el pedido ${orderNumber}`, async function() {
+        const response = await apiCall('/orders.php?action=delete', 'DELETE', {
+            order_id: Number(orderId)
+        });
 
-    const response = await apiCall('/orders.php?action=delete', 'DELETE', {
-        order_id: Number(orderId)
+        if (response && response.success) {
+            showAlert(response.message || 'Pedido eliminado correctamente', 'success');
+            await loadOrders();
+            return;
+        }
+
+        showAlert((response && response.message) ? response.message : 'No se pudo eliminar el pedido', 'error');
     });
-
-    if (response && response.success) {
-        showAlert(response.message || 'Pedido eliminado correctamente', 'success');
-        await loadOrders();
-        return;
-    }
-
-    showAlert((response && response.message) ? response.message : 'No se pudo eliminar el pedido', 'error');
 }
 
 function normalizeCategoryText(value) {

@@ -864,21 +864,24 @@ async function closeDrawer() {
     return;
   }
 
-  if (!confirm('¿Seguro que la quieres cerrar?')) {
-    return;
-  }
-
-  const res = await apiCall('/cashier.php?action=close', 'POST', {
-    closing_amount: closeAmount,
-    notes: closeNote
-  });
-  
-  if (res && res.success) {
-    showAlert(`Caja cerrada exitosamente. Arqueo completado. Diferencia de caja: ${formatMoney(res.difference_amount)}`, 'success');
-    refreshStatus();
-  } else if (res) {
-    showAlert(res.message, 'error');
-  }
+  confirmAction(
+    'Cerrar Caja',
+    '¿Estás seguro de que deseas finalizar el turno y cerrar la caja? Esta acción realizará el arqueo correspondiente.',
+    '🔒',
+    async function() {
+      const res = await apiCall('/cashier.php?action=close', 'POST', {
+        closing_amount: closeAmount,
+        notes: closeNote
+      });
+      
+      if (res && res.success) {
+        showAlert(`Caja cerrada exitosamente. Arqueo completado. Diferencia de caja: ${formatMoney(res.difference_amount)}`, 'success');
+        refreshStatus();
+      } else if (res) {
+        showAlert(res.message, 'error');
+      }
+    }
+  );
 }
 
 async function createControlNote() {

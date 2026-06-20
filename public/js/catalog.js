@@ -536,8 +536,19 @@
     if (openBtn && drawer) openBtn.addEventListener('click', () => drawer.classList.add('open'));
     if (closeBtn && drawer) {
       closeBtn.addEventListener('click', () => {
-        if (confirm('¿Seguro que quieres cerrar el carrito?')) {
-          drawer.classList.remove('open');
+        if (window.showPremiumModal) {
+          window.showPremiumModal(
+            'Cerrar Carrito',
+            '¿Seguro que quieres cerrar el carrito?',
+            '🛒',
+            () => {
+              drawer.classList.remove('open');
+            }
+          );
+        } else {
+          if (confirm('¿Seguro que quieres cerrar el carrito?')) {
+            drawer.classList.remove('open');
+          }
         }
       });
     }

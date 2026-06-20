@@ -501,6 +501,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
     </footer>
 
     <script src="js/jspdf.umd.min.js"></script>
+    <script src="js/modals.js"></script>
     <script src="js/main.js?v=2.6"></script>
     <script src="js/catalog.js"></script>
     <script>
@@ -656,17 +657,27 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
         }
 
         function removeFromCart(sku) {
-            if (!confirm('¿Eliminar este producto del carrito?')) return;
             const cart = getStoredCart();
-            const filtered = cart.filter(p => p.sku !== sku);
-            localStorage.setItem('truper_cart', JSON.stringify(filtered));
-            renderCartPage();
+            const item = cart.find(p => p.sku === sku);
+            const itemName = item ? decodeCartText(item.name) : 'este producto';
+            confirmDelete(itemName, function() {
+                const nextCart = getStoredCart(); // refresh in case it changed
+                const filtered = nextCart.filter(p => p.sku !== sku);
+                localStorage.setItem('truper_cart', JSON.stringify(filtered));
+                renderCartPage();
+            });
         }
 
         document.getElementById('clearCart')?.addEventListener('click', function() {
-            if (!confirm('¿Vaciar todo el carrito?')) return;
-            localStorage.removeItem('truper_cart');
-            renderCartPage();
+            confirmAction(
+                'Vaciar Carrito',
+                '¿Estás seguro de que deseas vaciar todo el carrito? Esta acción no se puede deshacer.',
+                '🗑️',
+                function() {
+                    localStorage.removeItem('truper_cart');
+                    renderCartPage();
+                }
+            );
         });
 
         document.getElementById('shareWhatsApp')?.addEventListener('click', function() {

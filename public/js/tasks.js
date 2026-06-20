@@ -178,10 +178,12 @@ async function logTime(id) {
 }
 
 async function deleteT(id) {
-    if (confirm('¿Eliminar tarea?')) {
+    const task = ALL_TASKS.find(t => t.id === id);
+    const taskTitle = task ? task.title : 'esta tarea';
+    confirmDelete(taskTitle, async function() {
         const res = await apiCall('/tasks.php?action=delete', 'POST', { task_id: id });
         if (res?.success) loadTasks();
-    }
+    });
 }
 
 function filterByPriority(p) {

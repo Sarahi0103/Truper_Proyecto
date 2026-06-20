@@ -180,6 +180,16 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
 
     <main>
         <div class="tickets-container">
+            <!-- ── Back Button ── -->
+            <div class="back-header">
+                <button onclick="history.back()" class="btn-back">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                    Regresar
+                </button>
+            </div>
+
             <div class="page-hero">
                 <div class="module-badge module-admin"><span class="module-glyph">TK</span> Historial centralizado</div>
                 <h1>Panel de Historial de Tickets</h1>
@@ -329,13 +339,12 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
 
     <script src="js/jspdf.umd.min.js"></script>
     <script src="js/main.js?v=2.6"></script>
+    <script src="js/modals.js"></script>
     <script>
         window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>';
 
         function logout() {
-            if (confirm('¿Deseas cerrar sesión?')) {
-                window.location.href = 'api/auth.php?action=logout';
-            }
+            confirmLogout('api/auth.php?action=logout');
         }
 
         function escapeHtml(v) {
@@ -857,60 +866,64 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
         }
 
         async function archiveCurrentMonth() {
-            if (!confirm('¿Estás seguro de que quieres archivar los tickets de este mes? Se generará y guardará un PDF de cierre mensual. Esta acción no se puede deshacer.')) {
-                return;
-            }
+            showPremiumModal(
+                'Archivar Mes',
+                '¿Estás seguro de que quieres archivar los tickets de este mes? Se generará y guardará un PDF de cierre mensual. Esta acción no se puede deshacer.',
+                '🔒',
+                async () => {
+                    const yearSelect = document.getElementById('ticketYearFilter');
+                    const monthSelect = document.getElementById('ticketMonthFilter');
+                    const year = yearSelect ? yearSelect.value : new Date().getFullYear();
+                    const month = monthSelect ? monthSelect.value : (new Date().getMonth() + 1);
 
-            const yearSelect = document.getElementById('ticketYearFilter');
-            const monthSelect = document.getElementById('ticketMonthFilter');
-            const year = yearSelect ? yearSelect.value : new Date().getFullYear();
-            const month = monthSelect ? monthSelect.value : (new Date().getMonth() + 1);
+                    try {
+                        // 1. Obtener datos históricos de este mes para el PDF
+                        showAlert('Obteniendo datos del mes...', 'info');
+                        const historyRes = await apiCall(`/analytics.php?action=ticket-history&year=${year}&month=${month}`);
+                        if (!historyRes || !historyRes.success) {
+                            showAlert('No se pudo obtener el historial para generar el PDF', 'error');
+                            return;
+                        }
 
-            try {
-                // 1. Obtener datos históricos de este mes para el PDF
-                showAlert('Obteniendo datos del mes...', 'info');
-                const historyRes = await apiCall(`/analytics.php?action=ticket-history&year=${year}&month=${month}`);
-                if (!historyRes || !historyRes.success) {
-                    showAlert('No se pudo obtener el historial para generar el PDF', 'error');
-                    return;
+                        // 2. Crear el PDF
+                        showAlert('Generando PDF del mes...', 'info');
+                        const doc = generateMonthlyReportPdf(year, month, historyRes.data);
+                        const pdfBase64 = doc.output('datauristring').split(',')[1];
+
+                        // 3. Subir el PDF al servidor
+                        showAlert('Guardando PDF en el servidor...', 'info');
+                        const uploadRes = await apiCall('/analytics.php?action=save-monthly-pdf', 'POST', {
+                            year: parseInt(year, 10),
+                            month: parseInt(month, 10),
+                            pdf_data: pdfBase64
+                        });
+
+                        if (!uploadRes || !uploadRes.success) {
+                            showAlert('Error al subir el reporte PDF: ' + (uploadRes?.message || 'Error desconocido'), 'error');
+                            return;
+                        }
+
+                        // 4. Archivar en base de datos
+                        showAlert('Archivando registros en la base de datos...', 'info');
+                        const data = await apiCall('/analytics.php?action=archive-tickets', 'POST', {
+                            year: parseInt(year, 10),
+                            month: parseInt(month, 10)
+                        });
+
+                        if (data && data.success) {
+                            showAlert(`Se archivaron ${data.archived_count} tickets y se guardó el PDF de cierre.`, 'success');
+                            loadTicketHistory();
+                            loadArchivedPdfs();
+                        } else {
+                            showAlert((data && data.message) || 'Error al archivar', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error archivando tickets:', error);
+                        showAlert('Error en la solicitud', 'error');
+                    }
                 }
-
-                // 2. Crear el PDF
-                showAlert('Generando PDF del mes...', 'info');
-                const doc = generateMonthlyReportPdf(year, month, historyRes.data);
-                const pdfBase64 = doc.output('datauristring').split(',')[1];
-
-                // 3. Subir el PDF al servidor
-                showAlert('Guardando PDF en el servidor...', 'info');
-                const uploadRes = await apiCall('/analytics.php?action=save-monthly-pdf', 'POST', {
-                    year: parseInt(year, 10),
-                    month: parseInt(month, 10),
-                    pdf_data: pdfBase64
-                });
-
-                if (!uploadRes || !uploadRes.success) {
-                    showAlert('Error al subir el reporte PDF: ' + (uploadRes?.message || 'Error desconocido'), 'error');
-                    return;
-                }
-
-                // 4. Archivar en base de datos
-                showAlert('Archivando registros en la base de datos...', 'info');
-                const data = await apiCall('/analytics.php?action=archive-tickets', 'POST', {
-                    year: parseInt(year, 10),
-                    month: parseInt(month, 10)
-                });
-
-                if (data && data.success) {
-                    showAlert(`Se archivaron ${data.archived_count} tickets y se guardó el PDF de cierre.`, 'success');
-                    loadTicketHistory();
-                    loadArchivedPdfs();
-                } else {
-                    showAlert((data && data.message) || 'Error al archivar', 'error');
-                }
-            } catch (error) {
-                console.error('Error archivando tickets:', error);
-                showAlert('Error en la solicitud', 'error');
-            }
+            );
+        }
         }
 
         async function loadArchivedPdfs() {
@@ -1041,63 +1054,63 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
         document.addEventListener('DOMContentLoaded', initTicketFilters);
 
         async function deleteTicketFromHistory(folio) {
-            if (!confirm(`¿Eliminar el ticket ${folio}? Esta acción no se puede deshacer.`)) return;
+            confirmDelete(`el ticket ${folio}`, async () => {
+                // Fade out inmediato para feedback visual
+                const row = document.querySelector(`tr[data-folio="${folio}"]`);
+                if (row) {
+                    row.style.opacity = '0';
+                    row.style.transform = 'translateX(30px)';
+                    row.style.pointerEvents = 'none';
+                }
 
-            // Fade out inmediato para feedback visual
-            const row = document.querySelector(`tr[data-folio="${folio}"]`);
-            if (row) {
-                row.style.opacity = '0';
-                row.style.transform = 'translateX(30px)';
-                row.style.pointerEvents = 'none';
-            }
+                try {
+                    const response = await fetch('api/ticket_validation.php?action=delete', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': window.csrfToken || ''
+                        },
+                        body: JSON.stringify({
+                            folio: folio,
+                            reason: 'Eliminado desde historial de tickets',
+                            csrf_token: window.csrfToken || ''
+                        })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        // Quitar del DOM definitivamente
+                        setTimeout(() => { if (row) row.remove(); }, 310);
 
-            try {
-                const response = await fetch('api/ticket_validation.php?action=delete', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': window.csrfToken || ''
-                    },
-                    body: JSON.stringify({
-                        folio: folio,
-                        reason: 'Eliminado desde historial de tickets',
-                        csrf_token: window.csrfToken || ''
-                    })
-                });
-                const data = await response.json();
-                if (data.success) {
-                    // Quitar del DOM definitivamente
-                    setTimeout(() => { if (row) row.remove(); }, 310);
+                        // Actualizar array global y contador
+                        if (window._allClientTickets) {
+                            window._allClientTickets = window._allClientTickets.filter(t => t.folio !== folio);
+                            const visibleCount = window._allClientTickets.filter(t => {
+                                const ps = t.pickup_status || 'pending';
+                                return ps !== 'cancelled' && ps !== 'expired';
+                            }).length;
+                            const countEl = document.getElementById('clientTicketsCount');
+                            if (countEl) countEl.textContent = visibleCount > 0 ? `${visibleCount} ticket${visibleCount !== 1 ? 's' : ''}` : '';
+                        }
 
-                    // Actualizar array global y contador
-                    if (window._allClientTickets) {
-                        window._allClientTickets = window._allClientTickets.filter(t => t.folio !== folio);
-                        const visibleCount = window._allClientTickets.filter(t => {
-                            const ps = t.pickup_status || 'pending';
-                            return ps !== 'cancelled' && ps !== 'expired';
-                        }).length;
-                        const countEl = document.getElementById('clientTicketsCount');
-                        if (countEl) countEl.textContent = visibleCount > 0 ? `${visibleCount} ticket${visibleCount !== 1 ? 's' : ''}` : '';
+                        showAlert('Ticket eliminado correctamente', 'success');
+                    } else {
+                        // Revertir fade si hubo error
+                        if (row) {
+                            row.style.opacity = '1';
+                            row.style.transform = '';
+                            row.style.pointerEvents = '';
+                        }
+                        showAlert(data.message || 'Error al eliminar ticket', 'error');
                     }
-
-                    showAlert('Ticket eliminado correctamente', 'success');
-                } else {
-                    // Revertir fade si hubo error
+                } catch (err) {
                     if (row) {
                         row.style.opacity = '1';
                         row.style.transform = '';
                         row.style.pointerEvents = '';
                     }
-                    showAlert(data.message || 'Error al eliminar ticket', 'error');
+                    showAlert('Error al eliminar ticket', 'error');
                 }
-            } catch (err) {
-                if (row) {
-                    row.style.opacity = '1';
-                    row.style.transform = '';
-                    row.style.pointerEvents = '';
-                }
-                showAlert('Error al eliminar ticket', 'error');
-            }
+            });
         }
     </script>
     <script src="js/mobile-optimize.js"></script>

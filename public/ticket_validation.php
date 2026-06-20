@@ -415,28 +415,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             }
         }
 
-        .btn-back {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            cursor: pointer;
-            padding: 0.6rem 1.2rem;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #fff;
-            font-weight: 600;
-            transition: all 0.2s ease;
-            text-decoration: none;
-            margin-bottom: 1.5rem;
-        }
-
-        .btn-back:hover {
-            background: #ff7f00;
-            border-color: #ff7f00;
-            box-shadow: 0 0 12px rgba(255, 127, 0, 0.4);
-            transform: translateX(-3px);
-        }
+        /* Botón de regreso usa estilos globales de styles.css */
 
         /* Dashboard and global history styles */
         .dashboard-panels {

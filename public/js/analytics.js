@@ -678,34 +678,37 @@ function displayTicketHistory(data) {
  * Archivar tickets del mes actual
  */
 async function archiveCurrentMonth() {
-    if (!confirm('¿Estás seguro de que quieres archivar los tickets de este mes? Esta acción no se puede deshacer.')) {
-        return;
-    }
-
     const year = document.getElementById('ticketYearFilter')?.value || new Date().getFullYear();
     const month = document.getElementById('ticketMonthFilter')?.value || new Date().getMonth() + 1;
 
-    try {
-        const response = await fetch('api/analytics.php?action=archive-tickets', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: `year=${year}&month=${month}`
-        });
+    showPremiumModal(
+        'Archivar Tickets',
+        '¿Estás seguro de que quieres archivar los tickets de este mes? Esta acción no se puede deshacer.',
+        '📦',
+        async function() {
+            try {
+                const response = await fetch('api/analytics.php?action=archive-tickets', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `year=${year}&month=${month}`
+                });
 
-        const data = await response.json();
+                const data = await response.json();
 
-        if (data.success) {
-            showAlert('Éxito', `Se archivaron ${data.archived_count} tickets correctamente.`, 'success');
-            loadTicketHistory();
-        } else {
-            showAlert('Error', data.message || 'Error al archivar', 'error');
+                if (data.success) {
+                    showAlert('Éxito', `Se archivaron ${data.archived_count} tickets correctamente.`, 'success');
+                    loadTicketHistory();
+                } else {
+                    showAlert('Error', data.message || 'Error al archivar', 'error');
+                }
+            } catch (error) {
+                console.error('Error archivando tickets:', error);
+                showAlert('Error', 'Error en la solicitud', 'error');
+            }
         }
-    } catch (error) {
-        console.error('Error archivando tickets:', error);
-        showAlert('Error', 'Error en la solicitud', 'error');
-    }
+    );
 }
 
 /**

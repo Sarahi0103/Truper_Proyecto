@@ -709,18 +709,18 @@ $is_admin_or_employee = ($is_admin || $user_role === 'employee');
 
         /* ── Delete expense ── */
         async function deleteExpense(id, title) {
-            if (!confirm(`¿Eliminar el gasto "${title}"? Esta acción no se puede deshacer.`)) return;
+            confirmDelete(title, async function() {
+                const res = await apiFetch('api/expenses.php?action=delete', 'POST', {
+                    id, csrf_token: window.csrfToken
+                });
 
-            const res = await apiFetch('api/expenses.php?action=delete', 'POST', {
-                id, csrf_token: window.csrfToken
+                if (res && res.success) {
+                    showAlert('Gasto eliminado', 'success');
+                    await loadAll();
+                } else {
+                    showAlert(res?.message || 'Error al eliminar', 'error');
+                }
             });
-
-            if (res && res.success) {
-                showAlert('Gasto eliminado', 'success');
-                await loadAll();
-            } else {
-                showAlert(res?.message || 'Error al eliminar', 'error');
-            }
         }
 
         /* ── Helpers ── */

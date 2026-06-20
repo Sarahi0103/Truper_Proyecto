@@ -637,6 +637,7 @@ function homepage_update_label($type) {
     </footer>
     <script src="<?php echo asset_url('js/jspdf.umd.min.js'); ?>"></script>
     <script src="<?php echo asset_url('js/main.js'); ?>"></script>
+    <script src="<?php echo asset_url('js/modals.js'); ?>"></script>
     <script src="<?php echo asset_url('js/catalog.js'); ?>"></script>
     <script>
         // Compartir por WhatsApp

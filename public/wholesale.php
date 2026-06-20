@@ -451,19 +451,18 @@ async function approveWholesale(id) {
 }
 
 async function deleteWholesale(id) {
-  if (!confirmDelete('¿Estás seguro de que deseas eliminar esta solicitud de mayoreo aprobada? Esta acción no se puede deshacer.')) {
-    return;
-  }
-  const res = await apiCall('/wholesale.php?action=delete', 'POST', { id });
-  if (res && res.success) {
-    handleSuccessResponse(res, {
-      scrollTarget: '#wholesaleRows',
-      successMessage: res.message || 'Solicitud eliminada correctamente',
-      onSuccess: () => loadWholesale()
-    });
-  } else if (res) {
-    showAlert(res.message, 'error');
-  }
+  confirmDelete('esta solicitud de mayoreo aprobada', async function() {
+    const res = await apiCall('/wholesale.php?action=delete', 'POST', { id });
+    if (res && res.success) {
+      handleSuccessResponse(res, {
+        scrollTarget: '#wholesaleRows',
+        successMessage: res.message || 'Solicitud eliminada correctamente',
+        onSuccess: () => loadWholesale()
+      });
+    } else if (res) {
+      showAlert(res.message, 'error');
+    }
+  });
 }
 
 async function loadWholesale() {
