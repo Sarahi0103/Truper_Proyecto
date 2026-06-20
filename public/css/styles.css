@@ -176,8 +176,9 @@ textarea {
 
 .btn-back:active {
     transform: translateX(-1px);
-    background: linear-gradient(135deg, rgba(255, 127, 0, 0.3) 0%, rgba(255, 127, 0, 0.1) 100%);
-    box-shadow: 0 0 20px rgba(255, 127, 0, 0.4), 0 0 40px rgba(255, 127, 0, 0.2);
+    background: linear-gradient(135deg, rgba(255, 127, 0, 0.4) 0%, rgba(255, 127, 0, 0.2) 100%);
+    border-color: var(--color-naranja);
+    box-shadow: 0 0 25px rgba(255, 127, 0, 0.5), 0 0 50px rgba(255, 127, 0, 0.3), inset 0 0 15px rgba(255, 127, 0, 0.2);
 }
 
 .btn-back svg {
