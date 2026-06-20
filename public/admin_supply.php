@@ -5932,7 +5932,7 @@ async function saveMarketplaceCeByAdmin() {
     const skuInput = document.getElementById('marketplaceSku');
     const normalizedSku = normalizeNumericSku(skuInput?.value || '');
     const marketplaceName = document.getElementById('marketplaceName')?.value?.trim() || '';
-    const price = Number(document.getElementById('marketplacePrice')?.value || 0);
+    const price = Math.round(Number(document.getElementById('marketplacePrice')?.value || 0) * 100) / 100;
     const stock = Number(document.getElementById('marketplaceStock')?.value || 0);
     const box = document.getElementById('marketplaceResult');
 
