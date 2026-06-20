@@ -892,6 +892,15 @@ function ensure_admin_supply_tables($pdo): void {
     try {
         $pdo->exec("ALTER TABLE homepage_updates ADD COLUMN IF NOT EXISTS update_type VARCHAR(20) NOT NULL DEFAULT 'noticia'");
     } catch (Exception $ignored) {}
+    try {
+        $pdo->exec("ALTER TABLE homepage_updates ADD COLUMN IF NOT EXISTS additional_images TEXT DEFAULT '[]'");
+    } catch (Exception $ignored) {}
+    try {
+        $pdo->exec("ALTER TABLE homepage_updates ADD COLUMN IF NOT EXISTS registration_url TEXT DEFAULT ''");
+    } catch (Exception $ignored) {}
+    try {
+        $pdo->exec("ALTER TABLE homepage_updates ADD COLUMN IF NOT EXISTS design_template VARCHAR(50) DEFAULT 'classic'");
+    } catch (Exception $ignored) {}
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS product_categories (
         id SERIAL PRIMARY KEY,
@@ -4622,7 +4631,7 @@ try {
                 $whereActive = ' WHERE (CASE WHEN ' . $activeCol . " IS NULL THEN 1 WHEN LOWER(CAST(" . $activeCol . " AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
             }
             $limit = $onlyActive ? 40 : 120;
-            $stmt = $pdo->query('SELECT id, update_type, title, body, ' . $selectImage . ', ' . $selectSort . ', ' . $selectActive . ', ' . $selectCreatedAt . ', ' . $selectUpdatedAt . ' FROM homepage_updates' . $whereActive . ' ORDER BY ' . $orderExpr . ' LIMIT ' . (int)$limit);
+            $stmt = $pdo->query('SELECT id, update_type, title, body, ' . $selectImage . ', ' . $selectSort . ', ' . $selectActive . ', ' . $selectCreatedAt . ', ' . $selectUpdatedAt . ', COALESCE(additional_images, \'[]\') AS additional_images, COALESCE(registration_url, \'\') AS registration_url, COALESCE(design_template, \'classic\') AS design_template FROM homepage_updates' . $whereActive . ' ORDER BY ' . $orderExpr . ' LIMIT ' . (int)$limit);
 
             $response = ['success' => true, 'items' => $stmt->fetchAll()];
             break;
@@ -4641,6 +4650,50 @@ try {
             $isActive = isset($_POST['is_active'])
                 ? normalize_bool_admin_supply($_POST['is_active'], true)
                 : (isset($input['is_active']) ? normalize_bool_admin_supply($input['is_active'], true) : true);
+
+            $registrationUrl = trim((string)($_POST['registration_url'] ?? ($input['registration_url'] ?? '')));
+            $existingGalleryRaw = trim((string)($_POST['existing_gallery'] ?? ($input['existing_gallery'] ?? '[]')));
+            $designTemplate = trim((string)($_POST['design_template'] ?? ($input['design_template'] ?? 'classic')));
+
+            $allowedTemplates = ['classic', 'split', 'gallery', 'minimal', 'magazine'];
+            if (!in_array($designTemplate, $allowedTemplates, true)) {
+                $designTemplate = 'classic';
+            }
+
+            $existingGallery = [];
+            if ($existingGalleryRaw !== '') {
+                try {
+                    $existingGallery = json_decode($existingGalleryRaw, true);
+                    if (!is_array($existingGallery)) {
+                        $existingGallery = [];
+                    }
+                } catch (Exception $e) {
+                    $existingGallery = [];
+                }
+            }
+
+            $uploadedGallery = [];
+            if (isset($_FILES['gallery']) && is_array($_FILES['gallery']['name'])) {
+                $fileCount = count($_FILES['gallery']['name']);
+                for ($i = 0; $i < $fileCount; $i++) {
+                    if ($_FILES['gallery']['error'][$i] === UPLOAD_ERR_OK) {
+                        $singleFile = [
+                            'name' => $_FILES['gallery']['name'][$i],
+                            'type' => $_FILES['gallery']['type'][$i],
+                            'tmp_name' => $_FILES['gallery']['tmp_name'][$i],
+                            'error' => $_FILES['gallery']['error'][$i],
+                            'size' => $_FILES['gallery']['size'][$i]
+                        ];
+                        try {
+                            $uploadedGallery[] = store_product_image($singleFile);
+                        } catch (Exception $e) {
+                            error_log('Gallery upload error: ' . $e->getMessage());
+                        }
+                    }
+                }
+            }
+            $mergedGallery = array_merge($existingGallery, $uploadedGallery);
+            $additionalImagesJson = json_encode($mergedGallery);
 
             $activeCol = homepage_updates_active_column_admin_supply();
             $sortCol = first_existing_column_admin_supply('homepage_updates', ['sort_order', 'display_order', 'order_index', 'position']);
@@ -4673,8 +4726,8 @@ try {
             }
 
             if ($id > 0) {
-                $sets = ['update_type = ?', 'title = ?', 'body = ?'];
-                $values = [$type, $title, $body];
+                $sets = ['update_type = ?', 'title = ?', 'body = ?', 'additional_images = ?', 'registration_url = ?', 'design_template = ?'];
+                $values = [$type, $title, $body, $additionalImagesJson, $registrationUrl, $designTemplate];
 
                 if ($imageUrl !== null && $imageCol !== null) {
                     $sets[] = $imageCol . ' = ?';
@@ -4702,9 +4755,9 @@ try {
                 $msg = $imageWarning ? ('Publicacion actualizada (sin imagen: ' . $imageWarning . ')') : 'Publicacion actualizada';
                 $response = ['success' => true, 'message' => $msg];
             } else {
-                $columns = ['update_type', 'title', 'body'];
-                $placeholders = ['?', '?', '?'];
-                $values = [$type, $title, $body];
+                $columns = ['update_type', 'title', 'body', 'additional_images', 'registration_url', 'design_template'];
+                $placeholders = ['?', '?', '?', '?', '?', '?'];
+                $values = [$type, $title, $body, $additionalImagesJson, $registrationUrl, $designTemplate];
 
                 if ($imageCol !== null) {
                     $columns[] = $imageCol;

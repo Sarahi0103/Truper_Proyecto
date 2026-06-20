@@ -334,7 +334,7 @@ try {
         $whereActive = " WHERE (CASE WHEN {$activeColumn} IS NULL THEN 1 WHEN LOWER(CAST({$activeColumn} AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
     }
 
-    $stmtUpdates = $pdo->query("SELECT update_type, title, body, {$imageSelect} FROM homepage_updates{$whereActive} ORDER BY {$sortColumn} ASC, id DESC LIMIT 12");
+    $stmtUpdates = $pdo->query("SELECT id, update_type, title, body, {$imageSelect} FROM homepage_updates{$whereActive} ORDER BY {$sortColumn} ASC, id DESC LIMIT 12");
     $homepageUpdates = $stmtUpdates ? $stmtUpdates->fetchAll() : [];
 } catch (Exception $ignored) {
     $homepageUpdates = [];
@@ -453,6 +453,9 @@ function homepage_update_label($type) {
                                         <span class="promo-kicker"><?php echo htmlspecialchars(homepage_update_label($update['update_type'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span>
                                         <h3><?php echo htmlspecialchars((string)($update['title'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></h3>
                                         <p><?php echo htmlspecialchars((string)($update['body'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></p>
+                                        <div style="margin-top: 1rem;">
+                                            <a href="update_detail.php?id=<?php echo (int)$update['id']; ?>" class="btn btn-primary btn-small" style="font-weight: 700; border-radius: 8px;">Ver más</a>
+                                        </div>
                                     </div>
                                     <?php if (!empty($update['image_url'])): ?>
                                         <div class="promo-slide-media">

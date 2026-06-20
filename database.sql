@@ -330,6 +330,9 @@ CREATE TABLE IF NOT EXISTS homepage_updates (
     image_url TEXT,
     position INTEGER DEFAULT 0,
     is_active BOOLEAN DEFAULT true,
+    additional_images TEXT DEFAULT '[]',
+    registration_url TEXT DEFAULT '',
+    design_template VARCHAR(50) DEFAULT 'classic',
     created_by INTEGER REFERENCES users(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

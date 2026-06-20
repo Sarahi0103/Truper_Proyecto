@@ -815,7 +815,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                         </div>
                         <div class="form-group">
                             <label>Orden de aparición</label>
-                            <input id="updateOrder" type="number" min="0" step="1" value="0" placeholder="1, 2, 3...">
+                            <select id="updateOrder" style="background:#111; border:1px solid #1f1f1f; color:white; padding:0.5rem; border-radius:8px; width:100%;"></select>
                         </div>
                         <div class="form-group">
                             <label>¿Visible en portada?</label>
@@ -843,6 +843,34 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                     <div id="updateImagePreview" style="display:none;margin-top:0.75rem;background:var(--theme-surface);border:1px solid var(--theme-border);border-radius:10px;padding:0.75rem;max-width:340px;">
                         <p class="text-muted" style="margin:0 0 0.5rem;font-size:0.82rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Imagen previa:</p>
                         <img id="updateImagePreviewImg" src="" alt="Vista previa" style="max-width:100%;border-radius:8px;display:block;">
+                    </div>
+
+                    <div class="grid grid-2" style="gap:1rem; margin-top: 1rem;">
+                        <div class="form-group">
+                            <label>Plantilla de diseño</label>
+                            <select id="updateTemplate">
+                                <option value="classic">🏛️ Clásica (Estándar)</option>
+                                <option value="split">🌗 Lateral (Dos Columnas)</option>
+                                <option value="gallery">🖼️ Galería Destacada (Visual)</option>
+                                <option value="minimal">✨ Minimalista Premium</option>
+                                <option value="magazine">📰 Revista / Editorial</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Enlace de registro / Documentación <span class="text-muted">(opcional)</span></label>
+                            <input id="updateRegistrationUrl" type="url" placeholder="https://docs.google.com/forms/...">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 1rem;">
+                        <label>Imágenes adicionales (Galería) <span class="text-muted">(opcional, selecciona múltiples)</span></label>
+                        <input id="updateGallery" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif">
+                    </div>
+
+                    <input type="hidden" id="updateExistingGallery" value="[]">
+                    <div id="updateGalleryPreview" style="display:none;margin-top:0.75rem;background:var(--theme-surface);border:1px solid var(--theme-border);border-radius:10px;padding:0.75rem;">
+                        <p class="text-muted" style="margin:0 0 0.5rem;font-size:0.82rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Imágenes de la galería:</p>
+                        <div id="updateGalleryPreviewContainer" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
                     </div>
 
                     <div class="d-flex align-center" style="gap:0.75rem;flex-wrap:wrap;margin-top:1.25rem;">
@@ -2110,18 +2138,49 @@ function updateExcludedChips() {
     `).join('');
 }
 
+let _homepageUpdatesCount = 0;
+
+function populateUpdateOrderSelect(maxVal, selectedValue) {
+    const select = document.getElementById('updateOrder');
+    if (!select) return;
+    select.innerHTML = '';
+    const limit = Math.max(1, maxVal);
+    for (let i = 1; i <= limit; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = i;
+        if (i === Number(selectedValue)) {
+            opt.selected = true;
+        }
+        select.appendChild(opt);
+    }
+}
+
 function resetUpdateForm() {
     document.getElementById('updateEditId').value = '';
     document.getElementById('updateType').value = 'noticia';
-    document.getElementById('updateOrder').value = '0';
+    populateUpdateOrderSelect(_homepageUpdatesCount + 1, _homepageUpdatesCount + 1);
     document.getElementById('updateActive').value = '1';
     document.getElementById('updateTitle').value = '';
     document.getElementById('updateBody').value = '';
     document.getElementById('updateImage').value = '';
+    document.getElementById('updateRegistrationUrl').value = '';
+    document.getElementById('updateTemplate').value = 'classic';
+    document.getElementById('updateExistingGallery').value = '[]';
+    document.getElementById('updateGallery').value = '';
 
     const preview = document.getElementById('updateImagePreview');
     if (preview) {
         preview.style.display = 'none';
+    }
+
+    const galleryPreview = document.getElementById('updateGalleryPreview');
+    if (galleryPreview) {
+        galleryPreview.style.display = 'none';
+    }
+    const galleryContainer = document.getElementById('updateGalleryPreviewContainer');
+    if (galleryContainer) {
+        galleryContainer.innerHTML = '';
     }
 
     const banner = document.getElementById('updateFormMode');
@@ -2138,10 +2197,14 @@ function fillUpdateForm(update) {
     if (!update) return;
     document.getElementById('updateEditId').value = update.id || '';
     document.getElementById('updateType').value = update.update_type || 'noticia';
-    document.getElementById('updateOrder').value = String(update.sort_order || 0);
+    populateUpdateOrderSelect(_homepageUpdatesCount, update.sort_order || 1);
     document.getElementById('updateActive').value = Number(update.is_active) ? '1' : '0';
     document.getElementById('updateTitle').value = update.title || '';
     document.getElementById('updateBody').value = update.body || '';
+    document.getElementById('updateRegistrationUrl').value = update.registration_url || '';
+    document.getElementById('updateTemplate').value = update.design_template || 'classic';
+    document.getElementById('updateExistingGallery').value = update.additional_images || '[]';
+    document.getElementById('updateGallery').value = '';
 
     const banner = document.getElementById('updateFormMode');
     if (banner) banner.style.display = 'block';
@@ -2158,6 +2221,64 @@ function fillUpdateForm(update) {
         preview.style.display = 'none';
     }
 
+    // Render gallery
+    const galleryPreview = document.getElementById('updateGalleryPreview');
+    const galleryContainer = document.getElementById('updateGalleryPreviewContainer');
+    if (galleryPreview && galleryContainer) {
+        galleryContainer.innerHTML = '';
+        let imgs = [];
+        try {
+            imgs = JSON.parse(update.additional_images || '[]');
+        } catch(e) {}
+        if (Array.isArray(imgs) && imgs.length > 0) {
+            imgs.forEach((imgUrl, imgIdx) => {
+                const wrapper = document.createElement('div');
+                wrapper.style.position = 'relative';
+                wrapper.style.width = '80px';
+                wrapper.style.height = '80px';
+                
+                const img = document.createElement('img');
+                img.src = imgUrl;
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                img.style.borderRadius = '6px';
+                img.style.border = '1px solid var(--theme-border)';
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.innerHTML = '&times;';
+                removeBtn.style.position = 'absolute';
+                removeBtn.style.top = '-5px';
+                removeBtn.style.right = '-5px';
+                removeBtn.style.background = 'var(--theme-accent)';
+                removeBtn.style.color = '#fff';
+                removeBtn.style.border = 'none';
+                removeBtn.style.borderRadius = '50%';
+                removeBtn.style.width = '18px';
+                removeBtn.style.height = '18px';
+                removeBtn.style.fontSize = '12px';
+                removeBtn.style.lineHeight = '18px';
+                removeBtn.style.cursor = 'pointer';
+                removeBtn.onclick = function() {
+                    imgs.splice(imgIdx, 1);
+                    document.getElementById('updateExistingGallery').value = JSON.stringify(imgs);
+                    wrapper.remove();
+                    if (imgs.length === 0 && (!document.getElementById('updateGallery').files.length)) {
+                        galleryPreview.style.display = 'none';
+                    }
+                };
+                
+                wrapper.appendChild(img);
+                wrapper.appendChild(removeBtn);
+                galleryContainer.appendChild(wrapper);
+            });
+            galleryPreview.style.display = 'block';
+        } else {
+            galleryPreview.style.display = 'none';
+        }
+    }
+
     const button = document.getElementById('updateSaveButton');
     if (button) {
         button.textContent = 'Actualizar publicación';
@@ -2171,6 +2292,14 @@ async function loadHomepageUpdatesAdmin() {
     if (!res || !res.success || !Array.isArray(res.items)) {
         if (box) box.innerHTML = '<p class="text-muted">No fue posible cargar publicaciones.</p>';
         return;
+    }
+
+    _homepageUpdatesCount = res.items.length;
+    
+    // Set default order select options for new items
+    const editId = document.getElementById('updateEditId').value;
+    if (!editId) {
+        populateUpdateOrderSelect(_homepageUpdatesCount + 1, _homepageUpdatesCount + 1);
     }
 
     if (res.items.length === 0) {
@@ -2260,7 +2389,6 @@ async function saveHomepageUpdate() {
             showAlert('Imagen muy grande', 'warning');
             return;
         }
-        // Validate image type
         if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
             if (box) box.innerHTML = '<div class="alert alert-error">Formato de imagen no soportado. Usa JPG, PNG, WebP o GIF.</div>';
             showAlert('Formato de imagen inválido', 'warning');
@@ -2272,14 +2400,25 @@ async function saveHomepageUpdate() {
     const formData = new FormData();
     formData.append('id', Number(document.getElementById('updateEditId').value || 0));
     formData.append('update_type', document.getElementById('updateType').value);
-    formData.append('sort_order', Number(document.getElementById('updateOrder').value || 0));
+    formData.append('sort_order', Number(document.getElementById('updateOrder').value || 1));
     formData.append('is_active', document.getElementById('updateActive').value === '1' ? '1' : '0');
     formData.append('title', title);
     formData.append('body', body);
+    formData.append('registration_url', document.getElementById('updateRegistrationUrl').value.trim());
+    formData.append('design_template', document.getElementById('updateTemplate').value);
+    formData.append('existing_gallery', document.getElementById('updateExistingGallery').value || '[]');
     formData.append('csrf_token', window.csrfToken || '');
     
     if (imageInput && imageInput.files.length > 0) {
         formData.append('image', imageInput.files[0]);
+    }
+
+    // Gallery upload files
+    const galleryInput = document.getElementById('updateGallery');
+    if (galleryInput && galleryInput.files.length > 0) {
+        for (let i = 0; i < galleryInput.files.length; i++) {
+            formData.append('gallery[]', galleryInput.files[i]);
+        }
     }
 
     try {
@@ -2305,6 +2444,50 @@ async function saveHomepageUpdate() {
         if (box) box.innerHTML = `<div class="alert alert-error">Error de conexión: ${escapeHtml(error.message)}</div>`;
     }
 }
+
+// Bind gallery file input previews
+document.addEventListener('DOMContentLoaded', function() {
+    const galleryInput = document.getElementById('updateGallery');
+    if (galleryInput) {
+        galleryInput.onchange = function() {
+            const files = this.files;
+            const galleryPreview = document.getElementById('updateGalleryPreview');
+            const galleryContainer = document.getElementById('updateGalleryPreviewContainer');
+            if (galleryPreview && galleryContainer) {
+                // Clear any staged previews
+                const filePreviews = galleryContainer.querySelectorAll('.new-file-preview');
+                filePreviews.forEach(el => el.remove());
+                
+                if (files.length > 0) {
+                    galleryPreview.style.display = 'block';
+                    Array.from(files).forEach(file => {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const wrapper = document.createElement('div');
+                            wrapper.className = 'new-file-preview';
+                            wrapper.style.position = 'relative';
+                            wrapper.style.width = '80px';
+                            wrapper.style.height = '80px';
+                            
+                            const img = document.createElement('img');
+                            img.src = e.target.result;
+                            img.style.width = '100%';
+                            img.style.height = '100%';
+                            img.style.objectFit = 'cover';
+                            img.style.borderRadius = '6px';
+                            img.style.border = '1px solid var(--theme-border)';
+                            img.style.opacity = '0.7';
+                            
+                            wrapper.appendChild(img);
+                            galleryContainer.appendChild(wrapper);
+                        };
+                        reader.readAsDataURL(file);
+                    });
+                }
+            }
+        };
+    }
+});
 
 async function deleteHomepageUpdate(id) {
     if (!id) return;
