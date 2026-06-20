@@ -338,9 +338,13 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
     </footer>
 
     <script src="js/jspdf.umd.min.js"></script>
+<<<<<<< Updated upstream
     <script src="js/main.js?v=2.6"></script>
     <script src="js/modals.js?v=4.2"></script>
     <script>
+=======
+    <script src="js/main.js?v=2.6"></script>\r\n    <script src="js/modals.js"></script>\r\n    <script>
+>>>>>>> Stashed changes
         window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>';
 
         function logout() {
@@ -1115,3 +1119,4 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
     <script src="js/mobile-optimize.js"></script>
 </body>
 </html>
+
