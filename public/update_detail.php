@@ -172,11 +172,12 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
             position: relative;
             aspect-ratio: 4/3;
             overflow: hidden;
-            border-radius: 10px;
-            border: 1px solid var(--theme-border, #1f1f1f);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
             cursor: zoom-in;
-            background: var(--theme-surface-hover, #1a1a1a);
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s;
+            background: #0b0b0d;
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.3s, box-shadow 0.3s;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.25);
         }
         
         .gallery-item img {
@@ -187,12 +188,13 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
         }
         
         .gallery-item:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            transform: translateY(-4px) scale(1.02);
+            border-color: rgba(255, 102, 0, 0.35);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.45), 0 0 15px rgba(255, 102, 0, 0.05);
         }
         
         .gallery-item:hover img {
-            transform: scale(1.08);
+            transform: scale(1.05);
         }
 
         /* CTA Section for registration link */
@@ -275,17 +277,19 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
         .tpl-classic .cover-wrap {
             width: 100%;
             margin-bottom: 2rem;
-            border-radius: 14px;
+            border-radius: 16px;
             overflow: hidden;
-            border: 1px solid var(--theme-border, #1f1f1f);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.35);
+            background: #0c0c0f;
         }
         .tpl-classic .cover-wrap img {
             width: 100%;
             height: auto;
             display: block;
-            max-height: 480px;
-            object-fit: cover;
+            max-height: 520px;
+            object-fit: contain;
+            background: #0c0c0f;
         }
         .tpl-classic h1 {
             font-size: 2.25rem;
@@ -325,11 +329,12 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
         .tpl-split .split-sidebar img.sidebar-cover {
             width: 100%;
             height: auto;
-            max-height: 380px;
-            object-fit: cover;
-            border-radius: 14px;
-            border: 1px solid var(--theme-border, #1f1f1f);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            max-height: 420px;
+            object-fit: contain;
+            background: #0c0c0f;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
             display: block;
             margin-bottom: 1.5rem;
         }
@@ -429,11 +434,14 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
         }
         .tpl-minimal .minimal-cover {
             width: 100%;
-            height: 380px;
-            object-fit: cover;
-            border-radius: 16px;
+            height: auto;
+            max-height: 420px;
+            object-fit: contain;
+            background: #0c0c0f;
+            border-radius: 20px;
             margin-bottom: 2rem;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
         }
         .tpl-minimal .body-content {
             font-size: 1.05rem;
