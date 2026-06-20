@@ -501,8 +501,8 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
     </footer>
 
     <script src="js/jspdf.umd.min.js"></script>
-    <script src="js/modals.js"></script>
     <script src="js/main.js?v=2.6"></script>
+    <script src="js/modals.js"></script>
     <script src="js/catalog.js"></script>
     <script>
         function decodeCartText(value) {

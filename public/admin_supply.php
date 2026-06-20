@@ -2308,17 +2308,17 @@ async function saveHomepageUpdate() {
 
 async function deleteHomepageUpdate(id) {
     if (!id) return;
-    if (!confirm('¿Deseas eliminar esta publicación de portada?')) return;
+    confirmDelete('esta publicación de portada', async () => {
+        const box = document.getElementById('updateResult');
+        const res = await apiCall('/admin_supply.php?action=updates-delete', 'POST', { id: id });
+        if (!res || !res.success) {
+            if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible eliminar')}</div>`;
+            return;
+        }
 
-    const box = document.getElementById('updateResult');
-    const res = await apiCall('/admin_supply.php?action=updates-delete', 'POST', { id: id });
-    if (!res || !res.success) {
-        if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible eliminar')}</div>`;
-        return;
-    }
-
-    if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Publicación eliminada')}</div>`;
-    loadHomepageUpdatesAdmin();
+        if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Publicación eliminada')}</div>`;
+        loadHomepageUpdatesAdmin();
+    });
 }
 
 function resetClientForm() {
@@ -2537,32 +2537,32 @@ function renderClientPickupTickets(tickets) {
 }
 
 async function deleteClientTicket(folio) {
-    if (!confirm(`¿Estás seguro de que deseas eliminar el ticket ${folio}? Esta acción no se puede deshacer.`)) return;
-
-    try {
-        const response = await fetch('api/ticket_validation.php?action=delete', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': window.csrfToken || ''
-            },
-            body: JSON.stringify({
-                folio: folio,
-                reason: 'Eliminado manualmente desde Abastecimiento',
-                csrf_token: window.csrfToken || ''
-            })
-        });
-        const data = await response.json();
-        if (data.success) {
-            showAlert('Ticket eliminado correctamente', 'success');
-            loadClientPickupTickets(); // Recargar lista
-        } else {
-            showAlert(data.message || 'Error al eliminar ticket', 'error');
+    confirmDelete(`el ticket ${folio}`, async () => {
+        try {
+            const response = await fetch('api/ticket_validation.php?action=delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': window.csrfToken || ''
+                },
+                body: JSON.stringify({
+                    folio: folio,
+                    reason: 'Eliminado manualmente desde Abastecimiento',
+                    csrf_token: window.csrfToken || ''
+                })
+            });
+            const data = await response.json();
+            if (data.success) {
+                showAlert('Ticket eliminado correctamente', 'success');
+                loadClientPickupTickets(); // Recargar lista
+            } else {
+                showAlert(data.message || 'Error al eliminar ticket', 'error');
+            }
+        } catch (err) {
+            console.error('Error eliminando ticket:', err);
+            showAlert('Error al eliminar ticket', 'error');
         }
-    } catch (err) {
-        console.error('Error eliminando ticket:', err);
-        showAlert('Error al eliminar ticket', 'error');
-    }
+    });
 }
 
 let stockCurrentPage = 1;
@@ -2622,46 +2622,52 @@ async function deleteCategoryQuickFromSelect(selectId, resultId) {
     const confirmLabel = names.length === 1
         ? `¿Eliminar categoría "${names[0]}"?`
         : `¿Eliminar ${names.length} categorías seleccionadas?`;
-    if (!confirm(confirmLabel)) return;
-
-    let removed = 0;
-    let firstError = '';
-
-    for (const option of selected) {
-        const categoryName = String(option.value || '').trim();
-        const categoryId = Number(option.dataset?.id || 0);
-        const res = await apiCall('/admin_supply.php?action=categories-delete', 'POST', {
-            id: categoryId,
-            name: categoryName
-        });
-
-        if (res && res.success) {
-            removed += 1;
-            option.remove();
-        } else if (!firstError) {
-            firstError = (res && res.message) ? res.message : `No fue posible eliminar "${categoryName}"`;
-        }
-    }
-
-    if (removed > 0) {
-        if (quickBox) quickBox.innerHTML = `<span style="color:#22c55e;">${removed === 1 ? 'Categoría eliminada.' : `${removed} categorías eliminadas.`}</span>`;
-        showAlert(removed === 1 ? 'Categoría eliminada' : `${removed} categorías eliminadas`, 'success');
-    }
-    if (firstError) {
-        if (quickBox) quickBox.innerHTML = `<span style="color:#f87171;">${escapeHtml(firstError)}</span>`;
-        showAlert(firstError, 'error');
-    }
-
-    await refreshCategoriesUi();
     
-    // Force reload of product lists to show updated categories
-    if (removed > 0) {
-        console.log('Reloading product lists after category deletion...');
-        await Promise.all([
-            loadStock(stockCurrentPage || 1, 25),
-            loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 25)
-        ]);
-    }
+    showPremiumModal(
+        'Eliminar Categoría(s)',
+        confirmLabel + ' Esta acción no se puede deshacer.',
+        '🗑️',
+        async () => {
+            let removed = 0;
+            let firstError = '';
+
+            for (const option of selected) {
+                const categoryName = String(option.value || '').trim();
+                const categoryId = Number(option.dataset?.id || 0);
+                const res = await apiCall('/admin_supply.php?action=categories-delete', 'POST', {
+                    id: categoryId,
+                    name: categoryName
+                });
+
+                if (res && res.success) {
+                    removed += 1;
+                    option.remove();
+                } else if (!firstError) {
+                    firstError = (res && res.message) ? res.message : `No fue posible eliminar "${categoryName}"`;
+                }
+            }
+
+            if (removed > 0) {
+                if (quickBox) quickBox.innerHTML = `<span style="color:#22c55e;">${removed === 1 ? 'Categoría eliminada.' : `${removed} categorías eliminadas.`}</span>`;
+                showAlert(removed === 1 ? 'Categoría eliminada' : `${removed} categorías eliminadas`, 'success');
+            }
+            if (firstError) {
+                if (quickBox) quickBox.innerHTML = `<span style="color:#f87171;">${escapeHtml(firstError)}</span>`;
+                showAlert(firstError, 'error');
+            }
+
+            await refreshCategoriesUi();
+            
+            // Force reload of product lists to show updated categories
+            if (removed > 0) {
+                console.log('Reloading product lists after category deletion...');
+                await Promise.all([
+                    loadStock(stockCurrentPage || 1, 25),
+                    loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 25)
+                ]);
+            }
+        }
+    );
 }
 
 async function deleteCategoryQuick() {
@@ -2858,45 +2864,48 @@ async function deleteStockSelectedItems() {
         return;
     }
 
-    if (!confirm(`¿Eliminar ${selectedIds.length} producto(s) seleccionado(s)? Se quitarán del catálogo.`)) {
-        return;
-    }
+    showPremiumModal(
+        'Eliminar Productos',
+        `¿Estás seguro de que deseas eliminar ${selectedIds.length} producto(s) seleccionado(s)? Se quitarán del catálogo. Esta acción no se puede deshacer.`,
+        '🗑️',
+        async () => {
+            if (quickBox) quickBox.innerHTML = '<span style="color:#cbd5e1;">Eliminando productos...</span>';
 
-    if (quickBox) quickBox.innerHTML = '<span style="color:#cbd5e1;">Eliminando productos...</span>';
+            let successCount = 0;
+            let firstError = '';
+            for (const id of selectedIds) {
+                const res = await apiCall('/admin_supply.php?action=product-delete', 'POST', { id: id });
+                if (res && res.success) {
+                    successCount += 1;
+                } else if (!firstError) {
+                    firstError = (res && res.message) ? res.message : `No se pudo eliminar el producto ${id}`;
+                }
+            }
 
-    let successCount = 0;
-    let firstError = '';
-    for (const id of selectedIds) {
-        const res = await apiCall('/admin_supply.php?action=product-delete', 'POST', { id: id });
-        if (res && res.success) {
-            successCount += 1;
-        } else if (!firstError) {
-            firstError = (res && res.message) ? res.message : `No se pudo eliminar el producto ${id}`;
+            if (successCount > 0) {
+                if (quickBox) quickBox.innerHTML = `<span style="color:#22c55e;">${successCount} producto(s) eliminado(s).</span>`;
+                showAlert(`${successCount} producto(s) eliminado(s)`, 'success');
+            }
+            if (firstError) {
+                if (quickBox) quickBox.innerHTML += ` <span style="color:#f87171;">${escapeHtml(firstError)}</span>`;
+                showAlert(firstError, 'error');
+            }
+
+            // Optimistic update: remove deleted products from cache and re-render
+            try {
+                const idsSet = new Set(selectedIds.map((i) => Number(i)));
+                stockItemsCache = (stockItemsCache || []).filter((p) => !idsSet.has(Number(p.id)));
+                renderStockList();
+                renderStockPagination({ current_page: stockCurrentPage, total_pages: Math.max(1, Math.ceil((stockItemsCache || []).length / (stockPerPage || 50))), total_items: (stockItemsCache || []).length });
+            } catch (e) {
+                console.warn('Optimistic bulk removal failed:', e);
+            }
+
+            // Background sync: refresh stock and marketplace quickly
+            await loadStock(stockCurrentPage);
+            void loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 10);
         }
-    }
-
-    if (successCount > 0) {
-        if (quickBox) quickBox.innerHTML = `<span style="color:#22c55e;">${successCount} producto(s) eliminado(s).</span>`;
-        showAlert(`${successCount} producto(s) eliminado(s)`, 'success');
-    }
-    if (firstError) {
-        if (quickBox) quickBox.innerHTML += ` <span style="color:#f87171;">${escapeHtml(firstError)}</span>`;
-        showAlert(firstError, 'error');
-    }
-
-    // Optimistic update: remove deleted products from cache and re-render
-    try {
-        const idsSet = new Set(selectedIds.map((i) => Number(i)));
-        stockItemsCache = (stockItemsCache || []).filter((p) => !idsSet.has(Number(p.id)));
-        renderStockList();
-        renderStockPagination({ current_page: stockCurrentPage, total_pages: Math.max(1, Math.ceil((stockItemsCache || []).length / (stockPerPage || 50))), total_items: (stockItemsCache || []).length });
-    } catch (e) {
-        console.warn('Optimistic bulk removal failed:', e);
-    }
-
-    // Background sync: refresh stock and marketplace quickly
-    await loadStock(stockCurrentPage);
-    void loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 10);
+    );
 }
 
 function resetProductForm() {
@@ -3009,33 +3018,33 @@ function prepareSeedProductForEditing(id) {
 
 async function deleteProductByAdmin(id) {
     if (!id) return;
-    if (!confirm('¿Deseas eliminar este producto? Se quitará del catálogo principal.')) return;
+    confirmDelete('este producto', async () => {
+        const box = document.getElementById('productCreateResult');
+        const res = await apiCall('/admin_supply.php?action=product-delete', 'POST', { id: id });
+        if (!res || !res.success) {
+            if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible eliminar producto')}</div>`;
+            return;
+        }
 
-    const box = document.getElementById('productCreateResult');
-    const res = await apiCall('/admin_supply.php?action=product-delete', 'POST', { id: id });
-    if (!res || !res.success) {
-        if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible eliminar producto')}</div>`;
-        return;
-    }
+        if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Producto eliminado')}</div>`;
+        if (Number(document.getElementById('newProductEditId').value || 0) === Number(id)) {
+            resetProductForm();
+        }
+        // Optimistic update: remove product from local cache and re-render immediately
+        try {
+            stockItemsCache = (stockItemsCache || []).filter((p) => Number(p.id) !== Number(id));
+            renderStockList();
+            // update pagination based on current cache
+            renderStockPagination({ current_page: stockCurrentPage, total_pages: Math.max(1, Math.ceil((stockItemsCache || []).length / (stockPerPage || 50))), total_items: (stockItemsCache || []).length });
+        } catch (e) {
+            console.warn('Optimistic product removal failed:', e);
+        }
 
-    if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Producto eliminado')}</div>`;
-    if (Number(document.getElementById('newProductEditId').value || 0) === Number(id)) {
-        resetProductForm();
-    }
-    // Optimistic update: remove product from local cache and re-render immediately
-    try {
-        stockItemsCache = (stockItemsCache || []).filter((p) => Number(p.id) !== Number(id));
-        renderStockList();
-        // update pagination based on current cache
-        renderStockPagination({ current_page: stockCurrentPage, total_pages: Math.max(1, Math.ceil((stockItemsCache || []).length / (stockPerPage || 50))), total_items: (stockItemsCache || []).length });
-    } catch (e) {
-        console.warn('Optimistic product removal failed:', e);
-    }
-
-    // Background sync to keep server state in sync (non-blocking). Use small per_page for quick refresh.
-    void loadStock(stockCurrentPage);
-    void loadSupplierProducts();
-    void loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 10);
+        // Background sync to keep server state in sync (non-blocking). Use small per_page for quick refresh.
+        void loadStock(stockCurrentPage);
+        void loadSupplierProducts();
+        void loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 10);
+    });
 }
 
 function syncStockVisibilityState(id, nextVisible) {
@@ -3767,14 +3776,15 @@ async function loadCalendar() {
 }
 
 async function deleteCalendarVisit(id) {
-    if (!confirm('¿Eliminar este registro de visita del historial?')) return;
-    const res = await apiCall('/admin_supply.php?action=calendar-delete', 'POST', { id: id });
-    if (res && res.success) {
-        showAlert(res.message || 'Visita eliminada correctamente', 'success');
-        await loadCalendar();
-    } else {
-        showAlert(res && res.message ? res.message : 'No se pudo eliminar la visita', 'error');
-    }
+    confirmDelete('este registro de visita', async () => {
+        const res = await apiCall('/admin_supply.php?action=calendar-delete', 'POST', { id: id });
+        if (res && res.success) {
+            showAlert(res.message || 'Visita eliminada correctamente', 'success');
+            await loadCalendar();
+        } else {
+            showAlert(res && res.message ? res.message : 'No se pudo eliminar la visita', 'error');
+        }
+    });
 }
 
 function addMappedProductToOrder() {
@@ -4002,15 +4012,16 @@ async function createSupplierProductLink() {
 }
 
 async function deleteSupplierProductLink(id) {
-    if (!confirm('¿Estás seguro de que deseas eliminar esta asignación producto-proveedor?')) return;
-    const res = await apiCall('/admin_supply.php?action=supplier-product-delete', 'POST', { id: id });
-    if (res && res.success) {
-        showAlert(res.message || 'Asignación eliminada correctamente', 'success');
-        await loadSupplierProducts();
-        await loadMappedProductsBySupplier();
-    } else {
-        showAlert(res?.message || 'Error al eliminar la asignación', 'error');
-    }
+    confirmDelete('esta asignación producto-proveedor', async () => {
+        const res = await apiCall('/admin_supply.php?action=supplier-product-delete', 'POST', { id: id });
+        if (res && res.success) {
+            showAlert(res.message || 'Asignación eliminada correctamente', 'success');
+            await loadSupplierProducts();
+            await loadMappedProductsBySupplier();
+        } else {
+            showAlert(res?.message || 'Error al eliminar la asignación', 'error');
+        }
+    });
 }
 
 async function loadMappedProductsBySupplier() {
@@ -4138,39 +4149,52 @@ async function loadSupplierOrders() {
 }
 
 async function receiveSupplierOrder(id) {
-    if (!confirm('¿Estás seguro de que deseas marcar esta orden como RECIBIDA (completada)? Se registrará el ingreso de mercancía.')) return;
-    const res = await apiCall('/admin_supply.php?action=supplier-order-receive', 'POST', { id: id });
-    if (res && res.success) {
-        showAlert(res.message || 'Orden completada correctamente', 'success');
-        loadSupplierOrders();
-        loadHistory();
-    } else {
-        showAlert(res?.message || 'Error al completar la orden', 'error');
-    }
+    confirmAction(
+        'Completar Orden',
+        '¿Estás seguro de que deseas marcar esta orden como RECIBIDA (completada)? Se registrará el ingreso de mercancía.',
+        '📥',
+        async () => {
+            const res = await apiCall('/admin_supply.php?action=supplier-order-receive', 'POST', { id: id });
+            if (res && res.success) {
+                showAlert(res.message || 'Orden completada correctamente', 'success');
+                loadSupplierOrders();
+                loadHistory();
+            } else {
+                showAlert(res?.message || 'Error al completar la orden', 'error');
+            }
+        }
+    );
 }
 
 async function cancelSupplierOrder(id) {
-    if (!confirm('¿Estás seguro de que deseas CANCELAR esta orden de compra?')) return;
-    const res = await apiCall('/admin_supply.php?action=supplier-order-cancel', 'POST', { id: id });
-    if (res && res.success) {
-        showAlert(res.message || 'Orden cancelada', 'success');
-        loadSupplierOrders();
-        loadHistory();
-    } else {
-        showAlert(res?.message || 'Error al cancelar la orden', 'error');
-    }
+    confirmAction(
+        'Cancelar Orden',
+        '¿Estás seguro de que deseas CANCELAR esta orden de compra?',
+        '🚫',
+        async () => {
+            const res = await apiCall('/admin_supply.php?action=supplier-order-cancel', 'POST', { id: id });
+            if (res && res.success) {
+                showAlert(res.message || 'Orden cancelada', 'success');
+                loadSupplierOrders();
+                loadHistory();
+            } else {
+                showAlert(res?.message || 'Error al cancelar la orden', 'error');
+            }
+        }
+    );
 }
 
 async function deleteSupplierOrder(id) {
-    if (!confirm('¿Estás seguro de que deseas eliminar esta orden de compra? Esta acción no se puede deshacer.')) return;
-    const res = await apiCall('/admin_supply.php?action=supplier-order-delete', 'POST', { id: id });
-    if (res && res.success) {
-        showAlert(res.message || 'Orden de compra eliminada correctamente', 'success');
-        loadSupplierOrders();
-        loadHistory();
-    } else {
-        showAlert(res?.message || 'Error al eliminar la orden de compra', 'error');
-    }
+    confirmDelete('esta orden de compra', async () => {
+        const res = await apiCall('/admin_supply.php?action=supplier-order-delete', 'POST', { id: id });
+        if (res && res.success) {
+            showAlert(res.message || 'Orden de compra eliminada correctamente', 'success');
+            loadSupplierOrders();
+            loadHistory();
+        } else {
+            showAlert(res?.message || 'Error al eliminar la orden de compra', 'error');
+        }
+    });
 }
 
 async function loadHistory() {
@@ -4272,26 +4296,24 @@ async function saveClientByAdmin() {
 async function deleteClientByAdmin(clientId) {
     if (!clientId) return;
 
-    if (!confirm('¿Deseas eliminar este cliente? Esta acción no se puede deshacer.')) {
-        return;
-    }
+    confirmDelete('este cliente', async () => {
+        const res = await apiCall('/admin_clients.php?action=delete', 'POST', { id: clientId });
+        const box = document.getElementById('clientCreateResult');
 
-    const res = await apiCall('/admin_clients.php?action=delete', 'POST', { id: clientId });
-    const box = document.getElementById('clientCreateResult');
-
-    if (!res || !res.success) {
-        if (box) {
-            box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible eliminar el cliente')}</div>`;
+        if (!res || !res.success) {
+            if (box) {
+                box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible eliminar el cliente')}</div>`;
+            }
+            return;
         }
-        return;
-    }
 
-    if (box) {
-        box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Cliente eliminado correctamente')}</div>`;
-    }
+        if (box) {
+            box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Cliente eliminado correctamente')}</div>`;
+        }
 
-    resetClientForm();
-    loadClients();
+        resetClientForm();
+        loadClients();
+    });
 }
 
 async function loadProductImageReferences() {
@@ -4520,15 +4542,16 @@ async function saveCategoryByAdmin() {
 
 async function deleteCategoryByAdminId(id) {
     if (!id) return;
-    if (!confirm('¿Deseas eliminar esta categoría?')) return;
-    const box = document.getElementById('categoryResult');
-    const res = await apiCall('/admin_supply.php?action=categories-delete', 'POST', { id: id });
-    if (!res || !res.success) {
-        if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible eliminar categoría')}</div>`;
-        return;
-    }
-    if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Categoría eliminada')}</div>`;
-    await refreshCategoriesUi();
+    confirmDelete('esta categoría', async () => {
+        const box = document.getElementById('categoryResult');
+        const res = await apiCall('/admin_supply.php?action=categories-delete', 'POST', { id: id });
+        if (!res || !res.success) {
+            if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible eliminar categoría')}</div>`;
+            return;
+        }
+        if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Categoría eliminada')}</div>`;
+        await refreshCategoriesUi();
+    });
 }
 
 function getCurrentStockSkuForGallery() {
@@ -5047,55 +5070,55 @@ async function setProductGalleryCover(sku, imagePath) {
 }
 
 async function deleteProductGalleryImage(sku, imagePath) {
-    if (!confirm('¿Eliminar esta imagen de la galería?')) return;
+    confirmDelete('esta imagen de la galería', async () => {
+        // 1. Optimistic update INMEDIATO — antes de llamar a la API
+        const previousImages = Array.isArray(stockGalleryCache) ? stockGalleryCache.slice() : [];
+        const previousCover = previousImages[0] || '';
+        const optimisticImages = previousImages.filter((i) => i !== imagePath);
 
-    // 1. Optimistic update INMEDIATO — antes de llamar a la API
-    const previousImages = Array.isArray(stockGalleryCache) ? stockGalleryCache.slice() : [];
-    const previousCover = previousImages[0] || '';
-    const optimisticImages = previousImages.filter((i) => i !== imagePath);
+        setGalleryState('stock', sku, optimisticImages.slice(), optimisticImages[0] || '');
+        renderProductGallery(optimisticImages, sku, 'stock');
+        syncGalleryModeUi('stock', optimisticImages[0] || '');
 
-    setGalleryState('stock', sku, optimisticImages.slice(), optimisticImages[0] || '');
-    renderProductGallery(optimisticImages, sku, 'stock');
-    syncGalleryModeUi('stock', optimisticImages[0] || '');
+        // 2. Llamada a la API
+        const res = await apiCall('/admin_supply.php?action=product-gallery-delete', 'POST', {
+            sku: sku,
+            image: imagePath
+        });
 
-    // 2. Llamada a la API
-    const res = await apiCall('/admin_supply.php?action=product-gallery-delete', 'POST', {
-        sku: sku,
-        image: imagePath
-    });
-
-    if (!res || !res.success) {
-        // Revertir al estado anterior si falla
-        setGalleryState('stock', sku, previousImages.slice(), previousCover);
-        renderProductGallery(previousImages, sku, 'stock');
-        syncGalleryModeUi('stock', previousCover);
-        showGalleryResult('stock', (res && res.message) ? res.message : 'No se pudo eliminar la imagen', 'error');
-        return;
-    }
-
-    showGalleryResult('stock', res.message || 'Imagen eliminada', 'success');
-
-    // 3. Usar las imágenes que devuelve el servidor como fuente de verdad definitiva
-    //    (NO hacer re-fetch — evita que la imagen reaparezca)
-    const serverImages = Array.isArray(res.images) && res.images.length >= 0
-        ? res.images
-        : optimisticImages;
-    const serverCover = res.cover || serverImages[0] || '';
-
-    setGalleryState('stock', sku, serverImages.slice(), serverCover);
-    renderProductGallery(serverImages, sku, 'stock');
-    syncGalleryModeUi('stock', serverCover);
-
-    // Actualizar cache de producto si existe
-    try {
-        const prod = stockItemsCache.find(p => String(p.sku || '') === String(sku));
-        if (prod) {
-            prod.image_url = serverCover || prod.image_url;
-            upsertStockCache(prod);
+        if (!res || !res.success) {
+            // Revertir al estado anterior si falla
+            setGalleryState('stock', sku, previousImages.slice(), previousCover);
+            renderProductGallery(previousImages, sku, 'stock');
+            syncGalleryModeUi('stock', previousCover);
+            showGalleryResult('stock', (res && res.message) ? res.message : 'No se pudo eliminar la imagen', 'error');
+            return;
         }
-    } catch (e) {
-        console.warn('Stock cache update after delete failed:', e);
-    }
+
+        showGalleryResult('stock', res.message || 'Imagen eliminada', 'success');
+
+        // 3. Usar las imágenes que devuelve el servidor como fuente de verdad definitiva
+        //    (NO hacer re-fetch — evita que la imagen reaparezca)
+        const serverImages = Array.isArray(res.images) && res.images.length >= 0
+            ? res.images
+            : optimisticImages;
+        const serverCover = res.cover || serverImages[0] || '';
+
+        setGalleryState('stock', sku, serverImages.slice(), serverCover);
+        renderProductGallery(serverImages, sku, 'stock');
+        syncGalleryModeUi('stock', serverCover);
+
+        // Actualizar cache de producto si existe
+        try {
+            const prod = stockItemsCache.find(p => String(p.sku || '') === String(sku));
+            if (prod) {
+                prod.image_url = serverCover || prod.image_url;
+                upsertStockCache(prod);
+            }
+        } catch (e) {
+            console.warn('Stock cache update after delete failed:', e);
+        }
+    });
 }
 
 
@@ -5152,55 +5175,55 @@ async function setMarketplaceGalleryCover(sku, imagePath) {
 }
 
 async function deleteMarketplaceGalleryImage(sku, imagePath) {
-    if (!confirm('¿Eliminar esta imagen de la galería CE?')) return;
+    confirmDelete('esta imagen de la galería CE', async () => {
+        // 1. Optimistic update INMEDIATO — antes de llamar a la API
+        const previousImages = Array.isArray(marketplaceGalleryCache) ? marketplaceGalleryCache.slice() : [];
+        const previousCover = previousImages[0] || '';
+        const optimisticImages = previousImages.filter((image) => image !== imagePath);
 
-    // 1. Optimistic update INMEDIATO — antes de llamar a la API
-    const previousImages = Array.isArray(marketplaceGalleryCache) ? marketplaceGalleryCache.slice() : [];
-    const previousCover = previousImages[0] || '';
-    const optimisticImages = previousImages.filter((image) => image !== imagePath);
+        setGalleryState('marketplace', sku, optimisticImages.slice(), optimisticImages[0] || '');
+        renderProductGallery(optimisticImages, sku, 'marketplace');
+        syncGalleryModeUi('marketplace', optimisticImages[0] || '');
 
-    setGalleryState('marketplace', sku, optimisticImages.slice(), optimisticImages[0] || '');
-    renderProductGallery(optimisticImages, sku, 'marketplace');
-    syncGalleryModeUi('marketplace', optimisticImages[0] || '');
+        // 2. Llamada a la API
+        const res = await apiCall('/admin_supply.php?action=product-gallery-delete', 'POST', {
+            sku: sku,
+            image: imagePath
+        });
 
-    // 2. Llamada a la API
-    const res = await apiCall('/admin_supply.php?action=product-gallery-delete', 'POST', {
-        sku: sku,
-        image: imagePath
-    });
-
-    if (!res || !res.success) {
-        // Revertir al estado anterior si falla
-        setGalleryState('marketplace', sku, previousImages.slice(), previousCover);
-        renderProductGallery(previousImages, sku, 'marketplace');
-        syncGalleryModeUi('marketplace', previousCover);
-        showGalleryResult('marketplace', (res && res.message) ? res.message : 'No se pudo eliminar la imagen CE', 'error');
-        return;
-    }
-
-    showGalleryResult('marketplace', res.message || 'Imagen CE eliminada', 'success');
-
-    // 3. Usar las imágenes que devuelve el servidor como fuente de verdad definitiva
-    //    (NO hacer re-fetch — evita que la imagen reaparezca)
-    const serverImages = Array.isArray(res.images) && res.images.length >= 0
-        ? res.images
-        : optimisticImages;
-    const serverCover = res.cover || serverImages[0] || '';
-
-    setGalleryState('marketplace', sku, serverImages.slice(), serverCover);
-    renderProductGallery(serverImages, sku, 'marketplace');
-    syncGalleryModeUi('marketplace', serverCover);
-
-    // Actualizar cache de marketplace si existe
-    try {
-        const item = marketplaceItemsCache.find(p => String(p.sku || '') === String(sku));
-        if (item) {
-            item.image_url = serverCover || item.image_url;
-            upsertMarketplaceCache(item);
+        if (!res || !res.success) {
+            // Revertir al estado anterior si falla
+            setGalleryState('marketplace', sku, previousImages.slice(), previousCover);
+            renderProductGallery(previousImages, sku, 'marketplace');
+            syncGalleryModeUi('marketplace', previousCover);
+            showGalleryResult('marketplace', (res && res.message) ? res.message : 'No se pudo eliminar la imagen CE', 'error');
+            return;
         }
-    } catch (e) {
-        console.warn('Marketplace cache update after delete failed:', e);
-    }
+
+        showGalleryResult('marketplace', res.message || 'Imagen CE eliminada', 'success');
+
+        // 3. Usar las imágenes que devuelve el servidor como fuente de verdad definitiva
+        //    (NO hacer re-fetch — evita que la imagen reaparezca)
+        const serverImages = Array.isArray(res.images) && res.images.length >= 0
+            ? res.images
+            : optimisticImages;
+        const serverCover = res.cover || serverImages[0] || '';
+
+        setGalleryState('marketplace', sku, serverImages.slice(), serverCover);
+        renderProductGallery(serverImages, sku, 'marketplace');
+        syncGalleryModeUi('marketplace', serverCover);
+
+        // Actualizar cache de marketplace si existe
+        try {
+            const item = marketplaceItemsCache.find(p => String(p.sku || '') === String(sku));
+            if (item) {
+                item.image_url = serverCover || item.image_url;
+                upsertMarketplaceCache(item);
+            }
+        } catch (e) {
+            console.warn('Marketplace cache update after delete failed:', e);
+        }
+    });
 }
 
 // Image compression helper (client-side optimization)
@@ -5848,34 +5871,47 @@ async function deleteMarketplaceSelectedItems() {
         return;
     }
 
-    if (!confirm(`¿Eliminar ${selectedIds.length} artículo(s) seleccionado(s)? Se borrarán definitivamente del Marketplace CE.`)) {
-        return;
-    }
+    showPremiumModal(
+        'Eliminar Artículos Marketplace',
+        `¿Estás seguro de que deseas eliminar ${selectedIds.length} artículo(s) seleccionado(s)? Se borrarán definitivamente del Marketplace CE. Esta acción no se puede deshacer.`,
+        '🗑️',
+        async () => {
+            if (quickBox) quickBox.innerHTML = '<span style="color:#cbd5e1;">Eliminando artículos...</span>';
 
-    if (quickBox) quickBox.innerHTML = '<span style="color:#cbd5e1;">Eliminando artículos...</span>';
+            let successCount = 0;
+            let firstError = '';
+            for (const id of selectedIds) {
+                const res = await apiCall('/admin_supply.php?action=marketplace-delete', 'POST', { id: id });
+                if (res && res.success) {
+                    successCount += 1;
+                } else if (!firstError) {
+                    firstError = (res && res.message) ? res.message : `No se pudo eliminar el artículo ${id}`;
+                }
+            }
 
-    let successCount = 0;
-    let firstError = '';
-    for (const id of selectedIds) {
-        const res = await apiCall('/admin_supply.php?action=marketplace-delete', 'POST', { id: id });
-        if (res && res.success) {
-            successCount += 1;
-        } else if (!firstError) {
-            firstError = (res && res.message) ? res.message : `No se pudo eliminar el artículo ${id}`;
+            if (successCount > 0) {
+                if (quickBox) quickBox.innerHTML = `<span style="color:#22c55e;">${successCount} artículo(s) eliminado(s).</span>`;
+                showAlert(`${successCount} artículo(s) CE eliminado(s) definitivamente`, 'success');
+            }
+            if (firstError) {
+                if (quickBox) quickBox.innerHTML += ` <span style="color:#f87171;">${escapeHtml(firstError)}</span>`;
+                showAlert(firstError, 'error');
+            }
+
+            // Optimistic update: remove deleted items from cache and re-render
+            try {
+                const idsSet = new Set(selectedIds.map((i) => Number(i)));
+                marketplaceItemsCache = (marketplaceItemsCache || []).filter((p) => !idsSet.has(Number(p.id)));
+                renderMarketplaceList();
+                renderMarketplacePagination({ current_page: marketplaceCurrentPage, total_pages: Math.max(1, Math.ceil((marketplaceItemsCache || []).length / (marketplacePerPage || 50))), total_items: (marketplaceItemsCache || []).length });
+            } catch (e) {
+                console.warn('Optimistic bulk marketplace removal failed:', e);
+            }
+
+            document.getElementById('marketplaceBulkSelectAll').checked = false;
+            await loadMarketplaceCeAdmin(marketplaceCurrentPage);
         }
-    }
-
-    if (successCount > 0) {
-        if (quickBox) quickBox.innerHTML = `<span style="color:#22c55e;">${successCount} artículo(s) eliminado(s).</span>`;
-        showAlert(`${successCount} artículo(s) CE eliminado(s) definitivamente`, 'success');
-    }
-    if (firstError) {
-        if (quickBox) quickBox.innerHTML += ` <span style="color:#f87171;">${escapeHtml(firstError)}</span>`;
-        showAlert(firstError, 'error');
-    }
-
-    // Optimistic UI update already performed; background sync to current page
-    await loadMarketplaceCeAdmin(marketplaceCurrentPage);
+    );
 }
 
 function renderMarketplaceList() {
@@ -6069,27 +6105,27 @@ async function saveMarketplaceCeByAdmin() {
 
 async function deleteMarketplaceCeByAdmin(id) {
     if (!id) return;
-    if (!confirm('¿Deseas eliminar este artículo CE? Se ocultará del Marketplace CE.')) return;
+    confirmDelete('este artículo CE', async () => {
+        const box = document.getElementById('marketplaceResult');
+        const res = await apiCall('/admin_supply.php?action=marketplace-delete', 'POST', { id: id });
+        if (!res || !res.success) {
+            if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible eliminar artículo CE')}</div>`;
+            return;
+        }
 
-    const box = document.getElementById('marketplaceResult');
-    const res = await apiCall('/admin_supply.php?action=marketplace-delete', 'POST', { id: id });
-    if (!res || !res.success) {
-        if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible eliminar artículo CE')}</div>`;
-        return;
-    }
+        if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Artículo CE eliminado definitivamente del Marketplace CE')}</div>`;
+        // Optimistic removal from marketplace cache
+        try {
+            marketplaceItemsCache = (marketplaceItemsCache || []).filter((p) => Number(p.id) !== Number(id));
+            renderMarketplaceList();
+            renderMarketplacePagination();
+        } catch (e) {
+            console.warn('Optimistic marketplace removal failed:', e);
+        }
 
-    if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Artículo CE eliminado definitivamente del Marketplace CE')}</div>`;
-    // Optimistic removal from marketplace cache
-    try {
-        marketplaceItemsCache = (marketplaceItemsCache || []).filter((p) => Number(p.id) !== Number(id));
-        renderMarketplaceList();
-        renderMarketplacePagination();
-    } catch (e) {
-        console.warn('Optimistic marketplace removal failed:', e);
-    }
-
-    // Background sync
-    void loadMarketplaceCeAdmin(marketplaceCurrentPage);
+        // Background sync
+        void loadMarketplaceCeAdmin(marketplaceCurrentPage);
+    });
 }
 
 // ===== HELPERS DRAG & DROP CSV =====
@@ -6531,50 +6567,53 @@ async function generatePoFromGroup(index) {
     const draft = currentAutoPoDrafts[index];
     if (!draft) return;
     
-    if (!confirm(`¿Generar Orden de Compra oficial para ${draft.supplier_name}?`)) {
-        return;
-    }
-    
-    const payload = {
-        supplier_name: draft.supplier_name,
-        expected_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10), // 1 semana después
-        items: draft.items.map(it => {
-            return {
-                supplier_product_id: it.supplier_product_id || 0,
-                sku: it.sku,
-                product_name: it.product_name,
-                quantity: it.suggested_quantity,
-                estimated_cost: it.estimated_cost
+    confirmAction(
+        'Generar Orden de Compra',
+        `¿Deseas generar la Orden de Compra oficial para ${draft.supplier_name}?`,
+        '📋',
+        async () => {
+            const payload = {
+                supplier_name: draft.supplier_name,
+                expected_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10), // 1 semana después
+                items: draft.items.map(it => {
+                    return {
+                        supplier_product_id: it.supplier_product_id || 0,
+                        sku: it.sku,
+                        product_name: it.product_name,
+                        quantity: it.suggested_quantity,
+                        estimated_cost: it.estimated_cost
+                    };
+                })
             };
-        })
-    };
-    
-    const res = await apiCall('/admin_supply.php?action=supplier-order-create', 'POST', payload);
-    if (res && res.success) {
-        showAlert(res.message, 'success');
-        // Remover de la pantalla
-        const card = document.getElementById(`supplier-group-${index}`);
-        if (card) {
-            card.style.transition = 'all 0.4s ease';
-            card.style.opacity = '0';
-            card.style.transform = 'scale(0.9)';
-            setTimeout(() => {
-                card.remove();
-                // Si ya no quedan grupos, mostrar el mensaje de Todo Listo
-                const remaining = document.querySelectorAll('.supplier-group-card');
-                if (remaining.length === 0) {
-                    loadAutoPoDrafts(); // Recargará y mostrará el banner de completado
+            
+            const res = await apiCall('/admin_supply.php?action=supplier-order-create', 'POST', payload);
+            if (res && res.success) {
+                showAlert(res.message, 'success');
+                // Remover de la pantalla
+                const card = document.getElementById(`supplier-group-${index}`);
+                if (card) {
+                    card.style.transition = 'all 0.4s ease';
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.9)';
+                    setTimeout(() => {
+                        card.remove();
+                        // Si ya no quedan grupos, mostrar el mensaje de Todo Listo
+                        const remaining = document.querySelectorAll('.supplier-group-card');
+                        if (remaining.length === 0) {
+                            loadAutoPoDrafts(); // Recargará y mostrará el banner de completado
+                        }
+                    }, 400);
                 }
-            }, 400);
+                
+                // Recargar la lista general de órdenes de proveedor si existe el método
+                if (typeof loadSupplierOrders === 'function') {
+                    loadSupplierOrders();
+                }
+            } else if (res) {
+                showAlert(res.message, 'error');
+            }
         }
-        
-        // Recargar la lista general de órdenes de proveedor si existe el método
-        if (typeof loadSupplierOrders === 'function') {
-            loadSupplierOrders();
-        }
-    } else if (res) {
-        showAlert(res.message, 'error');
-    }
+    );
 }
 
 function downloadCsvPoDraft(index) {

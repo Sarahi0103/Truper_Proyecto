@@ -881,9 +881,9 @@ $stock = (int)($product['stock_quantity'] ?? 0);
         <img id="lightboxImage" class="lightbox-image" src="" alt="">
     </div>
 </div>
-
-<script src="js/catalog.js?v=3.1"></script>
 <script src="js/main.js?v=2.6"></script>
+<script src="js/modals.js"></script>
+<script src="js/catalog.js?v=3.1"></script>
 <script>
     (function () {
         const galleryImages = <?php echo json_encode($galleryImages); ?>;
