@@ -738,6 +738,12 @@ try {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];
                 break;
             }
+            // Autolimpieza de registros mayores a 30 días
+            try {
+                $pdo->exec("DELETE FROM transaction_history WHERE created_at < NOW() - INTERVAL '30 days'");
+            } catch (Exception $e) {
+                error_log('Error cleaning transaction history: ' . $e->getMessage());
+            }
 
             $isAdminOrEmployee = (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee');
 

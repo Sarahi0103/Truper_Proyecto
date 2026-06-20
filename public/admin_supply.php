@@ -4201,15 +4201,63 @@ async function loadHistory() {
     const res = await apiCall('/admin_supply.php?action=history', 'GET', null, { silent: true });
     const body = document.getElementById('historyRows');
     if (!res || !res.success || !Array.isArray(res.items) || res.items.length === 0) {
-        body.innerHTML = '<tr><td colspan="4">Sin registros</td></tr>';
+        if (body) body.innerHTML = '<tr><td colspan="4">Sin registros</td></tr>';
         return;
     }
-    body.innerHTML = res.items.map(i => `<tr>
-        <td>${escapeHtml(i.transaction_type)}</td>
-        <td>${escapeHtml(i.reference_folio)}</td>
-        <td>${escapeHtml(i.created_at)}</td>
-        <td><small>${escapeHtml(i.data_json || '')}</small></td>
-    </tr>`).join('');
+    if (!body) return;
+
+    body.innerHTML = res.items.map(i => {
+        let typeLabel = i.transaction_type;
+        let badgeClass = 'badge-secondary';
+        
+        if (i.transaction_type === 'client_order') {
+            typeLabel = 'Pedido';
+            badgeClass = 'badge-order';
+        } else if (i.transaction_type === 'payment') {
+            typeLabel = 'Pago';
+            badgeClass = 'badge-payment';
+        } else if (i.transaction_type === 'supplier_order' || i.transaction_type.startsWith('supplier_order')) {
+            typeLabel = 'Orden Prov.';
+            badgeClass = 'badge-supply';
+        }
+
+        let parsedData = {};
+        if (i.data_json) {
+            try { parsedData = JSON.parse(i.data_json); } catch (e) {}
+        }
+
+        let details = '';
+        if (i.transaction_type === 'client_order') {
+            details = `Monto total: <strong>$${Number(parsedData.total || 0).toFixed(2)}</strong>`;
+        } else if (i.transaction_type === 'payment') {
+            details = `Abono: <strong>$${Number(parsedData.amount || 0).toFixed(2)}</strong> (${escapeHtml(parsedData.method || 'efectivo')})`;
+        } else if (i.transaction_type.startsWith('supplier_order')) {
+            if (parsedData.status) {
+                const statusLabels = {
+                    'completed': 'Completada: Mercancía recibida',
+                    'cancelled': 'Cancelada',
+                    'deleted': 'Eliminada',
+                    'pending': 'Pendiente'
+                };
+                const statusText = statusLabels[parsedData.status] || parsedData.status;
+                details = `Estado: <strong>${escapeHtml(statusText)}</strong>`;
+            } else {
+                const supplier = parsedData.supplier_name || 'N/A';
+                const totalVal = Number(parsedData.total || 0).toFixed(2);
+                const dateVal = parsedData.expected_date || 'N/A';
+                details = `Prov: <strong>${escapeHtml(supplier)}</strong> | Total: <strong>$${totalVal}</strong> | Entrega: <strong>${escapeHtml(dateVal)}</strong>`;
+            }
+        } else {
+            details = escapeHtml(i.data_json || '');
+        }
+
+        return `<tr>
+            <td><span class="badge ${badgeClass}">${typeLabel}</span></td>
+            <td><strong>${escapeHtml(i.reference_folio || '—')}</strong></td>
+            <td>${escapeHtml(i.created_at || '—')}</td>
+            <td>${details}</td>
+        </tr>`;
+    }).join('');
 }
 
 async function saveClientByAdmin() {

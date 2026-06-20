@@ -840,11 +840,14 @@ function exportHistoryToCSV() {
     
     filtered.forEach(item => {
         let typeLabel = '';
-        switch(item.transaction_type) {
-            case 'client_order': typeLabel = 'Pedido'; break;
-            case 'payment': typeLabel = 'Pago'; break;
-            case 'supplier_order': typeLabel = 'Orden Proveedor'; break;
-            default: typeLabel = item.transaction_type;
+        if (item.transaction_type === 'client_order') {
+            typeLabel = 'Pedido';
+        } else if (item.transaction_type === 'payment') {
+            typeLabel = 'Pago';
+        } else if (item.transaction_type === 'supplier_order' || item.transaction_type.startsWith('supplier_order')) {
+            typeLabel = 'Orden Proveedor';
+        } else {
+            typeLabel = item.transaction_type;
         }
 
         let parsedData = {};
@@ -857,6 +860,22 @@ function exportHistoryToCSV() {
             details = `Monto total: ${formatMoney(parsedData.total || 0)}`;
         } else if (item.transaction_type === 'payment') {
             details = `Abono: ${formatMoney(parsedData.amount || 0)} (${parsedData.method || 'efectivo'})`;
+        } else if (item.transaction_type.startsWith('supplier_order')) {
+            if (parsedData.status) {
+                const statusLabels = {
+                    'completed': 'Completada: Mercancía recibida',
+                    'cancelled': 'Cancelada',
+                    'deleted': 'Eliminada',
+                    'pending': 'Pendiente'
+                };
+                const statusText = statusLabels[parsedData.status] || parsedData.status;
+                details = `Estado: ${statusText}`;
+            } else {
+                const supplier = parsedData.supplier_name || 'N/A';
+                const totalVal = formatMoney(parsedData.total || 0);
+                const dateVal = parsedData.expected_date || 'N/A';
+                details = `Prov: ${supplier} | Total: ${totalVal} | Entrega: ${dateVal}`;
+            }
         } else {
             details = item.data_json || '';
         }
