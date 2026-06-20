@@ -804,73 +804,103 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                         ✏️ Editando publicación existente — <button type="button" class="btn btn-ghost btn-small" onclick="resetUpdateForm()" style="font-size:0.8rem;padding:2px 8px;">Cancelar edición</button>
                     </div>
 
-                    <div class="grid grid-3" style="gap:1rem;">
+                    <!-- SECCIÓN 1: PORTADA PRINCIPAL -->
+                    <div style="background: rgba(255, 102, 0, 0.015); border: 1px solid rgba(255, 102, 0, 0.18); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.8rem; box-shadow: inset 0 0 20px rgba(255,102,0,0.02);">
+                        <h4 style="margin: 0 0 0.5rem; color: var(--theme-accent, #ff7f00); font-size: 1.05rem; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(255, 102, 0, 0.15); padding-bottom: 0.5rem;">
+                            <span style="background: var(--theme-accent, #ff7f00); color: #000; font-weight: 800; border-radius: 4px; padding: 2px 8px; font-size: 0.75rem;">1</span>
+                            Configuración de Portada Principal
+                        </h4>
+                        <p class="text-muted" style="margin: 0 0 1.25rem; font-size: 0.82rem; line-height: 1.4; color: rgba(255,255,255,0.45);">
+                            Define los datos básicos que se mostrarán en la tarjeta del carrusel de novedades en la pantalla de inicio principal.
+                        </p>
+                        
+                        <div class="grid grid-3" style="gap:1rem;">
+                            <div class="form-group">
+                                <label>Tipo de publicación</label>
+                                <select id="updateType">
+                                    <option value="noticia">📰 Noticia</option>
+                                    <option value="promocion">🏷️ Promoción</option>
+                                    <option value="evento">📅 Evento</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Orden de aparición</label>
+                                <select id="updateOrder" style="background:#111; border:1px solid #1f1f1f; color:white; padding:0.5rem; border-radius:8px; width:100%;"></select>
+                            </div>
+                            <div class="form-group">
+                                <label>¿Visible en portada?</label>
+                                <select id="updateActive">
+                                    <option value="1">✅ Sí — visible</option>
+                                    <option value="0">🚫 No — oculta</option>
+                                </select>
+                            </div>
+                        </div>
+
                         <div class="form-group">
-                            <label>Tipo de publicación</label>
-                            <select id="updateType">
-                                <option value="noticia">📰 Noticia</option>
-                                <option value="promocion">🏷️ Promoción</option>
-                                <option value="evento">📅 Evento</option>
-                            </select>
+                            <label>Título <span style="color:var(--theme-accent);">*</span></label>
+                            <input id="updateTitle" type="text" maxlength="220" placeholder="Ej: ¡Nueva llegada de escaleras industriales!">
                         </div>
                         <div class="form-group">
-                            <label>Orden de aparición</label>
-                            <select id="updateOrder" style="background:#111; border:1px solid #1f1f1f; color:white; padding:0.5rem; border-radius:8px; width:100%;"></select>
+                            <label>Contenido <span style="color:var(--theme-accent);">*</span></label>
+                            <textarea id="updateBody" rows="4" maxlength="1200" placeholder="Describe la noticia, promoción o evento..."></textarea>
+                            <small class="text-muted">Máximo 1200 caracteres.</small>
                         </div>
+
                         <div class="form-group">
-                            <label>¿Visible en portada?</label>
-                            <select id="updateActive">
-                                <option value="1">✅ Sí — visible</option>
-                                <option value="0">🚫 No — oculta</option>
-                            </select>
+                            <label>Imagen de portada <span class="text-muted">(opcional, JPG/PNG/WebP)</span></label>
+                            <input id="updateImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+                        </div>
+                        <div id="updateImagePreview" style="display:none;margin-top:0.75rem;background:var(--theme-surface);border:1px solid var(--theme-border);border-radius:10px;padding:0.75rem;max-width:340px;">
+                            <p class="text-muted" style="margin:0 0 0.5rem;font-size:0.82rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Imagen previa:</p>
+                            <img id="updateImagePreviewImg" src="" alt="Vista previa" style="max-width:100%;border-radius:8px;display:block;">
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Título <span style="color:var(--theme-accent);">*</span></label>
-                        <input id="updateTitle" type="text" maxlength="220" placeholder="Ej: ¡Nueva llegada de escaleras industriales!">
-                    </div>
-                    <div class="form-group">
-                        <label>Contenido <span style="color:var(--theme-accent);">*</span></label>
-                        <textarea id="updateBody" rows="4" maxlength="1200" placeholder="Describe la noticia, promoción o evento..."></textarea>
-                        <small class="text-muted">Máximo 1200 caracteres.</small>
-                    </div>
+                    <!-- SECCIÓN 2: DETALLES DE PÁGINA INFORMATIVA ("VER MÁS") -->
+                    <div style="background: rgba(255,255,255,0.01); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: inset 0 0 20px rgba(255,255,255,0.01);">
+                        <h4 style="margin: 0 0 0.5rem; color: var(--theme-accent, #ff7f00); font-size: 1.05rem; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 0.5rem;">
+                            <span style="background: var(--theme-accent, #ff7f00); color: #000; font-weight: 800; border-radius: 4px; padding: 2px 8px; font-size: 0.75rem;">2</span>
+                            Detalles de Página Informativa ("Ver Más")
+                        </h4>
+                        <p class="text-muted" style="margin: 0 0 1.25rem; font-size: 0.82rem; line-height: 1.4; color: rgba(255,255,255,0.45);">
+                            Configura la vista detallada que se abrirá al presionar "Ver más". Elige el diseño de plantilla y añade enlaces o galerías complementarias.
+                        </p>
 
-                    <div class="form-group">
-                        <label>Imagen de portada <span class="text-muted">(opcional, JPG/PNG/WebP)</span></label>
-                        <input id="updateImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
-                    </div>
-                    <div id="updateImagePreview" style="display:none;margin-top:0.75rem;background:var(--theme-surface);border:1px solid var(--theme-border);border-radius:10px;padding:0.75rem;max-width:340px;">
-                        <p class="text-muted" style="margin:0 0 0.5rem;font-size:0.82rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Imagen previa:</p>
-                        <img id="updateImagePreviewImg" src="" alt="Vista previa" style="max-width:100%;border-radius:8px;display:block;">
-                    </div>
-
-                    <div class="grid grid-2" style="gap:1rem; margin-top: 1rem;">
-                        <div class="form-group">
-                            <label>Plantilla de diseño</label>
-                            <select id="updateTemplate">
-                                <option value="classic">🏛️ Clásica (Estándar)</option>
-                                <option value="split">🌗 Lateral (Dos Columnas)</option>
-                                <option value="gallery">🖼️ Galería Destacada (Visual)</option>
-                                <option value="minimal">✨ Minimalista Premium</option>
-                                <option value="magazine">📰 Revista / Editorial</option>
-                            </select>
+                        <div style="display: flex; gap: 1.5rem; align-items: flex-start; flex-wrap: wrap; margin-bottom: 1rem;">
+                            <div style="flex: 1; min-width: 250px;">
+                                <div class="form-group">
+                                    <label>Plantilla de diseño</label>
+                                    <select id="updateTemplate" onchange="updateTemplatePreview()">
+                                        <option value="classic">🏛️ Clásica (Estándar)</option>
+                                        <option value="split">🌗 Lateral (Dos Columnas)</option>
+                                        <option value="gallery">🖼️ Galería Destacada (Visual)</option>
+                                        <option value="minimal">✨ Minimalista Premium</option>
+                                        <option value="magazine">📰 Revista / Editorial</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="flex: 0 0 150px; text-align: center;">
+                                <label style="display: block; margin-bottom: 0.3rem; font-size: 0.8rem; color: var(--theme-text-muted);">Vista previa de plantilla</label>
+                                <div id="templatePreviewContainer" style="width: 150px; height: 112px; background: #0c0c0f; border: 1px solid var(--theme-border); border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+                                </div>
+                            </div>
                         </div>
-                        <div class="form-group">
+
+                        <div class="form-group" style="margin-top: 1rem;">
                             <label>Enlace de registro / Documentación <span class="text-muted">(opcional)</span></label>
                             <input id="updateRegistrationUrl" type="url" placeholder="https://docs.google.com/forms/...">
                         </div>
-                    </div>
 
-                    <div class="form-group" style="margin-top: 1rem;">
-                        <label>Imágenes adicionales (Galería) <span class="text-muted">(opcional, selecciona múltiples)</span></label>
-                        <input id="updateGallery" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif">
-                    </div>
+                        <div class="form-group" style="margin-top: 1rem;">
+                            <label>Imágenes adicionales (Galería) <span class="text-muted">(opcional, selecciona múltiples)</span></label>
+                            <input id="updateGallery" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif">
+                        </div>
 
-                    <input type="hidden" id="updateExistingGallery" value="[]">
-                    <div id="updateGalleryPreview" style="display:none;margin-top:0.75rem;background:var(--theme-surface);border:1px solid var(--theme-border);border-radius:10px;padding:0.75rem;">
-                        <p class="text-muted" style="margin:0 0 0.5rem;font-size:0.82rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Imágenes de la galería:</p>
-                        <div id="updateGalleryPreviewContainer" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+                        <input type="hidden" id="updateExistingGallery" value="[]">
+                        <div id="updateGalleryPreview" style="display:none;margin-top:0.75rem;background:var(--theme-surface);border:1px solid var(--theme-border);border-radius:10px;padding:0.75rem;">
+                            <p class="text-muted" style="margin:0 0 0.5rem;font-size:0.82rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Imágenes de la galería:</p>
+                            <div id="updateGalleryPreviewContainer" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+                        </div>
                     </div>
 
                     <div class="d-flex align-center" style="gap:0.75rem;flex-wrap:wrap;margin-top:1.25rem;">
@@ -2156,6 +2186,104 @@ function populateUpdateOrderSelect(maxVal, selectedValue) {
     }
 }
 
+function updateTemplatePreview() {
+    const select = document.getElementById('updateTemplate');
+    const container = document.getElementById('templatePreviewContainer');
+    if (!select || !container) return;
+    
+    const template = select.value || 'classic';
+    
+    const svgs = {
+        classic: `<svg width="150" height="112" viewBox="0 0 150 112" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="150" height="112" rx="8" fill="#0c0c0f"/>
+  <rect x="12" y="10" width="30" height="6" rx="2" fill="#ff7f00" opacity="0.8"/>
+  <rect x="12" y="20" width="126" height="6" rx="3" fill="#ffffff"/>
+  <rect x="12" y="29" width="80" height="6" rx="3" fill="#ffffff"/>
+  <rect x="12" y="42" width="126" height="34" rx="4" fill="#1f1f25" stroke="#333" stroke-width="1"/>
+  <path d="M70 54 L75 60 L78 57 L83 62 L67 62 Z" fill="#666"/>
+  <rect x="12" y="83" width="126" height="3" rx="1.5" fill="#444"/>
+  <rect x="12" y="89" width="126" height="3" rx="1.5" fill="#444"/>
+  <rect x="12" y="95" width="90" height="3" rx="1.5" fill="#444"/>
+</svg>`,
+        split: `<svg width="150" height="112" viewBox="0 0 150 112" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="150" height="112" rx="8" fill="#0c0c0f"/>
+  <rect x="10" y="10" width="46" height="52" rx="4" fill="#1f1f25" stroke="#333" stroke-width="1"/>
+  <path d="M29 30 L33 35 L35 33 L39 37 L27 37 Z" fill="#666"/>
+  <rect x="10" y="68" width="46" height="34" rx="4" fill="#ff7f00" opacity="0.15" stroke="#ff7f00" stroke-width="1" stroke-dasharray="2 2"/>
+  <rect x="16" y="82" width="34" height="6" rx="2" fill="#ff7f00" opacity="0.8"/>
+  
+  <rect x="66" y="10" width="30" height="6" rx="2" fill="#ff7f00" opacity="0.8"/>
+  <rect x="66" y="20" width="74" height="6" rx="3" fill="#ffffff"/>
+  <rect x="66" y="29" width="50" height="6" rx="3" fill="#ffffff"/>
+  <rect x="66" y="42" width="74" height="3" rx="1.5" fill="#444"/>
+  <rect x="66" y="48" width="74" height="3" rx="1.5" fill="#444"/>
+  <rect x="66" y="54" width="74" height="3" rx="1.5" fill="#444"/>
+  <rect x="66" y="60" width="60" height="3" rx="1.5" fill="#444"/>
+  <rect x="66" y="72" width="22" height="16" rx="2" fill="#1f1f25"/>
+  <rect x="92" y="72" width="22" height="16" rx="2" fill="#1f1f25"/>
+  <rect x="118" y="72" width="22" height="16" rx="2" fill="#1f1f25"/>
+</svg>`,
+        gallery: `<svg width="150" height="112" viewBox="0 0 150 112" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="150" height="112" rx="8" fill="#0c0c0f"/>
+  <rect x="55" y="8" width="40" height="4" rx="2" fill="#ff7f00" opacity="0.8"/>
+  <rect x="25" y="15" width="100" height="5" rx="2.5" fill="#ffffff"/>
+  
+  <rect x="12" y="25" width="80" height="44" rx="4" fill="#1f1f25" stroke="#333" stroke-width="1"/>
+  <path d="M48 42 L53 48 L56 45 L61 50 L45 50 Z" fill="#666"/>
+  <rect x="98" y="25" width="40" height="20" rx="3" fill="#1f1f25"/>
+  <rect x="98" y="49" width="40" height="20" rx="3" fill="#1f1f25"/>
+  
+  <rect x="12" y="76" width="126" height="3" rx="1.5" fill="#444"/>
+  <rect x="12" y="82" width="126" height="3" rx="1.5" fill="#444"/>
+  <rect x="12" y="88" width="70" height="3" rx="1.5" fill="#444"/>
+  
+  <rect x="12" y="96" width="126" height="10" rx="4" fill="#ff7f00" opacity="0.2"/>
+  <rect x="55" y="99" width="40" height="4" rx="2" fill="#ff7f00" opacity="0.8"/>
+</svg>`,
+        minimal: `<svg width="150" height="112" viewBox="0 0 150 112" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="150" height="112" rx="8" fill="#0c0c0f"/>
+  <rect x="10" y="8" width="130" height="96" rx="8" fill="#111116" stroke="#2a2a35" stroke-width="1"/>
+  <rect x="20" y="16" width="30" height="5" rx="2.5" fill="#ff7f00" opacity="0.8"/>
+  <rect x="20" y="24" width="110" height="6" rx="3" fill="#ffffff"/>
+  
+  <rect x="20" y="35" width="110" height="30" rx="4" fill="#1f1f25" stroke="#333" stroke-width="1"/>
+  <path d="M71 45 L76 51 L78 49 L83 54 L67 54 Z" fill="#666"/>
+  
+  <rect x="20" y="71" width="110" height="3" rx="1.5" fill="#444"/>
+  <rect x="20" y="77" width="110" height="3" rx="1.5" fill="#444"/>
+  <rect x="20" y="83" width="60" height="3" rx="1.5" fill="#444"/>
+  
+  <circle cx="23" cy="91" r="2" fill="#ff7f00" opacity="0.8"/>
+  <circle cx="31" cy="91" r="2" fill="#ff7f00" opacity="0.8"/>
+  <circle cx="39" cy="91" r="2" fill="#ff7f00" opacity="0.8"/>
+</svg>`,
+        magazine: `<svg width="150" height="112" viewBox="0 0 150 112" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="150" height="112" rx="8" fill="#0c0c0f"/>
+  <rect x="0" y="0" width="150" height="65" fill="#1f1f25"/>
+  <path d="M0 65 L40 30 L80 50 L120 20 L150 45 L150 65 Z" fill="#16161c" opacity="0.5"/>
+  
+  <rect x="0" y="30" width="150" height="35" fill="url(#magazine_gradient_preview)"/>
+  <defs>
+    <linearGradient id="magazine_gradient_preview" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#0c0c0f" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+  
+  <rect x="10" y="34" width="30" height="5" rx="2" fill="#ff7f00" opacity="0.85"/>
+  <rect x="10" y="44" width="130" height="6" rx="3" fill="#ffffff"/>
+  <rect x="10" y="53" width="90" height="6" rx="3" fill="#ffffff"/>
+  
+  <rect x="10" y="76" width="130" height="3" rx="1.5" fill="#444"/>
+  <rect x="10" y="82" width="130" height="3" rx="1.5" fill="#444"/>
+  <rect x="10" y="88" width="130" height="3" rx="1.5" fill="#444"/>
+  <rect x="10" y="94" width="80" height="3" rx="1.5" fill="#444"/>
+</svg>`
+    };
+    
+    container.innerHTML = svgs[template] || svgs['classic'];
+}
+
 function resetUpdateForm() {
     document.getElementById('updateEditId').value = '';
     document.getElementById('updateType').value = 'noticia';
@@ -2168,6 +2296,7 @@ function resetUpdateForm() {
     document.getElementById('updateTemplate').value = 'classic';
     document.getElementById('updateExistingGallery').value = '[]';
     document.getElementById('updateGallery').value = '';
+    updateTemplatePreview();
 
     const preview = document.getElementById('updateImagePreview');
     if (preview) {
@@ -2203,6 +2332,13 @@ function fillUpdateForm(update) {
     document.getElementById('updateBody').value = update.body || '';
     document.getElementById('updateRegistrationUrl').value = update.registration_url || '';
     document.getElementById('updateTemplate').value = update.design_template || 'classic';
+    updateTemplatePreview();
+
+    // Scroll up smoothly to the form container
+    const updatesSection = document.getElementById('updatesTab');
+    if (updatesSection) {
+        updatesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
     document.getElementById('updateExistingGallery').value = update.additional_images || '[]';
     document.getElementById('updateGallery').value = '';
 
@@ -2445,8 +2581,11 @@ async function saveHomepageUpdate() {
     }
 }
 
-// Bind gallery file input previews
+// Bind gallery file input previews and initialize template previews
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the SVG template preview
+    updateTemplatePreview();
+
     const galleryInput = document.getElementById('updateGallery');
     if (galleryInput) {
         galleryInput.onchange = function() {
