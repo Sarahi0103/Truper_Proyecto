@@ -393,25 +393,17 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             // Render stats summary cards
             if (summaryContainer) {
                 let statHTML = `
-                    <div class="card" data-card-type="all" onclick="filterByPaymentStatus('all')" style="cursor:pointer; border: 1px solid rgba(255,255,255,0.05); transition: all 0.2s;" title="Mostrar todos los tickets">
+                    <div class="card" style="border: 1px solid rgba(255,255,255,0.05);">
                         <div class="card-body">
                             <span class="text-muted text-uppercase" style="font-size:0.75rem; font-weight:700; display:block; letter-spacing: 0.04em;">Tickets Este Mes</span>
                             <strong style="display:block; font-size:1.5rem; margin-top:0.25rem; color:var(--color-naranja);">${stats.total_tickets || 0}</strong>
-                            <div style="font-size: 0.65rem; color: var(--theme-text-muted); margin-top: 0.2rem;">👉 Clic para ver todos</div>
                         </div>
                     </div>
-                    <div class="card">
+                    <div class="card" style="border: 1px solid rgba(255,255,255,0.05);">
                         <div class="card-body">
                             <span class="text-muted text-uppercase" style="font-size:0.75rem; font-weight:700; display:block; letter-spacing: 0.04em;">Total Ventas</span>
                             <strong style="display:block; font-size:1.5rem; margin-top:0.25rem; color:var(--color-naranja);">${formatAdminMoney(stats.total_sales || 0)}</strong>
                             <div style="font-size: 0.72rem; color: var(--theme-text-muted); margin-top: 0.2rem;">Promedio: ${formatAdminMoney(stats.avg_ticket || 0)}</div>
-                        </div>
-                    </div>
-                    <div class="card" data-card-type="pending" onclick="filterByPaymentStatus('pending')" style="cursor:pointer; border: 1px solid rgba(255,255,255,0.05); transition: all 0.2s;" title="Mostrar solo pagos pendientes">
-                        <div class="card-body">
-                            <span class="text-muted text-uppercase" style="font-size:0.75rem; font-weight:700; display:block; letter-spacing: 0.04em;">Pagos Pendientes</span>
-                            <strong style="display:block; font-size:1.5rem; margin-top:0.25rem; color:var(--color-naranja);">${stats.payment_pending || 0}</strong>
-                            <div style="font-size: 0.65rem; color: var(--color-naranja); margin-top: 0.2rem; font-weight: 600;">👉 Clic para ver pendientes</div>
                         </div>
                     </div>
                 `;
