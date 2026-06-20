@@ -391,6 +391,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') 
     </footer>
 
     <script src="js/main.js?v=2.6"></script>
+<script src="js/modals.js"></script>
     <script>
         window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>';
         window.TRUPER_COMPANY_WHATSAPP = '<?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?>';
@@ -400,9 +401,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') 
     <script src="js/barcode-scanner.js"></script>
     <script>
         function logout() {
-            if (confirm('¿Deseas cerrar sesión?')) {
-                window.location.href = 'api/auth.php?action=logout';
-            }
+            confirmLogout('api/auth.php?action=logout');
         }
     </script>
     <script src="js/mobile-optimize.js"></script>

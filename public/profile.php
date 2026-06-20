@@ -664,15 +664,14 @@ if (!empty($profile['birthdate'])) {
     </footer>
 
     <script src="js/main.js?v=3.0"></script>
+    <script src="js/modals.js"></script>
     <script>
         function goToOrdersWithDiscount() {
             window.location.href = 'orders.php?tab=newOrder';
         }
 
         function logout() {
-            if (confirm('¿Deseas cerrar sesión?')) {
-                window.location.href = 'api/auth.php?action=logout';
-            }
+            confirmLogout('api/auth.php?action=logout');
         }
     </script>
     <script src="js/mobile-optimize.js?v=3.0"></script>

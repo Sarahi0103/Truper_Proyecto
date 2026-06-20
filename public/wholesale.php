@@ -292,6 +292,7 @@ function activateWholesaleTab(tabName) {
 }
 </script>
 <script src="js/main.js?v=2.6"></script>
+<script src="js/modals.js"></script>
 <script>
 let allProducts = [];
 let loadedWholesaleRequests = [];

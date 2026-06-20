@@ -485,6 +485,7 @@ $is_admin_or_employee = ($is_admin || $user_role === 'employee');
 
     <script src="js/main.js?v=3.0"></script>
     <script src="js/mobile-optimize.js?v=3.0"></script>
+    <script src="js/modals.js"></script>
     <script>
         window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8"); ?>';
 

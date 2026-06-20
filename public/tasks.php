@@ -376,15 +376,14 @@ $is_admin_or_employee = ($is_admin || $user_role === 'employee');
     </footer>
 
     <script src="js/main.js?v=2.6"></script>
+<script src="js/modals.js"></script>
     <script>
         window.TRUPER_TASKS_ROLE = '<?php echo htmlspecialchars($_SESSION['role'] ?? 'client', ENT_QUOTES, 'UTF-8'); ?>';
     </script>
     <script src="js/tasks.js?v=20260506b8"></script>
     <script>
         function logout() {
-            if (confirm('¿Deseas cerrar sesión?')) {
-                window.location.href = 'api/auth.php?action=logout';
-            }
+            confirmLogout('api/auth.php?action=logout');
         }
     </script>
     <script src="js/mobile-optimize.js"></script>

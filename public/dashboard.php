@@ -885,6 +885,7 @@ $first_name = explode(' ', $user_name)[0];
     </footer>
 
     <script src="js/main.js?v=2.6"></script>
+    <script src="js/modals.js"></script>
     <style>
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes draw-line { to { stroke-dashoffset: 0; } }
@@ -932,9 +933,7 @@ $first_name = explode(' ', $user_name)[0];
 
         /* ── Logout ── */
         function logout() {
-            if (confirm('¿Deseas cerrar sesión?')) {
-                window.location.href = 'api/auth.php?action=logout';
-            }
+            confirmLogout('api/auth.php?action=logout');
         }
 
         /* ── Animate KPI value counting up ── */

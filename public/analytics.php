@@ -452,6 +452,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
 
     <script src="js/main.js?v=3.0"></script>
     <script src="js/analytics.js?v=3.0"></script>
+    <script src="js/modals.js"></script>
     <style>
         @keyframes pulse-skeleton {
             0%, 100% { opacity: 1; }
@@ -463,9 +464,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
 
         /* ── Logout ── */
         function logout() {
-            if (confirm('¿Deseas cerrar sesión?')) {
-                window.location.href = 'api/auth.php?action=logout';
-            }
+            confirmLogout('api/auth.php?action=logout');
         }
 
         /* ── Tab switching ── */
