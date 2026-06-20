@@ -6,13 +6,13 @@
 // Configuración de sesión segura (antes de iniciar sesión)
 if (session_status() === PHP_SESSION_NONE) {
     if (!defined('SESSION_TIMEOUT')) {
-        define('SESSION_TIMEOUT', 0); // Sin límite: sesión válida hasta que el usuario cierre sesión
+        define('SESSION_TIMEOUT', 21600); // 6 horas para mejorar seguridad
     }
     $sessionTimeout = SESSION_TIMEOUT;
     $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
         || (($_SERVER['SERVER_PORT'] ?? null) == 443);
 
-    ini_set('session.gc_maxlifetime', '315360000'); // 10 años en segundos
+    ini_set('session.gc_maxlifetime', '21600'); // 6 horas
     ini_set('session.cookie_httponly', '1');
     ini_set('session.cookie_secure', $isHttps ? '1' : '0');
     ini_set('session.use_strict_mode', '1');

@@ -13,9 +13,10 @@ $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
     || (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443);
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
-    ini_set('session.gc_maxlifetime', '315360000'); // 10 años
+    // Timeout de sesión: 6 horas (21600 segundos) para mejorar seguridad
+    ini_set('session.gc_maxlifetime', '21600'); // 6 horas
     session_set_cookie_params([
-        'lifetime' => 0, // 0 = hasta que el navegador se cierre (sin límite fijo)
+        'lifetime' => 21600, // 6 horas
         'path' => '/',
         'domain' => '',
         'secure' => $is_https,
@@ -112,7 +113,7 @@ if ($has_authenticated_session || $is_auth_context || $is_dynamic_catalog_page |
 }
 
 // Caché de servidor persistente (file-based) con primer nivel en memoria
-define('CACHE_ENABLED', false);
+define('CACHE_ENABLED', true);
 define('CACHE_TTL', 300); // 5 minutos
 $_CACHE = []; // Memoria (primer nivel)
 
@@ -1002,7 +1003,9 @@ try {
         ensure_postgresql_form_schema();
         try {
             $pdo->exec("INSERT INTO system_config (config_key, config_value) VALUES ('schema_form_initialized', 'true') ON CONFLICT (config_key) DO UPDATE SET config_value = 'true', updated_at = NOW()");
-        } catch (Exception $ignored) {}
+        } catch (Exception $e) {
+            error_log("Error al inicializar schema_form: " . $e->getMessage());
+        }
     }
 } catch (Exception $e) {
     // system_config table might not exist yet on first run
