@@ -249,7 +249,7 @@ if ($isLogged) {
                     <a href="login.php" class="btn btn-primary btn-small">Ingresar</a>
                 <?php else: ?>
                     <span style="color: var(--theme-text); margin-right: 1rem;">Hola, <?php echo htmlspecialchars($user['first_name'] ?? 'Usuario'); ?></span>
-                    <a href="api/auth.php?action=logout" class="btn btn-secondary btn-small">Cerrar Sesión</a>
+                    <button onclick="confirmLogout('api/auth.php?action=logout')" class="btn btn-secondary btn-small">Cerrar Sesión</button>
                 <?php endif; ?>
             </div>
         </div>
@@ -466,6 +466,7 @@ if ($isLogged) {
     </footer>
 
     <script src="js/main.js?v=2.6"></script>
+    <script src="js/modals.js"></script>
     <script>
         // Load cart and populate summary
         function loadCartSummary() {

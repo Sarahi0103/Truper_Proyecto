@@ -405,7 +405,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
             <div class="user-name"><?php echo $user_name; ?></div>
             <div class="user-role"><?php echo $nav_role === 'employee' ? 'PERSONAL' : 'ADMIN'; ?></div>
         </div>
-        <button class="btn-logout" onclick="window.location.href='api/auth.php?action=logout'">Cerrar Sesion</button>
+        <button class="btn-logout" onclick="confirmLogout('api/auth.php?action=logout')">Cerrar Sesion</button>
     </div>
 </header>
 <main>

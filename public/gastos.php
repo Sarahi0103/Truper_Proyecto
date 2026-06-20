@@ -329,7 +329,7 @@ $is_admin_or_employee = ($is_admin || $user_role === 'employee');
                 <div class="user-name"><?php echo $user_name; ?></div>
                 <div class="user-role"><?php echo ($user_role === 'employee') ? 'PERSONAL' : strtoupper($user_role); ?></div>
             </div>
-            <button class="btn-logout" onclick="if(confirm('¿Cerrar sesión?')) window.location.href='api/auth.php?action=logout'">Cerrar Sesión</button>
+            <button class="btn-logout" onclick="confirmLogout('api/auth.php?action=logout')">Cerrar Sesión</button>
         </div>
     </header>
 

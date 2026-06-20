@@ -269,7 +269,7 @@ $company_whatsapp = htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8
     </div>
     <div class="user-menu">
         <div class="user-info"><div class="user-name"><?php echo $user_name; ?></div></div>
-        <button class="btn-logout" onclick="window.location.href='api/auth.php?action=logout'">Cerrar Sesión</button>
+        <button class="btn-logout" onclick="confirmLogout('api/auth.php?action=logout')">Cerrar Sesión</button>
     </div>
 </header>
 

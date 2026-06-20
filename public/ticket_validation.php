@@ -515,7 +515,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                 <div class="user-name"><?php echo $user_name; ?></div>
                 <div class="user-role"><?php echo $user_role === 'employee' ? 'PERSONAL' : 'ADMIN'; ?></div>
             </div>
-            <a href="../admin_logout.php" class="btn-logout">Cerrar Sesión</a>
+            <button onclick="confirmLogout('../admin_logout.php')" class="btn-logout">Cerrar Sesión</button>
         </div>
     </header>
 
@@ -638,6 +638,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
 
     <script src="js/main.js?v=2.7"></script>
     <script src="js/mobile-optimize.js"></script>
+    <script src="js/modals.js"></script>
     <script>
         window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8"); ?>';
 
