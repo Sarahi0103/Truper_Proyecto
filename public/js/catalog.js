@@ -261,10 +261,6 @@
     const query = (document.getElementById('catalogSearch')?.value || '').toLowerCase().trim();
     const category = selectedQuickCategory || '';
     const stockMode = document.getElementById('filterStock')?.value || '';
-    const minPriceRaw = document.getElementById('filterMinPrice')?.value || '';
-    const maxPriceRaw = document.getElementById('filterMaxPrice')?.value || '';
-    const minPrice = minPriceRaw === '' ? null : toNumber(minPriceRaw);
-    const maxPrice = maxPriceRaw === '' ? null : toNumber(maxPriceRaw);
     const sortMode = document.getElementById('filterSort')?.value || 'name_asc';
 
     let visibleCards = [];
@@ -282,10 +278,9 @@
 
       const textMatch = `${name} ${sku} ${cardCategory.toLowerCase()}`.includes(query);
       const categoryMatch = !category || categoryTokens.includes(normalizeCategory(category));
-      const priceMatch = (minPrice === null || price >= minPrice) && (maxPrice === null || price <= maxPrice);
       const stockMatch = !stockMode || (stockMode === 'available' ? stock > 0 : stock <= 10);
 
-      const isVisible = textMatch && categoryMatch && priceMatch && stockMatch;
+      const isVisible = textMatch && categoryMatch && stockMatch;
       
       if (isVisible) {
         visibleCards.push({ card, price, stock, name });
@@ -489,7 +484,7 @@
       });
     });
 
-    const filterIds = ['catalogSearch', 'filterStock', 'filterMinPrice', 'filterMaxPrice', 'filterSort'];
+    const filterIds = ['catalogSearch', 'filterStock', 'filterSort'];
     filterIds.forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.addEventListener('input', applyFilters);
@@ -501,13 +496,9 @@
       clearFilters.addEventListener('click', () => {
         const search = document.getElementById('catalogSearch');
         const stock = document.getElementById('filterStock');
-        const minPrice = document.getElementById('filterMinPrice');
-        const maxPrice = document.getElementById('filterMaxPrice');
         const sort = document.getElementById('filterSort');
         if (search) search.value = '';
         if (stock) stock.value = '';
-        if (minPrice) minPrice.value = '';
-        if (maxPrice) maxPrice.value = '';
         if (sort) sort.value = 'name_asc';
         selectedQuickCategory = '';
         document.querySelectorAll('[data-quick-category]').forEach((btn) => {

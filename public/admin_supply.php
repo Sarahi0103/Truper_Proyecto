@@ -1235,18 +1235,13 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                             <label>Nombre de la Categoría</label>
                             <input id="categoryName" type="text" placeholder="Ej. Material eléctrico" maxlength="120">
                         </div>
-                        <div class="grid grid-2">
-                            <div class="form-group">
-                                <label>Orden de clasificación</label>
-                                <input id="categoryOrder" type="number" min="0" max="999" value="0">
-                            </div>
-                            <div class="form-group">
-                                <label>Estado</label>
-                                <select id="categoryActive">
-                                    <option value="1">Activo</option>
-                                    <option value="0">Inactivo</option>
-                                </select>
-                            </div>
+                        <input id="categoryOrder" type="hidden" value="0">
+                        <div class="form-group">
+                            <label>Estado</label>
+                            <select id="categoryActive">
+                                <option value="1">Activo</option>
+                                <option value="0">Inactivo</option>
+                            </select>
                         </div>
                         <div class="d-flex align-center" style="gap: 0.75rem; flex-wrap: wrap; margin-top: 1.5rem;">
                             <button class="btn btn-primary" id="categorySaveButton" onclick="saveCategoryByAdmin()">Guardar categoría</button>
@@ -4421,12 +4416,11 @@ async function loadProductCategories(onlyActive = true) {
 
         categoriesListBox.innerHTML = `
             <table>
-                <thead><tr><th>Nombre</th><th>Orden</th><th>Activa</th><th>Acciones</th></tr></thead>
+                <thead><tr><th>Nombre</th><th>Activa</th><th>Acciones</th></tr></thead>
                 <tbody>
                     ${res.items.map((cat) => `
                         <tr>
                             <td>${escapeHtml(cat.name || '')}</td>
-                            <td>${Number(cat.sort_order || 0)}</td>
                             <td>${(cat.is_active === true || cat.is_active === 't' || cat.is_active === '1' || Number(cat.is_active) === 1) ? '<span class="badge badge-success">Sí</span>' : '<span class="badge badge-danger">No</span>'}</td>
                             <td>
                                 <button class="btn btn-small btn-secondary" type="button" data-action="edit-category">Editar</button>
@@ -5699,7 +5693,7 @@ async function fillMarketplaceForm(item) {
     document.getElementById('marketplaceSku').value = item.sku || '';
     document.getElementById('marketplaceName').value = item.name || '';
     document.getElementById('marketplaceCondition').value = item.condition_label || 'Seminuevo';
-    document.getElementById('marketplacePrice').value = String(item.unit_price || 0);
+    document.getElementById('marketplacePrice').value = parseFloat(Number(item.unit_price || 0).toFixed(2));
     document.getElementById('marketplaceStock').value = String(item.stock_quantity || 0);
     document.getElementById('marketplaceActive').value = Number(item.is_active) ? '1' : '0';
     document.getElementById('marketplaceDescription').value = item.description || '';
@@ -5943,7 +5937,7 @@ async function saveMarketplaceCeByAdmin() {
     const skuInput = document.getElementById('marketplaceSku');
     const normalizedSku = normalizeNumericSku(skuInput?.value || '');
     const marketplaceName = document.getElementById('marketplaceName')?.value?.trim() || '';
-    const price = Math.round(Number(document.getElementById('marketplacePrice')?.value || 0) * 100) / 100;
+    const price = parseFloat(Number(document.getElementById('marketplacePrice')?.value || 0).toFixed(2));
     const stock = Number(document.getElementById('marketplaceStock')?.value || 0);
     const box = document.getElementById('marketplaceResult');
 

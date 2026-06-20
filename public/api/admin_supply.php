@@ -4342,6 +4342,12 @@ try {
             );
             $items = $stmt ? $stmt->fetchAll() : [];
 
+            // Normalize unit_price to avoid floating-point imprecision from PostgreSQL
+            $items = array_map(function ($item) {
+                $item['unit_price'] = number_format((float)($item['unit_price'] ?? 0), 2, '.', '');
+                return $item;
+            }, $items);
+
             $response = [
                 'success' => true,
                 'items' => $items,

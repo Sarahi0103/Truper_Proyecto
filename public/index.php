@@ -498,8 +498,6 @@ function homepage_update_label($type) {
             </div>
 
             <div class="catalog-filters">
-                <input id="filterMinPrice" type="number" min="0" step="1" placeholder="Precio mínimo">
-                <input id="filterMaxPrice" type="number" min="0" step="1" placeholder="Precio máximo">
                 <select id="filterStock">
                     <option value="">Todo stock</option>
                     <option value="available">Solo disponibles</option>
