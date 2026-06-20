@@ -924,7 +924,6 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                 }
             );
         }
-        }
 
         async function loadArchivedPdfs() {
             const container = document.getElementById('archivedPdfsContainer');
