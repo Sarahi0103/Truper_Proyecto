@@ -176,6 +176,8 @@ textarea {
 
 .btn-back:active {
     transform: translateX(-1px);
+    background: linear-gradient(135deg, rgba(255, 127, 0, 0.3) 0%, rgba(255, 127, 0, 0.1) 100%);
+    box-shadow: 0 0 20px rgba(255, 127, 0, 0.4), 0 0 40px rgba(255, 127, 0, 0.2);
 }
 
 .btn-back svg {
@@ -205,6 +207,7 @@ textarea {
     align-items: center;
     margin-bottom: 1.5rem;
     padding-top: 0.5rem;
+    justify-content: flex-start;
 }
 
 .back-header .btn-back {
