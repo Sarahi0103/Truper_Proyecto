@@ -759,13 +759,21 @@ $stock = (int)($product['stock_quantity'] ?? 0);
         </nav>
     </div>
     <div class="user-menu">
-
-        <a href="index.php" class="btn btn-small btn-ghost">Volver al catálogo</a>
     </div>
 </header>
 
 <main>
     <div class="container-fluid">
+        <!-- ── Back Button ── -->
+        <div class="back-header">
+            <a href="index.php" class="btn-back btn-back-dark">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Regresar
+            </a>
+        </div>
+
         <div class="breadcrumb">
             <a href="index.php">Catálogo</a>
             <span>/</span>

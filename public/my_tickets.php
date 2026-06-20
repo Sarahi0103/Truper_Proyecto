@@ -74,6 +74,16 @@ $userName = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8'
 <body>
 <div class="page-wrapper">
     <header class="main-header">
+        <!-- ── Back Button ── -->
+        <div class="back-header">
+            <a href="dashboard.php" class="btn-back btn-back-dark">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Regresar
+            </a>
+        </div>
+
         <div class="header-content">
             <h1>📋 Mis Tickets de Compra</h1>
             <p>Historial completo de tus transacciones con Truper</p>

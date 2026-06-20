@@ -410,6 +410,16 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
 </header>
 <main>
     <div class="container">
+        <!-- ── Back Button ── -->
+        <div class="back-header">
+            <a href="dashboard.php" class="btn-back btn-back-dark">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Regresar
+            </a>
+        </div>
+
         <div class="page-hero">
             <div class="module-badge module-finance"><span class="module-glyph">CJ</span> Control financiero</div>
             <h1>Control de Cajón de Dinero</h1>

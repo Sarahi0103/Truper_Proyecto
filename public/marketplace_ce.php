@@ -580,12 +580,19 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
     <main>
         <!-- HERO -->
         <section class="catalog-hero">
+            <!-- ── Back Button ── -->
+            <div class="back-header">
+                <a href="index.php" class="btn-back btn-back-dark">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                    Regresar
+                </a>
+            </div>
+
             <div class="module-badge module-main"><span class="module-glyph">CE</span> Segunda mano</div>
             <h1>Marketplace CE</h1>
             <p>Artículos de medio uso en buen estado: herramientas eléctricas, escaleras y más. Opciones accesibles con verificación del establecimiento.</p>
-            <div style="margin-top: 12px;">
-                <a href="/" class="btn btn-secondary btn-small">← Catálogo principal</a>
-            </div>
         </section>
 
         <section class="catalog-shell">

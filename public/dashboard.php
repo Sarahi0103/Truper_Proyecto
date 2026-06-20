@@ -559,6 +559,16 @@ $first_name = explode(' ', $user_name)[0];
     <main>
         <div class="db-shell">
 
+            <!-- ── Back Button ── -->
+            <div class="back-header">
+                <a href="index.php" class="btn-back btn-back-dark">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                    Regresar
+                </a>
+            </div>
+
             <!-- ── Welcome Hero ── -->
             <div class="db-hero">
                 <div class="db-hero-left">

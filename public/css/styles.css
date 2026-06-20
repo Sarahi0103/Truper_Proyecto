@@ -147,6 +147,70 @@ textarea {
     border-radius: 10px;
 }
 
+/* ============================================================
+   BOTÓN DE REGRESO PREMIUM
+   ============================================================ */
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.2rem;
+    background: rgba(255, 127, 0, 0.1);
+    border: 1px solid rgba(255, 127, 0, 0.3);
+    border-radius: 999px;
+    color: var(--color-naranja);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    backdrop-filter: blur(10px);
+}
+
+.btn-back:hover {
+    background: rgba(255, 127, 0, 0.2);
+    border-color: var(--color-naranja);
+    transform: translateX(-3px);
+    box-shadow: 0 4px 12px rgba(255, 127, 0, 0.2);
+}
+
+.btn-back:active {
+    transform: translateX(-1px);
+}
+
+.btn-back svg {
+    width: 18px;
+    height: 18px;
+    transition: transform 0.3s ease;
+}
+
+.btn-back:hover svg {
+    transform: translateX(-2px);
+}
+
+.btn-back-dark {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+}
+
+.btn-back-dark:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+}
+
+.back-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-top: 0.5rem;
+}
+
+.back-header .btn-back {
+    margin-right: 1rem;
+}
+
 .text-center {
     text-align: center;
 }
