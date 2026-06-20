@@ -4197,6 +4197,19 @@ async function deleteSupplierOrder(id) {
     });
 }
 
+function formatHistoryDate(rawDate) {
+    if (!rawDate) return '—';
+    const cleanDate = rawDate.split('.')[0];
+    const parts = cleanDate.split(' ');
+    if (parts.length === 2) {
+        const dateParts = parts[0].split('-');
+        if (dateParts.length === 3) {
+            return `${dateParts[2]}/${dateParts[1]}/${dateParts[0]} ${parts[1]}`;
+        }
+    }
+    return cleanDate;
+}
+
 async function loadHistory() {
     const res = await apiCall('/admin_supply.php?action=history', 'GET', null, { silent: true });
     const body = document.getElementById('historyRows');
@@ -4254,7 +4267,7 @@ async function loadHistory() {
         return `<tr>
             <td><span class="badge ${badgeClass}">${typeLabel}</span></td>
             <td><strong>${escapeHtml(i.reference_folio || '—')}</strong></td>
-            <td>${escapeHtml(i.created_at || '—')}</td>
+            <td>${escapeHtml(formatHistoryDate(i.created_at))}</td>
             <td>${details}</td>
         </tr>`;
     }).join('');

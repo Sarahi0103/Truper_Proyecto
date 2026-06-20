@@ -719,6 +719,19 @@ function applyHistoryFilters() {
     renderHistoryTable(filtered);
 }
 
+function formatHistoryDate(rawDate) {
+    if (!rawDate) return '—';
+    const cleanDate = rawDate.split('.')[0];
+    const parts = cleanDate.split(' ');
+    if (parts.length === 2) {
+        const dateParts = parts[0].split('-');
+        if (dateParts.length === 3) {
+            return `${dateParts[2]}/${dateParts[1]}/${dateParts[0]} ${parts[1]}`;
+        }
+    }
+    return cleanDate;
+}
+
 function renderHistoryTable(items) {
     const body       = document.getElementById('historyList');
     const pagination = document.getElementById('historyPagination');
@@ -778,7 +791,7 @@ function renderHistoryTable(items) {
             <tr>
                 <td><span class="badge ${badgeClass}">${typeLabel}</span></td>
                 <td><strong>${escapeHtml(i.reference_folio || '—')}</strong></td>
-                <td>${escapeHtml(i.created_at || '—')}</td>
+                <td>${escapeHtml(formatHistoryDate(i.created_at))}</td>
                 <td>${detailHtml}</td>
             </tr>
         `;
@@ -883,7 +896,7 @@ function exportHistoryToCSV() {
         const row = [
             typeLabel,
             item.reference_folio || '—',
-            item.created_at || '—',
+            formatHistoryDate(item.created_at),
             details.replace(/"/g, '""') // Escapar comillas dobles
         ];
         csvRows.push(row.map(cell => `"${cell}"`).join(','));

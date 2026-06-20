@@ -5130,7 +5130,7 @@ try {
             } catch (Exception $e) {
                 error_log('Error cleaning transaction history: ' . $e->getMessage());
             }
-            $stmt = $pdo->query("SELECT id, transaction_type, reference_folio, data_json, created_at FROM transaction_history ORDER BY created_at DESC LIMIT 300");
+            $stmt = $pdo->query("SELECT id, transaction_type, reference_folio, data_json, created_at::timestamp(0) AS created_at FROM transaction_history ORDER BY created_at DESC LIMIT 300");
             $response = ['success' => true, 'items' => $stmt->fetchAll()];
             break;
 

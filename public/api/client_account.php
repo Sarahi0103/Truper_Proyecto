@@ -750,7 +750,7 @@ try {
             if ($isAdminOrEmployee) {
                 $stmt = $pdo->prepare("
                     SELECT th.id, th.transaction_type, th.reference_folio, th.data_json,
-                           th.created_at
+                           th.created_at::timestamp(0) AS created_at
                     FROM transaction_history th
                     ORDER BY th.created_at DESC
                     LIMIT 200
@@ -759,12 +759,12 @@ try {
             } else {
                 $stmt = $pdo->prepare("
                     SELECT th.id, th.transaction_type, th.reference_folio, th.data_json,
-                           th.created_at
+                           th.created_at::timestamp(0) AS created_at
                     FROM transaction_history th
                     WHERE th.created_by = ?
                     UNION
                     SELECT th.id, th.transaction_type, th.reference_folio, th.data_json,
-                           th.created_at
+                           th.created_at::timestamp(0) AS created_at
                     FROM transaction_history th
                     INNER JOIN orders o ON o.order_number = th.reference_folio
                     INNER JOIN clients c ON c.id = o.client_id
