@@ -537,6 +537,9 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
             <nav class="nav-menu">
                 <a href="index.php">Productos</a>
                 <a href="marketplace_ce.php" class="active">Marketplace CE</a>
+                <?php if ($isAdmin): ?>
+                    <a href="guest_tickets.php">Tickets sin Registro</a>
+                <?php endif; ?>
                 <?php if ($isLogged): ?>
                     <div class="nav-dropdown">
                         <button class="nav-dropdown-btn">Mi Cuenta <span class="arrow">▼</span></button>

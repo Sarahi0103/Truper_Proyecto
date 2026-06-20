@@ -215,6 +215,9 @@ if ($isLogged) {
             <nav class="nav-menu">
                 <a href="index.php">Catálogo</a>
                 <a href="marketplace_ce.php">Marketplace CE</a>
+                <?php if ($isAdmin): ?>
+                    <a href="guest_tickets.php">Tickets sin Registro</a>
+                <?php endif; ?>
                 <?php if ($isLogged): ?>
                     <div class="nav-dropdown">
                         <button class="nav-dropdown-btn">Mi Cuenta <span class="arrow">▼</span></button>
@@ -271,9 +274,10 @@ if ($isLogged) {
         </div>
 
         <?php if (!$isLogged): ?>
-            <div class="auth-prompt">
-                <div class="auth-prompt-text">🔒 Necesitas una cuenta para completar tu pedido</div>
-                <div class="auth-buttons">
+            <div class="auth-prompt" style="background: rgba(255, 127, 0, 0.08); border: 1px solid rgba(255, 127, 0, 0.25); padding: 1.25rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                <div class="auth-prompt-text" style="color: #ff9f43; font-weight: 600; margin-bottom: 0.25rem;">💡 Puedes realizar tu pedido como Invitado sin registrarte llenando el formulario de abajo.</div>
+                <div class="auth-prompt-text" style="font-size: 0.9rem; color: var(--theme-text-muted);">O si prefieres, inicia sesión o regístrate para acumular puntos de lealtad y seguir tus pedidos:</div>
+                <div class="auth-buttons" style="margin-top: 0.75rem; display: flex; gap: 0.75rem;">
                     <a href="login.php?return_to=checkout.php" class="btn btn-primary" style="flex: 1; text-align: center;">Iniciar Sesión</a>
                     <a href="register.php?return_to=checkout.php" class="btn btn-secondary" style="flex: 1; text-align: center;">Registrarse</a>
                 </div>
@@ -468,6 +472,8 @@ if ($isLogged) {
     <script src="js/main.js?v=2.6"></script>
     <script src="js/modals.js"></script>
     <script>
+        window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8"); ?>';
+
         // Load cart and populate summary
         function loadCartSummary() {
             try {
@@ -535,6 +541,7 @@ if ($isLogged) {
             // Get form data
             const formData = new FormData(document.getElementById('checkoutForm'));
             const data = {
+                csrf_token: window.csrfToken,
                 firstName: formData.get('firstName'),
                 lastName: formData.get('lastName'),
                 email: formData.get('email'),

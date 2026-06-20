@@ -520,6 +520,9 @@ $first_name = explode(' ', $user_name)[0];
             <nav class="nav-menu">
                 <a href="index.php">Catálogo</a>
                 <a href="marketplace_ce.php">Marketplace CE</a>
+                <?php if ($is_staff): ?>
+                    <a href="guest_tickets.php">Tickets sin Registro</a>
+                <?php endif; ?>
                 <div class="nav-dropdown">
                     <button class="nav-dropdown-btn">Mi Cuenta <span class="arrow">▼</span></button>
                     <div class="nav-dropdown-content">

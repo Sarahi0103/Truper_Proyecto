@@ -30,7 +30,35 @@ class AuthController {
             
             $existing = $this->getUserByEmail($data['email']);
             if ($existing) {
-                return ['success' => false, 'message' => 'El email ya está registrado'];
+                if (($existing['role'] ?? '') === 'guest') {
+                    $firstName = trim((string)($data['first_name'] ?? ''));
+                    $lastName = trim((string)($data['last_name'] ?? ''));
+                    $fullName = trim($firstName . ' ' . $lastName);
+                    $password_hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
+                    
+                    $stmtUpdate = $this->pdo->prepare("UPDATE users SET password_hash = ?, first_name = ?, last_name = ?, name = ?, role = 'client', phone = ?, birthdate = ?, is_active = true, is_verified = true WHERE id = ?");
+                    $stmtUpdate->execute([
+                        $password_hash,
+                        $firstName,
+                        $lastName,
+                        $fullName,
+                        trim((string)($data['phone'] ?? '')),
+                        $birthdate,
+                        $existing['id']
+                    ]);
+                    
+                    $this->createClientIfPossible($existing['id'], trim((string)($data['company_name'] ?? '')));
+                    $userCode = $this->ensureUserCodeForUser($existing['id']);
+                    
+                    return [
+                        'success' => true,
+                        'message' => 'Registro exitoso. Tu cuenta de invitado ha sido convertida a cliente.',
+                        'user_id' => $existing['id'],
+                        'user_code' => $userCode
+                    ];
+                } else {
+                    return ['success' => false, 'message' => 'El email ya está registrado'];
+                }
             }
 
             $firstName = trim((string)($data['first_name'] ?? ''));

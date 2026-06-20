@@ -16,12 +16,9 @@ require_once __DIR__ . '/../../config/config.php';
 
 header('Content-Type: application/json');
 
-// Verify session
-if (!isset($_SESSION['user_id'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'message' => 'No autorizado']);
-    exit;
-}
+// Verify session - optional to support guest checkout
+$isGuest = !isset($_SESSION['user_id']);
+$userId = $isGuest ? null : $_SESSION['user_id'];
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -114,8 +111,33 @@ try {
         $total = round($subtotal + $shippingCost, 2);
 
         // Resolve or create the client record linked to the current user
+        if ($isGuest) {
+            $userStmt = $pdo->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
+            $userStmt->execute([$input['email']]);
+            $existingUser = $userStmt->fetch(PDO::FETCH_ASSOC);
+            if ($existingUser) {
+                $userId = (int)$existingUser['id'];
+            } else {
+                // Crear un nuevo usuario temporal con el rol de guest
+                $dummyPassword = password_hash(bin2hex(random_bytes(16)), PASSWORD_BCRYPT, ['cost' => 12]);
+                $insertUser = $pdo->prepare("
+                    INSERT INTO users (email, password_hash, first_name, last_name, role, phone, birthdate, loyalty_points, is_active, is_verified, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, 'guest', ?, '2000-01-01', 0, true, true, NOW(), NOW())
+                    RETURNING id
+                ");
+                $insertUser->execute([
+                    $input['email'],
+                    $dummyPassword,
+                    $input['firstName'],
+                    $input['lastName'],
+                    $input['phone']
+                ]);
+                $userId = (int)$insertUser->fetchColumn();
+            }
+        }
+
         $clientStmt = $pdo->prepare("SELECT id FROM clients WHERE user_id = ? LIMIT 1");
-        $clientStmt->execute([$_SESSION['user_id']]);
+        $clientStmt->execute([$userId]);
         $client = $clientStmt->fetch(PDO::FETCH_ASSOC);
 
         if ($client) {
@@ -123,7 +145,7 @@ try {
         } else {
             // DB-03: Use RETURNING id for PostgreSQL compatibility
             $clientInsert = $pdo->prepare("INSERT INTO clients (user_id, company_name, created_at, updated_at) VALUES (?, NULL, NOW(), NOW()) RETURNING id");
-            $clientInsert->execute([$_SESSION['user_id']]);
+            $clientInsert->execute([$userId]);
             $clientId = (int) $clientInsert->fetchColumn();
         }
 
@@ -243,9 +265,9 @@ try {
     // Log action
     try {
         log_action(
-            $_SESSION['user_id'],
+            $userId,
             'order_created',
-            'Pedido creado desde checkout: ' . $orderNumber,
+            $isGuest ? ('Pedido creado desde checkout (Invitado): ' . $orderNumber) : ('Pedido creado desde checkout: ' . $orderNumber),
             $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'
         );
     } catch (Exception $e) {

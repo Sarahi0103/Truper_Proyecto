@@ -21,7 +21,7 @@ class TicketIntegration {
     public function onOrderCompleted($orderId, $orderData) {
         try {
             // Obtener datos de la orden con información del usuario
-            $stmt = $this->pdo->prepare("SELECT o.id, o.client_id AS user_id, o.total_amount, 0 AS tax_amount, 0 AS discount_amount, NULL AS payment_method, o.created_at, u.role, u.first_name, u.last_name FROM orders o LEFT JOIN users u ON o.client_id = u.id WHERE o.id = :order_id");
+            $stmt = $this->pdo->prepare("SELECT o.id, c.user_id, o.total_amount, 0 AS tax_amount, 0 AS discount_amount, o.created_at, u.role, u.first_name, u.last_name, u.email FROM orders o LEFT JOIN clients c ON o.client_id = c.id LEFT JOIN users u ON c.user_id = u.id WHERE o.id = :order_id");
             $stmt->execute([':order_id' => $orderId]);
             $order = $stmt->fetch(PDO::FETCH_ASSOC);
             
@@ -29,13 +29,22 @@ class TicketIntegration {
                 return ['success' => false, 'message' => 'Orden no encontrada'];
             }
             
-            // Determinar customer_name y email según el rol del usuario
+            // Obtener el método de pago real desde la tabla de pagos
+            $paymentMethod = null;
+            try {
+                $payStmt = $this->pdo->prepare("SELECT payment_method FROM payments WHERE order_id = :order_id ORDER BY payment_date DESC LIMIT 1");
+                $payStmt->execute([':order_id' => $orderId]);
+                $paymentMethod = $payStmt->fetchColumn() ?: null;
+            } catch (Exception $payEx) {
+                error_log("Error fetching payment method for ticket: " . $payEx->getMessage());
+            }
+            
+            // Determinar customer_name y email según el rol del usuario (cliente o invitado/guest)
             $customerName = 'Admin';
             $customerEmail = 'admin@truper.com';
-            // Solo usar nombre del cliente si el rol es 'client' explícitamente
-            if (isset($order['role']) && $order['role'] === 'client' && $order['first_name']) {
+            if (isset($order['role']) && in_array($order['role'], ['client', 'guest']) && $order['first_name']) {
                 $customerName = trim($order['first_name'] . ' ' . ($order['last_name'] ?? ''));
-                $customerEmail = ''; // Se obtendrá del JOIN en consultas
+                $customerEmail = $order['email'] ?? '';
             }
             
             // Crear ticket automático
@@ -49,7 +58,7 @@ class TicketIntegration {
                 'tax_amount' => $order['tax_amount'],
                 'discount_amount' => $order['discount_amount'],
                 'total_amount' => $order['total_amount'],
-                'payment_method' => $order['payment_method'],
+                'payment_method' => $paymentMethod,
                 'payment_status' => 'completed',
                 'issued_by' => $_SESSION['user_id'] ?? $order['user_id'],
                 'notes' => 'Generado automáticamente de orden #' . $orderId
