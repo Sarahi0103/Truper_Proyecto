@@ -12,7 +12,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Historial de Tickets - Truper Platform</title>
-    <link rel="stylesheet" href="css/styles.css?v=4.1">
+    <link rel="stylesheet" href="css/styles.css?v=4.2">
     <link rel="stylesheet" href="css/theme.css?v=4.1">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/responsive-complete.css?v=5.0">
@@ -339,7 +339,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
 
     <script src="js/jspdf.umd.min.js"></script>
     <script src="js/main.js?v=2.6"></script>
-    <script src="js/modals.js"></script>
+    <script src="js/modals.js?v=4.2"></script>
     <script>
         window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>';
 

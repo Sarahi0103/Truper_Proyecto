@@ -12,7 +12,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Validación de Tickets - Truper Platform</title>
-    <link rel="stylesheet" href="css/styles.css?v=2.2">
+    <link rel="stylesheet" href="css/styles.css?v=4.2">
     <link rel="stylesheet" href="css/theme.css?v=2.5">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/responsive-complete.css?v=5.0">
@@ -502,7 +502,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
         <div class="validation-container">
             <!-- ── Back Button ── -->
             <div class="back-header">
-                <button onclick="history.back()" class="btn-back btn-back-dark btn-back-as-button">
+                <button onclick="history.back()" class="btn-back">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M19 12H5M12 19l-7-7 7-7"/>
                     </svg>
@@ -617,7 +617,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
 
     <script src="js/main.js?v=2.7"></script>
     <script src="js/mobile-optimize.js"></script>
-    <script src="js/modals.js"></script>
+    <script src="js/modals.js?v=4.2"></script>
     <script>
         window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8"); ?>';
 
