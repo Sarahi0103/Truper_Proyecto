@@ -846,11 +846,6 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                             <textarea id="updateBriefDescription" rows="2" maxlength="200" placeholder="Descripción resumida para mostrar en la tarjeta de portada principal..."></textarea>
                             <small class="text-muted">Máximo 200 caracteres. Se mostrará en la tarjeta de la portada principal.</small>
                         </div>
-                        <div class="form-group">
-                            <label>Contenido <span style="color:var(--theme-accent);">*</span></label>
-                            <textarea id="updateBody" rows="4" maxlength="1200" placeholder="Describe la noticia, promoción o evento..."></textarea>
-                            <small class="text-muted">Máximo 1200 caracteres. Contenido completo que se verá en la página detallada.</small>
-                        </div>
 
                         <div class="form-group">
                             <label>Imagen de portada <span class="text-muted">(opcional, JPG/PNG/WebP)</span></label>
@@ -890,6 +885,12 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                                 <div id="templatePreviewContainer" style="width: 150px; height: 112px; background: #0c0c0f; border: 1px solid var(--theme-border); border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 1rem;">
+                            <label>Contenido <span style="color:var(--theme-accent);">*</span></label>
+                            <textarea id="updateBody" rows="4" maxlength="1200" placeholder="Describe la noticia, promoción o evento completo..."></textarea>
+                            <small class="text-muted">Máximo 1200 caracteres. Contenido completo que se verá en la página detallada.</small>
                         </div>
 
                         <div class="form-group" style="margin-top: 1rem;">

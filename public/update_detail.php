@@ -160,6 +160,14 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
             margin-bottom: 1.5rem;
         }
 
+        .premium-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent 0%, rgba(255, 127, 0, 0.4) 20%, rgba(255, 127, 0, 0.4) 80%, transparent 100%);
+            margin: 2rem 0;
+            border: none;
+            opacity: 0.85;
+        }
+
         /* Generic Gallery Grid */
         .gallery-grid {
             display: grid;
@@ -173,11 +181,11 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
             aspect-ratio: 4/3;
             overflow: hidden;
             border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(255, 127, 0, 0.3);
             cursor: zoom-in;
             background: #0b0b0d;
             transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.3s, box-shadow 0.3s;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+            box-shadow: 0 0 25px rgba(255, 127, 0, 0.12), 0 8px 24px rgba(0, 0, 0, 0.45);
         }
         
         .gallery-item img {
@@ -189,8 +197,8 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
         
         .gallery-item:hover {
             transform: translateY(-4px) scale(1.02);
-            border-color: rgba(255, 102, 0, 0.35);
-            box-shadow: 0 15px 30px rgba(0,0,0,0.45), 0 0 15px rgba(255, 102, 0, 0.05);
+            border-color: rgba(255, 127, 0, 0.7);
+            box-shadow: 0 0 35px rgba(255, 127, 0, 0.35), 0 15px 30px rgba(0,0,0,0.55);
         }
         
         .gallery-item:hover img {
@@ -279,9 +287,14 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
             margin-bottom: 2rem;
             border-radius: 16px;
             overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.35);
+            border: 2px solid rgba(255, 127, 0, 0.35);
+            box-shadow: 0 0 30px rgba(255, 127, 0, 0.18), 0 15px 35px rgba(0,0,0,0.5);
             background: #0c0c0f;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .tpl-classic .cover-wrap:hover {
+            border-color: rgba(255, 127, 0, 0.65);
+            box-shadow: 0 0 40px rgba(255, 127, 0, 0.35), 0 20px 45px rgba(0,0,0,0.6);
         }
         .tpl-classic .cover-wrap img {
             width: 100%;
@@ -333,10 +346,15 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
             object-fit: contain;
             background: #0c0c0f;
             border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            border: 2px solid rgba(255, 127, 0, 0.35);
+            box-shadow: 0 0 30px rgba(255, 127, 0, 0.18), 0 15px 35px rgba(0,0,0,0.35);
             display: block;
             margin-bottom: 1.5rem;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .tpl-split .split-sidebar img.sidebar-cover:hover {
+            border-color: rgba(255, 127, 0, 0.65);
+            box-shadow: 0 0 40px rgba(255, 127, 0, 0.35), 0 20px 45px rgba(0,0,0,0.45);
         }
         .tpl-split h1 {
             font-size: 2.2rem;
@@ -378,15 +396,16 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
         .tpl-gallery .gallery-hero-item {
             border-radius: 14px;
             overflow: hidden;
-            border: 1px solid var(--theme-border, #1f1f1f);
+            border: 2px solid rgba(255, 127, 0, 0.3);
             cursor: zoom-in;
             background: var(--theme-surface-hover, #1a1a1a);
-            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-            transition: transform 0.3s ease, box-shadow 0.3s;
+            box-shadow: 0 0 25px rgba(255, 127, 0, 0.12), 0 8px 24px rgba(0,0,0,0.45);
+            transition: transform 0.3s ease, border-color 0.3s, box-shadow 0.3s;
         }
         .tpl-gallery .gallery-hero-item:hover {
             transform: translateY(-2px);
-            box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+            border-color: rgba(255, 127, 0, 0.6);
+            box-shadow: 0 0 35px rgba(255, 127, 0, 0.28), 0 12px 30px rgba(0,0,0,0.55);
         }
         .tpl-gallery .gallery-hero-item img {
             width: 100%;
@@ -412,14 +431,19 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
             margin: 0 auto;
         }
         .tpl-minimal .glass-card {
-            background: rgba(255, 255, 255, 0.02);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(22, 22, 26, 0.72);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 2px solid rgba(255, 127, 0, 0.3);
             border-radius: 24px;
             padding: 2.5rem;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+            box-shadow: 0 0 30px rgba(255, 127, 0, 0.15), 0 20px 50px rgba(0,0,0,0.4);
             margin-bottom: 2rem;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .tpl-minimal .glass-card:hover {
+            border-color: rgba(255, 127, 0, 0.55);
+            box-shadow: 0 0 45px rgba(255, 127, 0, 0.28), 0 25px 55px rgba(0,0,0,0.5);
         }
         :root[data-theme="light"] .tpl-minimal .glass-card {
             background: rgba(0, 0, 0, 0.02);
@@ -440,8 +464,13 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
             background: #0c0c0f;
             border-radius: 20px;
             margin-bottom: 2rem;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            border: 2px solid rgba(255, 127, 0, 0.35);
+            box-shadow: 0 0 30px rgba(255, 127, 0, 0.18), 0 15px 35px rgba(0,0,0,0.5);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .tpl-minimal .minimal-cover:hover {
+            border-color: rgba(255, 127, 0, 0.65);
+            box-shadow: 0 0 40px rgba(255, 127, 0, 0.35), 0 20px 45px rgba(0,0,0,0.6);
         }
         .tpl-minimal .body-content {
             font-size: 1.05rem;
@@ -470,7 +499,13 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
             margin-bottom: 2.5rem;
             display: flex;
             align-items: flex-end;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            border: 2px solid rgba(255, 127, 0, 0.35);
+            box-shadow: 0 0 30px rgba(255, 127, 0, 0.18), 0 15px 35px rgba(0,0,0,0.5);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .tpl-magazine .magazine-header:hover {
+            border-color: rgba(255, 127, 0, 0.65);
+            box-shadow: 0 0 40px rgba(255, 127, 0, 0.35), 0 20px 45px rgba(0,0,0,0.6);
         }
         .tpl-magazine .magazine-header .header-bg {
             position: absolute;
@@ -620,14 +655,21 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
                     <?php if ($formattedDate): ?>
                         <div class="update-meta">Publicado el <?php echo $formattedDate; ?></div>
                     <?php endif; ?>
-                    
+
+                    <hr class="premium-divider">
+
                     <?php if (!empty($update['brief_description'])): ?>
-                        <p class="lead-desc" style="font-size: 1.2rem; line-height: 1.6; color: var(--theme-accent, #ff7f00); margin-bottom: 1.5rem; font-style: italic; font-weight: 500; border-left: 3px solid var(--theme-accent, #ff7f00); padding-left: 1rem;"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
+                        <p class="lead-desc" style="font-size: 1.15rem; line-height: 1.65; color: var(--theme-accent, #ff7f00); margin-bottom: 1.25rem; font-style: italic; font-weight: 500; border-left: 3px solid var(--theme-accent, #ff7f00); padding-left: 1rem;"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
+                        <hr class="premium-divider">
                     <?php endif; ?>
                     <div class="body-content"><?php echo htmlspecialchars($update['body'], ENT_QUOTES, 'UTF-8'); ?></div>
-                    
+
                     <?php if (!empty($galleryImages)): ?>
-                        <h4 style="margin-top:2.5rem; border-bottom: 1px solid var(--theme-border, #1f1f1f); padding-bottom: 0.5rem;">Imágenes adicionales</h4>
+                        <hr class="premium-divider">
+                        <h4 style="margin: 0 0 1rem; font-size: 1.1rem; font-weight: 700; color: var(--theme-accent, #ff7f00); display: flex; align-items: center; gap: 0.5rem;">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                            Imágenes adicionales
+                        </h4>
                         <div class="gallery-grid">
                             <?php foreach ($galleryImages as $img): ?>
                                 <div class="gallery-item promo-image-gallery">
@@ -670,13 +712,20 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
                     </div>
                 <?php endif; ?>
 
+                <hr class="premium-divider" style="max-width:800px; margin-left:auto; margin-right:auto;">
+
                 <?php if (!empty($update['brief_description'])): ?>
-                    <p class="lead-desc" style="font-size: 1.2rem; line-height: 1.6; color: var(--theme-accent, #ff7f00); margin-bottom: 1.5rem; font-style: italic; font-weight: 500; border-left: 3px solid var(--theme-accent, #ff7f00); padding-left: 1rem; text-align: center; max-width: 800px; margin-left: auto; margin-right: auto;"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
+                    <p class="lead-desc" style="font-size: 1.15rem; line-height: 1.65; color: var(--theme-accent, #ff7f00); margin-bottom: 1.25rem; margin-top: 0; font-style: italic; font-weight: 500; border-left: 3px solid var(--theme-accent, #ff7f00); padding-left: 1rem; max-width: 800px; margin-left: auto; margin-right: auto;"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
+                    <hr class="premium-divider" style="max-width:800px; margin-left:auto; margin-right:auto;">
                 <?php endif; ?>
                 <div class="body-content"><?php echo htmlspecialchars($update['body'], ENT_QUOTES, 'UTF-8'); ?></div>
 
                 <?php if (!empty($remainingGallery)): ?>
-                    <h4 style="border-bottom: 1px solid var(--theme-border, #1f1f1f); padding-bottom: 0.5rem; max-width:800px; margin: 2rem auto 1rem;">Más fotos de la galería</h4>
+                    <hr class="premium-divider" style="max-width:800px; margin-left:auto; margin-right:auto;">
+                    <h4 style="font-size: 1.1rem; font-weight: 700; color: var(--theme-accent, #ff7f00); text-align: center; max-width:800px; margin: 0 auto 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        Más fotos de la galería
+                    </h4>
                     <div class="gallery-grid" style="max-width: 800px; margin-left: auto; margin-right: auto;">
                         <?php foreach ($remainingGallery as $img): ?>
                             <div class="gallery-item promo-image-gallery">
@@ -687,7 +736,8 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
                 <?php endif; ?>
 
                 <?php if (!empty($update['registration_url'])): ?>
-                    <div class="registration-cta-box" style="max-width: 800px; margin: 3rem auto 0;">
+                    <hr class="premium-divider" style="max-width:800px; margin-left:auto; margin-right:auto;">
+                    <div class="registration-cta-box" style="max-width: 800px; margin: 2rem auto 0;">
                         <h4>📝 Registro / Documentación</h4>
                         <p>Completa el formulario de registro o consulta la información complementaria.</p>
                         <a href="<?php echo htmlspecialchars($update['registration_url'], ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-cta">
@@ -714,13 +764,20 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
                         <img class="minimal-cover promo-image" src="<?php echo htmlspecialchars($update['image_url'], ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($update['title'], ENT_QUOTES, 'UTF-8'); ?>">
                     <?php endif; ?>
 
+                    <hr class="premium-divider">
+
                     <?php if (!empty($update['brief_description'])): ?>
-                        <p class="lead-desc" style="font-size: 1.2rem; line-height: 1.6; color: var(--theme-accent, #ff7f00); margin-bottom: 1.5rem; font-style: italic; font-weight: 500; border-left: 3px solid var(--theme-accent, #ff7f00); padding-left: 1rem;"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
+                        <p class="lead-desc" style="font-size: 1.15rem; line-height: 1.65; color: var(--theme-accent, #ff7f00); margin-bottom: 1.25rem; margin-top: 0; font-style: italic; font-weight: 500; border-left: 3px solid var(--theme-accent, #ff7f00); padding-left: 1rem;"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
+                        <hr class="premium-divider">
                     <?php endif; ?>
                     <div class="body-content"><?php echo htmlspecialchars($update['body'], ENT_QUOTES, 'UTF-8'); ?></div>
 
                     <?php if (!empty($galleryImages)): ?>
-                        <h4 style="margin-top:3rem; margin-bottom: 1rem; font-size:1.15rem; font-weight:700; color:var(--theme-accent);">Galería Complementaria</h4>
+                        <hr class="premium-divider">
+                        <h4 style="margin: 0 0 1rem; font-size: 1.1rem; font-weight: 700; color: var(--theme-accent, #ff7f00); display: flex; align-items: center; gap: 0.5rem;">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                            Galería Complementaria
+                        </h4>
                         <div class="gallery-grid" style="grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));">
                             <?php foreach ($galleryImages as $img): ?>
                                 <div class="gallery-item promo-image-gallery" style="aspect-ratio: 1/1; border-radius: 12px;">
@@ -731,7 +788,8 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
                     <?php endif; ?>
 
                     <?php if (!empty($update['registration_url'])): ?>
-                        <div class="registration-cta-box" style="margin-top: 3rem; background: rgba(255,127,0,0.04); border-color: rgba(255,127,0,0.15);">
+                        <hr class="premium-divider">
+                        <div class="registration-cta-box" style="margin-top: 2rem;">
                             <h4>Enlace de Registro / Soporte</h4>
                             <p>Haz clic abajo para completar tu registro o descargar la documentación.</p>
                             <a href="<?php echo htmlspecialchars($update['registration_url'], ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-cta" style="border-radius: 8px;">
@@ -761,13 +819,20 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
                     </div>
                 </div>
 
+                <hr class="premium-divider">
+
                 <?php if (!empty($update['brief_description'])): ?>
-                    <p class="lead-desc" style="font-size: 1.25rem; line-height: 1.6; color: var(--theme-accent, #ff7f00); margin-bottom: 1.75rem; font-style: italic; font-weight: 500; border-left: 3px solid var(--theme-accent, #ff7f00); padding-left: 1rem;"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
+                    <p class="lead-desc" style="font-size: 1.15rem; line-height: 1.65; color: var(--theme-accent, #ff7f00); margin-bottom: 1.25rem; margin-top: 0; font-style: italic; font-weight: 500; border-left: 3px solid var(--theme-accent, #ff7f00); padding-left: 1rem;"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
+                    <hr class="premium-divider">
                 <?php endif; ?>
                 <div class="body-content"><?php echo htmlspecialchars($update['body'], ENT_QUOTES, 'UTF-8'); ?></div>
 
                 <?php if (!empty($galleryImages)): ?>
-                    <h4 style="margin-top:3rem; font-family:'Outfit', sans-serif; font-size:1.4rem; border-bottom:2px solid var(--theme-accent, #ff7f00); padding-bottom: 0.3rem; margin-bottom: 1rem;">Reportaje Fotográfico</h4>
+                    <hr class="premium-divider">
+                    <h4 style="font-family:'Outfit', sans-serif; font-size:1.35rem; font-weight: 800; color: var(--theme-accent, #ff7f00); margin: 0 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        Reportaje Fotográfico
+                    </h4>
                     <div class="gallery-grid" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:20px;">
                         <?php foreach ($galleryImages as $img): ?>
                             <div class="gallery-item promo-image-gallery" style="aspect-ratio: 16/10;">
@@ -778,7 +843,8 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
                 <?php endif; ?>
 
                 <?php if (!empty($update['registration_url'])): ?>
-                    <div class="registration-cta-box" style="margin-top: 3.5rem; border-width: 2px;">
+                    <hr class="premium-divider">
+                    <div class="registration-cta-box" style="margin-top: 2rem; border-width: 2px;">
                         <h4>📌 Enlace Relacionado / Registro</h4>
                         <p>¿Interesado en participar? Accede al formulario a través del botón oficial.</p>
                         <a href="<?php echo htmlspecialchars($update['registration_url'], ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-cta">
@@ -806,13 +872,20 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
                     </div>
                 <?php endif; ?>
 
+                <hr class="premium-divider">
+
                 <?php if (!empty($update['brief_description'])): ?>
-                    <p class="lead-desc" style="font-size: 1.2rem; line-height: 1.6; color: var(--theme-accent, #ff7f00); margin-bottom: 1.5rem; font-style: italic; font-weight: 500; border-left: 3px solid var(--theme-accent, #ff7f00); padding-left: 1rem;"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
+                    <p class="lead-desc" style="font-size: 1.15rem; line-height: 1.65; color: var(--theme-accent, #ff7f00); margin-bottom: 1.25rem; margin-top: 0; font-style: italic; font-weight: 500; border-left: 3px solid var(--theme-accent, #ff7f00); padding-left: 1rem;"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
+                    <hr class="premium-divider">
                 <?php endif; ?>
                 <div class="body-content"><?php echo htmlspecialchars($update['body'], ENT_QUOTES, 'UTF-8'); ?></div>
 
                 <?php if (!empty($galleryImages)): ?>
-                    <h4 style="margin-top:2.5rem; border-bottom: 1px solid var(--theme-border, #1f1f1f); padding-bottom: 0.5rem; margin-bottom:1rem;">Galería de fotos</h4>
+                    <hr class="premium-divider">
+                    <h4 style="margin: 0 0 1rem; font-size: 1.1rem; font-weight: 700; color: var(--theme-accent, #ff7f00); display: flex; align-items: center; gap: 0.5rem;">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        Galería de fotos
+                    </h4>
                     <div class="gallery-grid">
                         <?php foreach ($galleryImages as $img): ?>
                             <div class="gallery-item promo-image-gallery">
@@ -823,7 +896,8 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
                 <?php endif; ?>
 
                 <?php if (!empty($update['registration_url'])): ?>
-                    <div class="registration-cta-box">
+                    <hr class="premium-divider">
+                    <div class="registration-cta-box" style="margin-top: 2rem;">
                         <h4>📝 Registro e Inscripción</h4>
                         <p>Puedes completar tu registro o acceder a la documentación de soporte a través del siguiente enlace.</p>
                         <a href="<?php echo htmlspecialchars($update['registration_url'], ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-cta">
