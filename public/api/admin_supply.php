@@ -2359,6 +2359,11 @@ function create_product_compatible($pdo, array $payload): void {
         $values[] = (float)number_format((float)$payload['price'], 2, '.', '');
     }
 
+    if (db_column_exists('products', 'net_price')) {
+        $columns[] = 'net_price';
+        $values[] = (float)number_format((float)$payload['price'], 2, '.', '');
+    }
+
     if (db_column_exists('products', 'is_active')) {
         $columns[] = 'is_active';
         $values[] = normalize_bool_admin_supply($payload['is_active'] ?? null, true);
@@ -2423,6 +2428,7 @@ function update_product_compatible($pdo, int $id, array $payload): void {
     if (db_column_exists('products', 'reorder_level')) { $sets[] = 'reorder_level = ?'; $values[] = (int)$payload['reorder_level']; }
     if (db_column_exists('products', 'unit_price')) { $sets[] = 'unit_price = ?'; $values[] = (float)number_format((float)$payload['price'], 2, '.', ''); }
     elseif (db_column_exists('products', 'sell_price')) { $sets[] = 'sell_price = ?'; $values[] = (float)number_format((float)$payload['price'], 2, '.', ''); }
+    if (db_column_exists('products', 'net_price')) { $sets[] = 'net_price = ?'; $values[] = (float)number_format((float)$payload['price'], 2, '.', ''); }
     if (db_column_exists('products', 'updated_at')) { $sets[] = 'updated_at = CURRENT_TIMESTAMP'; }
     
     if (empty($sets)) {
@@ -4242,11 +4248,21 @@ try {
                     }
                     
                     if ($matched_id) {
-                        $upd = $pdo->prepare("UPDATE products SET name=?, category=?, description=?, unit_price=?, stock_quantity=?, reorder_level=? WHERE id = ?");
-                        $upd->execute([$name, $category, $desc, $price, $stock, $reorder, $matched_id]);
+                        if (db_column_exists('products', 'net_price')) {
+                            $upd = $pdo->prepare("UPDATE products SET name=?, category=?, description=?, unit_price=?, stock_quantity=?, reorder_level=?, net_price=? WHERE id = ?");
+                            $upd->execute([$name, $category, $desc, $price, $stock, $reorder, $price, $matched_id]);
+                        } else {
+                            $upd = $pdo->prepare("UPDATE products SET name=?, category=?, description=?, unit_price=?, stock_quantity=?, reorder_level=? WHERE id = ?");
+                            $upd->execute([$name, $category, $desc, $price, $stock, $reorder, $matched_id]);
+                        }
                     } else {
-                        $ins = $pdo->prepare("INSERT INTO products (sku, name, category, description, unit_price, stock_quantity, reorder_level, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, true)");
-                        $ins->execute([$sku, $name, $category, $desc, $price, $stock, $reorder]);
+                        if (db_column_exists('products', 'net_price')) {
+                            $ins = $pdo->prepare("INSERT INTO products (sku, name, category, description, unit_price, stock_quantity, reorder_level, is_active, net_price) VALUES (?, ?, ?, ?, ?, ?, ?, true, ?)");
+                            $ins->execute([$sku, $name, $category, $desc, $price, $stock, $reorder, $price]);
+                        } else {
+                            $ins = $pdo->prepare("INSERT INTO products (sku, name, category, description, unit_price, stock_quantity, reorder_level, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, true)");
+                            $ins->execute([$sku, $name, $category, $desc, $price, $stock, $reorder]);
+                        }
                     }
                     $processed++;
                 }
@@ -4302,11 +4318,21 @@ try {
                     }
                     
                     if ($matched_id) {
-                        $upd = $pdo->prepare("UPDATE marketplace_ce_products SET name=?, category=?, description=?, condition_label=?, unit_price=?, stock_quantity=? WHERE id = ?");
-                        $upd->execute([$name, $category, $desc, $condition, $price, $stock, $matched_id]);
+                        if (db_column_exists('marketplace_ce_products', 'net_price')) {
+                            $upd = $pdo->prepare("UPDATE marketplace_ce_products SET name=?, category=?, description=?, condition_label=?, unit_price=?, stock_quantity=?, net_price=? WHERE id = ?");
+                            $upd->execute([$name, $category, $desc, $condition, $price, $stock, $price, $matched_id]);
+                        } else {
+                            $upd = $pdo->prepare("UPDATE marketplace_ce_products SET name=?, category=?, description=?, condition_label=?, unit_price=?, stock_quantity=? WHERE id = ?");
+                            $upd->execute([$name, $category, $desc, $condition, $price, $stock, $matched_id]);
+                        }
                     } else {
-                        $ins = $pdo->prepare("INSERT INTO marketplace_ce_products (sku, name, category, description, condition_label, unit_price, stock_quantity, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, true)");
-                        $ins->execute([$sku, $name, $category, $desc, $condition, $price, $stock]);
+                        if (db_column_exists('marketplace_ce_products', 'net_price')) {
+                            $ins = $pdo->prepare("INSERT INTO marketplace_ce_products (sku, name, category, description, condition_label, unit_price, stock_quantity, is_active, net_price) VALUES (?, ?, ?, ?, ?, ?, ?, true, ?)");
+                            $ins->execute([$sku, $name, $category, $desc, $condition, $price, $stock, $price]);
+                        } else {
+                            $ins = $pdo->prepare("INSERT INTO marketplace_ce_products (sku, name, category, description, condition_label, unit_price, stock_quantity, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, true)");
+                            $ins->execute([$sku, $name, $category, $desc, $condition, $price, $stock]);
+                        }
                     }
                     $processed++;
                 }
@@ -4522,6 +4548,7 @@ try {
 
                 if ($mkConditionCol !== null) { $sets[] = $mkConditionCol . ' = ?'; $values[] = $conditionLabel; }
                 if ($mkPriceCol !== null) { $sets[] = $mkPriceCol . ' = ?'; $values[] = $unitPrice; }
+                if (db_column_exists('marketplace_ce_products', 'net_price')) { $sets[] = 'net_price = ?'; $values[] = $unitPrice; }
                 if ($mkStockCol !== null) { $sets[] = $mkStockCol . ' = ?'; $values[] = max(0, $stockQuantity); }
                 
                 // Preserve existing gallery images if any, or use newly uploaded ones
@@ -4560,6 +4587,7 @@ try {
 
                 if ($mkConditionCol !== null) { $columns[] = $mkConditionCol; $placeholders[] = '?'; $values[] = $conditionLabel; }
                 if ($mkPriceCol !== null) { $columns[] = $mkPriceCol; $placeholders[] = '?'; $values[] = $unitPrice; }
+                if (db_column_exists('marketplace_ce_products', 'net_price')) { $columns[] = 'net_price'; $placeholders[] = '?'; $values[] = $unitPrice; }
                 if ($mkStockCol !== null) { $columns[] = $mkStockCol; $placeholders[] = '?'; $values[] = max(0, $stockQuantity); }
                 
                 // Add gallery images to variants_json for new items too

@@ -358,11 +358,17 @@ try {
             $type = $input['type'] ?? 'percentage';
             $value = (float)($input['value'] ?? 0);
             $exclude_skus = $input['exclude_skus'] ?? [];
+            $target = $input['target'] ?? 'stock';
 
-            $stmt = $pdo->prepare("SELECT id, name, sku, unit_price FROM products WHERE is_active = true ORDER BY name LIMIT 500");
-            if (!$stmt->execute()) {
-                $stmt = $pdo->prepare("SELECT id, name, sku, sell_price AS unit_price FROM products ORDER BY name LIMIT 500");
+            if ($target === 'marketplace') {
+                $stmt = $pdo->prepare("SELECT id, name, sku, unit_price FROM marketplace_ce_products WHERE is_active = true ORDER BY name LIMIT 500");
                 $stmt->execute();
+            } else {
+                $stmt = $pdo->prepare("SELECT id, name, sku, unit_price FROM products WHERE is_active = true ORDER BY name LIMIT 500");
+                if (!$stmt->execute()) {
+                    $stmt = $pdo->prepare("SELECT id, name, sku, sell_price AS unit_price FROM products ORDER BY name LIMIT 500");
+                    $stmt->execute();
+                }
             }
             $products = $stmt->fetchAll();
 
@@ -398,38 +404,92 @@ try {
             $type = $input['type'] ?? 'percentage';
             $value = (float)($input['value'] ?? 0);
             $exclude_skus = $input['exclude_skus'] ?? [];
+            $target = $input['target'] ?? 'stock';
             $affect_count = 0;
 
-            $stmt = $pdo->prepare("SELECT id, sku, unit_price FROM products WHERE is_active = true");
-            if (!$stmt->execute()) {
-                $stmt = $pdo->prepare("SELECT id, sku, sell_price AS unit_price FROM products");
+            if ($target === 'marketplace') {
+                $stmt = $pdo->prepare("SELECT id, sku, unit_price FROM marketplace_ce_products WHERE is_active = true");
                 $stmt->execute();
-            }
-            $products = $stmt->fetchAll();
+                $products = $stmt->fetchAll();
 
-            foreach ($products as $p) {
-                $sku = strtoupper(preg_replace('/^XLS-/i', '', (string)$p['sku']));
-                if (in_array($sku, array_map('strtoupper', $exclude_skus), true)) continue;
+                foreach ($products as $p) {
+                    $sku = strtoupper(preg_replace('/^XLS-/i', '', (string)$p['sku']));
+                    if (in_array($sku, array_map('strtoupper', $exclude_skus), true)) continue;
 
-                $current = (float)$p['unit_price'];
-                $new = $type === 'percentage' ? round($current * (1 + $value / 100), 2) : round($current + $value, 2);
-                
-                try {
-                    $upstmt = $pdo->prepare("UPDATE products SET unit_price = ? WHERE id = ?");
+                    $current = (float)$p['unit_price'];
+                    $new = $type === 'percentage' ? round($current * (1 + $value / 100), 2) : round($current + $value, 2);
+
+                    $upstmt = $pdo->prepare("UPDATE marketplace_ce_products SET unit_price = ? WHERE id = ?");
                     $upstmt->execute([$new, (int)$p['id']]);
                     $affect_count++;
-                } catch (Exception $e1) {
+                }
+            } else {
+                $stmt = $pdo->prepare("SELECT id, sku, unit_price FROM products WHERE is_active = true");
+                if (!$stmt->execute()) {
+                    $stmt = $pdo->prepare("SELECT id, sku, sell_price AS unit_price FROM products");
+                    $stmt->execute();
+                }
+                $products = $stmt->fetchAll();
+
+                foreach ($products as $p) {
+                    $sku = strtoupper(preg_replace('/^XLS-/i', '', (string)$p['sku']));
+                    if (in_array($sku, array_map('strtoupper', $exclude_skus), true)) continue;
+
+                    $current = (float)$p['unit_price'];
+                    $new = $type === 'percentage' ? round($current * (1 + $value / 100), 2) : round($current + $value, 2);
+                    
                     try {
-                        $upstmt = $pdo->prepare("UPDATE products SET sell_price = ? WHERE id = ?");
+                        $upstmt = $pdo->prepare("UPDATE products SET unit_price = ? WHERE id = ?");
                         $upstmt->execute([$new, (int)$p['id']]);
                         $affect_count++;
-                    } catch(Exception $e2) {}
+                    } catch (Exception $e1) {
+                        try {
+                            $upstmt = $pdo->prepare("UPDATE products SET sell_price = ? WHERE id = ?");
+                            $upstmt->execute([$new, (int)$p['id']]);
+                            $affect_count++;
+                        } catch(Exception $e2) {}
+                    }
                 }
             }
 
             $response = [
                 'success' => true,
-                'message' => "Precios actualizados en {$affect_count} productos",
+                'message' => "Precios actualizados en {$affect_count} productos (" . ($target === 'marketplace' ? 'Marketplace' : 'Stock') . ")",
+                'count' => $affect_count
+            ];
+            break;
+
+        case 'revert-to-net-prices':
+            require_admin();
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            $target = $input['target'] ?? 'stock';
+            $affect_count = 0;
+
+            if ($target === 'marketplace') {
+                $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET unit_price = net_price WHERE net_price IS NOT NULL");
+                $stmt->execute();
+                $affect_count = $stmt->rowCount();
+            } else {
+                try {
+                    $stmt = $pdo->prepare("UPDATE products SET unit_price = net_price WHERE net_price IS NOT NULL");
+                    $stmt->execute();
+                    $affect_count = $stmt->rowCount();
+                } catch (Exception $e1) {
+                    try {
+                        $stmt = $pdo->prepare("UPDATE products SET sell_price = net_price WHERE net_price IS NOT NULL");
+                        $stmt->execute();
+                        $affect_count = $stmt->rowCount();
+                    } catch (Exception $e2) {}
+                }
+            }
+
+            $response = [
+                'success' => true,
+                'message' => "Precios neto restaurados en {$affect_count} productos (" . ($target === 'marketplace' ? 'Marketplace' : 'Stock') . ")",
                 'count' => $affect_count
             ];
             break;

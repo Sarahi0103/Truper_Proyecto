@@ -1110,7 +1110,14 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                 <h3>Ajuste de Precios Masivo</h3>
                 <p class="text-muted">Aplica un cambio de precio a múltiples productos. Usa % para porcentaje o $ para monto fijo.</p>
                 
-                <div class="grid grid-3 mt-2" style="align-items: flex-end;">
+                <div class="grid grid-4 mt-2" style="align-items: flex-end;">
+                    <div class="form-group">
+                        <label>Aplicar a</label>
+                        <select id="priceAdjustTarget">
+                            <option value="stock">Productos (Stock)</option>
+                            <option value="marketplace">Marketplace CE</option>
+                        </select>
+                    </div>
                     <div class="form-group">
                         <label>Tipo de ajuste</label>
                         <select id="priceAdjustType">
@@ -1155,6 +1162,25 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                     <button class="btn btn-secondary mt-2" onclick="cancelPriceAdjustment()">Cancelar</button>
                 </div>
                 <div id="priceResult" class="mt-2"></div>
+
+                <hr style="border: 0; border-top: 1px solid var(--ui-border-soft); margin: 2rem 0 1.5rem 0;">
+                
+                <h3>Restaurar Precios Neto</h3>
+                <p class="text-muted">Revierte los precios actuales a los precios neto originales de cada producto.</p>
+                
+                <div class="grid grid-3 mt-2" style="align-items: flex-end;">
+                    <div class="form-group">
+                        <label>Restaurar en</label>
+                        <select id="priceRevertTarget">
+                            <option value="stock">Productos (Stock)</option>
+                            <option value="marketplace">Marketplace CE</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-secondary" onclick="revertToNetPrices()" style="width: 100%; display: block;">Restaurar precios neto</button>
+                    </div>
+                </div>
+                <div id="priceRevertResult" class="mt-2"></div>
             </div></div>
         </section>
 
@@ -1699,6 +1725,7 @@ async function validateSkuAvailability(kind, options = {}) {
     if (currentId > 0) {
         const cache = isMarketplace ? marketplaceItemsCache : stockItemsCache;
         const item = cache.find((row) => Number(row.id) === currentId);
+        const normalizeCode = isMarketplace ? normalizeMarketplaceCode : normalizeNumericSku;
         if (item && normalizeCode(item.sku || '') === sku) {
             setSkuStatus(statusId, isMarketplace ? 'Editando artículo CE existente.' : 'Editando producto existente.', 'muted');
             return true;
@@ -1903,6 +1930,7 @@ async function toggleProductVisibility(productId, newState) {
 let pricePreviewData = null;
 
 async function applyPriceAdjustment() {
+    const target = document.getElementById('priceAdjustTarget').value;
     const type = document.getElementById('priceAdjustType').value;
     const value = parseFloat(document.getElementById('priceAdjustValue').value || 0);
     const excludeSkus = (document.getElementById('priceExcludeSkus').value || '').split(',').map(s => s.trim().toUpperCase()).filter(s => s);
@@ -1916,7 +1944,7 @@ async function applyPriceAdjustment() {
         const res = await fetch('/api/products.php?action=preview-price-adjustment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type, value, exclude_skus: excludeSkus })
+            body: JSON.stringify({ target, type, value, exclude_skus: excludeSkus })
         });
         const data = await res.json();
         if (!data.success || !Array.isArray(data.preview)) {
@@ -1924,7 +1952,7 @@ async function applyPriceAdjustment() {
             return;
         }
 
-        pricePreviewData = { type, value, exclude_skus: excludeSkus, affected: data.count || 0 };
+        pricePreviewData = { target, type, value, exclude_skus: excludeSkus, affected: data.count || 0 };
         const preview = data.preview.slice(0, 5);
         
         const content = document.getElementById('pricePreviewContent');
@@ -1987,6 +2015,37 @@ async function confirmPriceAdjustment() {
     } catch (e) {
         console.error('Error applying price adjustment:', e);
         document.getElementById('priceResult').innerHTML = '<div class="alert alert-error">Error de conexión</div>';
+    }
+}
+
+async function revertToNetPrices() {
+    const target = document.getElementById('priceRevertTarget').value;
+    const resultBox = document.getElementById('priceRevertResult');
+    if (!resultBox) return;
+
+    const confirmRevert = confirm(`¿Estás seguro de que deseas restaurar los precios neto originales para todos los productos de tipo "${target === 'marketplace' ? 'Marketplace CE' : 'Stock'}"? Esta acción sobrescribirá los precios actuales.`);
+    if (!confirmRevert) return;
+
+    resultBox.innerHTML = '<div class="alert alert-info">Restaurando precios, por favor espera...</div>';
+
+    try {
+        const res = await fetch('/api/products.php?action=revert-to-net-prices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target })
+        });
+        const data = await res.json();
+        if (data.success) {
+            resultBox.innerHTML = `<div class="alert alert-success">${escapeHtml(data.message || 'Precios neto restaurados exitosamente')}</div>`;
+            setTimeout(() => {
+                resultBox.innerHTML = '';
+            }, 3000);
+        } else {
+            resultBox.innerHTML = `<div class="alert alert-error">${escapeHtml(data.message || 'Error al restaurar precios neto')}</div>`;
+        }
+    } catch (e) {
+        console.error('Error reverting to net prices:', e);
+        resultBox.innerHTML = '<div class="alert alert-error">Error de conexión</div>';
     }
 }
 

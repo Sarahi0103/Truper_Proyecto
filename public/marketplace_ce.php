@@ -766,9 +766,10 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
                 const sku     = (card.dataset.sku  || '').toLowerCase();
                 const cond    = (card.dataset.condition || '').toLowerCase();
                 const cardCat = (card.dataset.category || '').toLowerCase();
+                const cardCats = cardCat.split(',').map(c => c.trim());
 
                 const matchSearch = !q || name.includes(q) || sku.includes(q) || cond.includes(q);
-                const matchCat    = !cat || cardCat === cat;
+                const matchCat    = !cat || cardCats.includes(cat);
 
                 if (matchSearch && matchCat) {
                     card.style.display = '';
