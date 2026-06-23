@@ -323,20 +323,9 @@ mobileOptimizationStyles.textContent = `
         text-size-adjust: 100%;
     }
 
+    /* Evitar user-select: none en el body completo ya que rompe la interactividad y los clics de botones en iOS Safari */
     body.is-touch-device {
-        -webkit-user-select: none;
-        user-select: none;
-    }
-
-    body.is-touch-device input,
-    body.is-touch-device textarea,
-    body.is-touch-device select {
-        -webkit-user-select: text;
-        user-select: text;
-    }
-
-    body.is-scrolling {
-        pointer-events: none;
+        -webkit-tap-highlight-color: transparent;
     }
 
     /* Reducir movimiento si lo prefieren */

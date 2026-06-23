@@ -94,6 +94,7 @@ body.catalog-minimal {
 
 header {
     background: rgba(255, 255, 255, 0.94);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--theme-border);
     box-shadow: 0 6px 20px var(--theme-shadow);
