@@ -724,8 +724,10 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
                 <span class="cart-total"><strong id="cartTotalAmount">$0</strong></span>
             </div>
             <div class="btn-group" style="flex-direction: column; gap: 8px;">
-                <button id="printTicket" class="btn btn-primary">⬇️ Descargar Ticket</button>
-                <button id="shareWhatsApp" class="btn btn-secondary">📱 Enviar cotización por WhatsApp</button>
+                <button id="printTicket" class="btn btn-primary">⬇️ Enviar cotización</button>
+                <button id="shareWhatsApp" class="btn btn-secondary"
+                        data-company-whatsapp="<?php echo htmlspecialchars($whatsappPhone, ENT_QUOTES, 'UTF-8'); ?>"
+                        data-client-code="<?php echo htmlspecialchars($clientCode ?? 'PUBLICO', ENT_QUOTES, 'UTF-8'); ?>">📱 Enviar cotización por WhatsApp</button>
                 <button id="clearCart" class="btn btn-ghost">🗑️ Vaciar Carrito</button>
             </div>
         </div>
@@ -738,6 +740,9 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
     <script src="js/jspdf.umd.min.js"></script>
     <script src="js/main.js?v=2.6"></script>
     <script src="js/modals.js"></script>
+    <script>
+        window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8"); ?>';
+    </script>
     <script src="js/catalog.js?v=3.1"></script>
     <script>
     (function () {
@@ -788,43 +793,6 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
 
         filterCe();
 
-        /* ===== WhatsApp share ===== */
-        const shareBtn = document.getElementById('shareWhatsApp');
-        if (shareBtn) {
-            shareBtn.addEventListener('click', function () {
-                const items = JSON.parse(localStorage.getItem('truper_cart') || '[]');
-                if (!items.length) { alert('El carrito está vacío'); return; }
-
-                const total = items.reduce((s, i) => s + i.unit_price * i.quantity, 0);
-                const now   = new Date();
-                const ticketCode = 'CE-TCK-' + String(now.getTime()).slice(-8);
-                const issueDate  = now.toLocaleString('es-MX');
-                const issueDateIso = now.toISOString();
-                const clientCode = document.body?.dataset?.clientCode || 'PUBLICO';
-
-                const safeItems = items.map(i => ({
-                    name: i.name, sku: String(i.sku||'').replace(/^XLS-/i,''),
-                    quantity: Number(i.quantity||0), price: Number(i.unit_price||0)
-                }));
-                const encodedItems = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(safeItems)))));
-                const ticketUrl = `${window.location.origin}/ticket_quote.php?folio=${encodeURIComponent(ticketCode)}&issued_at=${encodeURIComponent(issueDateIso)}&client=${encodeURIComponent(clientCode)}&total=${encodeURIComponent(total.toFixed(2))}&items=${encodedItems}&format=thermal&auto_pdf=1`;
-
-                let msg = 'TRUPER - COTIZACION MARKETPLACE CE\n===========================\n';
-                msg += `Folio: ${ticketCode}\nFecha: ${issueDate}\nCliente: ${clientCode}\n---------------------------\nARTICULOS:\n`;
-                items.forEach(i => {
-                    const code  = String(i.sku||'').replace(/^XLS-/i,'') || 'N/A';
-                    const total_line = i.unit_price * i.quantity;
-                    msg += `- ${i.name}\n  Codigo: ${code}\n  ${i.quantity} x $${Number(i.unit_price).toFixed(2)} = $${total_line.toFixed(2)}\n`;
-                });
-                msg += `---------------------------\nTOTAL: $${total.toFixed(2)}\nPDF/Ticket: ${ticketUrl}\n\nQuedo atento(a) a disponibilidad.`;
-
-                if (companyWhatsApp) {
-                    window.open(`https://wa.me/${companyWhatsApp}?text=${encodeURIComponent(msg)}`, '_blank');
-                } else {
-                    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
-                }
-            });
-        }
     })();
     </script>
     <script src="js/mobile-optimize.js"></script>

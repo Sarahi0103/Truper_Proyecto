@@ -488,8 +488,10 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                     <span id="cartTotalAmount">$0</span>
                 </div>
                 <div class="summary-actions">
-                    <button id="printTicket" class="btn btn-primary btn-full">⬇️ Descargar Ticket</button>
-                    <button id="shareWhatsApp" class="btn btn-secondary btn-full">📱 WhatsApp</button>
+                    <button id="printTicket" class="btn btn-primary btn-full">⬇️ Enviar cotización</button>
+                    <button id="shareWhatsApp" class="btn btn-secondary btn-full"
+                            data-company-whatsapp="<?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?>"
+                            data-client-code="<?php echo htmlspecialchars($clientTicketCode ?? 'PUBLICO', ENT_QUOTES, 'UTF-8'); ?>">📱 Enviar cotización por WhatsApp</button>
                     <button id="clearCart" class="btn btn-ghost btn-full">🗑️ Vaciar Carrito</button>
                 </div>
             </div>
@@ -503,6 +505,9 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
     <script src="js/jspdf.umd.min.js"></script>
     <script src="js/main.js?v=2.6"></script>
     <script src="js/modals.js"></script>
+    <script>
+        window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8"); ?>';
+    </script>
     <script src="js/catalog.js"></script>
     <script>
         function decodeCartText(value) {
@@ -679,56 +684,6 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                 }
             );
         });
-
-        document.getElementById('shareWhatsApp')?.addEventListener('click', function() {
-            const items = getStoredCart();
-            if (items.length === 0) {
-                alert('El carrito está vacío');
-                return;
-            }
-
-            const total = items.reduce((sum, item) => sum + (Number(item.unit_price || 0) * Number(item.quantity || 0)), 0);
-            const now = new Date();
-            const ticketCode = `TCK-${String(now.getTime()).slice(-8)}`;
-            const issueDate = now.toLocaleString('es-MX');
-            const issueDateIso = now.toISOString();
-            const clientCode = '<?php echo htmlspecialchars($clientTicketCode, ENT_QUOTES, 'UTF-8'); ?>';
-            const companyWhatsApp = '<?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?>';
-
-            const safeItems = items.map(item => ({
-                name: decodeCartText(item.name),
-                sku: String(item.sku || '').replace(/^XLS-/i, ''),
-                quantity: Number(item.quantity || 0),
-                price: Number(item.unit_price || 0)
-            }));
-            const encodedItems = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(safeItems)))));
-            const ticketUrl = `${window.location.origin}/ticket_quote.php?folio=${encodeURIComponent(ticketCode)}&issued_at=${encodeURIComponent(issueDateIso)}&client=${encodeURIComponent(clientCode)}&total=${encodeURIComponent(total.toFixed(2))}&items=${encodedItems}&format=thermal&auto_pdf=1`;
-
-            let message = 'TRUPER - COTIZACION\n';
-            message += '===========================\n';
-            message += `Folio: ${ticketCode}\n`;
-            message += `Fecha: ${issueDate}\n`;
-            message += `Cliente: ${clientCode}\n`;
-            message += '---------------------------\n';
-            message += 'PRODUCTOS:\n';
-            items.forEach((item, idx) => {
-                const code = String(item.sku || '').replace(/^XLS-/i, '') || 'N/A';
-                const lineTotal = (Number(item.unit_price || 0) * Number(item.quantity || 0));
-                message += `- ${decodeCartText(item.name)}\n`;
-                message += `  Codigo: ${code}\n`;
-                message += `  ${item.quantity} x $${Number(item.unit_price).toFixed(2)} = $${lineTotal.toFixed(2)}\n`;
-                if (idx < (items.length - 1)) {
-                    message += '---------------------------\n';
-                }
-            });
-            message += '---------------------------\n';
-            message += `TOTAL: $${total.toFixed(2)}\n`;
-            message += `PDF/Ticket: ${ticketUrl}\n\n`;
-            message += 'Quedo atento(a) a disponibilidad y tiempo de entrega.';
-
-            const encodedMsg = encodeURIComponent(message);
-            const whatsappUrl = `https://wa.me/${companyWhatsApp}?text=${encodedMsg}`;
-            window.open(whatsappUrl, '_blank');
         });
 
         document.addEventListener('DOMContentLoaded', async function() {

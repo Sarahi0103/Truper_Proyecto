@@ -166,7 +166,7 @@
     return sku.replace(/^XLS-/i, '');
   }
 
-  function drawTicketPdf(format) {
+  function drawTicketPdf(format, overrideFolio = null) {
     const cart = getCart();
     if (cart.length === 0) {
       if (window.showAlert) window.showAlert('No hay productos en el carrito', 'warning');
@@ -179,7 +179,7 @@
     }
 
     const now = new Date();
-    const folio = createTicketFolio(now);
+    const folio = overrideFolio || createTicketFolio(now);
     const date = now.toLocaleString('es-MX');
     const meta = getTicketMeta();
     const total = cart.reduce((sum, item) => sum + toNumber(item.unit_price) * toNumber(item.quantity), 0);
@@ -544,8 +544,149 @@
       });
     }
 
+    window.registerQuoteTicket = function(items, total) {
+      return fetch('api/create_quote_ticket.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': window.csrfToken || ''
+        },
+        body: JSON.stringify({
+          items: items.map(item => ({
+            id: item.id,
+            sku: item.sku,
+            name: item.name,
+            unit_price: item.unit_price,
+            quantity: item.quantity
+          })),
+          total: total
+        })
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Error al registrar la cotización en el servidor');
+        }
+        return response.json();
+      })
+      .then(result => {
+        if (!result.success || !result.folio) {
+          throw new Error(result.message || 'Error en la respuesta del servidor');
+        }
+        return result;
+      });
+    };
+
+    window.shareQuoteViaWhatsApp = function(companyWhatsApp, clientCode, typeLabel = 'COTIZACION') {
+      const items = getCart();
+      if (items.length === 0) {
+        if (window.showAlert) window.showAlert('El carrito está vacío', 'warning');
+        else alert('El carrito está vacío');
+        return;
+      }
+
+      const shareBtn = document.getElementById('shareWhatsApp');
+      let originalText = '';
+      if (shareBtn) {
+        originalText = shareBtn.innerHTML;
+        shareBtn.disabled = true;
+        shareBtn.innerHTML = '⌛ Procesando...';
+      }
+
+      const total = items.reduce((sum, item) => sum + (toNumber(item.unit_price || 0) * toNumber(item.quantity || 0)), 0);
+
+      window.registerQuoteTicket(items, total)
+        .then(result => {
+          const officialFolio = result.folio;
+          drawTicketPdf('thermal', officialFolio);
+
+          const now = new Date();
+          const issueDate = now.toLocaleString('es-MX');
+          const ticketUrl = `${window.location.origin}/ticket_quote.php?folio=${encodeURIComponent(officialFolio)}&auto_pdf=1`;
+
+          let message = `TRUPER - ${typeLabel.toUpperCase()}\n`;
+          message += '===========================\n';
+          message += `Folio: ${officialFolio}\n`;
+          message += `Fecha: ${issueDate}\n`;
+          message += `Cliente: ${clientCode || 'PUBLICO'}\n`;
+          message += '---------------------------\n';
+          message += 'PRODUCTOS:\n';
+          items.forEach((item, idx) => {
+            const code = String(item.sku || '').replace(/^XLS-/i, '') || 'N/A';
+            const lineTotal = (toNumber(item.unit_price || 0) * toNumber(item.quantity || 0));
+            message += `- ${item.name}\n`;
+            message += `  Codigo: ${code}\n`;
+            message += `  ${item.quantity} x $${toNumber(item.unit_price).toFixed(2)} = $${lineTotal.toFixed(2)}\n`;
+            if (idx < (items.length - 1)) {
+              message += '---------------------------\n';
+            }
+          });
+          message += '---------------------------\n';
+          message += `TOTAL: $${total.toFixed(2)}\n`;
+          message += `PDF/Ticket: ${ticketUrl}\n\n`;
+          message += 'Quedo atento(a) a disponibilidad y tiempo de entrega.';
+
+          const encodedMsg = encodeURIComponent(message);
+          const whatsappUrl = companyWhatsApp
+            ? `https://wa.me/${companyWhatsApp}?text=${encodedMsg}`
+            : `https://wa.me/?text=${encodedMsg}`;
+
+          window.open(whatsappUrl, '_blank');
+        })
+        .catch(err => {
+          console.error(err);
+          if (window.showAlert) window.showAlert('Error: ' + err.message, 'error');
+          else alert('Error: ' + err.message);
+        })
+        .finally(() => {
+          if (shareBtn) {
+            shareBtn.disabled = false;
+            shareBtn.innerHTML = originalText;
+          }
+        });
+    };
+
     const ticketBtn = document.getElementById('printTicket');
-    if (ticketBtn) ticketBtn.addEventListener('click', () => drawTicketPdf('thermal'));
+    if (ticketBtn) {
+      ticketBtn.addEventListener('click', () => {
+        const items = getCart();
+        if (items.length === 0) {
+          if (window.showAlert) window.showAlert('El carrito está vacío', 'warning');
+          else alert('El carrito está vacío');
+          return;
+        }
+
+        const originalText = ticketBtn.innerHTML;
+        ticketBtn.disabled = true;
+        ticketBtn.innerHTML = '⌛ Guardando...';
+
+        const total = items.reduce((sum, item) => sum + (toNumber(item.unit_price || 0) * toNumber(item.quantity || 0)), 0);
+
+        window.registerQuoteTicket(items, total)
+          .then(result => {
+            const officialFolio = result.folio;
+            drawTicketPdf('thermal', officialFolio);
+          })
+          .catch(err => {
+            console.error(err);
+            if (window.showAlert) window.showAlert('Error: ' + err.message, 'error');
+            else alert('Error: ' + err.message);
+          })
+          .finally(() => {
+            ticketBtn.disabled = false;
+            ticketBtn.innerHTML = originalText;
+          });
+      });
+    }
+
+    const shareBtn = document.getElementById('shareWhatsApp');
+    if (shareBtn) {
+      shareBtn.addEventListener('click', () => {
+        const companyWhatsApp = shareBtn.dataset.companyWhatsapp || '';
+        const clientCode = shareBtn.dataset.clientCode || 'PUBLICO';
+        const typeLabel = shareBtn.dataset.typeLabel || 'COTIZACION';
+        window.shareQuoteViaWhatsApp(companyWhatsApp, clientCode, typeLabel);
+      });
+    }
 
     const clearBtn = document.getElementById('clearCart');
     if (clearBtn) {

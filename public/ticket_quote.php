@@ -54,6 +54,33 @@ if ($quoteId > 0) {
     } catch (Exception $ignored) {
         // Keep fallback data from URL.
     }
+} else if ($folio !== 'COT-000000' && $folio !== '') {
+    // Intentar cargar desde sales_tickets por folio
+    try {
+        $stmtSt = $pdo->prepare("SELECT st.id, st.total_amount, st.issued_date, st.customer_name, u.user_code FROM sales_tickets st LEFT JOIN users u ON st.user_id = u.id WHERE st.folio = ? LIMIT 1");
+        $stmtSt->execute([$folio]);
+        $rowSt = $stmtSt->fetch();
+        if ($rowSt) {
+            $total = (float)$rowSt['total_amount'];
+            $issuedAt = (string)$rowSt['issued_date'];
+            $client = !empty($rowSt['user_code']) ? (string)$rowSt['user_code'] : (!empty($rowSt['customer_name']) ? (string)$rowSt['customer_name'] : 'PUBLICO');
+            
+            // Get items
+            $stmtStItems = $pdo->prepare("SELECT product_name AS name, quantity, unit_price AS price, product_id FROM ticket_items WHERE ticket_id = ?");
+            $stmtStItems->execute([$rowSt['id']]);
+            $rawItems = $stmtStItems->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $items = array_map(function($i) {
+                return [
+                    'name' => $i['name'],
+                    'quantity' => (int)$i['quantity'],
+                    'price' => (float)$i['price'],
+                    'product_id' => $i['product_id']
+                ];
+            }, $rawItems);
+        }
+    } catch (Exception $ignored) {
+        // Keep fallback data from URL.
+    }
 }
 
 function ticket_quote_number($value) {
