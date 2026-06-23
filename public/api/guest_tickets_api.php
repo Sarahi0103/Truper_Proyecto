@@ -66,6 +66,7 @@ try {
                 SELECT 
                     st.id,
                     st.folio,
+                    st.description,
                     st.order_id,
                     o.order_number,
                     st.total_amount,

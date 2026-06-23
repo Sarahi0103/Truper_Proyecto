@@ -46,6 +46,23 @@ class TicketIntegration {
                 $customerName = trim($order['first_name'] . ' ' . ($order['last_name'] ?? ''));
                 $customerEmail = $order['email'] ?? '';
             }
+
+            // Detección de Origen (Marketplace vs Stock)
+            $isMarketplace = false;
+            try {
+                $checkStmt = $this->pdo->prepare("SELECT p.name FROM order_items oi LEFT JOIN products p ON oi.product_id = p.id WHERE oi.order_id = ?");
+                $checkStmt->execute([$orderId]);
+                $orderItems = $checkStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                foreach ($orderItems as $oItem) {
+                    if (strpos($oItem['name'] ?? '', '[CE]') !== false) {
+                        $isMarketplace = true;
+                        break;
+                    }
+                }
+            } catch (Exception $eEx) {
+                error_log("Error scanning order items for ticket source: " . $eEx->getMessage());
+            }
+            $originSource = $isMarketplace ? 'Marketplace' : 'Stock';
             
             // Crear ticket automático
             $ticketData = [
@@ -54,6 +71,7 @@ class TicketIntegration {
                 'customer_name' => $customerName,
                 'customer_email' => $customerEmail,
                 'ticket_type' => 'sale',
+                'description' => $originSource,
                 'subtotal' => $orderData['subtotal'] ?? ($order['total_amount'] - ($order['tax_amount'] ?? 0)),
                 'tax_amount' => $order['tax_amount'],
                 'discount_amount' => $order['discount_amount'],

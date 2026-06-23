@@ -563,6 +563,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                     <thead>
                         <tr>
                             <th>Folio</th>
+                            <th>Origen</th>
                             <th>Invitado</th>
                             <th>Contacto</th>
                             <th>Nº Orden</th>
@@ -574,7 +575,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                     </thead>
                     <tbody id="ticketsTableBody">
                         <tr>
-                            <td colspan="8" class="empty-state">Cargando tickets...</td>
+                            <td colspan="9" class="empty-state">Cargando tickets...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -615,6 +616,10 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                     <div class="info-block">
                         <span class="info-lbl">Estado de Pago</span>
                         <span class="info-val" id="mdPayment">Pagado</span>
+                    </div>
+                    <div class="info-block">
+                        <span class="info-lbl">Origen</span>
+                        <span class="info-val" id="mdSource">Stock</span>
                     </div>
                     <div class="info-block" style="grid-column: span 2;">
                         <span class="info-lbl">Notas del Pedido / Dirección</span>
@@ -692,7 +697,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             if (tickets.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="8" class="empty-state">
+                        <td colspan="9" class="empty-state">
                             <span class="empty-icon">🎫</span>
                             No se encontraron tickets de invitados
                         </td>
@@ -706,6 +711,12 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                 const guestName = `${tk.first_name || ''} ${tk.last_name || ''}`.trim() || 'Invitado';
                 const statusBadge = getStatusBadge(tk.pickup_status);
                 
+                // Origen display
+                const source = tk.description || 'Stock';
+                const sourceBadge = source === 'Marketplace'
+                    ? '<span class="badge-status" style="background:rgba(23, 162, 184, 0.15); color:#17a2b8; border:1px solid rgba(23,162,184,0.25);">🛍️ Marketplace</span>'
+                    : '<span class="badge-status" style="background:rgba(40, 167, 69, 0.15); color:#28a745; border:1px solid rgba(40,167,69,0.25);">📦 Stock</span>';
+
                 // Expiration display
                 const expDateStr = tk.expiration_date ? new Date(tk.expiration_date).toLocaleDateString('es-MX') : 'N/A';
                 
@@ -717,22 +728,23 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                 if (tk.pickup_status === 'pending') {
                     actionsHtml += `
                         <button class="btn-action btn-deliver" onclick="deliverTicket('${tk.folio}')" title="Confirmar Entrega">✓ Entregar</button>
-                        <button class="btn-action btn-cancel" onclick="cancelTicket('${tk.folio}')" title="Cancelar Ticket">✗</button>
                     `;
                 } else if (tk.pickup_status === 'expired') {
                     actionsHtml += `
                         <button class="btn-action btn-reactivate" onclick="reactivateTicket(${tk.id})" title="Reactivar ticket por 30 días">🔄 Reactivar</button>
-                        <button class="btn-action btn-cancel" onclick="cancelTicket('${tk.folio}')" title="Cancelar Ticket">✗</button>
                     `;
                 }
                 
+                // Delete button always visible for all status values
                 actionsHtml += `
+                    <button class="btn-action btn-cancel" onclick="cancelTicket('${tk.folio}')" title="Eliminar Ticket">🗑️ Eliminar</button>
                     <button class="btn-action btn-detail" onclick="openDetails('${tk.folio}')" title="Ver Detalles">👁 Detalle</button>
                 `;
 
                 html += `
                     <tr id="row-${tk.folio}">
                         <td style="font-family: monospace; font-weight: 700; color: var(--color-naranja, #ff6600);">${tk.folio}</td>
+                        <td>${sourceBadge}</td>
                         <td style="font-weight: 600;">${guestName}</td>
                         <td style="font-size: 0.85rem; color: rgba(255,255,255,0.65);">
                             <div>${tk.email || ''}</div>
@@ -864,6 +876,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             document.getElementById('mdDate').textContent = '—';
             document.getElementById('mdTotal').textContent = '$0.00';
             document.getElementById('mdPayment').textContent = '—';
+            document.getElementById('mdSource').textContent = '—';
             document.getElementById('mdNotes').textContent = '—';
             document.getElementById('mdProductsBody').innerHTML = '<tr><td colspan="4" style="text-align: center;">Cargando...</td></tr>';
             document.getElementById('mdLogs').innerHTML = '<div style="padding: 0.5rem; text-align: center; color: rgba(255,255,255,0.4);">Cargando logs...</div>';
@@ -884,6 +897,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                     document.getElementById('mdDate').textContent = new Date(selectedTicket.issued_date).toLocaleString('es-MX');
                     document.getElementById('mdTotal').textContent = '$' + parseFloat(selectedTicket.total_amount || 0).toFixed(2);
                     document.getElementById('mdPayment').textContent = selectedTicket.payment_status === 'completed' ? 'PAGADO' : 'PENDIENTE';
+                    document.getElementById('mdSource').textContent = selectedTicket.description || 'Stock';
                     
                     let extraNotes = selectedTicket.notes || '';
                     if (selectedTicket.pickup_notes) {

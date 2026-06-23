@@ -65,12 +65,22 @@ try {
     // 2. Instanciar SalesTicket y crear ticket
     $ticketModel = new SalesTicket($pdo);
 
+    // Detección de Origen
+    $isMarketplace = false;
+    foreach ($items as $item) {
+        if (strpos($item['name'] ?? '', '[CE]') !== false) {
+            $isMarketplace = true;
+            break;
+        }
+    }
+    $originSource = $isMarketplace ? 'Marketplace' : 'Stock';
+
     $ticketData = [
         'order_id' => null,
         'user_id' => $guestUserId,
         'customer_name' => 'Invitado (Cotización)',
         'ticket_type' => 'sale',
-        'description' => 'Cotización desde el Carrito',
+        'description' => $originSource,
         'subtotal_amount' => $total,
         'tax_amount' => 0,
         'discount_amount' => 0,
