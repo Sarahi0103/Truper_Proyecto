@@ -302,6 +302,12 @@ class SalesTicket {
                 ':notes' => $notes
             ]);
 
+            // Si el pago no estaba completado, autorizar el pago al entregar
+            if ($ticket['payment_status'] !== 'completed') {
+                $payStmt = $this->pdo->prepare("UPDATE sales_tickets SET payment_status = 'completed', updated_at = NOW() WHERE id = :ticket_id");
+                $payStmt->execute([':ticket_id' => $ticket['id']]);
+            }
+
             // Registrar en log de recolección
             $logStmt = $this->pdo->prepare("INSERT INTO ticket_pickup_log (ticket_id, admin_id, action, notes, ip_address, created_at) VALUES (:ticket_id, :admin_id, 'validated', :notes, :ip_address, NOW())");
             $logStmt->execute([
@@ -311,20 +317,61 @@ class SalesTicket {
                 ':ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
             ]);
 
-            // Sincronizar con pedido relacionado (manejo de error si tabla no existe)
+            // Sincronizar con pedido relacionado (manejo de error si tabla no existe) o generar uno nuevo si no existe
             if ($ticket['order_id']) {
                 try {
-                    $orderStmt = $this->pdo->prepare("UPDATE orders SET status = 'delivered', updated_at = NOW() WHERE id = :order_id AND payment_status = 'paid'");
+                    $orderStmt = $this->pdo->prepare("UPDATE orders SET status = 'delivered', payment_status = 'paid', payment_amount = total_amount, balance = 0, updated_at = NOW() WHERE id = :order_id");
                     $orderStmt->execute([':order_id' => $ticket['order_id']]);
 
                     // Registrar sincronización en auditoría
-                    $this->addAuditLog($ticket['id'], 'pickup_validated', null, ['order_status' => 'delivered'], 'Recolección validada y pedido marcado como entregado');
+                    $this->addAuditLog($ticket['id'], 'pickup_validated', null, ['order_status' => 'delivered', 'payment_status' => 'paid'], 'Recolección validada y pedido marcado como entregado/pagado');
                 } catch (Exception $e) {
                     error_log('Tabla orders no existe o error al actualizar: ' . $e->getMessage());
                     $this->addAuditLog($ticket['id'], 'pickup_validated', null, null, 'Recolección validada (tabla orders no disponible)');
                 }
             } else {
-                $this->addAuditLog($ticket['id'], 'pickup_validated', null, null, 'Recolección validada (sin pedido relacionado)');
+                try {
+                    // Buscar client_id para el user_id del ticket
+                    $clientStmt = $this->pdo->prepare("SELECT id FROM clients WHERE user_id = ? LIMIT 1");
+                    $clientStmt->execute([$ticket['user_id']]);
+                    $clientId = $clientStmt->fetchColumn();
+                    
+                    if (!$clientId && $ticket['user_id']) {
+                        // Crear registro en la tabla clients
+                        $clientInsert = $this->pdo->prepare("INSERT INTO clients (user_id, company_name, created_at, updated_at) VALUES (?, NULL, NOW(), NOW()) RETURNING id");
+                        $clientInsert->execute([$ticket['user_id']]);
+                        $clientId = $clientInsert->fetchColumn();
+                    }
+                    
+                    if ($clientId) {
+                        $orderNumber = 'ORD-' . date('Y') . '-' . strtoupper(bin2hex(random_bytes(3)));
+                        
+                        $orderStmt = $this->pdo->prepare("
+                            INSERT INTO orders (client_id, order_number, total_amount, payment_status, payment_amount, balance, order_date, delivery_date, notes, is_wholesale, status, created_at, updated_at)
+                            VALUES (?, ?, ?, 'paid', ?, 0, NOW(), NOW(), ?, false, 'delivered', NOW(), NOW())
+                            RETURNING id
+                        ");
+                        $orderStmt->execute([
+                            $clientId,
+                            $orderNumber,
+                            $ticket['total_amount'],
+                            $ticket['total_amount'],
+                            'Pedido generado automáticamente al entregar el ticket ' . $ticket['folio'] . '. ' . ($ticket['notes'] ?? '')
+                        ]);
+                        $newOrderId = (int)$orderStmt->fetchColumn();
+
+                        // Enlazar el order_id al ticket
+                        $linkStmt = $this->pdo->prepare("UPDATE sales_tickets SET order_id = ?, updated_at = NOW() WHERE id = ?");
+                        $linkStmt->execute([$newOrderId, $ticket['id']]);
+
+                        $this->addAuditLog($ticket['id'], 'pickup_validated', null, ['order_id' => $newOrderId, 'order_number' => $orderNumber], 'Pedido creado y enlazado al autorizar entrega del ticket');
+                    } else {
+                        $this->addAuditLog($ticket['id'], 'pickup_validated', null, null, 'Recolección validada (sin cliente asociado para crear pedido)');
+                    }
+                } catch (Exception $e) {
+                    error_log('Error creando pedido automático al entregar: ' . $e->getMessage());
+                    $this->addAuditLog($ticket['id'], 'pickup_validated', null, null, 'Error creando pedido automático: ' . $e->getMessage());
+                }
             }
 
             $this->pdo->commit();
@@ -355,10 +402,12 @@ class SalesTicket {
                     COALESCE(st.customer_name, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END) AS customer_name,
                     CASE WHEN st.customer_name = 'Admin' THEN 'admin@truper.com' ELSE u.email END AS email,
                     u.phone,
-                    admin.first_name || CASE WHEN admin.last_name IS NOT NULL AND admin.last_name <> '' THEN ' ' || admin.last_name ELSE '' END AS pickup_admin_name
+                    admin.first_name || CASE WHEN admin.last_name IS NOT NULL AND admin.last_name <> '' THEN ' ' || admin.last_name ELSE '' END AS pickup_admin_name,
+                    o.order_number
                 FROM sales_tickets st
                 LEFT JOIN users u ON st.user_id = u.id
                 LEFT JOIN users admin ON st.pickup_verified_by = admin.id
+                LEFT JOIN orders o ON st.order_id = o.id
                 WHERE st.folio = :folio
             ");
             $stmt->execute([':folio' => $folio]);
@@ -555,9 +604,7 @@ class SalesTicket {
                 return ['eligible' => false, 'reason' => 'Ticket fue eliminado'];
             }
 
-            if ($ticket['payment_status'] !== 'completed') {
-                return ['eligible' => false, 'reason' => 'Ticket no está pagado'];
-            }
+            // We allow validation of unpaid tickets because delivering/validating it authorizes payment!
 
             if ($ticket['pickup_status'] === 'picked_up') {
                 return ['eligible' => false, 'reason' => 'Ticket ya fue entregado'];

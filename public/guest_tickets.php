@@ -254,13 +254,13 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.75);
-            backdrop-filter: blur(5px);
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
             z-index: 10000;
             display: none;
             align-items: center;
             justify-content: center;
-            padding: 1rem;
+            padding: 1.5rem;
         }
 
         .modal.active {
@@ -269,81 +269,152 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
 
         .modal-content {
             background: #1e1e1e;
-            border: 1px solid rgba(255, 102, 0, 0.2);
-            border-radius: 12px;
+            border: 1px solid rgba(255, 102, 0, 0.3);
+            border-radius: 16px;
             width: 100%;
-            max-width: 800px;
-            max-height: 85vh;
+            max-width: 850px;
+            max-height: 90vh;
             overflow-y: auto;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            animation: modalFade 0.3s ease;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(255, 102, 0, 0.15);
+            animation: modalFade 0.35s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         @keyframes modalFade {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: scale(0.97) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
         }
 
         .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1.5rem;
+            padding: 1.5rem 2rem;
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.01);
         }
 
         .modal-title {
-            font-size: 1.4rem;
-            font-weight: 700;
+            font-size: 1.5rem;
+            font-weight: 800;
             color: var(--color-naranja, #ff6600);
             margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
         }
 
         .modal-close {
-            background: none;
-            border: none;
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 1.5rem;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1.3rem;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
-            transition: color 0.2s;
+            transition: all 0.2s ease;
         }
         .modal-close:hover {
+            background: rgba(255, 102, 0, 0.15);
+            border-color: rgba(255, 102, 0, 0.3);
             color: #ffffff;
+            transform: rotate(90deg);
         }
 
         .modal-body {
-            padding: 1.5rem;
+            padding: 2rem;
+        }
+
+        .info-card-section {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .info-card-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .info-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+        }
+
+        .info-card-title {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--color-naranja, #ff6600);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            padding-bottom: 0.5rem;
         }
 
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 1.25rem;
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 1.25rem;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem 1.25rem;
+        }
+
+        .info-grid.full-width {
+            grid-template-columns: 1fr;
         }
 
         .info-block {
             display: flex;
             flex-direction: column;
+            min-width: 0;
         }
 
         .info-lbl {
-            font-size: 0.78rem;
+            font-size: 0.72rem;
             color: rgba(255, 255, 255, 0.4);
             text-transform: uppercase;
             font-weight: 700;
             letter-spacing: 0.05em;
-            margin-bottom: 0.3rem;
+            margin-bottom: 0.25rem;
         }
 
         .info-val {
-            font-size: 1rem;
+            font-size: 0.95rem;
             color: #ffffff;
             font-weight: 500;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            white-space: normal;
+        }
+
+        .info-val .badge-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.2rem 0.65rem;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .badge-pill-success {
+            background: rgba(40, 167, 69, 0.15);
+            color: #28a745;
+            border: 1px solid rgba(40, 167, 69, 0.25);
+        }
+
+        .badge-pill-pending {
+            background: rgba(255, 102, 0, 0.15);
+            color: #ffa809;
+            border: 1px solid rgba(255, 102, 0, 0.25);
         }
 
         .items-title {
@@ -360,7 +431,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             border-collapse: collapse;
             margin-bottom: 1.5rem;
             background: rgba(255, 255, 255, 0.01);
-            border-radius: 6px;
+            border-radius: 8px;
             overflow: hidden;
         }
 
@@ -370,12 +441,12 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             font-size: 0.8rem;
             font-weight: 700;
             text-transform: uppercase;
-            padding: 0.75rem 1rem;
+            padding: 0.85rem 1rem;
             text-align: left;
         }
 
         .tbl-items td {
-            padding: 0.75rem 1rem;
+            padding: 0.85rem 1rem;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             color: rgba(255, 255, 255, 0.85);
             font-size: 0.9rem;
@@ -384,8 +455,8 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
         .log-section {
             background: rgba(0, 0, 0, 0.15);
             border: 1px solid rgba(255, 255, 255, 0.04);
-            border-radius: 8px;
-            padding: 1.25rem;
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
         }
 
         .log-list {
@@ -394,13 +465,13 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             gap: 0.75rem;
             max-height: 180px;
             overflow-y: auto;
-            margin-top: 0.5rem;
+            margin-top: 0.75rem;
         }
 
         .log-item {
             background: rgba(255, 255, 255, 0.02);
-            padding: 0.6rem 0.85rem;
-            border-radius: 6px;
+            padding: 0.65rem 0.85rem;
+            border-radius: 8px;
             font-size: 0.85rem;
             border-left: 3px solid var(--color-naranja, #ff6600);
             display: flex;
@@ -410,26 +481,29 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
 
         .log-txt {
             color: rgba(255, 255, 255, 0.8);
+            padding-right: 1rem;
         }
 
         .log-time {
             font-size: 0.75rem;
             color: rgba(255, 255, 255, 0.4);
+            white-space: nowrap;
         }
 
         .modal-footer {
             display: flex;
             justify-content: flex-end;
             gap: 1rem;
-            padding: 1.5rem;
+            padding: 1.5rem 2rem;
             border-top: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.01);
         }
 
         .btn-modal {
-            padding: 0.6rem 1.5rem;
+            padding: 0.65rem 1.5rem;
             font-size: 0.9rem;
             font-weight: 700;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             transition: all 0.2s;
             border: none;
@@ -591,69 +665,92 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                 <button class="modal-close" onclick="closeModal()">×</button>
             </div>
             <div class="modal-body">
-                <!-- Info Grid -->
-                <div class="info-grid">
-                    <div class="info-block">
-                        <span class="info-lbl">Nombre del Invitado</span>
-                        <span class="info-val" id="mdName">John Doe</span>
+                <!-- Info Section with grouped Cards -->
+                <div class="info-card-section">
+                    <!-- Client Card -->
+                    <div class="info-card">
+                        <h4 class="info-card-title">👤 Datos del Invitado</h4>
+                        <div class="info-grid full-width">
+                            <div class="info-block">
+                                <span class="info-lbl">Nombre del Invitado</span>
+                                <span class="info-val" id="mdName">John Doe</span>
+                            </div>
+                            <div class="info-block" style="margin-top: 0.5rem;">
+                                <span class="info-lbl">Correo Electrónico</span>
+                                <span class="info-val" id="mdEmail" style="word-break: break-all;">john@example.com</span>
+                            </div>
+                            <div class="info-block" style="margin-top: 0.5rem;">
+                                <span class="info-lbl">Teléfono</span>
+                                <span class="info-val" id="mdPhone">5512345678</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="info-block">
-                        <span class="info-lbl">Correo Electrónico</span>
-                        <span class="info-val" id="mdEmail">john@example.com</span>
+
+                    <!-- Ticket Details Card -->
+                    <div class="info-card">
+                        <h4 class="info-card-title">📄 Detalles del Ticket</h4>
+                        <div class="info-grid">
+                            <div class="info-block">
+                                <span class="info-lbl">Fecha Emisión</span>
+                                <span class="info-val" id="mdDate">2026-06-20</span>
+                            </div>
+                            <div class="info-block">
+                                <span class="info-lbl">N° de Orden</span>
+                                <span class="info-val" id="mdOrderNumber" style="font-family: monospace; font-weight: 700; color: #ffa809;">—</span>
+                            </div>
+                            <div class="info-block">
+                                <span class="info-lbl">Total Ticket</span>
+                                <span class="info-val" id="mdTotal" style="color: var(--color-naranja, #ff6600); font-weight: 700;">$0.00</span>
+                            </div>
+                            <div class="info-block">
+                                <span class="info-lbl">Estado de Pago</span>
+                                <span class="info-val" id="mdPayment">Pagado</span>
+                            </div>
+                            <div class="info-block">
+                                <span class="info-lbl">Origen</span>
+                                <span class="info-val" id="mdSource">Stock</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="info-block">
-                        <span class="info-lbl">Teléfono</span>
-                        <span class="info-val" id="mdPhone">5512345678</span>
-                    </div>
-                    <div class="info-block">
-                        <span class="info-lbl">Fecha Emisión</span>
-                        <span class="info-val" id="mdDate">2026-06-20</span>
-                    </div>
-                    <div class="info-block">
-                        <span class="info-lbl">Total Ticket</span>
-                        <span class="info-val" id="mdTotal" style="color: var(--color-naranja, #ff6600); font-weight: 700;">$0.00</span>
-                    </div>
-                    <div class="info-block">
-                        <span class="info-lbl">Estado de Pago</span>
-                        <span class="info-val" id="mdPayment">Pagado</span>
-                    </div>
-                    <div class="info-block">
-                        <span class="info-lbl">Origen</span>
-                        <span class="info-val" id="mdSource">Stock</span>
-                    </div>
-                    <div class="info-block" style="grid-column: span 2;">
-                        <span class="info-lbl">Notas del Pedido / Dirección</span>
-                        <span class="info-val" id="mdNotes">N/A</span>
-                    </div>
+                </div>
+
+                <!-- Notes Block -->
+                <div class="info-card" style="margin-bottom: 2rem;">
+                    <h4 class="info-card-title" style="margin-bottom: 0.75rem;">📝 Notas del Pedido / Dirección de Entrega</h4>
+                    <div class="info-val" id="mdNotes" style="font-style: italic; color: rgba(255, 255, 255, 0.85); line-height: 1.4;">N/A</div>
                 </div>
 
                 <!-- Products list -->
                 <h4 class="items-title">Productos Adquiridos</h4>
-                <table class="tbl-items">
-                    <thead>
-                        <tr>
-                            <th>Producto</th>
-                            <th style="width: 100px; text-align: center;">Cantidad</th>
-                            <th style="width: 130px; text-align: right;">P. Unitario</th>
-                            <th style="width: 140px; text-align: right;">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody id="mdProductsBody">
-                        <tr>
-                            <td colspan="4" style="text-align: center;">Cargando productos...</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="table-wrap" style="margin-bottom: 2rem; border-color: rgba(255, 255, 255, 0.08);">
+                    <table class="tbl-items" style="margin-bottom: 0;">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th style="width: 100px; text-align: center;">Cantidad</th>
+                                <th style="width: 130px; text-align: right;">P. Unitario</th>
+                                <th style="width: 140px; text-align: right;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mdProductsBody">
+                            <tr>
+                                <td colspan="4" style="text-align: center; padding: 1.5rem; color: rgba(255,255,255,0.45);">Cargando productos...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
                 <!-- Audit Log -->
-                <div class="log-section">
-                    <h4 style="margin: 0; color: #ffffff; font-size: 1rem; font-weight: 700;">Historial de Eventos del Ticket</h4>
+                <div class="log-section" style="border-radius: 12px; background: rgba(0, 0, 0, 0.25); border-color: rgba(255, 255, 255, 0.06); padding: 1.5rem;">
+                    <h4 style="margin: 0 0 1rem 0; color: #ffffff; font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                        📋 Historial de Eventos del Ticket
+                    </h4>
                     <div class="log-list" id="mdLogs">
                         <div class="log-item"><span class="log-txt">No hay eventos registrados</span></div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer" style="background: rgba(255, 255, 255, 0.01); padding: 1.25rem 2rem;">
                 <button class="btn-modal btn-modal-close" onclick="closeModal()">Cerrar</button>
                 <button class="btn-modal btn-modal-close" id="mdPrintBtn" onclick="printModalTicket()">🖨️ Imprimir</button>
                 <button class="btn-modal btn-modal-confirm" id="mdConfirmBtn" onclick="confirmDeliveryFromModal()">Confirmar Entrega</button>
@@ -874,11 +971,12 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             document.getElementById('mdEmail').textContent = '—';
             document.getElementById('mdPhone').textContent = '—';
             document.getElementById('mdDate').textContent = '—';
+            document.getElementById('mdOrderNumber').textContent = '—';
             document.getElementById('mdTotal').textContent = '$0.00';
             document.getElementById('mdPayment').textContent = '—';
             document.getElementById('mdSource').textContent = '—';
             document.getElementById('mdNotes').textContent = '—';
-            document.getElementById('mdProductsBody').innerHTML = '<tr><td colspan="4" style="text-align: center;">Cargando...</td></tr>';
+            document.getElementById('mdProductsBody').innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 1.5rem; color: rgba(255,255,255,0.45);">Cargando...</td></tr>';
             document.getElementById('mdLogs').innerHTML = '<div style="padding: 0.5rem; text-align: center; color: rgba(255,255,255,0.4);">Cargando logs...</div>';
             
             modal.classList.add('active');
@@ -895,8 +993,14 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                     document.getElementById('mdEmail').textContent = selectedTicket.email || 'N/A';
                     document.getElementById('mdPhone').textContent = selectedTicket.phone || 'N/A';
                     document.getElementById('mdDate').textContent = new Date(selectedTicket.issued_date).toLocaleString('es-MX');
+                    document.getElementById('mdOrderNumber').textContent = selectedTicket.order_number || '—';
                     document.getElementById('mdTotal').textContent = '$' + parseFloat(selectedTicket.total_amount || 0).toFixed(2);
-                    document.getElementById('mdPayment').textContent = selectedTicket.payment_status === 'completed' ? 'PAGADO' : 'PENDIENTE';
+                    
+                    const isPaid = selectedTicket.payment_status === 'completed';
+                    document.getElementById('mdPayment').innerHTML = isPaid 
+                        ? '<span class="badge-pill badge-pill-success">✓ Pagado</span>' 
+                        : '<span class="badge-pill badge-pill-pending">⏳ Pendiente</span>';
+                        
                     document.getElementById('mdSource').textContent = selectedTicket.description || 'Stock';
                     
                     let extraNotes = selectedTicket.notes || '';
@@ -921,7 +1025,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                             `;
                         });
                     } else {
-                        pRows = '<tr><td colspan="4" style="text-align: center;">No hay artículos en este ticket</td></tr>';
+                        pRows = '<tr><td colspan="4" style="text-align: center; padding: 1.5rem; color: rgba(255,255,255,0.45);">No hay artículos en este ticket</td></tr>';
                     }
                     document.getElementById('mdProductsBody').innerHTML = pRows;
 
@@ -956,7 +1060,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                     if (!selectedTicket.eligibility.eligible) {
                         confirmBtn.textContent = selectedTicket.eligibility.reason || 'No entregable';
                     } else {
-                        confirmBtn.textContent = 'Confirmar Entrega';
+                        confirmBtn.textContent = isPaid ? 'Confirmar Entrega' : 'Autorizar Pago y Entregar';
                     }
 
                 } else {
