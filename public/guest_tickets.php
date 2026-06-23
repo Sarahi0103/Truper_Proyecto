@@ -890,76 +890,164 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
         }
 
         async function deliverTicket(folio) {
-            if (!confirm(`¿Estás seguro de que deseas confirmar la entrega física del ticket ${folio}?`)) {
-                return;
-            }
+            if (window.showPremiumModal) {
+                window.showPremiumModal(
+                    'Confirmar Entrega',
+                    `¿Estás seguro de que deseas confirmar la entrega física del ticket <strong>${folio}</strong>?`,
+                    '📦',
+                    async () => {
+                        try {
+                            const response = await fetch('api/guest_tickets_api.php?action=validate', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.csrfToken },
+                                body: JSON.stringify({ folio: folio, notes: 'Recogido físicamente en tienda por cliente invitado' })
+                            });
+                            const result = await response.json();
 
-            try {
-                const response = await fetch('api/guest_tickets_api.php?action=validate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.csrfToken },
-                    body: JSON.stringify({ folio: folio, notes: 'Recogido físicamente en tienda por cliente invitado' })
-                });
-                const result = await response.json();
-
-                if (result.success) {
-                    showAlert('Ticket validado y entregado exitosamente', 'success');
-                    fetchTickets();
-                } else {
-                    showAlert(result.message || 'Error al validar ticket', 'error');
+                            if (result.success) {
+                                showAlert('Ticket validado y entregado exitosamente', 'success');
+                                fetchTickets();
+                            } else {
+                                showAlert(result.message || 'Error al validar ticket', 'error');
+                            }
+                        } catch (e) {
+                            console.error(e);
+                            showAlert('Error de conexión', 'error');
+                        }
+                    }
+                );
+            } else {
+                if (!confirm(`¿Estás seguro de que deseas confirmar la entrega física del ticket ${folio}?`)) {
+                    return;
                 }
-            } catch (e) {
-                console.error(e);
-                showAlert('Error de conexión', 'error');
+                try {
+                    const response = await fetch('api/guest_tickets_api.php?action=validate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.csrfToken },
+                        body: JSON.stringify({ folio: folio, notes: 'Recogido físicamente en tienda por cliente invitado' })
+                    });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showAlert('Ticket validado y entregado exitosamente', 'success');
+                        fetchTickets();
+                    } else {
+                        showAlert(result.message || 'Error al validar ticket', 'error');
+                    }
+                } catch (e) {
+                    console.error(e);
+                    showAlert('Error de conexión', 'error');
+                }
             }
         }
 
         async function reactivateTicket(ticketId) {
-            if (!confirm(`¿Deseas reactivar este ticket expirado por 30 días adicionales?`)) {
-                return;
-            }
+            if (window.showPremiumModal) {
+                window.showPremiumModal(
+                    'Reactivar Ticket',
+                    '¿Deseas reactivar este ticket expirado por 30 días adicionales?',
+                    '🔄',
+                    async () => {
+                        try {
+                            const response = await fetch('api/guest_tickets_api.php?action=reactivate', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.csrfToken },
+                                body: JSON.stringify({ ticket_id: ticketId, notes: 'Ticket reactivado por administración' })
+                            });
+                            const result = await response.json();
 
-            try {
-                const response = await fetch('api/guest_tickets_api.php?action=reactivate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.csrfToken },
-                    body: JSON.stringify({ ticket_id: ticketId, notes: 'Ticket reactivado por administración' })
-                });
-                const result = await response.json();
-
-                if (result.success) {
-                    showAlert('Ticket reactivado exitosamente por 30 días más', 'success');
-                    fetchTickets();
-                } else {
-                    showAlert(result.message || 'Error al reactivar ticket', 'error');
+                            if (result.success) {
+                                showAlert('Ticket reactivado exitosamente por 30 días más', 'success');
+                                fetchTickets();
+                            } else {
+                                showAlert(result.message || 'Error al reactivar ticket', 'error');
+                            }
+                        } catch (e) {
+                            console.error(e);
+                            showAlert('Error de conexión', 'error');
+                        }
+                    }
+                );
+            } else {
+                if (!confirm(`¿Deseas reactivar este ticket expirado por 30 días adicionales?`)) {
+                    return;
                 }
-            } catch (e) {
-                console.error(e);
-                showAlert('Error de conexión', 'error');
+                try {
+                    const response = await fetch('api/guest_tickets_api.php?action=reactivate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.csrfToken },
+                        body: JSON.stringify({ ticket_id: ticketId, notes: 'Ticket reactivado por administración' })
+                    });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showAlert('Ticket reactivado exitosamente por 30 días más', 'success');
+                        fetchTickets();
+                    } else {
+                        showAlert(result.message || 'Error al reactivar ticket', 'error');
+                    }
+                } catch (e) {
+                    console.error(e);
+                    showAlert('Error de conexión', 'error');
+                }
             }
         }
 
         async function cancelTicket(folio) {
-            const reason = prompt('Ingrese el motivo de cancelación/eliminación del ticket:', 'Cancelado por administración');
-            if (reason === null) return; // cancel clicked
+            if (window.showPremiumModal) {
+                window.showPremiumModal(
+                    'Eliminar Ticket',
+                    `<p>¿Estás seguro de que deseas cancelar/eliminar el ticket <strong>${folio}</strong>? Esta acción no se puede deshacer.</p>
+                     <div style="margin-top: 1rem; text-align: left;">
+                         <label for="cancelReasonInput" style="display: block; font-size: 0.85rem; color: rgba(255,255,255,0.6); margin-bottom: 0.5rem;">Motivo de cancelación:</label>
+                         <input type="text" id="cancelReasonInput" value="Cancelado por administración" style="width: 100%; padding: 0.6rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.2); color: #fff; box-sizing: border-box;" />
+                     </div>`,
+                    '🗑️',
+                    async () => {
+                        const reasonInput = document.getElementById('cancelReasonInput');
+                        const reason = reasonInput ? reasonInput.value.trim() : 'Cancelado por administración';
+                        try {
+                            const response = await fetch('api/guest_tickets_api.php?action=cancel', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.csrfToken },
+                                body: JSON.stringify({ folio: folio, reason: reason })
+                            });
+                            const result = await response.json();
 
-            try {
-                const response = await fetch('api/guest_tickets_api.php?action=cancel', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.csrfToken },
-                    body: JSON.stringify({ folio: folio, reason: reason })
-                });
-                const result = await response.json();
+                            if (result.success) {
+                                showAlert('Ticket cancelado correctamente', 'success');
+                                fetchTickets();
+                            } else {
+                                showAlert(result.message || 'Error al cancelar ticket', 'error');
+                            }
+                        } catch (e) {
+                            console.error(e);
+                            showAlert('Error de conexión', 'error');
+                        }
+                    }
+                );
+            } else {
+                const reason = prompt('Ingrese el motivo de cancelación/eliminación del ticket:', 'Cancelado por administración');
+                if (reason === null) return; // cancel clicked
 
-                if (result.success) {
-                    showAlert('Ticket cancelado correctamente', 'success');
-                    fetchTickets();
-                } else {
-                    showAlert(result.message || 'Error al cancelar ticket', 'error');
+                try {
+                    const response = await fetch('api/guest_tickets_api.php?action=cancel', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.csrfToken },
+                        body: JSON.stringify({ folio: folio, reason: reason })
+                    });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showAlert('Ticket cancelado correctamente', 'success');
+                        fetchTickets();
+                    } else {
+                        showAlert(result.message || 'Error al cancelar ticket', 'error');
+                    }
+                } catch (e) {
+                    console.error(e);
+                    showAlert('Error de conexión', 'error');
                 }
-            } catch (e) {
-                console.error(e);
-                showAlert('Error de conexión', 'error');
             }
         }
 
@@ -1081,27 +1169,63 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
 
         async function confirmDeliveryFromModal() {
             if (!selectedTicket) return;
-            const notes = prompt("Notas de entrega (opcional):", "Entregado en sucursal.");
-            if (notes === null) return;
 
-            try {
-                const response = await fetch('api/guest_tickets_api.php?action=validate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.csrfToken },
-                    body: JSON.stringify({ folio: selectedTicket.folio, notes: notes })
-                });
-                const result = await response.json();
+            if (window.showPremiumModal) {
+                window.showPremiumModal(
+                    'Confirmar Entrega',
+                    `¿Estás seguro de que deseas confirmar la entrega física del ticket <strong>${selectedTicket.folio}</strong>?
+                    <div style="margin-top: 1rem; text-align: left;">
+                        <label for="deliveryNotesInput" style="display: block; font-size: 0.85rem; color: rgba(255,255,255,0.6); margin-bottom: 0.5rem;">Notas de entrega (opcional):</label>
+                        <input type="text" id="deliveryNotesInput" value="Entregado en sucursal." style="width: 100%; padding: 0.6rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.2); color: #fff; box-sizing: border-box;" />
+                    </div>`,
+                    '📦',
+                    async () => {
+                        const notesInput = document.getElementById('deliveryNotesInput');
+                        const notes = notesInput ? notesInput.value.trim() : 'Entregado en sucursal.';
+                        try {
+                            const response = await fetch('api/guest_tickets_api.php?action=validate', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.csrfToken },
+                                body: JSON.stringify({ folio: selectedTicket.folio, notes: notes })
+                            });
+                            const result = await response.json();
 
-                if (result.success) {
-                    showAlert('Ticket validado y entregado exitosamente', 'success');
-                    closeModal();
-                    fetchTickets();
-                } else {
-                    showAlert(result.message || 'Error al entregar ticket', 'error');
+                            if (result.success) {
+                                showAlert('Ticket validado y entregado exitosamente', 'success');
+                                closeModal();
+                                fetchTickets();
+                            } else {
+                                showAlert(result.message || 'Error al entregar ticket', 'error');
+                            }
+                        } catch (e) {
+                            console.error(e);
+                            showAlert('Error de conexión', 'error');
+                        }
+                    }
+                );
+            } else {
+                const notes = prompt("Notas de entrega (opcional):", "Entregado en sucursal.");
+                if (notes === null) return;
+
+                try {
+                    const response = await fetch('api/guest_tickets_api.php?action=validate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.csrfToken },
+                        body: JSON.stringify({ folio: selectedTicket.folio, notes: notes })
+                    });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showAlert('Ticket validado y entregado exitosamente', 'success');
+                        closeModal();
+                        fetchTickets();
+                    } else {
+                        showAlert(result.message || 'Error al entregar ticket', 'error');
+                    }
+                } catch (e) {
+                    console.error(e);
+                    showAlert('Error de conexión', 'error');
                 }
-            } catch (e) {
-                console.error(e);
-                showAlert('Error de conexión', 'error');
             }
         }
 
