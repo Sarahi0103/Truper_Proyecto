@@ -97,16 +97,16 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
     <link rel="stylesheet" href="<?php echo asset_url('css/dark-mode-auto.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_url('css/catalog-min.css'); ?>">
     <style>
-        /* Base Styling for Informative Page */
+        /* ============================================================
+           BASE — Page Structure
+        ============================================================ */
         .detail-wrapper {
-            max-width: 1100px;
-            margin: 2rem auto;
+            max-width: 860px;
+            margin: 2.5rem auto;
             padding: 0 1.5rem;
         }
-        
-        .back-nav {
-            margin-bottom: 1.5rem;
-        }
+
+        .back-nav { margin-bottom: 2rem; }
 
         .btn-back-link {
             display: inline-flex;
@@ -115,7 +115,8 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
             color: var(--theme-text-muted, #888);
             text-decoration: none;
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: 0.88rem;
+            letter-spacing: 0.02em;
             transition: color 0.2s, transform 0.2s;
             cursor: pointer;
             background: none;
@@ -127,203 +128,231 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
             transform: translateX(-3px);
         }
 
-        /* Badge Styling */
+        /* ============================================================
+           BADGES
+        ============================================================ */
         .update-badge {
             display: inline-block;
-            padding: 4px 12px;
-            font-size: 0.75rem;
+            padding: 3px 10px;
+            font-size: 0.7rem;
             font-weight: 800;
             text-transform: uppercase;
             border-radius: 999px;
-            letter-spacing: 0.05em;
-            margin-bottom: 1rem;
+            letter-spacing: 0.07em;
+            margin-bottom: 0.75rem;
         }
-        .badge-news {
-            color: #dbeafe;
-            background: rgba(30, 64, 175, 0.4);
-            border: 1px solid rgba(59, 130, 246, 0.5);
-        }
-        .badge-promo {
-            color: #fef08a;
-            background: rgba(133, 77, 14, 0.4);
-            border: 1px solid rgba(234, 179, 8, 0.5);
-        }
-        .badge-event {
-            color: #e9d5ff;
-            background: rgba(107, 33, 168, 0.4);
-            border: 1px solid rgba(168, 85, 247, 0.5);
-        }
+        .badge-news  { color: #dbeafe; background: rgba(30,64,175,0.4); border: 1px solid rgba(59,130,246,0.5); }
+        .badge-promo { color: #fef08a; background: rgba(133,77,14,0.4); border: 1px solid rgba(234,179,8,0.5); }
+        .badge-event { color: #e9d5ff; background: rgba(107,33,168,0.4); border: 1px solid rgba(168,85,247,0.5); }
 
         .update-meta {
-            font-size: 0.85rem;
-            color: var(--theme-text-muted, #888);
-            margin-bottom: 1.5rem;
+            font-size: 0.8rem;
+            color: var(--theme-text-muted, #777);
+            margin-bottom: 0;
+            letter-spacing: 0.03em;
         }
 
+        /* ============================================================
+           PREMIUM ORANGE DIVIDER
+        ============================================================ */
         .premium-divider {
             height: 1px;
-            background: linear-gradient(90deg, transparent 0%, rgba(255, 127, 0, 0.4) 20%, rgba(255, 127, 0, 0.4) 80%, transparent 100%);
-            margin: 2rem 0;
+            background: linear-gradient(90deg, transparent 0%, rgba(255,127,0,0.45) 25%, rgba(255,127,0,0.45) 75%, transparent 100%);
+            margin: 1.75rem 0;
             border: none;
-            opacity: 0.85;
+            opacity: 0.9;
         }
 
-        /* Generic Gallery Grid */
+        /* ============================================================
+           BODY CONTENT — shared
+        ============================================================ */
+        .body-content {
+            font-size: 0.97rem;
+            line-height: 1.8;
+            color: var(--theme-text, rgba(255,255,255,0.88));
+            white-space: pre-line;
+            margin-bottom: 0;
+        }
+        :root[data-theme="light"] .body-content { color: #222; }
+
+        /* ============================================================
+           GALLERY GRID — shared
+        ============================================================ */
         .gallery-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 15px;
-            margin-top: 2rem;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 12px;
+            margin-top: 0;
         }
-        
         .gallery-item {
             position: relative;
             aspect-ratio: 4/3;
             overflow: hidden;
-            border-radius: 12px;
-            border: 2px solid rgba(255, 127, 0, 0.3);
+            border-radius: 10px;
+            border: 1.5px solid rgba(255,127,0,0.28);
             cursor: zoom-in;
             background: #0b0b0d;
-            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.3s, box-shadow 0.3s;
-            box-shadow: 0 0 25px rgba(255, 127, 0, 0.12), 0 8px 24px rgba(0, 0, 0, 0.45);
+            transition: transform 0.3s ease, border-color 0.3s, box-shadow 0.3s;
+            box-shadow: 0 0 16px rgba(255,127,0,0.1), 0 4px 12px rgba(0,0,0,0.4);
         }
-        
         .gallery-item img {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transition: transform 0.5s ease;
+            transition: transform 0.45s ease;
         }
-        
         .gallery-item:hover {
-            transform: translateY(-4px) scale(1.02);
-            border-color: rgba(255, 127, 0, 0.7);
-            box-shadow: 0 0 35px rgba(255, 127, 0, 0.35), 0 15px 30px rgba(0,0,0,0.55);
+            transform: translateY(-3px) scale(1.01);
+            border-color: rgba(255,127,0,0.6);
+            box-shadow: 0 0 28px rgba(255,127,0,0.28), 0 10px 24px rgba(0,0,0,0.55);
         }
-        
-        .gallery-item:hover img {
-            transform: scale(1.05);
+        .gallery-item:hover img { transform: scale(1.06); }
+
+        /* ============================================================
+           GALLERY SECTION HEADER — shared
+        ============================================================ */
+        .gallery-section-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--theme-accent, #ff7f00);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin: 0 0 1rem;
+        }
+        .gallery-section-title svg { flex-shrink: 0; opacity: 0.85; }
+
+        /* ============================================================
+           LEAD / BRIEF DESC — shared
+        ============================================================ */
+        .lead-desc {
+            font-size: 1.05rem !important;
+            line-height: 1.65 !important;
+            color: var(--theme-accent, #ff7f00) !important;
+            margin: 0 0 0 !important;
+            font-style: italic;
+            font-weight: 500;
+            border-left: 3px solid rgba(255,127,0,0.7);
+            padding-left: 1rem;
+            border-radius: 0 2px 2px 0;
         }
 
-        /* CTA Section for registration link */
+        /* ============================================================
+           CTA BOX — shared
+        ============================================================ */
         .registration-cta-box {
-            margin-top: 3rem;
-            padding: 2.25rem 2rem;
-            background: linear-gradient(135deg, rgba(255, 102, 0, 0.08) 0%, rgba(255, 102, 0, 0.02) 50%, rgba(12, 12, 15, 0.65) 100%);
-            border: 1px solid rgba(255, 102, 0, 0.28);
-            border-radius: 18px;
+            padding: 1.75rem 1.5rem;
+            background: linear-gradient(135deg, rgba(255,102,0,0.08) 0%, rgba(12,12,15,0.7) 100%);
+            border: 1px solid rgba(255,102,0,0.3);
+            border-radius: 14px;
             text-align: center;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.35), inset 0 1px 1px rgba(255,255,255,0.06);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.04);
+            backdrop-filter: blur(10px);
             transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
         }
         .registration-cta-box:hover {
-            border-color: rgba(255, 102, 0, 0.45);
-            box-shadow: 0 20px 45px rgba(0,0,0,0.45), 0 0 20px rgba(255, 102, 0, 0.08);
+            border-color: rgba(255,102,0,0.5);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.4), 0 0 20px rgba(255,102,0,0.08);
             transform: translateY(-2px);
         }
         .registration-cta-box h4 {
-            margin: 0 0 0.65rem;
+            margin: 0 0 0.5rem;
             color: var(--theme-accent, #ff7f00);
-            font-size: 1.3rem;
+            font-size: 1.05rem;
             font-weight: 800;
-            letter-spacing: -0.01em;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
-            text-shadow: 0 2px 10px rgba(255, 102, 0, 0.15);
         }
         .registration-cta-box p {
-            margin: 0 0 1.5rem;
-            font-size: 0.92rem;
+            margin: 0 0 1.25rem;
+            font-size: 0.87rem;
             line-height: 1.5;
-            color: rgba(255, 255, 255, 0.7);
+            color: rgba(255,255,255,0.65);
         }
         .registration-cta-box .btn-cta {
-            padding: 0.85rem 2rem;
-            font-size: 0.92rem;
+            padding: 0.7rem 1.75rem;
+            font-size: 0.85rem;
             font-weight: 800;
-            border-radius: 12px;
+            border-radius: 10px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
             background: linear-gradient(135deg, #ff6600, #ff8c00);
-            color: #ffffff;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.12);
             text-transform: uppercase;
-            letter-spacing: 0.04em;
-            box-shadow: 0 6px 20px rgba(255,102,0,0.25);
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            letter-spacing: 0.05em;
+            box-shadow: 0 4px 14px rgba(255,102,0,0.28);
+            transition: all 0.25s ease;
             cursor: pointer;
             text-decoration: none;
-            max-width: 280px;
+            max-width: 260px;
             width: 100%;
             box-sizing: border-box;
             margin: 0 auto;
         }
         .registration-cta-box .btn-cta:hover {
             background: linear-gradient(135deg, #ff8c00, #ffaa00);
-            transform: translateY(-2px) scale(1.01);
-            box-shadow: 0 8px 25px rgba(255, 102, 0, 0.4), 0 0 0 4px rgba(255, 102, 0, 0.15);
-            color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255,102,0,0.4);
+            color: #fff;
         }
-        .registration-cta-box .btn-cta:active {
-            transform: translateY(1px);
-        }
-
+        .registration-cta-box .btn-cta:active { transform: translateY(1px); }
 
         /* ============================================================
-           TEMPLATE 1: CLASSIC (🏛️ Clásica)
+           TEMPLATE 1: CLASSIC 🏛️
         ============================================================ */
         .tpl-classic {
-            max-width: 800px;
+            max-width: 720px;
             margin: 0 auto;
+        }
+        .tpl-classic .page-header {
+            margin-bottom: 1.5rem;
+        }
+        .tpl-classic h1 {
+            font-size: 1.85rem;
+            font-weight: 800;
+            line-height: 1.25;
+            letter-spacing: -0.02em;
+            margin: 0.4rem 0 0.3rem;
         }
         .tpl-classic .cover-wrap {
             width: 100%;
-            margin-bottom: 2rem;
-            border-radius: 16px;
+            max-height: 340px;
             overflow: hidden;
-            border: 2px solid rgba(255, 127, 0, 0.35);
-            box-shadow: 0 0 30px rgba(255, 127, 0, 0.18), 0 15px 35px rgba(0,0,0,0.5);
+            border-radius: 14px;
+            border: 1.5px solid rgba(255,127,0,0.32);
+            box-shadow: 0 0 24px rgba(255,127,0,0.14), 0 8px 24px rgba(0,0,0,0.5);
             background: #0c0c0f;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             transition: border-color 0.3s ease, box-shadow 0.3s ease;
         }
         .tpl-classic .cover-wrap:hover {
-            border-color: rgba(255, 127, 0, 0.65);
-            box-shadow: 0 0 40px rgba(255, 127, 0, 0.35), 0 20px 45px rgba(0,0,0,0.6);
+            border-color: rgba(255,127,0,0.6);
+            box-shadow: 0 0 32px rgba(255,127,0,0.28), 0 12px 30px rgba(0,0,0,0.6);
         }
         .tpl-classic .cover-wrap img {
             width: 100%;
-            height: auto;
-            display: block;
-            max-height: 520px;
+            height: 100%;
             object-fit: contain;
-            background: #0c0c0f;
-        }
-        .tpl-classic h1 {
-            font-size: 2.25rem;
-            margin-bottom: 0.75rem;
-            line-height: 1.25;
-        }
-        .tpl-classic .body-content {
-            font-size: 1.05rem;
-            line-height: 1.7;
-            color: var(--theme-text, #eee);
-            margin-bottom: 2rem;
-            white-space: pre-line;
+            max-height: 340px;
+            display: block;
         }
 
         /* ============================================================
-           TEMPLATE 2: SPLIT (🌗 Lateral)
+           TEMPLATE 2: SPLIT 🌗
         ============================================================ */
         .tpl-split {
             display: flex;
             flex-direction: column;
-            gap: 2.5rem;
+            gap: 2rem;
         }
         @media (min-width: 768px) {
             .tpl-split {
@@ -331,235 +360,206 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
                 align-items: flex-start;
             }
             .tpl-split .split-sidebar {
-                flex: 0 0 380px;
+                flex: 0 0 280px;
                 position: sticky;
                 top: 2rem;
             }
-            .tpl-split .split-main {
-                flex: 1;
-            }
+            .tpl-split .split-main { flex: 1; }
+        }
+        .tpl-split h1 {
+            font-size: 1.7rem;
+            font-weight: 800;
+            margin: 0.35rem 0 0.25rem;
+            line-height: 1.25;
+            letter-spacing: -0.02em;
         }
         .tpl-split .split-sidebar img.sidebar-cover {
             width: 100%;
             height: auto;
-            max-height: 420px;
+            max-height: 300px;
             object-fit: contain;
             background: #0c0c0f;
-            border-radius: 16px;
-            border: 2px solid rgba(255, 127, 0, 0.35);
-            box-shadow: 0 0 30px rgba(255, 127, 0, 0.18), 0 15px 35px rgba(0,0,0,0.35);
+            border-radius: 14px;
+            border: 1.5px solid rgba(255,127,0,0.32);
+            box-shadow: 0 0 22px rgba(255,127,0,0.14), 0 8px 20px rgba(0,0,0,0.4);
             display: block;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
             transition: border-color 0.3s ease, box-shadow 0.3s ease;
         }
         .tpl-split .split-sidebar img.sidebar-cover:hover {
-            border-color: rgba(255, 127, 0, 0.65);
-            box-shadow: 0 0 40px rgba(255, 127, 0, 0.35), 0 20px 45px rgba(0,0,0,0.45);
-        }
-        .tpl-split h1 {
-            font-size: 2.2rem;
-            margin-top: 0;
-            margin-bottom: 0.75rem;
-            line-height: 1.2;
-        }
-        .tpl-split .body-content {
-            font-size: 1.05rem;
-            line-height: 1.75;
-            white-space: pre-line;
-            margin-bottom: 2rem;
+            border-color: rgba(255,127,0,0.6);
+            box-shadow: 0 0 32px rgba(255,127,0,0.28), 0 12px 28px rgba(0,0,0,0.5);
         }
 
         /* ============================================================
-           TEMPLATE 3: GALLERY FOCUS (🖼️ Galería Destacada)
+           TEMPLATE 3: GALLERY 🖼️
         ============================================================ */
-        .tpl-gallery h1 {
-            font-size: 2.4rem;
-            text-align: center;
-            margin-bottom: 0.5rem;
+        .tpl-gallery {
+            max-width: 860px;
+            margin: 0 auto;
         }
-        .tpl-gallery .update-meta {
+        .tpl-gallery .page-header {
             text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .tpl-gallery h1 {
+            font-size: 1.85rem;
+            font-weight: 800;
+            margin: 0.35rem 0 0.25rem;
+            letter-spacing: -0.02em;
         }
         .tpl-gallery .gallery-hero {
             display: grid;
             grid-template-columns: 2fr 1fr;
-            grid-template-rows: repeat(2, 200px);
-            gap: 15px;
-            margin-bottom: 2.5rem;
+            grid-template-rows: repeat(2, 170px);
+            gap: 10px;
+            margin-bottom: 0;
         }
         @media (max-width: 600px) {
             .tpl-gallery .gallery-hero {
                 grid-template-columns: 1fr;
-                grid-template-rows: repeat(3, 200px);
+                grid-template-rows: auto;
             }
         }
         .tpl-gallery .gallery-hero-item {
-            border-radius: 14px;
+            border-radius: 12px;
             overflow: hidden;
-            border: 2px solid rgba(255, 127, 0, 0.3);
+            border: 1.5px solid rgba(255,127,0,0.28);
             cursor: zoom-in;
-            background: var(--theme-surface-hover, #1a1a1a);
-            box-shadow: 0 0 25px rgba(255, 127, 0, 0.12), 0 8px 24px rgba(0,0,0,0.45);
+            background: #1a1a1f;
+            box-shadow: 0 0 18px rgba(255,127,0,0.1), 0 4px 14px rgba(0,0,0,0.45);
             transition: transform 0.3s ease, border-color 0.3s, box-shadow 0.3s;
         }
         .tpl-gallery .gallery-hero-item:hover {
             transform: translateY(-2px);
-            border-color: rgba(255, 127, 0, 0.6);
-            box-shadow: 0 0 35px rgba(255, 127, 0, 0.28), 0 12px 30px rgba(0,0,0,0.55);
+            border-color: rgba(255,127,0,0.55);
+            box-shadow: 0 0 28px rgba(255,127,0,0.24), 0 8px 22px rgba(0,0,0,0.55);
         }
         .tpl-gallery .gallery-hero-item img {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
-        .tpl-gallery .hero-main {
-            grid-row: span 2;
-        }
-        .tpl-gallery .body-content {
-            font-size: 1.08rem;
-            line-height: 1.75;
-            max-width: 800px;
-            margin: 0 auto 2.5rem;
-            white-space: pre-line;
-        }
+        .tpl-gallery .hero-main { grid-row: span 2; }
 
         /* ============================================================
-           TEMPLATE 4: MINIMAL PREMIUM (✨ Minimalista Card)
+           TEMPLATE 4: MINIMAL ✨
         ============================================================ */
         .tpl-minimal {
-            max-width: 780px;
+            max-width: 700px;
             margin: 0 auto;
         }
         .tpl-minimal .glass-card {
-            background: rgba(22, 22, 26, 0.72);
+            background: rgba(18,18,22,0.75);
             backdrop-filter: blur(18px);
             -webkit-backdrop-filter: blur(18px);
-            border: 2px solid rgba(255, 127, 0, 0.3);
-            border-radius: 24px;
-            padding: 2.5rem;
-            box-shadow: 0 0 30px rgba(255, 127, 0, 0.15), 0 20px 50px rgba(0,0,0,0.4);
-            margin-bottom: 2rem;
+            border: 1.5px solid rgba(255,127,0,0.28);
+            border-radius: 20px;
+            padding: 2.25rem 2rem;
+            box-shadow: 0 0 24px rgba(255,127,0,0.13), 0 16px 40px rgba(0,0,0,0.4);
+            margin-bottom: 0;
             transition: border-color 0.3s ease, box-shadow 0.3s ease;
         }
         .tpl-minimal .glass-card:hover {
-            border-color: rgba(255, 127, 0, 0.55);
-            box-shadow: 0 0 45px rgba(255, 127, 0, 0.28), 0 25px 55px rgba(0,0,0,0.5);
+            border-color: rgba(255,127,0,0.5);
+            box-shadow: 0 0 36px rgba(255,127,0,0.24), 0 20px 50px rgba(0,0,0,0.5);
         }
         :root[data-theme="light"] .tpl-minimal .glass-card {
-            background: rgba(0, 0, 0, 0.02);
-            border-color: rgba(0, 0, 0, 0.08);
-            box-shadow: 0 20px 50px rgba(0,0,0,0.06);
+            background: rgba(255,255,255,0.7);
+            border-color: rgba(255,127,0,0.2);
         }
         .tpl-minimal h1 {
-            font-size: 2.15rem;
-            font-weight: 700;
+            font-size: 1.75rem;
+            font-weight: 800;
             letter-spacing: -0.02em;
-            margin-bottom: 1rem;
+            margin: 0.35rem 0 0.25rem;
+            line-height: 1.25;
         }
         .tpl-minimal .minimal-cover {
             width: 100%;
             height: auto;
-            max-height: 420px;
+            max-height: 300px;
             object-fit: contain;
             background: #0c0c0f;
-            border-radius: 20px;
-            margin-bottom: 2rem;
-            border: 2px solid rgba(255, 127, 0, 0.35);
-            box-shadow: 0 0 30px rgba(255, 127, 0, 0.18), 0 15px 35px rgba(0,0,0,0.5);
+            border-radius: 14px;
+            display: block;
+            margin-bottom: 0;
+            border: 1.5px solid rgba(255,127,0,0.3);
+            box-shadow: 0 0 22px rgba(255,127,0,0.14), 0 8px 22px rgba(0,0,0,0.45);
             transition: border-color 0.3s ease, box-shadow 0.3s ease;
         }
         .tpl-minimal .minimal-cover:hover {
-            border-color: rgba(255, 127, 0, 0.65);
-            box-shadow: 0 0 40px rgba(255, 127, 0, 0.35), 0 20px 45px rgba(0,0,0,0.6);
-        }
-        .tpl-minimal .body-content {
-            font-size: 1.05rem;
-            line-height: 1.8;
-            letter-spacing: 0.01em;
-            white-space: pre-line;
-            margin-bottom: 2rem;
-            color: var(--theme-text-primary, #ffffff);
-        }
-        :root[data-theme="light"] .tpl-minimal .body-content {
-            color: #111;
+            border-color: rgba(255,127,0,0.6);
+            box-shadow: 0 0 32px rgba(255,127,0,0.28), 0 14px 32px rgba(0,0,0,0.55);
         }
 
         /* ============================================================
-           TEMPLATE 5: MAGAZINE / EDITORIAL (📰 Revista)
+           TEMPLATE 5: MAGAZINE 📰
         ============================================================ */
         .tpl-magazine {
-            max-width: 900px;
+            max-width: 800px;
             margin: 0 auto;
         }
         .tpl-magazine .magazine-header {
             position: relative;
-            border-radius: 18px;
+            border-radius: 16px;
             overflow: hidden;
-            height: 380px;
-            margin-bottom: 2.5rem;
+            height: 300px;
+            margin-bottom: 0;
             display: flex;
             align-items: flex-end;
-            border: 2px solid rgba(255, 127, 0, 0.35);
-            box-shadow: 0 0 30px rgba(255, 127, 0, 0.18), 0 15px 35px rgba(0,0,0,0.5);
+            border: 1.5px solid rgba(255,127,0,0.32);
+            box-shadow: 0 0 24px rgba(255,127,0,0.14), 0 10px 28px rgba(0,0,0,0.5);
             transition: border-color 0.3s ease, box-shadow 0.3s ease;
         }
         .tpl-magazine .magazine-header:hover {
-            border-color: rgba(255, 127, 0, 0.65);
-            box-shadow: 0 0 40px rgba(255, 127, 0, 0.35), 0 20px 45px rgba(0,0,0,0.6);
+            border-color: rgba(255,127,0,0.6);
+            box-shadow: 0 0 34px rgba(255,127,0,0.28), 0 14px 36px rgba(0,0,0,0.6);
         }
         .tpl-magazine .magazine-header .header-bg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            z-index: 1;
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            object-fit: cover; z-index: 1;
         }
         .tpl-magazine .magazine-header .header-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.1) 100%);
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.35) 60%, rgba(0,0,0,0.05) 100%);
             z-index: 2;
         }
         .tpl-magazine .magazine-header .header-text {
-            position: relative;
-            z-index: 3;
-            padding: 2.5rem;
+            position: relative; z-index: 3;
+            padding: 1.75rem;
             width: 100%;
         }
         .tpl-magazine .magazine-header h1 {
-            font-size: 2.5rem;
+            font-size: 1.9rem;
             color: #fff;
-            margin: 0 0 0.5rem;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-            font-family: 'Outfit', 'Georgia', serif;
-            font-weight: 700;
+            margin: 0 0 0.3rem;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
         }
         .tpl-magazine .magazine-header .update-meta {
-            color: #ccc;
+            color: rgba(255,255,255,0.75);
             margin-bottom: 0;
         }
         .tpl-magazine .body-content {
-            font-size: 1.1rem;
-            line-height: 1.8;
-            font-family: 'Inter', Georgia, serif;
-            white-space: pre-line;
-            margin-bottom: 2rem;
+            font-family: 'Inter', sans-serif;
         }
         .tpl-magazine .body-content::first-letter {
-            font-size: 3.5rem;
+            font-size: 3rem;
             font-weight: bold;
             float: left;
-            margin-right: 10px;
-            line-height: 0.85;
+            margin-right: 8px;
+            line-height: 0.88;
             color: var(--theme-accent, #ff7f00);
             font-family: 'Outfit', sans-serif;
-            margin-top: 5px;
+            margin-top: 4px;
         }
+
     </style>
 </head>
 <body class="catalog-minimal" data-client-code="PUBLICO" data-client-number="0">
@@ -860,32 +860,35 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
         <?php else: ?>
             <!-- TEMPLATE 1: CLASSIC LAYOUT (DEFAULT) -->
             <div class="tpl-classic">
-                <span class="update-badge <?php echo get_update_badge_class($update['update_type']); ?>"><?php echo get_update_label($update['update_type']); ?></span>
-                <h1><?php echo htmlspecialchars($update['title'], ENT_QUOTES, 'UTF-8'); ?></h1>
-                <?php if ($formattedDate): ?>
-                    <div class="update-meta">Publicado el <?php echo $formattedDate; ?></div>
-                <?php endif; ?>
+                <div class="page-header">
+                    <span class="update-badge <?php echo get_update_badge_class($update['update_type']); ?>"><?php echo get_update_label($update['update_type']); ?></span>
+                    <h1><?php echo htmlspecialchars($update['title'], ENT_QUOTES, 'UTF-8'); ?></h1>
+                    <?php if ($formattedDate): ?>
+                        <div class="update-meta">Publicado el <?php echo $formattedDate; ?></div>
+                    <?php endif; ?>
+                </div>
+
+                <hr class="premium-divider">
 
                 <?php if (!empty($update['image_url'])): ?>
                     <div class="cover-wrap">
                         <img class="promo-image" src="<?php echo htmlspecialchars($update['image_url'], ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($update['title'], ENT_QUOTES, 'UTF-8'); ?>">
                     </div>
+                    <hr class="premium-divider">
                 <?php endif; ?>
 
-                <hr class="premium-divider">
-
                 <?php if (!empty($update['brief_description'])): ?>
-                    <p class="lead-desc" style="font-size: 1.15rem; line-height: 1.65; color: var(--theme-accent, #ff7f00); margin-bottom: 1.25rem; margin-top: 0; font-style: italic; font-weight: 500; border-left: 3px solid var(--theme-accent, #ff7f00); padding-left: 1rem;"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
+                    <p class="lead-desc"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
                     <hr class="premium-divider">
                 <?php endif; ?>
                 <div class="body-content"><?php echo htmlspecialchars($update['body'], ENT_QUOTES, 'UTF-8'); ?></div>
 
                 <?php if (!empty($galleryImages)): ?>
                     <hr class="premium-divider">
-                    <h4 style="margin: 0 0 1rem; font-size: 1.1rem; font-weight: 700; color: var(--theme-accent, #ff7f00); display: flex; align-items: center; gap: 0.5rem;">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    <div class="gallery-section-title">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                         Galería de fotos
-                    </h4>
+                    </div>
                     <div class="gallery-grid">
                         <?php foreach ($galleryImages as $img): ?>
                             <div class="gallery-item promo-image-gallery">
@@ -897,7 +900,7 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
 
                 <?php if (!empty($update['registration_url'])): ?>
                     <hr class="premium-divider">
-                    <div class="registration-cta-box" style="margin-top: 2rem;">
+                    <div class="registration-cta-box">
                         <h4>📝 Registro e Inscripción</h4>
                         <p>Puedes completar tu registro o acceder a la documentación de soporte a través del siguiente enlace.</p>
                         <a href="<?php echo htmlspecialchars($update['registration_url'], ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-cta">
