@@ -292,11 +292,25 @@ function formatCurrency(amount) {
 }
 
 /**
+ * Crear objeto Date seguro para iOS Safari y todos los navegadores
+ */
+function safeNewDate(dateString) {
+    if (!dateString) return new Date();
+    if (dateString instanceof Date) return dateString;
+    let str = String(dateString).trim();
+    if (!str.includes('T')) {
+        // Reemplazar guiones por barras para compatibilidad total con iOS Safari / WebKit
+        str = str.replace(/-/g, '/');
+    }
+    return new Date(str);
+}
+
+/**
  * Formatear fecha
  */
 function formatDate(dateString) {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString('es-MX', options);
+    return safeNewDate(dateString).toLocaleDateString('es-MX', options);
 }
 
 /**

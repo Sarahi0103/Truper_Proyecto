@@ -522,7 +522,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                         </td>
                         <td style="padding: 1rem;">${pickupBadge}</td>
                         <td style="padding: 1rem; font-size: 0.9rem; color: var(--theme-text-muted);">
-                            ${new Date(ticket.issued_date).toLocaleDateString('es-MX')}
+                            ${safeNewDate(ticket.issued_date).toLocaleDateString('es-MX')}
                         </td>
                         <td style="padding: 1rem; text-align: center;">${actionButton}</td>
                     </tr>
@@ -584,7 +584,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                     <tr style="border-bottom: 1px solid var(--theme-border);">
                         <td style="padding: 1rem; font-family: monospace; font-weight:700; color:var(--color-naranja);">${escapeHtml(st.folio)}</td>
                         <td style="padding: 1rem; font-weight: 600;">${escapeHtml(st.customer_name || '—')}</td>
-                        <td style="padding: 1rem; color:var(--theme-text-muted);">${new Date(st.issued_date).toLocaleDateString('es-MX')}</td>
+                        <td style="padding: 1rem; color:var(--theme-text-muted);">${safeNewDate(st.issued_date).toLocaleDateString('es-MX')}</td>
                         <td style="padding: 1rem; font-weight:700; color:var(--color-naranja);">${formatAdminMoney(st.total_amount || 0)}</td>
                         <td style="padding: 1rem; text-align:center; font-weight:600;">${st.item_count || 0}</td>
                         <td style="padding: 1rem;">
@@ -784,7 +784,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                 
                 const statusLabel = t.payment_status === 'completed' ? 'Pagado' : 'Pendiente';
                 doc.text(statusLabel, 130, y + 5);
-                doc.text(new Date(t.issued_date).toLocaleDateString('es-MX'), 155, y + 5);
+                doc.text(safeNewDate(t.issued_date).toLocaleDateString('es-MX'), 155, y + 5);
                 doc.text(`$${Number(t.total_amount || 0).toLocaleString('es-MX', {minimumFractionDigits:2})}`, 180, y + 5);
                 
                 y += 7;
@@ -848,7 +848,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                     if (name.length > 25) name = name.substring(0, 23) + '...';
                     doc.text(name, 50, y + 5);
                     doc.text(st.payment_status || 'Recibido', 130, y + 5);
-                    doc.text(new Date(st.issued_date).toLocaleDateString('es-MX'), 155, y + 5);
+                    doc.text(safeNewDate(st.issued_date).toLocaleDateString('es-MX'), 155, y + 5);
                     doc.text(`$${Number(st.total_amount || 0).toLocaleString('es-MX', {minimumFractionDigits:2})}`, 180, y + 5);
                     
                     y += 7;

@@ -816,7 +816,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                     : '<span class="badge-status" style="background:rgba(40, 167, 69, 0.15); color:#28a745; border:1px solid rgba(40,167,69,0.25);">📦 Stock</span>';
 
                 // Expiration display
-                const expDateStr = tk.expiration_date ? new Date(tk.expiration_date).toLocaleDateString('es-MX') : 'N/A';
+                const expDateStr = tk.expiration_date ? safeNewDate(tk.expiration_date).toLocaleDateString('es-MX') : 'N/A';
                 
                 // Format amount
                 const amount = parseFloat(tk.total_amount || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1081,7 +1081,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                     document.getElementById('mdName').textContent = selectedTicket.customer_name || 'Invitado';
                     document.getElementById('mdEmail').textContent = selectedTicket.email || 'N/A';
                     document.getElementById('mdPhone').textContent = selectedTicket.phone || 'N/A';
-                    document.getElementById('mdDate').textContent = new Date(selectedTicket.issued_date).toLocaleString('es-MX');
+                    document.getElementById('mdDate').textContent = safeNewDate(selectedTicket.issued_date).toLocaleString('es-MX');
                     document.getElementById('mdOrderNumber').textContent = selectedTicket.order_number || '—';
                     document.getElementById('mdTotal').textContent = '$' + parseFloat(selectedTicket.total_amount || 0).toFixed(2);
                     
@@ -1130,7 +1130,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                             };
                             const actionText = actionLabels[log.action] || log.action;
                             const noteStr = log.notes ? ` (${log.notes})` : '';
-                            const logDate = new Date(log.created_at).toLocaleString('es-MX');
+                            const logDate = safeNewDate(log.created_at).toLocaleString('es-MX');
                             logHtml += `
                                 <div class="log-item">
                                     <span class="log-txt"><strong>${actionText}</strong>${noteStr} por ${log.admin_name || 'Sistema'}</span>
@@ -1273,7 +1273,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                         <table class="info-table">
                             <tr>
                                 <td><strong>Cliente Invitado:</strong> ${selectedTicket.customer_name || 'Invitado'}</td>
-                                <td style="text-align: right;"><strong>Fecha:</strong> ${new Date(selectedTicket.issued_date).toLocaleDateString('es-MX')}</td>
+                                <td style="text-align: right;"><strong>Fecha:</strong> ${safeNewDate(selectedTicket.issued_date).toLocaleDateString('es-MX')}</td>
                             </tr>
                             <tr>
                                 <td><strong>Email:</strong> ${selectedTicket.email || 'N/A'}</td>
