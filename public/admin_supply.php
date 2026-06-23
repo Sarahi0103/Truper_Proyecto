@@ -842,9 +842,14 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                             <input id="updateTitle" type="text" maxlength="220" placeholder="Ej: ¡Nueva llegada de escaleras industriales!">
                         </div>
                         <div class="form-group">
+                            <label>Descripción breve <span style="color:var(--theme-accent);">*</span></label>
+                            <textarea id="updateBriefDescription" rows="2" maxlength="200" placeholder="Descripción resumida para mostrar en la tarjeta de portada principal..."></textarea>
+                            <small class="text-muted">Máximo 200 caracteres. Se mostrará en la tarjeta de la portada principal.</small>
+                        </div>
+                        <div class="form-group">
                             <label>Contenido <span style="color:var(--theme-accent);">*</span></label>
                             <textarea id="updateBody" rows="4" maxlength="1200" placeholder="Describe la noticia, promoción o evento..."></textarea>
-                            <small class="text-muted">Máximo 1200 caracteres.</small>
+                            <small class="text-muted">Máximo 1200 caracteres. Contenido completo que se verá en la página detallada.</small>
                         </div>
 
                         <div class="form-group">
@@ -2291,6 +2296,7 @@ function resetUpdateForm() {
     populateUpdateOrderSelect(_homepageUpdatesCount + 1, _homepageUpdatesCount + 1);
     document.getElementById('updateActive').value = '1';
     document.getElementById('updateTitle').value = '';
+    document.getElementById('updateBriefDescription').value = '';
     document.getElementById('updateBody').value = '';
     document.getElementById('updateImage').value = '';
     document.getElementById('updateRegistrationUrl').value = '';
@@ -2330,6 +2336,7 @@ function fillUpdateForm(update) {
     populateUpdateOrderSelect(_homepageUpdatesCount, update.sort_order || 1);
     document.getElementById('updateActive').value = Number(update.is_active) ? '1' : '0';
     document.getElementById('updateTitle').value = update.title || '';
+    document.getElementById('updateBriefDescription').value = update.brief_description || '';
     document.getElementById('updateBody').value = update.body || '';
     document.getElementById('updateRegistrationUrl').value = update.registration_url || '';
     document.getElementById('updateTemplate').value = update.design_template || 'classic';
@@ -2461,7 +2468,8 @@ async function loadHomepageUpdatesAdmin() {
                         <td>${escapeHtml(normalizeUpdateTypeLabel(item.update_type))}</td>
                         <td>
                             <strong>${escapeHtml(item.title || '')}</strong>
-                            <div class="text-muted" style="font-size: 12px; max-width: 480px;">${escapeHtml(item.body || '')}</div>
+                            <div style="font-size: 12px; color: var(--theme-accent, #ff7f00); font-weight: 500; margin: 2px 0;">${escapeHtml(item.brief_description || '')}</div>
+                            <div class="text-muted" style="font-size: 11px; max-width: 480px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${escapeHtml(item.body || '')}</div>
                         </td>
                         <td>${Number(item.sort_order || 0)}</td>
                         <td>${isTruthyFlag(item.is_active)
@@ -2493,6 +2501,7 @@ async function loadHomepageUpdatesAdmin() {
 async function saveHomepageUpdate() {
     // Validation
     const title = document.getElementById('updateTitle')?.value?.trim() || '';
+    const briefDescription = document.getElementById('updateBriefDescription')?.value?.trim() || '';
     const body = document.getElementById('updateBody')?.value?.trim() || '';
     const box = document.getElementById('updateResult');
 
@@ -2504,6 +2513,16 @@ async function saveHomepageUpdate() {
     if (title.length > 220) {
         if (box) box.innerHTML = '<div class="alert alert-error">El título no puede exceder 220 caracteres.</div>';
         showAlert('Título muy largo', 'warning');
+        return;
+    }
+    if (!briefDescription) {
+        if (box) box.innerHTML = '<div class="alert alert-error">La descripción breve es requerida.</div>';
+        showAlert('Descripción breve requerida', 'warning');
+        return;
+    }
+    if (briefDescription.length > 200) {
+        if (box) box.innerHTML = '<div class="alert alert-error">La descripción breve no puede exceder 200 caracteres.</div>';
+        showAlert('Descripción breve muy larga', 'warning');
         return;
     }
     if (!body) {
@@ -2540,6 +2559,7 @@ async function saveHomepageUpdate() {
     formData.append('sort_order', Number(document.getElementById('updateOrder').value || 1));
     formData.append('is_active', document.getElementById('updateActive').value === '1' ? '1' : '0');
     formData.append('title', title);
+    formData.append('brief_description', briefDescription);
     formData.append('body', body);
     formData.append('registration_url', document.getElementById('updateRegistrationUrl').value.trim());
     formData.append('design_template', document.getElementById('updateTemplate').value);

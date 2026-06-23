@@ -12,7 +12,7 @@ if ($id > 0) {
             : "'' AS image_url";
             
         $stmt = $pdo->prepare("
-            SELECT id, update_type, title, body, {$imageSelect}, 
+            SELECT id, update_type, title, body, COALESCE(brief_description, '') AS brief_description, {$imageSelect}, 
                    COALESCE(additional_images, '[]') AS additional_images, 
                    COALESCE(registration_url, '') AS registration_url, 
                    COALESCE(design_template, 'classic') AS design_template,
@@ -621,6 +621,9 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
                         <div class="update-meta">Publicado el <?php echo $formattedDate; ?></div>
                     <?php endif; ?>
                     
+                    <?php if (!empty($update['brief_description'])): ?>
+                        <p class="lead-desc" style="font-size: 1.2rem; line-height: 1.6; color: var(--theme-accent, #ff7f00); margin-bottom: 1.5rem; font-style: italic; font-weight: 500; border-left: 3px solid var(--theme-accent, #ff7f00); padding-left: 1rem;"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
+                    <?php endif; ?>
                     <div class="body-content"><?php echo htmlspecialchars($update['body'], ENT_QUOTES, 'UTF-8'); ?></div>
                     
                     <?php if (!empty($galleryImages)): ?>
@@ -667,6 +670,9 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
                     </div>
                 <?php endif; ?>
 
+                <?php if (!empty($update['brief_description'])): ?>
+                    <p class="lead-desc" style="font-size: 1.2rem; line-height: 1.6; color: var(--theme-accent, #ff7f00); margin-bottom: 1.5rem; font-style: italic; font-weight: 500; border-left: 3px solid var(--theme-accent, #ff7f00); padding-left: 1rem; text-align: center; max-width: 800px; margin-left: auto; margin-right: auto;"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
+                <?php endif; ?>
                 <div class="body-content"><?php echo htmlspecialchars($update['body'], ENT_QUOTES, 'UTF-8'); ?></div>
 
                 <?php if (!empty($remainingGallery)): ?>
@@ -708,6 +714,9 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
                         <img class="minimal-cover promo-image" src="<?php echo htmlspecialchars($update['image_url'], ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($update['title'], ENT_QUOTES, 'UTF-8'); ?>">
                     <?php endif; ?>
 
+                    <?php if (!empty($update['brief_description'])): ?>
+                        <p class="lead-desc" style="font-size: 1.2rem; line-height: 1.6; color: var(--theme-accent, #ff7f00); margin-bottom: 1.5rem; font-style: italic; font-weight: 500; border-left: 3px solid var(--theme-accent, #ff7f00); padding-left: 1rem;"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
+                    <?php endif; ?>
                     <div class="body-content"><?php echo htmlspecialchars($update['body'], ENT_QUOTES, 'UTF-8'); ?></div>
 
                     <?php if (!empty($galleryImages)): ?>
@@ -752,6 +761,9 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
                     </div>
                 </div>
 
+                <?php if (!empty($update['brief_description'])): ?>
+                    <p class="lead-desc" style="font-size: 1.25rem; line-height: 1.6; color: var(--theme-accent, #ff7f00); margin-bottom: 1.75rem; font-style: italic; font-weight: 500; border-left: 3px solid var(--theme-accent, #ff7f00); padding-left: 1rem;"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
+                <?php endif; ?>
                 <div class="body-content"><?php echo htmlspecialchars($update['body'], ENT_QUOTES, 'UTF-8'); ?></div>
 
                 <?php if (!empty($galleryImages)): ?>
@@ -794,6 +806,9 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
                     </div>
                 <?php endif; ?>
 
+                <?php if (!empty($update['brief_description'])): ?>
+                    <p class="lead-desc" style="font-size: 1.2rem; line-height: 1.6; color: var(--theme-accent, #ff7f00); margin-bottom: 1.5rem; font-style: italic; font-weight: 500; border-left: 3px solid var(--theme-accent, #ff7f00); padding-left: 1rem;"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
+                <?php endif; ?>
                 <div class="body-content"><?php echo htmlspecialchars($update['body'], ENT_QUOTES, 'UTF-8'); ?></div>
 
                 <?php if (!empty($galleryImages)): ?>

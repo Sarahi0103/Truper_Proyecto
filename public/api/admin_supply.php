@@ -928,6 +928,9 @@ function ensure_admin_supply_tables($pdo): void {
     try {
         $pdo->exec("ALTER TABLE homepage_updates ADD COLUMN IF NOT EXISTS design_template VARCHAR(50) DEFAULT 'classic'");
     } catch (Exception $ignored) {}
+    try {
+        $pdo->exec("ALTER TABLE homepage_updates ADD COLUMN IF NOT EXISTS brief_description TEXT DEFAULT ''");
+    } catch (Exception $ignored) {}
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS product_categories (
         id SERIAL PRIMARY KEY,
@@ -4704,7 +4707,7 @@ try {
                 $whereActive = ' WHERE (CASE WHEN ' . $activeCol . " IS NULL THEN 1 WHEN LOWER(CAST(" . $activeCol . " AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
             }
             $limit = $onlyActive ? 40 : 120;
-            $stmt = $pdo->query('SELECT id, update_type, title, body, ' . $selectImage . ', ' . $selectSort . ', ' . $selectActive . ', ' . $selectCreatedAt . ', ' . $selectUpdatedAt . ', COALESCE(additional_images, \'[]\') AS additional_images, COALESCE(registration_url, \'\') AS registration_url, COALESCE(design_template, \'classic\') AS design_template FROM homepage_updates' . $whereActive . ' ORDER BY ' . $orderExpr . ' LIMIT ' . (int)$limit);
+            $stmt = $pdo->query('SELECT id, update_type, title, body, COALESCE(brief_description, \'\') AS brief_description, ' . $selectImage . ', ' . $selectSort . ', ' . $selectActive . ', ' . $selectCreatedAt . ', ' . $selectUpdatedAt . ', COALESCE(additional_images, \'[]\') AS additional_images, COALESCE(registration_url, \'\') AS registration_url, COALESCE(design_template, \'classic\') AS design_template FROM homepage_updates' . $whereActive . ' ORDER BY ' . $orderExpr . ' LIMIT ' . (int)$limit);
 
             $response = ['success' => true, 'items' => $stmt->fetchAll()];
             break;
@@ -4719,6 +4722,7 @@ try {
             $type = sanitize($_POST['update_type'] ?? ($input['update_type'] ?? 'noticia'));
             $title = trim((string)($_POST['title'] ?? ($input['title'] ?? ($_REQUEST['title'] ?? ''))));
             $body = trim((string)($_POST['body'] ?? ($input['body'] ?? ($_REQUEST['body'] ?? ''))));
+            $briefDescription = trim((string)($_POST['brief_description'] ?? ($input['brief_description'] ?? ($_REQUEST['brief_description'] ?? ''))));
             $sortOrder = (int)($_POST['sort_order'] ?? ($input['sort_order'] ?? 0));
             $isActive = isset($_POST['is_active'])
                 ? normalize_bool_admin_supply($_POST['is_active'], true)
@@ -4799,8 +4803,8 @@ try {
             }
 
             if ($id > 0) {
-                $sets = ['update_type = ?', 'title = ?', 'body = ?', 'additional_images = ?', 'registration_url = ?', 'design_template = ?'];
-                $values = [$type, $title, $body, $additionalImagesJson, $registrationUrl, $designTemplate];
+                $sets = ['update_type = ?', 'title = ?', 'body = ?', 'brief_description = ?', 'additional_images = ?', 'registration_url = ?', 'design_template = ?'];
+                $values = [$type, $title, $body, $briefDescription, $additionalImagesJson, $registrationUrl, $designTemplate];
 
                 if ($imageUrl !== null && $imageCol !== null) {
                     $sets[] = $imageCol . ' = ?';
@@ -4829,9 +4833,9 @@ try {
                 $msg = $imageWarning ? ('Publicacion actualizada (sin imagen: ' . $imageWarning . ')') : 'Publicacion actualizada';
                 $response = ['success' => true, 'message' => $msg];
             } else {
-                $columns = ['update_type', 'title', 'body', 'additional_images', 'registration_url', 'design_template'];
-                $placeholders = ['?', '?', '?', '?', '?', '?'];
-                $values = [$type, $title, $body, $additionalImagesJson, $registrationUrl, $designTemplate];
+                $columns = ['update_type', 'title', 'body', 'brief_description', 'additional_images', 'registration_url', 'design_template'];
+                $placeholders = ['?', '?', '?', '?', '?', '?', '?'];
+                $values = [$type, $title, $body, $briefDescription, $additionalImagesJson, $registrationUrl, $designTemplate];
 
                 if ($imageCol !== null) {
                     $columns[] = $imageCol;

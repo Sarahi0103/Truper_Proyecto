@@ -328,13 +328,16 @@ try {
     $imageSelect = db_column_exists('homepage_updates', 'image_url')
         ? "COALESCE(image_url, '') AS image_url"
         : "'' AS image_url";
+    $briefDescSelect = db_column_exists('homepage_updates', 'brief_description')
+        ? "COALESCE(brief_description, '') AS brief_description"
+        : "'' AS brief_description";
 
     $whereActive = '';
     if ($activeColumn !== null) {
         $whereActive = " WHERE (CASE WHEN {$activeColumn} IS NULL THEN 1 WHEN LOWER(CAST({$activeColumn} AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
     }
 
-    $stmtUpdates = $pdo->query("SELECT id, update_type, title, body, {$imageSelect} FROM homepage_updates{$whereActive} ORDER BY {$sortColumn} ASC, id DESC LIMIT 12");
+    $stmtUpdates = $pdo->query("SELECT id, update_type, title, body, {$briefDescSelect}, {$imageSelect} FROM homepage_updates{$whereActive} ORDER BY {$sortColumn} ASC, id DESC LIMIT 12");
     $homepageUpdates = $stmtUpdates ? $stmtUpdates->fetchAll() : [];
 } catch (Exception $ignored) {
     $homepageUpdates = [];
@@ -455,7 +458,7 @@ function homepage_update_label($type) {
                                     <div class="promo-slide-text">
                                         <span class="promo-kicker"><?php echo htmlspecialchars(homepage_update_label($update['update_type'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span>
                                         <h3><?php echo htmlspecialchars((string)($update['title'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></h3>
-                                        <p><?php echo htmlspecialchars((string)($update['body'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></p>
+                                        <p><?php echo htmlspecialchars((string)(($update['brief_description'] ?? '') !== '' ? $update['brief_description'] : ($update['body'] ?? '')), ENT_QUOTES, 'UTF-8'); ?></p>
                                         <div style="margin-top: 1rem;">
                                             <a href="update_detail.php?id=<?php echo (int)$update['id']; ?>" class="btn btn-primary btn-small" style="font-weight: 700; border-radius: 8px;">Ver más</a>
                                         </div>
@@ -476,9 +479,13 @@ function homepage_update_label($type) {
                 <div class="promo-viewport" data-promo-viewport>
                     <div class="promo-track" data-promo-track>
                         <article class="promo-slide" data-promo-slide>
-                            <span class="promo-kicker">Portada</span>
-                            <h3>Publica tus promociones desde Abastecimiento</h3>
-                            <p>Usa el módulo Portada para crear tarjetas con imagen, título y contenido atractivo para tus clientes.</p>
+                            <div class="promo-slide-content">
+                                <div class="promo-slide-text">
+                                    <span class="promo-kicker">Portada</span>
+                                    <h3>Publica tus promociones desde Abastecimiento</h3>
+                                    <p>Usa el módulo Portada para crear tarjetas con imagen, título y contenido atractivo para tus clientes.</p>
+                                </div>
+                            </div>
                         </article>
                     </div>
                 </div>
