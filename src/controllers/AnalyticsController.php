@@ -246,10 +246,14 @@ class AnalyticsController {
         try {
             // Órdenes del mes
             $stmt = $this->pdo->prepare("
-                SELECT COUNT(*) as total, COALESCE(SUM(total_amount),0) as revenue
-                FROM orders
-                WHERE EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM NOW())
-                AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM NOW())
+                SELECT 
+                    COUNT(DISTINCT o.id) as total, 
+                    COALESCE(SUM(oi.quantity * COALESCE(p.net_price, oi.unit_price)), 0) as revenue
+                FROM orders o
+                LEFT JOIN order_items oi ON o.id = oi.order_id
+                LEFT JOIN products p ON oi.product_id = p.id
+                WHERE EXTRACT(MONTH FROM o.created_at) = EXTRACT(MONTH FROM NOW())
+                AND EXTRACT(YEAR FROM o.created_at) = EXTRACT(YEAR FROM NOW())
             ");
             $stmt->execute();
             $monthly_stats = $stmt->fetch();

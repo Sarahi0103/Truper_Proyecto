@@ -325,12 +325,11 @@ try {
             $salesToday = 0.0;
             $pendingCollections = 0.0;
             if (table_exists($pdo, 'public.orders')) {
-                $ordersTotalColumn = column_exists($pdo, 'orders', 'total_amount') ? 'total_amount' : 'total';
-                $stmt = $pdo->query("SELECT COALESCE(SUM($ordersTotalColumn),0) AS total FROM orders WHERE DATE(created_at) = CURRENT_DATE");
+                $stmt = $pdo->query("SELECT COALESCE(SUM(oi.quantity * COALESCE(p.net_price, oi.unit_price)), 0) AS total FROM orders o LEFT JOIN order_items oi ON o.id = oi.order_id LEFT JOIN products p ON oi.product_id = p.id WHERE DATE(o.created_at) = CURRENT_DATE");
                 $salesToday = (float)($stmt->fetch()['total'] ?? 0);
 
                 if (column_exists($pdo, 'orders', 'payment_status')) {
-                    $stmt = $pdo->query("SELECT COALESCE(SUM($ordersTotalColumn),0) AS total FROM orders WHERE payment_status IN ('pending','partial')");
+                    $stmt = $pdo->query("SELECT COALESCE(SUM(oi.quantity * COALESCE(p.net_price, oi.unit_price)), 0) AS total FROM orders o LEFT JOIN order_items oi ON o.id = oi.order_id LEFT JOIN products p ON oi.product_id = p.id WHERE o.payment_status IN ('pending','partial')");
                     $pendingCollections = (float)($stmt->fetch()['total'] ?? 0);
                 }
             }
@@ -434,10 +433,9 @@ try {
                 $targetAmount = (float)$rowGoal['target_amount'];
             }
 
-            $ordersTotalColumn = column_exists($pdo, 'orders', 'total_amount') ? 'total_amount' : 'total';
             $achieved = 0.0;
             if (table_exists($pdo, 'public.orders')) {
-                $stmt = $pdo->prepare("SELECT COALESCE(SUM($ordersTotalColumn),0) AS total FROM orders WHERE DATE(created_at) BETWEEN ? AND ?");
+                $stmt = $pdo->prepare("SELECT COALESCE(SUM(oi.quantity * COALESCE(p.net_price, oi.unit_price)), 0) AS total FROM orders o LEFT JOIN order_items oi ON o.id = oi.order_id LEFT JOIN products p ON oi.product_id = p.id WHERE DATE(o.created_at) BETWEEN ? AND ?");
                 $stmt->execute([$monthStart, $monthEnd]);
                 $achieved = (float)($stmt->fetch()['total'] ?? 0);
             }
@@ -446,9 +444,11 @@ try {
 
             $weeklyRows = [];
             if (table_exists($pdo, 'public.orders')) {
-                $stmt = $pdo->prepare("SELECT DATE_TRUNC('week', created_at)::date AS week_start, COALESCE(SUM($ordersTotalColumn),0) AS week_total
-                                       FROM orders
-                                       WHERE DATE(created_at) BETWEEN ? AND ?
+                $stmt = $pdo->prepare("SELECT DATE_TRUNC('week', o.created_at)::date AS week_start, COALESCE(SUM(oi.quantity * COALESCE(p.net_price, oi.unit_price)), 0) AS week_total
+                                       FROM orders o
+                                       LEFT JOIN order_items oi ON o.id = oi.order_id
+                                       LEFT JOIN products p ON oi.product_id = p.id
+                                       WHERE DATE(o.created_at) BETWEEN ? AND ?
                                        GROUP BY 1 ORDER BY 1 ASC");
                 $stmt->execute([$monthStart, $monthEnd]);
                 $weeklyRows = $stmt->fetchAll();

@@ -75,6 +75,7 @@ class OrderController {
                     'discount_percentage' => $discount * 100,
                     'discount_amount' => $item_discount,
                     'line_total' => $line_total,
+                    'net_price' => isset($product['net_price']) ? (float)$product['net_price'] : $unit_price,
                 ];
             }
             
@@ -142,7 +143,7 @@ class OrderController {
                 $this->updatePurchaseStatistics(
                     $item['product_id'],
                     $item['quantity'],
-                    $item['line_total'],
+                    $item['quantity'] * $item['net_price'],
                     $context['weather_condition'] ?? null,
                     $context['special_event'] ?? null
                 );

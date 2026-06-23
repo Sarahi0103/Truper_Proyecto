@@ -113,20 +113,12 @@ function client_purchase_stats($pdo, int $clientId, ?int $year): array {
 
     if ($year && $year > 0) {
         $queries[] = [
-            "SELECT MONTH(created_at) AS month_num, COUNT(*) AS total_orders, COALESCE(SUM(total_amount), 0) AS total_amount FROM orders WHERE client_id = ? AND YEAR(created_at) = ? GROUP BY MONTH(created_at) ORDER BY month_num ASC",
-            [$clientId, $year]
-        ];
-        $queries[] = [
-            "SELECT EXTRACT(MONTH FROM created_at) AS month_num, COUNT(*) AS total_orders, COALESCE(SUM(total_amount), 0) AS total_amount FROM orders WHERE client_id = ? AND EXTRACT(YEAR FROM created_at) = ? GROUP BY EXTRACT(MONTH FROM created_at) ORDER BY month_num ASC",
+            "SELECT EXTRACT(MONTH FROM o.created_at)::int AS month_num, COUNT(DISTINCT o.id) AS total_orders, COALESCE(SUM(oi.quantity * COALESCE(p.net_price, oi.unit_price)), 0) AS total_amount FROM orders o LEFT JOIN order_items oi ON o.id = oi.order_id LEFT JOIN products p ON oi.product_id = p.id WHERE o.client_id = ? AND EXTRACT(YEAR FROM o.created_at) = ? GROUP BY month_num ORDER BY month_num ASC",
             [$clientId, $year]
         ];
     } else {
         $queries[] = [
-            "SELECT MONTH(created_at) AS month_num, COUNT(*) AS total_orders, COALESCE(SUM(total_amount), 0) AS total_amount FROM orders WHERE client_id = ? GROUP BY MONTH(created_at) ORDER BY month_num ASC",
-            $params
-        ];
-        $queries[] = [
-            "SELECT EXTRACT(MONTH FROM created_at) AS month_num, COUNT(*) AS total_orders, COALESCE(SUM(total_amount), 0) AS total_amount FROM orders WHERE client_id = ? GROUP BY EXTRACT(MONTH FROM created_at) ORDER BY month_num ASC",
+            "SELECT EXTRACT(MONTH FROM o.created_at)::int AS month_num, COUNT(DISTINCT o.id) AS total_orders, COALESCE(SUM(oi.quantity * COALESCE(p.net_price, oi.unit_price)), 0) AS total_amount FROM orders o LEFT JOIN order_items oi ON o.id = oi.order_id LEFT JOIN products p ON oi.product_id = p.id WHERE o.client_id = ? GROUP BY month_num ORDER BY month_num ASC",
             $params
         ];
     }
@@ -165,7 +157,16 @@ function client_summary($pdo, int $clientId): array {
     ];
 
     try {
-        $stmt = $pdo->prepare("SELECT COUNT(*) AS total_orders, COALESCE(SUM(total_amount), 0) AS total_spent, COALESCE(AVG(total_amount), 0) AS avg_ticket FROM orders WHERE client_id = ?");
+        $stmt = $pdo->prepare("
+            SELECT 
+                COUNT(DISTINCT o.id) AS total_orders, 
+                COALESCE(SUM(oi.quantity * COALESCE(p.net_price, oi.unit_price)), 0) AS total_spent, 
+                CASE WHEN COUNT(DISTINCT o.id) > 0 THEN COALESCE(SUM(oi.quantity * COALESCE(p.net_price, oi.unit_price)), 0) / COUNT(DISTINCT o.id) ELSE 0 END AS avg_ticket 
+            FROM orders o
+            LEFT JOIN order_items oi ON o.id = oi.order_id
+            LEFT JOIN products p ON oi.product_id = p.id
+            WHERE o.client_id = ?
+        ");
         $stmt->execute([$clientId]);
         $row = $stmt->fetch();
         if ($row) {
@@ -189,22 +190,24 @@ function client_summary($pdo, int $clientId): array {
 function order_monthly_stats($pdo, ?int $year, ?int $clientId = null): array {
     $sql = "
         SELECT
-            EXTRACT(MONTH FROM created_at)::int AS month_num,
-            COUNT(*) AS total_orders,
-            COALESCE(SUM(total_amount), 0) AS total_amount
-        FROM orders
-        WHERE created_at IS NOT NULL
+            EXTRACT(MONTH FROM o.created_at)::int AS month_num,
+            COUNT(DISTINCT o.id) AS total_orders,
+            COALESCE(SUM(oi.quantity * COALESCE(p.net_price, oi.unit_price)), 0) AS total_amount
+        FROM orders o
+        LEFT JOIN order_items oi ON o.id = oi.order_id
+        LEFT JOIN products p ON oi.product_id = p.id
+        WHERE o.created_at IS NOT NULL
     ";
 
     $params = [];
 
     if ($year && $year > 0) {
-        $sql .= " AND EXTRACT(YEAR FROM created_at) = ?";
+        $sql .= " AND EXTRACT(YEAR FROM o.created_at) = ?";
         $params[] = $year;
     }
 
     if ($clientId) {
-        $sql .= " AND client_id = ?";
+        $sql .= " AND o.client_id = ?";
         $params[] = $clientId;
     }
 
@@ -219,17 +222,19 @@ function order_monthly_stats($pdo, ?int $year, ?int $clientId = null): array {
 function order_yearly_stats($pdo, ?int $clientId = null): array {
     $sql = "
         SELECT
-            EXTRACT(YEAR FROM created_at)::int AS year_val,
-            COUNT(*) AS total_orders,
-            COALESCE(SUM(total_amount), 0) AS total_amount
-        FROM orders
-        WHERE created_at IS NOT NULL
+            EXTRACT(YEAR FROM o.created_at)::int AS year_val,
+            COUNT(DISTINCT o.id) AS total_orders,
+            COALESCE(SUM(oi.quantity * COALESCE(p.net_price, oi.unit_price)), 0) AS total_amount
+        FROM orders o
+        LEFT JOIN order_items oi ON o.id = oi.order_id
+        LEFT JOIN products p ON oi.product_id = p.id
+        WHERE o.created_at IS NOT NULL
     ";
 
     $params = [];
 
     if ($clientId) {
-        $sql .= " AND client_id = ?";
+        $sql .= " AND o.client_id = ?";
         $params[] = $clientId;
     }
 
@@ -262,7 +267,7 @@ try {
                 SELECT 
                     COALESCE(p.category, 'General') AS category, 
                     SUM(oi.quantity)::int AS total_qty, 
-                    SUM(oi.line_total)::float AS total_amount
+                    SUM(oi.quantity * COALESCE(p.net_price, oi.unit_price))::float AS total_amount
                 FROM order_items oi
                 JOIN products p ON oi.product_id = p.id
                 JOIN orders o ON o.id = oi.order_id
@@ -425,17 +430,19 @@ try {
                 }
             }
 
-            // Fetch data for report
+            // Fetch data for report based on net_price
             $sql = "
                 SELECT
                     o.id AS order_id,
                     o.created_at,
-                    o.total_amount,
+                    COALESCE(SUM(oi.quantity * COALESCE(p.net_price, oi.unit_price)), 0) AS total_amount,
                     c.company_name,
                     u.first_name || ' ' || u.last_name AS client_name
                 FROM orders o
                 LEFT JOIN clients c ON o.client_id = c.id
                 LEFT JOIN users u ON c.user_id = u.id
+                LEFT JOIN order_items oi ON o.id = oi.order_id
+                LEFT JOIN products p ON oi.product_id = p.id
             ";
 
             $params = [];
@@ -445,7 +452,7 @@ try {
                 $params[':end_date'] = $endDate;
             }
 
-            $sql .= " ORDER BY o.created_at DESC LIMIT 1000"; // Limitar a 1000 registros
+            $sql .= " GROUP BY o.id, c.company_name, u.first_name, u.last_name ORDER BY o.created_at DESC LIMIT 1000"; // Limitar a 1000 registros
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
@@ -632,17 +639,19 @@ try {
             
             $sql = "
                 SELECT 
-                    EXTRACT(DAY FROM created_at)::int as day,
-                    COUNT(*) as count,
-                    COALESCE(SUM(total_amount), 0) as total
-                FROM orders
-                WHERE EXTRACT(MONTH FROM created_at) = ?
-                AND EXTRACT(YEAR FROM created_at) = ?
+                    EXTRACT(DAY FROM o.created_at)::int as day,
+                    COUNT(DISTINCT o.id) as count,
+                    COALESCE(SUM(oi.quantity * COALESCE(p.net_price, oi.unit_price)), 0) as total
+                FROM orders o
+                LEFT JOIN order_items oi ON o.id = oi.order_id
+                LEFT JOIN products p ON oi.product_id = p.id
+                WHERE EXTRACT(MONTH FROM o.created_at) = ?
+                AND EXTRACT(YEAR FROM o.created_at) = ?
             ";
             
             $params = [$month, $year];
             if ($clientId) {
-                $sql .= " AND client_id = ?";
+                $sql .= " AND o.client_id = ?";
                 $params[] = $clientId;
             }
             $sql .= " GROUP BY day ORDER BY day ASC";
@@ -719,11 +728,13 @@ try {
                     " . $nameExpr . " AS name,
                     " . $pointsExpr . " AS loyalty_points,
                     " . $activeExpr . " AS is_active,
-                    COALESCE(COUNT(o.id), 0) AS order_count,
-                    COALESCE(SUM(o.total_amount), 0) AS total_spent
+                    COALESCE(COUNT(DISTINCT o.id), 0) AS order_count,
+                    COALESCE(SUM(oi.quantity * COALESCE(p.net_price, oi.unit_price)), 0) AS total_spent
                 FROM users u
                 LEFT JOIN clients c ON c.user_id = u.id
                 LEFT JOIN orders o ON o.client_id = c.id
+                LEFT JOIN order_items oi ON o.id = oi.order_id
+                LEFT JOIN products p ON oi.product_id = p.id
                 WHERE u.role = 'client'
                 GROUP BY u.id, " . $nameExpr . ", " . $pointsExpr . ", " . $activeExpr . "
                 ORDER BY total_spent DESC
