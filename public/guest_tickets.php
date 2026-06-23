@@ -249,34 +249,35 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
 
         /* Modal Styles */
         .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(8px);
-            z-index: 10000;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 1.5rem;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: rgba(0, 0, 0, 0.7) !important;
+            backdrop-filter: blur(8px) !important;
+            z-index: 10000 !important;
+            display: none !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 1.5rem !important;
         }
 
         .modal.active {
-            display: flex;
+            display: flex !important;
         }
 
         .modal-content {
-            background: #1e1e1e;
-            border: 1px solid rgba(255, 102, 0, 0.3);
-            border-radius: 16px;
-            width: 100%;
-            max-width: 850px;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(255, 102, 0, 0.15);
-            animation: modalFade 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            background: #1e1e1e !important;
+            border: 1px solid rgba(255, 102, 0, 0.3) !important;
+            border-radius: 16px !important;
+            width: 100% !important;
+            max-width: 850px !important;
+            max-height: 90vh !important;
+            overflow-y: auto !important;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(255, 102, 0, 0.15) !important;
+            animation: modalFade 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            margin: auto !important;
         }
 
         @keyframes modalFade {
