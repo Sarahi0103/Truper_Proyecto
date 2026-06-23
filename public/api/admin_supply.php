@@ -1,14 +1,16 @@
 <?php
-require_once '../../config/config.php';
+require_once __DIR__ . '/../../config/config.php';
 ini_set('display_errors', '0');
 ob_start();
 
-require_admin();
+if (PHP_SAPI !== 'cli') {
+    require_admin();
+}
 require_once __DIR__ . '/ensure-sync.php';
 header('Content-Type: application/json');
 
 $action = $_GET['action'] ?? 'stock';
-$method = $_SERVER['REQUEST_METHOD'];
+$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $input = json_decode(file_get_contents('php://input'), true) ?: [];
 
 if ($method === 'GET') {
@@ -282,38 +284,15 @@ function image_storage_roots_admin_supply(): array {
 }
 // Helper function to create directories with proper permissions
 function ensure_directory_exists($path, $perms = 0777) {
-    // Normalize path, resolving .. and . segments safely
+    if (is_dir($path)) {
+        return $path;
+    }
     $path = str_replace('\\', '/', $path);
-    $isAbsolute = strlen($path) > 0 && $path[0] === '/';
-    $parts = explode('/', trim($path, '/'));
-    $stack = [];
-    foreach ($parts as $part) {
-        if ($part === '' || $part === '.') continue;
-        if ($part === '..') {
-            if (!empty($stack)) array_pop($stack);
-            continue;
-        }
-        $stack[] = $part;
+    if (!@mkdir($path, $perms, true) && !is_dir($path)) {
+        throw new Exception("Could not create directory: $path");
     }
-
-    $normalized = ($isAbsolute ? '/' : '') . implode('/', $stack);
-    if ($normalized === '') $normalized = $isAbsolute ? '/' : '.';
-
-    $current = $isAbsolute ? '' : '';
-    $segments = explode('/', ltrim($normalized, '/'));
-    foreach ($segments as $seg) {
-        if ($seg === '') continue;
-        $current .= '/' . $seg;
-        if (!is_dir($current)) {
-            $mkdir_result = @mkdir($current, $perms, true);
-            if (!$mkdir_result && !is_dir($current)) {
-                throw new Exception("Could not create directory: $current");
-            }
-        }
-        @chmod($current, $perms);
-    }
-
-    return $normalized;
+    @chmod($path, $perms);
+    return $path;
 }
 
 // Normalize any image path/url to a relative path starting with images/...
@@ -1426,7 +1405,7 @@ function store_product_image(array $file): string {
     }
 
     $tmp = $file['tmp_name'] ?? '';
-    if ($tmp === '' || !is_uploaded_file($tmp)) {
+    if ($tmp === '' || (!is_uploaded_file($tmp) && PHP_SAPI !== 'cli')) {
         throw new Exception('Archivo de imagen inválido');
     }
 
@@ -1462,12 +1441,50 @@ function store_product_image(array $file): string {
     }
 
     // Generate unique filename with timestamp
-    $filename = time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+    $hasGD = function_exists('imagecreatefromstring') && function_exists('imagewebp');
+    $finalExt = $hasGD ? 'webp' : $ext;
+    $filename = time() . '_' . bin2hex(random_bytes(4)) . '.' . $finalExt;
     $filepath = $productsDir . '/' . $filename;
 
-    // Validate and move file
-    if (!move_uploaded_file($tmp, $filepath)) {
-        throw new Exception('No se pudo guardar la imagen');
+    $saved = false;
+    if ($hasGD) {
+        $imageString = file_get_contents($tmp);
+        if ($imageString !== false) {
+            $img = @imagecreatefromstring($imageString);
+            if ($img) {
+                $maxW = 1200;
+                $maxH = 1200;
+                $w = imagesx($img);
+                $h = imagesy($img);
+                if ($w > $maxW || $h > $maxH) {
+                    $ratio = min($maxW / $w, $maxH / $h);
+                    $nw = (int)($w * $ratio);
+                    $nh = (int)($h * $ratio);
+                    $newImg = imagecreatetruecolor($nw, $nh);
+                    // Preserve transparency for PNG, WebP, GIF
+                    imagealphablending($newImg, false);
+                    imagesavealpha($newImg, true);
+                    $transparent = imagecolorallocatealpha($newImg, 255, 255, 255, 127);
+                    imagefilledrectangle($newImg, 0, 0, $nw, $nh, $transparent);
+                    imagecopyresampled($newImg, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
+                    imagedestroy($img);
+                    $img = $newImg;
+                }
+                $saved = imagewebp($img, $filepath, 85);
+                imagedestroy($img);
+            }
+        }
+    }
+
+    if (!$saved) {
+        // Fallback to moving the file
+        if ($hasGD) {
+            $filename = time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+            $filepath = $productsDir . '/' . $filename;
+        }
+        if (!move_uploaded_file($tmp, $filepath)) {
+            throw new Exception('No se pudo guardar la imagen');
+        }
     }
 
     // Ensure file has correct permissions
@@ -2044,7 +2061,7 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
     }
 
     $tmp = $file['tmp_name'] ?? '';
-    if ($tmp === '' || !is_uploaded_file($tmp)) {
+    if ($tmp === '' || (!is_uploaded_file($tmp) && PHP_SAPI !== 'cli')) {
         throw new Exception('Archivo de imagen inválido');
     }
 
@@ -2098,7 +2115,9 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
     }
 
     // Nombre de archivo: timestamp + random para evitar colisiones
-    $filename = time() . '_' . bin2hex(random_bytes(4)) . '.' . ($ext === 'jpeg' ? 'jpg' : $ext);
+    $hasWebpSupport = function_exists('imagecreatefromstring') && function_exists('imagewebp');
+    $finalExt = $hasWebpSupport ? 'webp' : ($ext === 'jpeg' ? 'jpg' : $ext);
+    $filename = time() . '_' . bin2hex(random_bytes(4)) . '.' . $finalExt;
     $destPath = $galleryDir . '/' . $filename;
 
     // Intentar redimensionar con GD si está disponible
@@ -2116,12 +2135,11 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
                 $ratio = min($maxW / $w, $maxH / $h);
                 $nw = (int)($w * $ratio); $nh = (int)($h * $ratio);
                 $newImg = imagecreatetruecolor($nw, $nh);
-                if (in_array($ext, ['png', 'gif', 'webp'])) {
-                    imagealphablending($newImg, false);
-                    imagesavealpha($newImg, true);
-                    $transparent = imagecolorallocatealpha($newImg, 255, 255, 255, 127);
-                    imagefilledrectangle($newImg, 0, 0, $nw, $nh, $transparent);
-                }
+                // Preserve transparency for PNG, WebP, GIF
+                imagealphablending($newImg, false);
+                imagesavealpha($newImg, true);
+                $transparent = imagecolorallocatealpha($newImg, 255, 255, 255, 127);
+                imagefilledrectangle($newImg, 0, 0, $nw, $nh, $transparent);
                 imagecopyresampled($newImg, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
                 // Aplicar sharpen para mejorar nitidez tras resize
                 if (function_exists('imageconvolution')) {
@@ -2133,20 +2151,24 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
             }
             
             $saved = false;
-            if ($ext === 'png') {
-                $saved = imagepng($img, $destPath, 3); // 0=sin compresión, 9=máxima; 3=alta calidad
-            } elseif (in_array($ext, ['webp']) && function_exists('imagewebp')) {
-                $saved = imagewebp($img, $destPath, 92);
+            if ($hasWebpSupport) {
+                $saved = imagewebp($img, $destPath, 85);
             } else {
-                $saved = imagejpeg($img, $destPath, 92);
-                if ($saved) {
-                    // normalize extension to jpg
-                    $filename = pathinfo($filename, PATHINFO_FILENAME) . '.jpg';
-                    $newDestPath = $galleryDir . '/' . $filename;
-                    if (is_file($destPath) && $destPath !== $newDestPath) {
-                        rename($destPath, $newDestPath);
+                if ($ext === 'png') {
+                    $saved = imagepng($img, $destPath, 3); // 0=sin compresión, 9=máxima; 3=alta calidad
+                } elseif (in_array($ext, ['webp']) && function_exists('imagewebp')) {
+                    $saved = imagewebp($img, $destPath, 92);
+                } else {
+                    $saved = imagejpeg($img, $destPath, 92);
+                    if ($saved) {
+                        // normalize extension to jpg
+                        $filename = pathinfo($filename, PATHINFO_FILENAME) . '.jpg';
+                        $newDestPath = $galleryDir . '/' . $filename;
+                        if (is_file($destPath) && $destPath !== $newDestPath) {
+                            rename($destPath, $newDestPath);
+                        }
+                        $destPath = $newDestPath;
                     }
-                    $destPath = $newDestPath;
                 }
             }
             imagedestroy($img);
@@ -2756,7 +2778,8 @@ function ensure_numeric_client_user_code_admin_supply($pdo, int $userId): string
     return $code;
 }
 
-$response = ['success' => false, 'message' => 'Accion no reconocida'];
+if (PHP_SAPI !== 'cli') {
+    $response = ['success' => false, 'message' => 'Accion no reconocida'];
 
 try {
     // CSRF validation for POST requests to write endpoints
@@ -5610,3 +5633,4 @@ if (!empty($buffer)) {
 
 // JSON minificado para reducir tamaño de respuesta
 echo json_encode($response, JSON_UNESCAPED_UNICODE);
+}

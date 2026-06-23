@@ -3,6 +3,8 @@
  * Controlador de Órdenes y Pedidos
  */
 
+require_once __DIR__ . '/../utils/AppLogger.php';
+
 class OrderController {
     private $pdo;
     
@@ -157,7 +159,7 @@ class OrderController {
                 require_once __DIR__ . '/../../backend/hooks/ticket_hooks.php';
                 onOrderCompleted($order_id);
             } catch (Exception $e) {
-                error_log("Error al crear ticket automático desde OrderController: " . $e->getMessage());
+                AppLogger::error("Error al crear ticket automático desde OrderController: " . $e->getMessage(), ['order_id' => $order_id, 'exception' => $e]);
             }
             
             $historyStmt = $this->pdo->prepare("INSERT INTO transaction_history (transaction_type, reference_folio, data_json, created_by) VALUES ('client_order', ?, ?, ?)");
@@ -167,6 +169,8 @@ class OrderController {
                 $_SESSION['user_id'] ?? null
             ]);
             
+            AppLogger::info("Orden creada exitosamente: " . $order_number, ['order_id' => $order_id, 'client_id' => $client_id, 'total' => $total_amount]);
+
             return [
                 'success' => true,
                 'message' => 'Orden creada exitosamente',
@@ -180,7 +184,7 @@ class OrderController {
             if ($this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
             }
-            error_log("Error creando orden: " . $e->getMessage());
+            AppLogger::error("Error creando orden: " . $e->getMessage(), ['client_id' => $client_id, 'exception' => $e]);
             return ['success' => false, 'message' => 'Error al crear la orden: ' . $e->getMessage()];
         }
     }
@@ -235,13 +239,15 @@ class OrderController {
                 $_SESSION['user_id'] ?? null
             ]);
             
+            AppLogger::info("Pago registrado exitosamente para la orden ID: " . $order_id, ['order_id' => $order_id, 'amount' => $amount, 'new_balance' => max(0, $new_balance)]);
+
             return [
                 'success' => true,
                 'message' => 'Pago registrado exitosamente',
                 'balance' => max(0, $new_balance)
             ];
         } catch (PDOException $e) {
-            error_log("Error registrando pago: " . $e->getMessage());
+            AppLogger::error("Error registrando pago para la orden ID: " . $order_id . " - " . $e->getMessage(), ['order_id' => $order_id, 'amount' => $amount, 'exception' => $e]);
             return ['success' => false, 'message' => 'Error al registrar el pago'];
         }
     }

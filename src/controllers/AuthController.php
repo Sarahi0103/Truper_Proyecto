@@ -3,6 +3,8 @@
  * Controlador de Autenticación
  */
 
+require_once __DIR__ . '/../utils/AppLogger.php';
+
 class AuthController {
     private $pdo;
     
@@ -79,6 +81,8 @@ class AuthController {
             $this->createClientIfPossible($user_id, trim((string)($data['company_name'] ?? '')));
             $userCode = $this->ensureUserCodeForUser($user_id);
             
+            AppLogger::info("Usuario registrado exitosamente: " . $data['email'], ['email' => $data['email'], 'user_id' => $user_id]);
+
             return [
                 'success' => true,
                 'message' => 'Registro exitoso. Ya puedes iniciar sesión.',
@@ -86,7 +90,7 @@ class AuthController {
                 'user_code' => $userCode
             ];
         } catch (Exception $e) {
-            error_log("Error en registro: " . $e->getMessage());
+            AppLogger::error("Error en registro: " . $e->getMessage(), ['email' => $data['email'] ?? null, 'exception' => $e]);
             return ['success' => false, 'message' => 'Error al registrar. Intenta de nuevo.'];
         }
     }
@@ -105,13 +109,16 @@ class AuthController {
                 $user = $this->safeGetUserByIdentifier($identifier);
             }
             if (!$user) {
+                AppLogger::warning("Intento de inicio de sesión fallido (usuario no encontrado): " . $identifier, ['identifier' => $identifier]);
                 return ['success' => false, 'message' => 'Email o contraseña incorrectos'];
             }
 
             if (array_key_exists('is_active', $user) && !$this->isTruthy($user['is_active'])) {
+                AppLogger::warning("Intento de inicio de sesión en cuenta desactivada: " . $user['email'], ['user_id' => $user['id']]);
                 return ['success' => false, 'message' => 'Tu cuenta está desactivada'];
             }
             if (array_key_exists('active', $user) && !$this->isTruthy($user['active'])) {
+                AppLogger::warning("Intento de inicio de sesión en cuenta desactivada: " . $user['email'], ['user_id' => $user['id']]);
                 return ['success' => false, 'message' => 'Tu cuenta está desactivada'];
             }
 
@@ -146,6 +153,7 @@ class AuthController {
                 }
             }
             if (!$passwordOk) {
+                AppLogger::warning("Intento de inicio de sesión fallido (contraseña incorrecta) para: " . $user['email'], ['user_id' => $user['id']]);
                 return ['success' => false, 'message' => 'Email o contraseña incorrectos'];
             }
 
@@ -194,13 +202,15 @@ class AuthController {
                 ];
             }
 
+            AppLogger::info("Inicio de sesión exitoso: " . $user['email'], ['user_id' => $user['id'], 'role' => $role]);
+
             return [
                 'success' => true,
                 'message' => 'Bienvenido ' . $name,
                 'role' => $role
             ];
         } catch (PDOException $e) {
-            error_log("Error en login: " . $e->getMessage());
+            AppLogger::error("Error en login: " . $e->getMessage(), ['identifier' => $identifier, 'exception' => $e]);
             return ['success' => false, 'message' => 'Error al iniciar sesión'];
         }
     }
@@ -237,28 +247,34 @@ class AuthController {
             $user = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
             if (!$user) {
+                AppLogger::warning("Intento de inicio de sesión de cliente fallido (código no encontrado): " . $userCode, ['user_code' => $userCode]);
                 return ['success' => false, 'message' => 'Código de cliente incorrecto'];
             }
 
             if (($user['role'] ?? 'client') !== 'client') {
+                AppLogger::warning("Intento de inicio de sesión de cliente fallido (rol no es cliente): " . $user['email'], ['user_id' => $user['id'], 'role' => $user['role'] ?? 'none']);
                 return ['success' => false, 'message' => 'Este acceso es solo para clientes'];
             }
 
             if (array_key_exists('is_active', $user) && !$this->isTruthy($user['is_active'])) {
+                AppLogger::warning("Intento de inicio de sesión de cliente en cuenta desactivada: " . $user['email'], ['user_id' => $user['id']]);
                 return ['success' => false, 'message' => 'Tu cuenta está desactivada'];
             }
             if (array_key_exists('active', $user) && !$this->isTruthy($user['active'])) {
+                AppLogger::warning("Intento de inicio de sesión de cliente en cuenta desactivada: " . $user['email'], ['user_id' => $user['id']]);
                 return ['success' => false, 'message' => 'Tu cuenta está desactivada'];
             }
 
             $storedBirthdate = trim((string)($user[$birthColumn] ?? ''));
             if ($storedBirthdate === '') {
+                AppLogger::warning("Intento de inicio de sesión de cliente fallido (sin fecha de nacimiento registrada): " . $user['email'], ['user_id' => $user['id']]);
                 return ['success' => false, 'message' => 'Tu cuenta no tiene fecha de nacimiento registrada'];
             }
 
             $providedDate = substr($birthdate, 0, 10);
             $storedDate = substr($storedBirthdate, 0, 10);
             if ($providedDate !== $storedDate) {
+                AppLogger::warning("Intento de inicio de sesión de cliente fallido (fecha de nacimiento incorrecta) para: " . $user['email'], ['user_id' => $user['id']]);
                 return ['success' => false, 'message' => 'Fecha de nacimiento incorrecta'];
             }
 
@@ -288,13 +304,15 @@ class AuthController {
             $_SESSION['loyalty_points'] = (int)$points;
             $_SESSION['login_time'] = time();
 
+            AppLogger::info("Inicio de sesión de cliente por código exitoso: " . $user['email'], ['user_id' => $user['id'], 'user_code' => $userCode]);
+
             return [
                 'success' => true,
                 'message' => 'Bienvenido ' . $name,
                 'role' => $role
             ];
         } catch (PDOException $e) {
-            error_log("Error en login de cliente: " . $e->getMessage());
+            AppLogger::error("Error en login de cliente: " . $e->getMessage(), ['user_code' => $userCode, 'exception' => $e]);
             return ['success' => false, 'message' => 'Error al iniciar sesión'];
         }
     }
