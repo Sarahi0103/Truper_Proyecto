@@ -98,7 +98,7 @@ class OrderController {
                 $order_number,
                 $total_amount,
                 $total_amount,
-                $is_wholesale ? true : false,
+                $is_wholesale ? 1 : 0,
                 $context['notes'] ?? null
             ]);
             

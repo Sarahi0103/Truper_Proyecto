@@ -161,6 +161,8 @@ try {
                 db_column_exists('users', 'birthdate') ? 'u.birthdate' : (db_column_exists('users', 'birthday') ? 'u.birthday AS birthdate' : 'NULL AS birthdate'),
                 db_column_exists('users', 'user_code') ? 'u.user_code' : "'' AS user_code",
                 db_column_exists('users', 'is_active') ? 'u.is_active' : (db_column_exists('users', 'active') ? 'u.active AS is_active' : '1 AS is_active'),
+                db_column_exists('users', 'created_at') ? 'u.created_at' : 'NULL AS created_at',
+                db_column_exists('users', 'last_login') ? 'u.last_login' : 'NULL AS last_login',
                 (db_table_exists('clients') && db_column_exists('clients', 'company_name')) ? 'c.company_name' : "'' AS company_name"
             ];
 

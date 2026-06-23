@@ -2712,6 +2712,7 @@ function renderClientList(clients) {
                     <th>Código único</th>
                     <th>Teléfono</th>
                     <th>Email</th>
+                    <th>Registro / Sesión</th>
                     <th>Estado</th>
                     <th>Acciones</th>
                 </tr>
@@ -2720,13 +2721,28 @@ function renderClientList(clients) {
                 ${clients.map((client) => {
                     const fullName = `${client.first_name || ''} ${client.last_name || ''}`.trim();
                     const code = displayClientCode(client.user_code || '');
-                    const statusLabel = Number(client.is_active) ? 'Activo' : 'Inactivo';
+                    const formatDate = (dateStr) => {
+                        if (!dateStr) return 'N/A';
+                        const d = new Date(dateStr);
+                        if (isNaN(d.getTime())) return dateStr;
+                        return d.getFullYear() + '-' + 
+                               String(d.getMonth() + 1).padStart(2, '0') + '-' + 
+                               String(d.getDate()).padStart(2, '0') + ' ' + 
+                               String(d.getHours()).padStart(2, '0') + ':' + 
+                               String(d.getMinutes()).padStart(2, '0');
+                    };
                     return `
                         <tr>
                             <td>${escapeHtml(fullName || 'Sin nombre')}</td>
                             <td>${escapeHtml(code || 'Sin código')}</td>
                             <td>${escapeHtml(client.phone || '')}</td>
                             <td>${escapeHtml(client.email || '')}</td>
+                            <td>
+                                <div style="font-size: 0.85rem; line-height: 1.3;">
+                                    <span style="opacity: 0.7;">Reg:</span> ${formatDate(client.created_at)}<br>
+                                    <span style="opacity: 0.7;">Sesión:</span> ${formatDate(client.last_login)}
+                                </div>
+                            </td>
                             <td>${Number(client.is_active) ? '<span class="badge badge-success">Activo</span>' : '<span class="badge badge-danger">Inactivo</span>'}</td>
                             <td>
                                 <button class="btn btn-small btn-secondary" type="button" data-client="${escapeHtml(encodeURIComponent(JSON.stringify(client)))}" onclick="fillClientFormFromButton(this)">Editar</button>

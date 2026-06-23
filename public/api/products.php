@@ -332,7 +332,7 @@ try {
             $updated = false;
             try {
                 $stmt = $pdo->prepare("UPDATE products SET is_active = ? WHERE id = ?");
-                $stmt->execute([$is_active ? true : false, $id]);
+                $stmt->execute([$is_active ? 1 : 0, $id]);
                 $updated = $stmt->rowCount() > 0;
             } catch (Exception $e1) {
                 try {

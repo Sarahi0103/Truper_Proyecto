@@ -355,6 +355,26 @@ try {
             $realProfit = $salesToday - $pendingSupplierPayments;
             $profitMarginPct = $salesToday > 0 ? ($realProfit / $salesToday) * 100 : 0;
 
+            $recentMovements = [];
+            if ($open) {
+                $stmt = $pdo->prepare("
+                    SELECT 
+                        m.id, 
+                        m.movement_type, 
+                        m.amount, 
+                        m.description, 
+                        m.created_at,
+                        COALESCE(u.first_name || ' ' || u.last_name, u.name, 'Usuario') AS creator_name
+                    FROM cash_drawer_movements m 
+                    LEFT JOIN users u ON u.id = m.created_by 
+                    WHERE m.session_id = ? 
+                    ORDER BY m.created_at DESC 
+                    LIMIT 100
+                ");
+                $stmt->execute([$open['id']]);
+                $recentMovements = $stmt->fetchAll() ?: [];
+            }
+
             $response = [
                 'success' => true,
                 'open_session' => $open ?: null,
@@ -368,7 +388,8 @@ try {
                     'overdue_notes' => $overdueNotes,
                     'real_profit' => $realProfit,
                     'profit_margin_pct' => $profitMarginPct
-                ]
+                ],
+                'recent_movements' => $recentMovements
             ];
             break;
 

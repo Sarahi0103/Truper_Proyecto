@@ -551,6 +551,14 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                 <button class="btn btn-primary mt-2" onclick="addMovement()">Registrar movimiento</button>
               </div></div>
 
+              <div class="card mt-3 show-only-open"><div class="card-body">
+                <h3>Movimientos Recientes del Turno</h3>
+                <p class="text-muted mb-2">Historial de movimientos de efectivo registrados en el turno actual.</p>
+                <div class="table-responsive">
+                  <div id="recentMovementsList" class="text-muted">Cargando movimientos...</div>
+                </div>
+              </div></div>
+
               <!-- Placeholder when closed -->
               <div class="placeholder-card show-only-closed">
                   <div class="placeholder-icon">📥</div>
@@ -680,6 +688,80 @@ function formatMoney(value) {
   return `$${Number(value || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+function escapeHtml(str) {
+  if (typeof str !== 'string') return '';
+  return str.replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+}
+
+function renderRecentMovements(movements) {
+  const box = document.getElementById('recentMovementsList');
+  if (!box) return;
+
+  if (!Array.isArray(movements) || movements.length === 0) {
+    box.innerHTML = '<p class="text-muted">No hay movimientos registrados en este turno.</p>';
+    return;
+  }
+
+  box.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Hora exacta</th>
+          <th>Tipo</th>
+          <th>Concepto / Descripción</th>
+          <th>Monto</th>
+          <th>Registrado por</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${movements.map((m) => {
+          const amount = Number(m.amount || 0);
+          
+          let typeLabel = '';
+          let typeColor = '';
+          if (m.movement_type === 'in') {
+            typeLabel = '📥 Entrada';
+            typeColor = '#10b981';
+          } else if (m.movement_type === 'out') {
+            typeLabel = '📤 Salida';
+            typeColor = '#ef4444';
+          } else if (m.movement_type === 'sale') {
+            typeLabel = '🛒 Venta Manual';
+            typeColor = '#10b981';
+          } else {
+            typeLabel = m.movement_type;
+            typeColor = '#aaa';
+          }
+
+          // Format exact hours, minutes, and seconds
+          const formatDate = (dateStr) => {
+            if (!dateStr) return 'N/A';
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+            return String(d.getHours()).padStart(2, '0') + ':' + 
+                   String(d.getMinutes()).padStart(2, '0') + ':' +
+                   String(d.getSeconds()).padStart(2, '0');
+          };
+
+          return `<tr>
+            <td><strong>${formatDate(m.created_at)}</strong></td>
+            <td style="color:${typeColor}; font-weight:600;">${typeLabel}</td>
+            <td style="white-space:normal; max-width:300px; word-break:break-word;">${escapeHtml(m.description || 'Sin concepto')}</td>
+            <td style="font-weight:700; color:${m.movement_type === 'out' ? '#ef4444' : '#10b981'};">
+              ${m.movement_type === 'out' ? '-' : '+'}${formatMoney(amount)}
+            </td>
+            <td>${escapeHtml(m.creator_name || 'Usuario')}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
 function renderMetrics(summary) {
   const box = document.getElementById('cashierMetrics');
   if (!box) return;
@@ -777,9 +859,12 @@ async function refreshStatus() {
 
   if (res.open_session) {
     updateMonthlyGoalProgress(res.summary ? Number(res.summary.sales_today || 0) : 0);
+    renderRecentMovements(res.recent_movements || []);
   } else {
     const goalCard = document.getElementById('monthlyGoalProgressCard');
     if (goalCard) goalCard.style.display = 'none';
+    const movementsBox = document.getElementById('recentMovementsList');
+    if (movementsBox) movementsBox.innerHTML = '<p class="text-muted">Caja cerrada. Inicie turno para ver movimientos.</p>';
   }
 }
 
