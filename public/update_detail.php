@@ -96,10 +96,10 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
     <link rel="stylesheet" href="<?php echo asset_url('css/responsive-complete.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_url('css/dark-mode-auto.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_url('css/catalog-min.css'); ?>">
-    <style>
+        <style>
         /* ============================================================
            BASE — Page Structure
-        ============================================================ */
+           ============================================================ */
         .detail-wrapper {
             max-width: 860px;
             margin: 2.5rem auto;
@@ -129,71 +129,100 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
         }
 
         /* ============================================================
+           PREMIUM GLASS CARD WITH ORANGE DIFFUSED CONTOUR
+           ============================================================ */
+        .premium-detail-card {
+            background: rgba(18, 18, 22, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1.5px solid rgba(255, 127, 0, 0.28);
+            border-radius: 20px;
+            padding: 2.5rem 2.25rem;
+            box-shadow: 0 0 28px rgba(255, 127, 0, 0.12), 0 16px 40px rgba(0, 0, 0, 0.45);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+        }
+        .premium-detail-card:hover {
+            border-color: rgba(255, 127, 0, 0.55);
+            box-shadow: 0 0 40px rgba(255, 127, 0, 0.26), 0 20px 48px rgba(0, 0, 0, 0.55);
+            transform: translateY(-2px);
+        }
+        :root[data-theme="light"] .premium-detail-card {
+            background: rgba(255, 255, 255, 0.88);
+            border-color: rgba(255, 127, 0, 0.22);
+            box-shadow: 0 0 20px rgba(255, 127, 0, 0.08), 0 8px 30px rgba(0, 0, 0, 0.08);
+        }
+        :root[data-theme="light"] .premium-detail-card:hover {
+            border-color: rgba(255, 127, 0, 0.45);
+            box-shadow: 0 0 32px rgba(255, 127, 0, 0.18), 0 14px 36px rgba(0, 0, 0, 0.12);
+        }
+
+        /* ============================================================
            BADGES
-        ============================================================ */
+           ============================================================ */
         .update-badge {
             display: inline-block;
-            padding: 3px 10px;
-            font-size: 0.7rem;
+            padding: 4px 12px;
+            font-size: 0.72rem;
             font-weight: 800;
             text-transform: uppercase;
             border-radius: 999px;
-            letter-spacing: 0.07em;
-            margin-bottom: 0.75rem;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.85rem;
         }
         .badge-news  { color: #dbeafe; background: rgba(30,64,175,0.4); border: 1px solid rgba(59,130,246,0.5); }
         .badge-promo { color: #fef08a; background: rgba(133,77,14,0.4); border: 1px solid rgba(234,179,8,0.5); }
         .badge-event { color: #e9d5ff; background: rgba(107,33,168,0.4); border: 1px solid rgba(168,85,247,0.5); }
 
         .update-meta {
-            font-size: 0.8rem;
+            font-size: 0.82rem;
             color: var(--theme-text-muted, #777);
             margin-bottom: 0;
-            letter-spacing: 0.03em;
+            letter-spacing: 0.02em;
         }
 
         /* ============================================================
-           PREMIUM ORANGE DIVIDER
-        ============================================================ */
+           PREMIUM GRADIENT DIVIDER
+           ============================================================ */
         .premium-divider {
             height: 1px;
-            background: linear-gradient(90deg, transparent 0%, rgba(255,127,0,0.45) 25%, rgba(255,127,0,0.45) 75%, transparent 100%);
+            background: linear-gradient(90deg, transparent 0%, rgba(255,127,0,0.4) 20%, rgba(255,127,0,0.4) 80%, transparent 100%);
             margin: 1.75rem 0;
             border: none;
-            opacity: 0.9;
+            opacity: 0.85;
         }
 
         /* ============================================================
-           BODY CONTENT — shared
-        ============================================================ */
+           BODY CONTENT
+           ============================================================ */
         .body-content {
-            font-size: 0.97rem;
+            font-size: 0.98rem;
             line-height: 1.8;
             color: var(--theme-text, rgba(255,255,255,0.88));
             white-space: pre-line;
             margin-bottom: 0;
         }
-        :root[data-theme="light"] .body-content { color: #222; }
+        :root[data-theme="light"] .body-content { color: #2d3748; }
 
         /* ============================================================
-           GALLERY GRID — shared
-        ============================================================ */
+           GALLERY GRID
+           ============================================================ */
         .gallery-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
             gap: 12px;
             margin-top: 0;
+            max-width: 600px;
         }
         .gallery-item {
             position: relative;
             aspect-ratio: 4/3;
             overflow: hidden;
-            border-radius: 10px;
-            border: 1.5px solid rgba(255,127,0,0.28);
+            border-radius: 8px;
+            border: 1.5px solid rgba(255,127,0,0.2);
             cursor: zoom-in;
             background: #0b0b0d;
             transition: transform 0.3s ease, border-color 0.3s, box-shadow 0.3s;
-            box-shadow: 0 0 16px rgba(255,127,0,0.1), 0 4px 12px rgba(0,0,0,0.4);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
         .gallery-item img {
             width: 100%;
@@ -202,15 +231,12 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
             transition: transform 0.45s ease;
         }
         .gallery-item:hover {
-            transform: translateY(-3px) scale(1.01);
-            border-color: rgba(255,127,0,0.6);
-            box-shadow: 0 0 28px rgba(255,127,0,0.28), 0 10px 24px rgba(0,0,0,0.55);
+            transform: translateY(-2px);
+            border-color: rgba(255,127,0,0.55);
+            box-shadow: 0 0 20px rgba(255,127,0,0.24), 0 8px 16px rgba(0,0,0,0.45);
         }
-        .gallery-item:hover img { transform: scale(1.06); }
+        .gallery-item:hover img { transform: scale(1.05); }
 
-        /* ============================================================
-           GALLERY SECTION HEADER — shared
-        ============================================================ */
         .gallery-section-title {
             display: flex;
             align-items: center;
@@ -225,8 +251,8 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
         .gallery-section-title svg { flex-shrink: 0; opacity: 0.85; }
 
         /* ============================================================
-           LEAD / BRIEF DESC — shared
-        ============================================================ */
+           LEAD / BRIEF DESC
+           ============================================================ */
         .lead-desc {
             font-size: 1.05rem !important;
             line-height: 1.65 !important;
@@ -240,27 +266,32 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
         }
 
         /* ============================================================
-           CTA BOX — shared
-        ============================================================ */
+           CTA BOX
+           ============================================================ */
         .registration-cta-box {
-            padding: 1.75rem 1.5rem;
-            background: linear-gradient(135deg, rgba(255,102,0,0.08) 0%, rgba(12,12,15,0.7) 100%);
-            border: 1px solid rgba(255,102,0,0.3);
-            border-radius: 14px;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, rgba(255,102,0,0.06) 0%, rgba(12,12,15,0.75) 100%);
+            border: 1px solid rgba(255,102,0,0.25);
+            border-radius: 12px;
             text-align: center;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.04);
-            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            backdrop-filter: blur(8px);
             transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
         }
+        :root[data-theme="light"] .registration-cta-box {
+            background: linear-gradient(135deg, rgba(255,102,0,0.04) 0%, rgba(247,250,252,0.95) 100%);
+            border-color: rgba(255,102,0,0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
         .registration-cta-box:hover {
-            border-color: rgba(255,102,0,0.5);
-            box-shadow: 0 12px 32px rgba(0,0,0,0.4), 0 0 20px rgba(255,102,0,0.08);
-            transform: translateY(-2px);
+            border-color: rgba(255,102,0,0.45);
+            box-shadow: 0 10px 28px rgba(0,0,0,0.25), 0 0 15px rgba(255,102,0,0.05);
+            transform: translateY(-1px);
         }
         .registration-cta-box h4 {
-            margin: 0 0 0.5rem;
+            margin: 0 0 0.4rem;
             color: var(--theme-accent, #ff7f00);
-            font-size: 1.05rem;
+            font-size: 1rem;
             font-weight: 800;
             display: flex;
             align-items: center;
@@ -268,87 +299,86 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
             gap: 8px;
         }
         .registration-cta-box p {
-            margin: 0 0 1.25rem;
-            font-size: 0.87rem;
+            margin: 0 0 1.15rem;
+            font-size: 0.85rem;
             line-height: 1.5;
-            color: rgba(255,255,255,0.65);
+            color: var(--theme-text-muted, rgba(255,255,255,0.6));
         }
         .registration-cta-box .btn-cta {
-            padding: 0.7rem 1.75rem;
-            font-size: 0.85rem;
+            padding: 0.65rem 1.5rem;
+            font-size: 0.82rem;
             font-weight: 800;
-            border-radius: 10px;
+            border-radius: 8px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
             background: linear-gradient(135deg, #ff6600, #ff8c00);
             color: #fff;
-            border: 1px solid rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.1);
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            box-shadow: 0 4px 14px rgba(255,102,0,0.28);
-            transition: all 0.25s ease;
+            box-shadow: 0 4px 12px rgba(255,102,0,0.25);
+            transition: all 0.2s ease;
             cursor: pointer;
             text-decoration: none;
-            max-width: 260px;
+            max-width: 250px;
             width: 100%;
             box-sizing: border-box;
             margin: 0 auto;
         }
         .registration-cta-box .btn-cta:hover {
             background: linear-gradient(135deg, #ff8c00, #ffaa00);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(255,102,0,0.4);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(255,102,0,0.35);
             color: #fff;
         }
-        .registration-cta-box .btn-cta:active { transform: translateY(1px); }
 
         /* ============================================================
            TEMPLATE 1: CLASSIC 🏛️
-        ============================================================ */
+           ============================================================ */
         .tpl-classic {
             max-width: 720px;
             margin: 0 auto;
         }
         .tpl-classic .page-header {
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.25rem;
         }
         .tpl-classic h1 {
-            font-size: 1.85rem;
+            font-size: 1.8rem;
             font-weight: 800;
             line-height: 1.25;
             letter-spacing: -0.02em;
             margin: 0.4rem 0 0.3rem;
+            font-family: 'Outfit', sans-serif;
         }
         .tpl-classic .cover-wrap {
-            width: 100%;
-            max-height: 340px;
+            max-width: 520px;
+            margin: 0 auto 1.5rem;
+            border-radius: 10px;
             overflow: hidden;
-            border-radius: 14px;
-            border: 1.5px solid rgba(255,127,0,0.32);
-            box-shadow: 0 0 24px rgba(255,127,0,0.14), 0 8px 24px rgba(0,0,0,0.5);
-            background: #0c0c0f;
+            border: 1.5px solid rgba(255,127,0,0.25);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            background: rgba(0,0,0,0.15);
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            transition: border-color 0.3s ease;
         }
         .tpl-classic .cover-wrap:hover {
-            border-color: rgba(255,127,0,0.6);
-            box-shadow: 0 0 32px rgba(255,127,0,0.28), 0 12px 30px rgba(0,0,0,0.6);
+            border-color: rgba(255,127,0,0.5);
         }
         .tpl-classic .cover-wrap img {
             width: 100%;
-            height: 100%;
+            height: auto;
+            max-height: 280px;
             object-fit: contain;
-            max-height: 340px;
             display: block;
         }
 
         /* ============================================================
            TEMPLATE 2: SPLIT 🌗
-        ============================================================ */
+           ============================================================ */
         .tpl-split {
             display: flex;
             flex-direction: column;
@@ -360,7 +390,7 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
                 align-items: flex-start;
             }
             .tpl-split .split-sidebar {
-                flex: 0 0 280px;
+                flex: 0 0 250px;
                 position: sticky;
                 top: 2rem;
             }
@@ -372,48 +402,57 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
             margin: 0.35rem 0 0.25rem;
             line-height: 1.25;
             letter-spacing: -0.02em;
+            font-family: 'Outfit', sans-serif;
         }
         .tpl-split .split-sidebar img.sidebar-cover {
             width: 100%;
             height: auto;
-            max-height: 300px;
+            max-height: 240px;
             object-fit: contain;
-            background: #0c0c0f;
-            border-radius: 14px;
-            border: 1.5px solid rgba(255,127,0,0.32);
-            box-shadow: 0 0 22px rgba(255,127,0,0.14), 0 8px 20px rgba(0,0,0,0.4);
+            background: rgba(0,0,0,0.15);
+            border-radius: 10px;
+            border: 1.5px solid rgba(255,127,0,0.25);
             display: block;
             margin-bottom: 1rem;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            transition: border-color 0.3s ease;
         }
         .tpl-split .split-sidebar img.sidebar-cover:hover {
-            border-color: rgba(255,127,0,0.6);
-            box-shadow: 0 0 32px rgba(255,127,0,0.28), 0 12px 28px rgba(0,0,0,0.5);
+            border-color: rgba(255,127,0,0.5);
         }
 
         /* ============================================================
            TEMPLATE 3: GALLERY 🖼️
-        ============================================================ */
+           ============================================================ */
         .tpl-gallery {
-            max-width: 860px;
+            max-width: 800px;
             margin: 0 auto;
         }
         .tpl-gallery .page-header {
             text-align: center;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.25rem;
         }
         .tpl-gallery h1 {
-            font-size: 1.85rem;
+            font-size: 1.8rem;
             font-weight: 800;
             margin: 0.35rem 0 0.25rem;
             letter-spacing: -0.02em;
+            font-family: 'Outfit', sans-serif;
         }
         .tpl-gallery .gallery-hero {
             display: grid;
             grid-template-columns: 2fr 1fr;
-            grid-template-rows: repeat(2, 170px);
+            grid-template-rows: repeat(2, 130px);
             gap: 10px;
-            margin-bottom: 0;
+            margin: 0 auto 1.5rem;
+            max-width: 600px;
+        }
+        .tpl-gallery .gallery-hero.single-image {
+            grid-template-columns: 1fr;
+            grid-template-rows: auto;
+            max-width: 480px;
+        }
+        .tpl-gallery .gallery-hero.single-image .gallery-hero-item {
+            aspect-ratio: 16/10;
         }
         @media (max-width: 600px) {
             .tpl-gallery .gallery-hero {
@@ -422,18 +461,16 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
             }
         }
         .tpl-gallery .gallery-hero-item {
-            border-radius: 12px;
+            border-radius: 10px;
             overflow: hidden;
-            border: 1.5px solid rgba(255,127,0,0.28);
+            border: 1.5px solid rgba(255,127,0,0.25);
             cursor: zoom-in;
             background: #1a1a1f;
-            box-shadow: 0 0 18px rgba(255,127,0,0.1), 0 4px 14px rgba(0,0,0,0.45);
-            transition: transform 0.3s ease, border-color 0.3s, box-shadow 0.3s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: border-color 0.3s ease;
         }
         .tpl-gallery .gallery-hero-item:hover {
-            transform: translateY(-2px);
-            border-color: rgba(255,127,0,0.55);
-            box-shadow: 0 0 28px rgba(255,127,0,0.24), 0 8px 22px rgba(0,0,0,0.55);
+            border-color: rgba(255,127,0,0.5);
         }
         .tpl-gallery .gallery-hero-item img {
             width: 100%;
@@ -444,77 +481,49 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
 
         /* ============================================================
            TEMPLATE 4: MINIMAL ✨
-        ============================================================ */
+           ============================================================ */
         .tpl-minimal {
             max-width: 700px;
             margin: 0 auto;
         }
-        .tpl-minimal .glass-card {
-            background: rgba(18,18,22,0.75);
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
-            border: 1.5px solid rgba(255,127,0,0.28);
-            border-radius: 20px;
-            padding: 2.25rem 2rem;
-            box-shadow: 0 0 24px rgba(255,127,0,0.13), 0 16px 40px rgba(0,0,0,0.4);
-            margin-bottom: 0;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-        }
-        .tpl-minimal .glass-card:hover {
-            border-color: rgba(255,127,0,0.5);
-            box-shadow: 0 0 36px rgba(255,127,0,0.24), 0 20px 50px rgba(0,0,0,0.5);
-        }
-        :root[data-theme="light"] .tpl-minimal .glass-card {
-            background: rgba(255,255,255,0.7);
-            border-color: rgba(255,127,0,0.2);
-        }
         .tpl-minimal h1 {
-            font-size: 1.75rem;
+            font-size: 1.7rem;
             font-weight: 800;
             letter-spacing: -0.02em;
             margin: 0.35rem 0 0.25rem;
             line-height: 1.25;
+            font-family: 'Outfit', sans-serif;
         }
         .tpl-minimal .minimal-cover {
             width: 100%;
+            max-width: 480px;
             height: auto;
-            max-height: 300px;
+            max-height: 240px;
             object-fit: contain;
-            background: #0c0c0f;
-            border-radius: 14px;
+            background: rgba(0,0,0,0.15);
+            border-radius: 10px;
             display: block;
-            margin-bottom: 0;
-            border: 1.5px solid rgba(255,127,0,0.3);
-            box-shadow: 0 0 22px rgba(255,127,0,0.14), 0 8px 22px rgba(0,0,0,0.45);
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            margin: 0 auto 1.5rem;
+            border: 1.5px solid rgba(255,127,0,0.25);
+            transition: border-color 0.3s ease;
         }
         .tpl-minimal .minimal-cover:hover {
-            border-color: rgba(255,127,0,0.6);
-            box-shadow: 0 0 32px rgba(255,127,0,0.28), 0 14px 32px rgba(0,0,0,0.55);
+            border-color: rgba(255,127,0,0.5);
         }
 
         /* ============================================================
            TEMPLATE 5: MAGAZINE 📰
-        ============================================================ */
+           ============================================================ */
         .tpl-magazine {
             max-width: 800px;
             margin: 0 auto;
         }
         .tpl-magazine .magazine-header {
             position: relative;
-            border-radius: 16px;
             overflow: hidden;
-            height: 300px;
-            margin-bottom: 0;
+            height: 240px;
             display: flex;
             align-items: flex-end;
-            border: 1.5px solid rgba(255,127,0,0.32);
-            box-shadow: 0 0 24px rgba(255,127,0,0.14), 0 10px 28px rgba(0,0,0,0.5);
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-        }
-        .tpl-magazine .magazine-header:hover {
-            border-color: rgba(255,127,0,0.6);
-            box-shadow: 0 0 34px rgba(255,127,0,0.28), 0 14px 36px rgba(0,0,0,0.6);
         }
         .tpl-magazine .magazine-header .header-bg {
             position: absolute; top: 0; left: 0;
@@ -524,7 +533,7 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
         .tpl-magazine .magazine-header .header-overlay {
             position: absolute; top: 0; left: 0;
             width: 100%; height: 100%;
-            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.35) 60%, rgba(0,0,0,0.05) 100%);
+            background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.05) 100%);
             z-index: 2;
         }
         .tpl-magazine .magazine-header .header-text {
@@ -533,7 +542,7 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
             width: 100%;
         }
         .tpl-magazine .magazine-header h1 {
-            font-size: 1.9rem;
+            font-size: 1.85rem;
             color: #fff;
             margin: 0 0 0.3rem;
             text-shadow: 0 2px 6px rgba(0,0,0,0.6);
@@ -559,7 +568,6 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
             font-family: 'Outfit', sans-serif;
             margin-top: 4px;
         }
-
     </style>
 </head>
 <body class="catalog-minimal" data-client-code="PUBLICO" data-client-number="0">
@@ -632,14 +640,14 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
         <!-- RENDER CHOSEN TEMPLATE -->
         <?php if ($tpl === 'split'): ?>
             <!-- TEMPLATE 2: SPLIT LAYOUT -->
-            <div class="tpl-split">
+            <div class="tpl-split premium-detail-card">
                 <div class="split-sidebar">
                     <?php if (!empty($update['image_url'])): ?>
                         <img class="sidebar-cover promo-image" src="<?php echo htmlspecialchars($update['image_url'], ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($update['title'], ENT_QUOTES, 'UTF-8'); ?>">
                     <?php endif; ?>
                     
                     <?php if (!empty($update['registration_url'])): ?>
-                        <div class="registration-cta-box" style="margin-top: 0;">
+                        <div class="registration-cta-box">
                             <h4>📝 Registro</h4>
                             <p>Accede al registro o documentos de este evento/noticia.</p>
                             <a href="<?php echo htmlspecialchars($update['registration_url'], ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-cta">
@@ -659,17 +667,17 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
                     <hr class="premium-divider">
 
                     <?php if (!empty($update['brief_description'])): ?>
-                        <p class="lead-desc" style="font-size: 1.15rem; line-height: 1.65; color: var(--theme-accent, #ff7f00); margin-bottom: 1.25rem; font-style: italic; font-weight: 500; border-left: 3px solid var(--theme-accent, #ff7f00); padding-left: 1rem;"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
+                        <p class="lead-desc"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
                         <hr class="premium-divider">
                     <?php endif; ?>
                     <div class="body-content"><?php echo htmlspecialchars($update['body'], ENT_QUOTES, 'UTF-8'); ?></div>
 
                     <?php if (!empty($galleryImages)): ?>
                         <hr class="premium-divider">
-                        <h4 style="margin: 0 0 1rem; font-size: 1.1rem; font-weight: 700; color: var(--theme-accent, #ff7f00); display: flex; align-items: center; gap: 0.5rem;">
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        <div class="gallery-section-title">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                             Imágenes adicionales
-                        </h4>
+                        </div>
                         <div class="gallery-grid">
                             <?php foreach ($galleryImages as $img): ?>
                                 <div class="gallery-item promo-image-gallery">
@@ -683,11 +691,11 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
 
         <?php elseif ($tpl === 'gallery'): ?>
             <!-- TEMPLATE 3: GALLERY FOCUS LAYOUT -->
-            <div class="tpl-gallery">
+            <div class="tpl-gallery premium-detail-card">
                 <span class="update-badge <?php echo get_update_badge_class($update['update_type']); ?>" style="display:table; margin: 0 auto 1rem;"><?php echo get_update_label($update['update_type']); ?></span>
-                <h1><?php echo htmlspecialchars($update['title'], ENT_QUOTES, 'UTF-8'); ?></h1>
+                <h1 style="text-align: center;"><?php echo htmlspecialchars($update['title'], ENT_QUOTES, 'UTF-8'); ?></h1>
                 <?php if ($formattedDate): ?>
-                    <div class="update-meta">Publicado el <?php echo $formattedDate; ?></div>
+                    <div class="update-meta" style="text-align: center; margin-bottom: 1.5rem;">Publicado el <?php echo $formattedDate; ?></div>
                 <?php endif; ?>
 
                 <?php 
@@ -703,30 +711,30 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
                 ?>
                 
                 <?php if (!empty($heroImages)): ?>
-                    <div class="gallery-hero">
+                    <div class="gallery-hero <?php echo count($heroImages) === 1 ? 'single-image' : ''; ?>">
                         <?php foreach ($heroImages as $index => $img): ?>
-                            <div class="gallery-hero-item <?php echo $index === 0 ? 'hero-main' : ''; ?> promo-image-gallery">
+                            <div class="gallery-hero-item <?php echo ($index === 0 && count($heroImages) > 1) ? 'hero-main' : ''; ?> promo-image-gallery">
                                 <img class="promo-image" src="<?php echo htmlspecialchars($img, ENT_QUOTES, 'UTF-8'); ?>" alt="Galería principal">
                             </div>
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>
 
-                <hr class="premium-divider" style="max-width:800px; margin-left:auto; margin-right:auto;">
+                <hr class="premium-divider">
 
                 <?php if (!empty($update['brief_description'])): ?>
-                    <p class="lead-desc" style="font-size: 1.15rem; line-height: 1.65; color: var(--theme-accent, #ff7f00); margin-bottom: 1.25rem; margin-top: 0; font-style: italic; font-weight: 500; border-left: 3px solid var(--theme-accent, #ff7f00); padding-left: 1rem; max-width: 800px; margin-left: auto; margin-right: auto;"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
-                    <hr class="premium-divider" style="max-width:800px; margin-left:auto; margin-right:auto;">
+                    <p class="lead-desc" style="max-width: 600px; margin-left: auto; margin-right: auto;"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
+                    <hr class="premium-divider">
                 <?php endif; ?>
-                <div class="body-content"><?php echo htmlspecialchars($update['body'], ENT_QUOTES, 'UTF-8'); ?></div>
+                <div class="body-content" style="max-width: 600px; margin-left: auto; margin-right: auto;"><?php echo htmlspecialchars($update['body'], ENT_QUOTES, 'UTF-8'); ?></div>
 
                 <?php if (!empty($remainingGallery)): ?>
-                    <hr class="premium-divider" style="max-width:800px; margin-left:auto; margin-right:auto;">
-                    <h4 style="font-size: 1.1rem; font-weight: 700; color: var(--theme-accent, #ff7f00); text-align: center; max-width:800px; margin: 0 auto 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    <hr class="premium-divider">
+                    <div class="gallery-section-title" style="justify-content: center;">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                         Más fotos de la galería
-                    </h4>
-                    <div class="gallery-grid" style="max-width: 800px; margin-left: auto; margin-right: auto;">
+                    </div>
+                    <div class="gallery-grid" style="margin-left: auto; margin-right: auto;">
                         <?php foreach ($remainingGallery as $img): ?>
                             <div class="gallery-item promo-image-gallery">
                                 <img class="promo-image" src="<?php echo htmlspecialchars($img, ENT_QUOTES, 'UTF-8'); ?>" alt="Galería secundaria">
@@ -736,8 +744,8 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
                 <?php endif; ?>
 
                 <?php if (!empty($update['registration_url'])): ?>
-                    <hr class="premium-divider" style="max-width:800px; margin-left:auto; margin-right:auto;">
-                    <div class="registration-cta-box" style="max-width: 800px; margin: 2rem auto 0;">
+                    <hr class="premium-divider">
+                    <div class="registration-cta-box" style="max-width: 600px; margin: 2rem auto 0;">
                         <h4>📝 Registro / Documentación</h4>
                         <p>Completa el formulario de registro o consulta la información complementaria.</p>
                         <a href="<?php echo htmlspecialchars($update['registration_url'], ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-cta">
@@ -752,57 +760,55 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
 
         <?php elseif ($tpl === 'minimal'): ?>
             <!-- TEMPLATE 4: MINIMAL PREMIUM LAYOUT -->
-            <div class="tpl-minimal">
-                <div class="glass-card">
-                    <span class="update-badge <?php echo get_update_badge_class($update['update_type']); ?>"><?php echo get_update_label($update['update_type']); ?></span>
-                    <h1><?php echo htmlspecialchars($update['title'], ENT_QUOTES, 'UTF-8'); ?></h1>
-                    <?php if ($formattedDate): ?>
-                        <div class="update-meta">Publicado el <?php echo $formattedDate; ?></div>
-                    <?php endif; ?>
+            <div class="tpl-minimal premium-detail-card">
+                <span class="update-badge <?php echo get_update_badge_class($update['update_type']); ?>"><?php echo get_update_label($update['update_type']); ?></span>
+                <h1><?php echo htmlspecialchars($update['title'], ENT_QUOTES, 'UTF-8'); ?></h1>
+                <?php if ($formattedDate): ?>
+                    <div class="update-meta" style="margin-bottom: 1.5rem;">Publicado el <?php echo $formattedDate; ?></div>
+                <?php endif; ?>
 
-                    <?php if (!empty($update['image_url'])): ?>
-                        <img class="minimal-cover promo-image" src="<?php echo htmlspecialchars($update['image_url'], ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($update['title'], ENT_QUOTES, 'UTF-8'); ?>">
-                    <?php endif; ?>
+                <?php if (!empty($update['image_url'])): ?>
+                    <img class="minimal-cover promo-image" src="<?php echo htmlspecialchars($update['image_url'], ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($update['title'], ENT_QUOTES, 'UTF-8'); ?>">
+                <?php endif; ?>
 
+                <hr class="premium-divider">
+
+                <?php if (!empty($update['brief_description'])): ?>
+                    <p class="lead-desc"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
                     <hr class="premium-divider">
+                <?php endif; ?>
+                <div class="body-content"><?php echo htmlspecialchars($update['body'], ENT_QUOTES, 'UTF-8'); ?></div>
 
-                    <?php if (!empty($update['brief_description'])): ?>
-                        <p class="lead-desc" style="font-size: 1.15rem; line-height: 1.65; color: var(--theme-accent, #ff7f00); margin-bottom: 1.25rem; margin-top: 0; font-style: italic; font-weight: 500; border-left: 3px solid var(--theme-accent, #ff7f00); padding-left: 1rem;"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
-                        <hr class="premium-divider">
-                    <?php endif; ?>
-                    <div class="body-content"><?php echo htmlspecialchars($update['body'], ENT_QUOTES, 'UTF-8'); ?></div>
+                <?php if (!empty($galleryImages)): ?>
+                    <hr class="premium-divider">
+                    <div class="gallery-section-title">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        Galería Complementaria
+                    </div>
+                    <div class="gallery-grid">
+                        <?php foreach ($galleryImages as $img): ?>
+                            <div class="gallery-item promo-image-gallery">
+                                <img class="promo-image" src="<?php echo htmlspecialchars($img, ENT_QUOTES, 'UTF-8'); ?>" alt="Galería minimalista">
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
 
-                    <?php if (!empty($galleryImages)): ?>
-                        <hr class="premium-divider">
-                        <h4 style="margin: 0 0 1rem; font-size: 1.1rem; font-weight: 700; color: var(--theme-accent, #ff7f00); display: flex; align-items: center; gap: 0.5rem;">
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                            Galería Complementaria
-                        </h4>
-                        <div class="gallery-grid" style="grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));">
-                            <?php foreach ($galleryImages as $img): ?>
-                                <div class="gallery-item promo-image-gallery" style="aspect-ratio: 1/1; border-radius: 12px;">
-                                    <img class="promo-image" src="<?php echo htmlspecialchars($img, ENT_QUOTES, 'UTF-8'); ?>" alt="Galería minimalista">
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-
-                    <?php if (!empty($update['registration_url'])): ?>
-                        <hr class="premium-divider">
-                        <div class="registration-cta-box" style="margin-top: 2rem;">
-                            <h4>Enlace de Registro / Soporte</h4>
-                            <p>Haz clic abajo para completar tu registro o descargar la documentación.</p>
-                            <a href="<?php echo htmlspecialchars($update['registration_url'], ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-cta" style="border-radius: 8px;">
-                                Enlace de Registro
-                            </a>
-                        </div>
-                    <?php endif; ?>
-                </div>
+                <?php if (!empty($update['registration_url'])): ?>
+                    <hr class="premium-divider">
+                    <div class="registration-cta-box" style="margin-top: 2rem;">
+                        <h4>Enlace de Registro / Soporte</h4>
+                        <p>Haz clic abajo para completar tu registro o descargar la documentación.</p>
+                        <a href="<?php echo htmlspecialchars($update['registration_url'], ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-cta">
+                            Enlace de Registro
+                        </a>
+                    </div>
+                <?php endif; ?>
             </div>
 
         <?php elseif ($tpl === 'magazine'): ?>
             <!-- TEMPLATE 5: MAGAZINE LAYOUT -->
-            <div class="tpl-magazine">
+            <div class="tpl-magazine premium-detail-card" style="padding: 0; overflow: hidden;">
                 <div class="magazine-header">
                     <?php if (!empty($update['image_url'])): ?>
                         <img class="header-bg promo-image" src="<?php echo htmlspecialchars($update['image_url'], ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($update['title'], ENT_QUOTES, 'UTF-8'); ?>">
@@ -819,47 +825,47 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
                     </div>
                 </div>
 
-                <hr class="premium-divider">
+                <div style="padding: 2.25rem 2rem;">
+                    <?php if (!empty($update['brief_description'])): ?>
+                        <p class="lead-desc"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
+                        <hr class="premium-divider">
+                    <?php endif; ?>
+                    <div class="body-content"><?php echo htmlspecialchars($update['body'], ENT_QUOTES, 'UTF-8'); ?></div>
 
-                <?php if (!empty($update['brief_description'])): ?>
-                    <p class="lead-desc" style="font-size: 1.15rem; line-height: 1.65; color: var(--theme-accent, #ff7f00); margin-bottom: 1.25rem; margin-top: 0; font-style: italic; font-weight: 500; border-left: 3px solid var(--theme-accent, #ff7f00); padding-left: 1rem;"><?php echo htmlspecialchars($update['brief_description'], ENT_QUOTES, 'UTF-8'); ?></p>
-                    <hr class="premium-divider">
-                <?php endif; ?>
-                <div class="body-content"><?php echo htmlspecialchars($update['body'], ENT_QUOTES, 'UTF-8'); ?></div>
+                    <?php if (!empty($galleryImages)): ?>
+                        <hr class="premium-divider">
+                        <div class="gallery-section-title">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                            Reportaje Fotográfico
+                        </div>
+                        <div class="gallery-grid">
+                            <?php foreach ($galleryImages as $img): ?>
+                                <div class="gallery-item promo-image-gallery" style="aspect-ratio: 16/10;">
+                                    <img class="promo-image" src="<?php echo htmlspecialchars($img, ENT_QUOTES, 'UTF-8'); ?>" alt="Galería revista">
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
 
-                <?php if (!empty($galleryImages)): ?>
-                    <hr class="premium-divider">
-                    <h4 style="font-family:'Outfit', sans-serif; font-size:1.35rem; font-weight: 800; color: var(--theme-accent, #ff7f00); margin: 0 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                        Reportaje Fotográfico
-                    </h4>
-                    <div class="gallery-grid" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:20px;">
-                        <?php foreach ($galleryImages as $img): ?>
-                            <div class="gallery-item promo-image-gallery" style="aspect-ratio: 16/10;">
-                                <img class="promo-image" src="<?php echo htmlspecialchars($img, ENT_QUOTES, 'UTF-8'); ?>" alt="Galería revista">
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-
-                <?php if (!empty($update['registration_url'])): ?>
-                    <hr class="premium-divider">
-                    <div class="registration-cta-box" style="margin-top: 2rem; border-width: 2px;">
-                        <h4>📌 Enlace Relacionado / Registro</h4>
-                        <p>¿Interesado en participar? Accede al formulario a través del botón oficial.</p>
-                        <a href="<?php echo htmlspecialchars($update['registration_url'], ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-cta">
-                            <span>Ingresar al Formulario</span>
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/>
-                            </svg>
-                        </a>
-                    </div>
-                <?php endif; ?>
+                    <?php if (!empty($update['registration_url'])): ?>
+                        <hr class="premium-divider">
+                        <div class="registration-cta-box">
+                            <h4>📌 Enlace Relacionado / Registro</h4>
+                            <p>¿Interesado en participar? Accede al formulario a través del botón oficial.</p>
+                            <a href="<?php echo htmlspecialchars($update['registration_url'], ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-cta">
+                                <span>Ingresar al Formulario</span>
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/>
+                                </svg>
+                            </a>
+                        </div>
+                    <?php endif; ?>
+                </div>
             </div>
 
         <?php else: ?>
             <!-- TEMPLATE 1: CLASSIC LAYOUT (DEFAULT) -->
-            <div class="tpl-classic">
+            <div class="tpl-classic premium-detail-card">
                 <div class="page-header">
                     <span class="update-badge <?php echo get_update_badge_class($update['update_type']); ?>"><?php echo get_update_label($update['update_type']); ?></span>
                     <h1><?php echo htmlspecialchars($update['title'], ENT_QUOTES, 'UTF-8'); ?></h1>
