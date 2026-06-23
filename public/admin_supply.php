@@ -2655,6 +2655,23 @@ async function saveHomepageUpdate() {
         }
         
         if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Publicación guardada')}</div>`;
+        
+        // Mostrar modal premium de éxito
+        if (window.showPremiumModal) {
+            window.showPremiumModal(
+                '¡Portada Actualizada!',
+                'La publicación se ha guardado correctamente y los cambios ya son visibles en la portada.',
+                '✨',
+                () => {}
+            );
+            const cancelBtn = document.getElementById('modalCancel');
+            if (cancelBtn) cancelBtn.style.display = 'none';
+            const confirmBtn = document.getElementById('modalConfirm');
+            if (confirmBtn) confirmBtn.textContent = 'Aceptar';
+        } else {
+            showAlert('Publicación guardada y portada actualizada', 'success');
+        }
+
         resetUpdateForm();
         loadHomepageUpdatesAdmin();
     } catch (error) {
