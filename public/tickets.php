@@ -339,9 +339,20 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
     </footer>
 
     <script src="js/jspdf.umd.min.js"></script>
-    <script src="js/main.js?v=2.6"></script>
-    <script src="js/modals.js?v=4.2"></script>
+    <script src="<?php echo asset_url('js/main.js'); ?>"></script>
+    <script src="<?php echo asset_url('js/modals.js'); ?>"></script>
     <script>
+        if (typeof safeNewDate !== 'function') {
+            window.safeNewDate = function(dateString) {
+                if (!dateString) return new Date();
+                if (dateString instanceof Date) return dateString;
+                let str = String(dateString).trim();
+                if (!str.includes('T')) {
+                    str = str.replace(/-/g, '/');
+                }
+                return new Date(str);
+            };
+        }
         window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>';
 
         function logout() {

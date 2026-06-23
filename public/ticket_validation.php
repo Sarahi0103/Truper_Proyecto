@@ -615,10 +615,21 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
         </div>
     </main>
 
-    <script src="js/main.js?v=2.7"></script>
-    <script src="js/mobile-optimize.js"></script>
-    <script src="js/modals.js?v=4.2"></script>
+    <script src="<?php echo asset_url('js/main.js'); ?>"></script>
+    <script src="<?php echo asset_url('js/mobile-optimize.js'); ?>"></script>
+    <script src="<?php echo asset_url('js/modals.js'); ?>"></script>
     <script>
+        if (typeof safeNewDate !== 'function') {
+            window.safeNewDate = function(dateString) {
+                if (!dateString) return new Date();
+                if (dateString instanceof Date) return dateString;
+                let str = String(dateString).trim();
+                if (!str.includes('T')) {
+                    str = str.replace(/-/g, '/');
+                }
+                return new Date(str);
+            };
+        }
         window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8"); ?>';
 
         function escapeHtml(text) {
@@ -726,13 +737,13 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
 
         function displayTicketDetails(ticket) {
             document.getElementById('ticketFolio').textContent = ticket.folio;
-            document.getElementById('ticketDate').textContent = new Date(ticket.issued_date).toLocaleDateString('es-ES');
+            document.getElementById('ticketDate').textContent = safeNewDate(ticket.issued_date).toLocaleDateString('es-ES');
             document.getElementById('customerName').textContent = ticket.customer_name || 'N/A';
             document.getElementById('customerEmail').textContent = ticket.email || 'N/A';
             document.getElementById('customerPhone').textContent = ticket.phone || 'N/A';
             document.getElementById('ticketTotal').textContent = '$' + parseFloat(ticket.total_amount).toFixed(2);
             document.getElementById('paymentStatus').textContent = ticket.payment_status === 'completed' ? 'PAGADO' : 'PENDIENTE';
-            document.getElementById('expirationDate').textContent = ticket.expiration_date ? new Date(ticket.expiration_date).toLocaleDateString('es-ES') : 'N/A';
+            document.getElementById('expirationDate').textContent = ticket.expiration_date ? safeNewDate(ticket.expiration_date).toLocaleDateString('es-ES') : 'N/A';
 
             // Status badge
             const statusElement = document.getElementById('ticketStatus');
@@ -743,7 +754,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             // Expiration warning
             const expirationWarning = document.getElementById('expirationWarning');
             if (ticket.expiration_date) {
-                const expirationDate = new Date(ticket.expiration_date);
+                const expirationDate = safeNewDate(ticket.expiration_date);
                 const today = new Date();
                 const daysUntilExpiration = Math.ceil((expirationDate - today) / (1000 * 60 * 60 * 24));
 
@@ -827,7 +838,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                         <div class="log-action">${escapeHtml(getActionText(log.action))}</div>
                         <div class="log-meta">
                             ${log.admin_name ? `Por: ${escapeHtml(log.admin_name)}` : ''} | 
-                            ${new Date(log.created_at).toLocaleString('es-ES')}
+                            ${safeNewDate(log.created_at).toLocaleString('es-ES')}
                         </div>
                         ${log.notes ? `<div style="margin-top: 0.5rem; color: #fff;">${escapeHtml(log.notes)}</div>` : ''}
                     </div>
@@ -951,7 +962,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                         <h1>TRUPER</h1>
                         <h2>Ticket de Validación</h2>
                         <p><strong>Folio:</strong> ${currentTicket.folio}</p>
-                        <p><strong>Fecha:</strong> ${new Date(currentTicket.issued_date).toLocaleDateString('es-MX')}</p>
+                        <p><strong>Fecha:</strong> ${safeNewDate(currentTicket.issued_date).toLocaleDateString('es-MX')}</p>
                     </div>
                     
                     <div class="ticket-info">
@@ -1105,7 +1116,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                                                 <td style="padding: 0.75rem; font-family: monospace; font-weight: bold; color: #ff7f00; cursor: pointer;" onclick="loadTicketDetails('${escapeHtml(t.folio)}')">${escapeHtml(t.folio)}</td>
                                                 <td style="padding: 0.75rem;">${escapeHtml(t.customer_name || 'N/A')}</td>
                                                 <td style="padding: 0.75rem;">${payBadge}</td>
-                                                <td style="padding: 0.75rem; color: #888;">${new Date(t.issued_date).toLocaleDateString('es-MX')}</td>
+                                                <td style="padding: 0.75rem; color: #888;">${safeNewDate(t.issued_date).toLocaleDateString('es-MX')}</td>
                                                 <td style="padding: 0.75rem; text-align: right; font-weight: bold;">$${parseFloat(t.total_amount || 0).toFixed(2)}</td>
                                                 <td style="padding: 0.75rem; text-align: center;">
                                                     <button onclick="loadTicketDetails('${escapeHtml(t.folio)}')" class="btn btn-small" style="background: #ff7f00; color: #fff; border: none; padding: 0.35rem 0.75rem; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.8rem; transition: background 0.2s;">Validar</button>
@@ -1166,7 +1177,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                                                         </span>
                                                     </td>
                                                     <td style="padding: 0.75rem;">${escapeHtml(log.admin_name || 'N/A')}</td>
-                                                    <td style="padding: 0.75rem; text-align: right; color: #888;">${new Date(log.created_at).toLocaleString('es-MX')}</td>
+                                                    <td style="padding: 0.75rem; text-align: right; color: #888;">${safeNewDate(log.created_at).toLocaleString('es-MX')}</td>
                                                 </tr>
                                             `;
                                         }).join('')}
