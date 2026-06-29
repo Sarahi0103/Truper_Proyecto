@@ -36,3 +36,6 @@ clean_base64_images.php
 cleanup_orphaned_images.php
 cache/
 
+# Scratch directory (development scripts)
+scratch/
+
