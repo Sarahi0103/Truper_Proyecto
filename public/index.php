@@ -428,7 +428,7 @@ function homepage_update_label($type) {
             </section>
         <?php endif; ?>
 
-        <section class="catalog-hero">
+        <section class="catalog-hero" style="background: linear-gradient(180deg, rgba(14, 14, 16, 0.75) 0%, rgba(23, 23, 26, 0.85) 100%), url('/img/fondo_portada_truper.png') center/cover no-repeat !important; background-size: cover !important;">
             <div class="module-badge module-main"><span class="module-glyph">CT</span> Catálogo principal</div>
             <h1>Catálogo Truper</h1>
             <p>Visualización ágil, sencilla y eficaz con precio, stock, variantes e información técnica.</p>

@@ -1739,7 +1739,7 @@ footer {
 
 .catalog-hero {
     background: linear-gradient(180deg, rgba(14, 14, 16, 0.75) 0%, rgba(23, 23, 26, 0.85) 100%),
-                url('/images/fondo_portada_truper.png') center/cover no-repeat !important;
+                url('/img/fondo_portada_truper.png') center/cover no-repeat !important;
     color: #ffffff;
     border-radius: 12px;
     padding: 2rem;

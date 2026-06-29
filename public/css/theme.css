@@ -470,7 +470,7 @@ textarea:focus,
 
 .catalog-hero {
     background: linear-gradient(180deg, rgba(14, 14, 16, 0.75) 0%, rgba(23, 23, 26, 0.85) 100%),
-                url('/images/fondo_portada_truper.png') center/cover no-repeat !important;
+                url('/img/fondo_portada_truper.png') center/cover no-repeat !important;
     color: #ffffff;
     border: 1px solid #333333;
     box-shadow: 0 18px 40px rgba(0, 0, 0, 0.4);
@@ -478,7 +478,7 @@ textarea:focus,
 
 :root[data-theme="dark"] .catalog-hero {
     background: linear-gradient(180deg, rgba(10, 10, 10, 0.8) 0%, rgba(20, 20, 20, 0.9) 100%),
-                url('/images/fondo_portada_truper.png') center/cover no-repeat !important;
+                url('/img/fondo_portada_truper.png') center/cover no-repeat !important;
     border-color: #333333;
     box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6);
 }
@@ -547,7 +547,7 @@ textarea:focus,
 
 .catalog-hero {
     background: linear-gradient(180deg, rgba(14, 14, 16, 0.75) 0%, rgba(23, 23, 26, 0.85) 100%),
-                url('/images/fondo_portada_truper.png') center/cover no-repeat !important;
+                url('/img/fondo_portada_truper.png') center/cover no-repeat !important;
     color: #ffffff;
     border: 1px solid #333333;
     box-shadow: 0 18px 40px rgba(0, 0, 0, 0.4);
@@ -625,7 +625,7 @@ textarea:focus,
 
 :root[data-theme="dark"] .catalog-hero {
     background: linear-gradient(180deg, rgba(10, 10, 10, 0.8) 0%, rgba(20, 20, 20, 0.9) 100%),
-                url('/images/fondo_portada_truper.png') center/cover no-repeat !important;
+                url('/img/fondo_portada_truper.png') center/cover no-repeat !important;
     border-color: #333333;
 }
 
