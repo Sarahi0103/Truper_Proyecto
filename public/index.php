@@ -431,7 +431,7 @@ function homepage_update_label($type) {
         <section class="catalog-hero" style="background: linear-gradient(180deg, rgba(14, 14, 16, 0.75) 0%, rgba(23, 23, 26, 0.85) 100%), url('/img/fondo_portada_truper.png') center/cover no-repeat !important; background-size: cover !important;">
             <div class="module-badge module-main"><span class="module-glyph">CT</span> Catálogo principal</div>
             <h1>Catálogo Truper</h1>
-            <p>Visualización ágil, sencilla y eficaz con precio, stock, variantes e información técnica.</p>
+            <p style="color: #ffffff !important; font-weight: 600 !important; font-size: 1.15rem !important; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9) !important; opacity: 1 !important;">Visualización ágil, sencilla y eficaz con precio, stock, variantes e información técnica.</p>
             <div style="margin-top: 12px;">
                 <a href="/marketplace_ce.php" class="btn btn-secondary btn-small">Ir a Marketplace CE (segunda mano)</a>
             </div>

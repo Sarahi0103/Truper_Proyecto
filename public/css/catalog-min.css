@@ -36,9 +36,11 @@ h1 {
 }
 
 .catalog-hero p {
-    color: #aaaaaa !important;
-    font-size: 1.1rem !important;
-    max-width: 600px !important;
+    color: #ffffff !important;
+    font-size: 1.15rem !important;
+    font-weight: 600 !important;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9) !important;
+    max-width: 650px !important;
     line-height: 1.6 !important;
     text-align: center !important;
 }

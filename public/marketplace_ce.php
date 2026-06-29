@@ -594,7 +594,7 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
         <section class="catalog-hero" style="background: linear-gradient(180deg, rgba(14, 14, 16, 0.75) 0%, rgba(23, 23, 26, 0.85) 100%), url('/img/Fondo_marketplace.jpg') center/cover no-repeat !important; background-size: cover !important;">
             <div class="module-badge module-main"><span class="module-glyph">CE</span> Segunda mano</div>
             <h1>Marketplace CE</h1>
-            <p>Artículos de medio uso en buen estado: herramientas eléctricas, escaleras y más. Opciones accesibles con verificación del establecimiento.</p>
+            <p style="color: #ffffff !important; font-weight: 600 !important; font-size: 1.15rem !important; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9) !important; opacity: 1 !important;">Artículos de medio uso en buen estado: herramientas eléctricas, escaleras y más. Opciones accesibles con verificación del establecimiento.</p>
         </section>
 
         <section class="catalog-shell">
