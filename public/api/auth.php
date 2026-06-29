@@ -115,27 +115,25 @@ try {
                 break;
             }
 
-            $email = sanitize($_POST['email'] ?? '');
+            $identifier = sanitize($_POST['email'] ?? ($_POST['username'] ?? ''));
             $password = $_POST['password'] ?? '';
             
-            // Validar email
-            $validated_email = SecurityValidator::validateEmail($email);
-            if (!$validated_email) {
-                $response = ['success' => false, 'message' => 'Email inválido'];
+            if (trim($identifier) === '') {
+                $response = ['success' => false, 'message' => 'Usuario y contraseña requeridos'];
                 break;
             }
             
-            // Rate limiting por IP + email
-            $loginKey = 'login_attempts_' . hash('sha256', strtolower($validated_email) . '_' . IPSecurity::getClientIP());
+            // Rate limiting por IP + identificador
+            $loginKey = 'login_attempts_' . hash('sha256', strtolower($identifier) . '_' . IPSecurity::getClientIP());
             $limiter = new RateLimiter($pdo);
             if (!$limiter->checkLimit($loginKey, 6, 900)) {
                 $response = ['success' => false, 'message' => 'Demasiados intentos. Intenta en 15 minutos.'];
                 $secLogger = new SecurityLogger($pdo);
-                $secLogger->logEvent('RATE_LIMIT_EXCEEDED', "Email: $validated_email", 'HIGH');
+                $secLogger->logEvent('RATE_LIMIT_EXCEEDED', "Usuario: $identifier", 'HIGH');
                 break;
             }
 
-            $response = $auth->login($validated_email, $password);
+            $response = $auth->login($identifier, $password);
 
             if ($response['success']) {
                 auth_rate_limit_reset($loginKey);
@@ -143,7 +141,7 @@ try {
                 
                 // Log de seguridad
                 $secLogger = new SecurityLogger($pdo);
-                $secLogger->logEvent('LOGIN_SUCCESS', "Email: $validated_email", 'LOW', $_SESSION['user_id']);
+                $secLogger->logEvent('LOGIN_SUCCESS', "Usuario: $identifier", 'LOW', $_SESSION['user_id']);
                 
                 $engagement = apply_login_engagement_rules($_SESSION['user_id']);
                 if (!empty($engagement['birthday_bonus_awarded'])) {
@@ -156,7 +154,7 @@ try {
             } else {
                 // Log de login fallido
                 $secLogger = new SecurityLogger($pdo);
-                $secLogger->logFailedLogin($validated_email, $response['message'] ?? 'Invalid credentials');
+                $secLogger->logFailedLogin($identifier, $response['message'] ?? 'Invalid credentials');
             }
             break;
 

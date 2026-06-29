@@ -327,8 +327,8 @@ if (is_logged_in()) {
                         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
                         <input type="hidden" name="return_to" value="<?php echo htmlspecialchars((string)$return_to, ENT_QUOTES, 'UTF-8'); ?>">
                         <div class="form-group">
-                            <label for="email">Email o teléfono</label>
-                            <input type="text" id="email" name="email" required placeholder="Agrega tu correo designado" maxlength="255" autocomplete="username">
+                            <label for="email">Usuario o correo</label>
+                            <input type="text" id="email" name="email" required placeholder="Ingresa tu usuario" maxlength="255" autocomplete="username">
                         </div>
 
                         <div class="form-group">

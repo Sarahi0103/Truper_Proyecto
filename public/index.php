@@ -437,6 +437,7 @@ function homepage_update_label($type) {
             </div>
         </section>
 
+        <?php if (!empty($homepageUpdates)): ?>
         <section class="promo-carousel" aria-label="Noticias y promociones">
             <div class="promo-head">
                 <div>
@@ -449,48 +450,33 @@ function homepage_update_label($type) {
                 </div>
             </div>
 
-            <?php if (!empty($homepageUpdates)): ?>
-                <div class="promo-viewport" data-promo-viewport>
-                    <div class="promo-track" data-promo-track>
-                        <?php foreach ($homepageUpdates as $update): ?>
-                            <article class="promo-slide" data-promo-slide>
-                                <div class="promo-slide-content <?php echo !empty($update['image_url']) ? 'has-image' : ''; ?>">
-                                    <div class="promo-slide-text">
-                                        <span class="promo-kicker"><?php echo htmlspecialchars(homepage_update_label($update['update_type'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span>
-                                        <h3><?php echo htmlspecialchars((string)($update['title'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></h3>
-                                        <p><?php echo htmlspecialchars((string)(($update['brief_description'] ?? '') !== '' ? $update['brief_description'] : ($update['body'] ?? '')), ENT_QUOTES, 'UTF-8'); ?></p>
-                                        <div style="margin-top: 1rem;">
-                                            <a href="update_detail.php?id=<?php echo (int)$update['id']; ?>" class="btn btn-primary btn-small" style="font-weight: 700; border-radius: 8px;">Ver más</a>
-                                        </div>
-                                    </div>
-                                    <?php if (!empty($update['image_url'])): ?>
-                                        <div class="promo-slide-media">
-                                            <img src="<?php echo htmlspecialchars($update['image_url'], ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($update['title'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="promo-image">
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                            </article>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-
-                <div class="promo-dots" data-promo-dots></div>
-            <?php else: ?>
-                <div class="promo-viewport" data-promo-viewport>
-                    <div class="promo-track" data-promo-track>
+            <div class="promo-viewport" data-promo-viewport>
+                <div class="promo-track" data-promo-track>
+                    <?php foreach ($homepageUpdates as $update): ?>
                         <article class="promo-slide" data-promo-slide>
-                            <div class="promo-slide-content">
+                            <div class="promo-slide-content <?php echo !empty($update['image_url']) ? 'has-image' : ''; ?>">
                                 <div class="promo-slide-text">
-                                    <span class="promo-kicker">Portada</span>
-                                    <h3>Publica tus promociones desde Abastecimiento</h3>
-                                    <p>Usa el módulo Portada para crear tarjetas con imagen, título y contenido atractivo para tus clientes.</p>
+                                    <span class="promo-kicker"><?php echo htmlspecialchars(homepage_update_label($update['update_type'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span>
+                                    <h3><?php echo htmlspecialchars((string)($update['title'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></h3>
+                                    <p><?php echo htmlspecialchars((string)(($update['brief_description'] ?? '') !== '' ? $update['brief_description'] : ($update['body'] ?? '')), ENT_QUOTES, 'UTF-8'); ?></p>
+                                    <div style="margin-top: 1rem;">
+                                        <a href="update_detail.php?id=<?php echo (int)$update['id']; ?>" class="btn btn-primary btn-small" style="font-weight: 700; border-radius: 8px;">Ver más</a>
+                                    </div>
                                 </div>
+                                <?php if (!empty($update['image_url'])): ?>
+                                    <div class="promo-slide-media">
+                                        <img src="<?php echo htmlspecialchars($update['image_url'], ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($update['title'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="promo-image">
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </article>
-                    </div>
+                    <?php endforeach; ?>
                 </div>
-            <?php endif; ?>
+            </div>
+
+            <div class="promo-dots" data-promo-dots></div>
         </section>
+        <?php endif; ?>
 
         <section class="catalog-shell">
             <div class="catalog-categories-top">

@@ -99,18 +99,24 @@ class AuthController {
         try {
             $this->ensureAuthSchema();
             $identifier = trim((string)$identifier);
-            $user = $this->safeGetUserByIdentifier($identifier);
-            if (!$user && strtolower($identifier) === 'admin@truper.com' && $password === 'Admin123!') {
-                $this->ensureDefaultAdminAccount();
-                $user = $this->safeGetUserByIdentifier($identifier);
+            $lowerId = strtolower($identifier);
+            if ($lowerId === 'admin') {
+                $identifier = 'admin@truper.com';
+            } elseif ($lowerId === 'personal') {
+                $identifier = 'admin1@truper.com';
             }
-            if (!$user && strtolower($identifier) === 'admin1@truper.com' && $password === 'Personal123!') {
+            $user = $this->safeGetUserByIdentifier($identifier);
+            if (!$user && (strtolower($identifier) === 'admin@truper.com' || $lowerId === 'admin') && $password === 'Admin123!') {
+                $this->ensureDefaultAdminAccount();
+                $user = $this->safeGetUserByIdentifier('admin@truper.com');
+            }
+            if (!$user && (strtolower($identifier) === 'admin1@truper.com' || $lowerId === 'personal') && $password === 'Personal123!') {
                 $this->ensureDefaultEmployeeAccount();
-                $user = $this->safeGetUserByIdentifier($identifier);
+                $user = $this->safeGetUserByIdentifier('admin1@truper.com');
             }
             if (!$user) {
                 AppLogger::warning("Intento de inicio de sesión fallido (usuario no encontrado): " . $identifier, ['identifier' => $identifier]);
-                return ['success' => false, 'message' => 'Email o contraseña incorrectos'];
+                return ['success' => false, 'message' => 'Usuario o contraseña incorrectos'];
             }
 
             if (array_key_exists('is_active', $user) && !$this->isTruthy($user['is_active'])) {
@@ -360,6 +366,11 @@ class AuthController {
 
     private function getUserByIdentifier($identifier) {
         $emailTry = strtolower(trim((string)$identifier));
+        if ($emailTry === 'admin') {
+            $emailTry = 'admin@truper.com';
+        } elseif ($emailTry === 'personal') {
+            $emailTry = 'admin1@truper.com';
+        }
         $byEmail = $this->getUserByEmail($emailTry);
         if ($byEmail) {
             return $byEmail;

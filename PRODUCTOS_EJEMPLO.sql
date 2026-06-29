@@ -1,1 +1,0 @@
--- Archivo de ejemplo desactivado: se retiraron los inserts de productos de prueba.

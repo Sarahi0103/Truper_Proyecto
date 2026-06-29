@@ -1002,23 +1002,9 @@ $first_name = explode(' ', $user_name)[0];
             // Load expenses stats asynchronously, bypassing metrics cache
             loadExpensesMetricsDirectly(expEl, netEl, revEl);
 
-            // Check cache first (5 min TTL) - Mejora de caché de métricas
+            // Cargar métricas directamente en tiempo real
             const cacheKey = 'dash_metrics_' + (<?php echo $_SESSION['user_id'] ?? 0; ?>);
-            const cached = localStorage.getItem(cacheKey);
-            if (cached) {
-                const data = JSON.parse(cached);
-                if (Date.now() - data.timestamp < 300000) { // 5 minutes
-                    animateCount(ordEl, data.orders);
-                    if (!isStaff && revEl) {
-                        revEl.classList.remove('db-skeleton');
-                        revEl.style.animation = 'countUp .4s ease';
-                        revEl.textContent = '$' + data.revenue.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-                    }
-                    animateCount(pendEl, data.pending);
-                    animateCount(taskEl, data.tasks);
-                    return;
-                }
-            }
+            localStorage.removeItem(cacheKey);
 
             const currentYear = new Date().getFullYear();
             const currentMonth = new Date().getMonth() + 1;
