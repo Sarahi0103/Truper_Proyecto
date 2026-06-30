@@ -17,6 +17,8 @@ public/images/products/gallery/
 public/images/products/by_code/
 images/products/
 img/
+!public/img/logo_fox.png
+!public/img/favicon_fox.png
 *.sha1
 
 # Test scripts and temporary files
