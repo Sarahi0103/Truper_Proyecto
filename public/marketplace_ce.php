@@ -56,7 +56,10 @@ try {
         AND pc.is_active = false
     )";
 
-    $sqlCe = "SELECT id, {$nameExpr} AS name, {$skuExpr} AS sku, {$priceExpr} AS unit_price, {$categoryExpr} AS category, {$descriptionExpr} AS description, {$conditionExpr} AS condition_label, {$stockExpr} AS stock_quantity, {$imageExpr} AS image_url, {$variantsExpr} AS variants_json FROM marketplace_ce_products" . $productsVisibilityWhere . " ORDER BY name LIMIT 300";
+    $netPriceExpr = db_column_exists('marketplace_ce_products', 'net_price') ? 'COALESCE(net_price, unit_price, 0)' : $priceExpr;
+    $discountExpr = db_column_exists('marketplace_ce_products', 'discount_percentage') ? 'COALESCE(discount_percentage, 0)' : '0';
+
+    $sqlCe = "SELECT id, {$nameExpr} AS name, {$skuExpr} AS sku, {$priceExpr} AS unit_price, {$netPriceExpr} AS net_price, {$discountExpr} AS discount_percentage, {$categoryExpr} AS category, {$descriptionExpr} AS description, {$conditionExpr} AS condition_label, {$stockExpr} AS stock_quantity, {$imageExpr} AS image_url, {$variantsExpr} AS variants_json FROM marketplace_ce_products" . $productsVisibilityWhere . " ORDER BY name LIMIT 300";
     $stmtCe = $pdo->prepare($sqlCe);
     $stmtCe->execute();
     $marketplaceItems = $stmtCe->fetchAll();
@@ -689,7 +692,23 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
                             <span class="stock-badge <?php echo $stockClass; ?>">
                                 <?php echo $stockLabel . $itemStock; ?>
                             </span>
-                            <div class="catalog-price">$<?php echo number_format($itemPrice, 2, '.', ','); ?></div>
+                            <?php if (isset($item['discount_percentage']) && (float)$item['discount_percentage'] > 0): ?>
+                                <div class="catalog-price-container" style="display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px;">
+                                    <div class="original-price-wrap" style="display: flex; align-items: center; gap: 8px;">
+                                        <span class="price-base" style="text-decoration: line-through; color: rgba(255, 255, 255, 0.4); font-size: 0.85rem;">
+                                            $<?php echo number_format((float)($item['net_price'] ?? $itemPrice), 2, '.', ','); ?>
+                                        </span>
+                                        <span class="discount-badge" style="background: rgba(255, 102, 0, 0.15); color: var(--color-naranja, #ff6600); font-size: 0.75rem; font-weight: bold; padding: 2px 6px; border-radius: 4px;">
+                                            <?php echo (float)$item['discount_percentage']; ?>% OFF
+                                        </span>
+                                    </div>
+                                    <div class="catalog-price" style="color: #fff; font-weight: 700; font-size: 1.2rem; padding: 0;">
+                                        $<?php echo number_format($itemPrice, 2, '.', ','); ?>
+                                    </div>
+                                </div>
+                            <?php else: ?>
+                                <div class="catalog-price">$<?php echo number_format($itemPrice, 2, '.', ','); ?></div>
+                            <?php endif; ?>
                             <div class="product-actions">
                                 <button
                                     type="button"

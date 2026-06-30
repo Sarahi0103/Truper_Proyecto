@@ -176,5 +176,19 @@ if ($pdo === null) {
     exit(0);
 }
 
+// Migraciones automáticas del sistema (Descuento y Precio Base)
+try {
+    $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS net_price DECIMAL(10,2)");
+} catch (Exception $ignored) {}
+try {
+    $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_percentage DECIMAL(5,2) DEFAULT 0");
+} catch (Exception $ignored) {}
+try {
+    $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS net_price DECIMAL(12,2)");
+} catch (Exception $ignored) {}
+try {
+    $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS discount_percentage DECIMAL(5,2) DEFAULT 0");
+} catch (Exception $ignored) {}
+
 return $pdo;
 ?>

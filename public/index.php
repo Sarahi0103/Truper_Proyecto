@@ -44,7 +44,7 @@ try {
         AND pc.is_active = false
     )";
 
-    $stmt = $pdo->prepare("SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category, description, technical_specs, stock_quantity, image_url, variants_json FROM products" . $visibilityWhere . " ORDER BY name LIMIT 200");
+    $stmt = $pdo->prepare("SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, COALESCE(net_price, unit_price, sell_price, 0) AS net_price, COALESCE(discount_percentage, 0) AS discount_percentage, category, description, technical_specs, stock_quantity, image_url, variants_json FROM products" . $visibilityWhere . " ORDER BY name LIMIT 200");
     $stmt->execute();
     $products = $stmt->fetchAll();
 } catch (Exception $e) {
@@ -590,7 +590,23 @@ function homepage_update_label($type) {
                             <span class="stock-badge <?php echo $stock <= 10 ? 'stock-low' : 'stock-ok'; ?>">
                                 <?php echo $stock <= 10 ? 'Stock bajo: ' : 'Stock: '; ?><?php echo $stock; ?>
                             </span>
-                            <div class="catalog-price"><?php echo '$' . number_format((float)$product['unit_price'], 2, '.', ','); ?></div>
+                            <?php if (isset($product['discount_percentage']) && (float)$product['discount_percentage'] > 0): ?>
+                                <div class="catalog-price-container" style="display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px;">
+                                    <div class="original-price-wrap" style="display: flex; align-items: center; gap: 8px;">
+                                        <span class="price-base" style="text-decoration: line-through; color: rgba(255, 255, 255, 0.4); font-size: 0.85rem;">
+                                            $<?php echo number_format((float)$product['net_price'], 2, '.', ','); ?>
+                                        </span>
+                                        <span class="discount-badge" style="background: rgba(255, 102, 0, 0.15); color: var(--color-naranja, #ff6600); font-size: 0.75rem; font-weight: bold; padding: 2px 6px; border-radius: 4px;">
+                                            <?php echo (float)$product['discount_percentage']; ?>% OFF
+                                        </span>
+                                    </div>
+                                    <div class="catalog-price" style="color: #fff; font-weight: 700; font-size: 1.2rem; padding: 0;">
+                                        $<?php echo number_format((float)$product['unit_price'], 2, '.', ','); ?>
+                                    </div>
+                                </div>
+                            <?php else: ?>
+                                <div class="catalog-price"><?php echo '$' . number_format((float)$product['unit_price'], 2, '.', ','); ?></div>
+                            <?php endif; ?>
                             <div class="product-actions">
                                 <button
                                     type="button"

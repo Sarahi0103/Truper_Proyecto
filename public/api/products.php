@@ -359,14 +359,24 @@ try {
             $value = (float)($input['value'] ?? 0);
             $exclude_skus = $input['exclude_skus'] ?? [];
             $target = $input['target'] ?? 'stock';
+            $filter_mode = $input['filter_mode'] ?? 'exclude';
+
+            $table = $target === 'marketplace' ? 'marketplace_ce_products' : 'products';
+
+            $netPriceSelect = db_column_exists($table, 'net_price')
+                ? "COALESCE(net_price, unit_price, 0) AS net_price"
+                : "unit_price AS net_price";
+            $discountSelect = db_column_exists($table, 'discount_percentage')
+                ? "COALESCE(discount_percentage, 0) AS discount_percentage"
+                : "0 AS discount_percentage";
 
             if ($target === 'marketplace') {
-                $stmt = $pdo->prepare("SELECT id, name, sku, unit_price FROM marketplace_ce_products WHERE is_active = true ORDER BY name LIMIT 500");
+                $stmt = $pdo->prepare("SELECT id, name, sku, unit_price, {$netPriceSelect}, {$discountSelect} FROM marketplace_ce_products WHERE is_active = true ORDER BY name LIMIT 500");
                 $stmt->execute();
             } else {
-                $stmt = $pdo->prepare("SELECT id, name, sku, unit_price FROM products WHERE is_active = true ORDER BY name LIMIT 500");
+                $stmt = $pdo->prepare("SELECT id, name, sku, unit_price, {$netPriceSelect}, {$discountSelect} FROM products WHERE is_active = true ORDER BY name LIMIT 500");
                 if (!$stmt->execute()) {
-                    $stmt = $pdo->prepare("SELECT id, name, sku, sell_price AS unit_price FROM products ORDER BY name LIMIT 500");
+                    $stmt = $pdo->prepare("SELECT id, name, sku, sell_price AS unit_price, sell_price AS net_price, 0 AS discount_percentage FROM products ORDER BY name LIMIT 500");
                     $stmt->execute();
                 }
             }
@@ -376,17 +386,38 @@ try {
             $count = 0;
             foreach ($products as $p) {
                 $sku = strtoupper(preg_replace('/^XLS-/i', '', (string)$p['sku']));
-                if (in_array($sku, array_map('strtoupper', $exclude_skus), true)) continue;
+                $in_list = in_array($sku, array_map('strtoupper', $exclude_skus), true);
+                if ($filter_mode === 'include') {
+                    if (!$in_list) continue;
+                } else {
+                    if ($in_list) continue;
+                }
 
                 $current = (float)$p['unit_price'];
-                $new = $type === 'percentage' ? round($current * (1 + $value / 100), 2) : round($current + $value, 2);
+                $net_price = (float)($p['net_price'] ?? $current);
+                $discount_percentage = (float)($p['discount_percentage'] ?? 0);
+
+                if ($type === 'discount') {
+                    $new_discount = $value;
+                    $new_net = $net_price;
+                    $new = round($new_net * (1 - $new_discount / 100), 2);
+                } else {
+                    $new_discount = $discount_percentage;
+                    $new_net = $type === 'percentage' ? round($net_price * (1 + $value / 100), 2) : round($net_price + $value, 2);
+                    $new = round($new_net * (1 - $new_discount / 100), 2);
+                }
                 
                 $count++;
                 if (count($preview) < 5) {
                     $preview[] = [
                         'name' => $p['name'],
+                        'sku' => $p['sku'],
                         'current_price' => $current,
-                        'new_price' => $new
+                        'net_price' => $net_price,
+                        'discount_percentage' => $discount_percentage,
+                        'new_price' => $new,
+                        'new_net_price' => $new_net,
+                        'new_discount' => $new_discount
                     ];
                 }
             }
@@ -405,50 +436,78 @@ try {
             $value = (float)($input['value'] ?? 0);
             $exclude_skus = $input['exclude_skus'] ?? [];
             $target = $input['target'] ?? 'stock';
+            $filter_mode = $input['filter_mode'] ?? 'exclude';
             $affect_count = 0;
 
-            if ($target === 'marketplace') {
-                $stmt = $pdo->prepare("SELECT id, sku, unit_price FROM marketplace_ce_products WHERE is_active = true");
-                $stmt->execute();
-                $products = $stmt->fetchAll();
+            $table = $target === 'marketplace' ? 'marketplace_ce_products' : 'products';
 
-                foreach ($products as $p) {
-                    $sku = strtoupper(preg_replace('/^XLS-/i', '', (string)$p['sku']));
-                    if (in_array($sku, array_map('strtoupper', $exclude_skus), true)) continue;
+            $netPriceSelect = db_column_exists($table, 'net_price')
+                ? "COALESCE(net_price, unit_price, 0) AS net_price"
+                : "unit_price AS net_price";
+            $discountSelect = db_column_exists($table, 'discount_percentage')
+                ? "COALESCE(discount_percentage, 0) AS discount_percentage"
+                : "0 AS discount_percentage";
 
-                    $current = (float)$p['unit_price'];
-                    $new = $type === 'percentage' ? round($current * (1 + $value / 100), 2) : round($current + $value, 2);
-
-                    $upstmt = $pdo->prepare("UPDATE marketplace_ce_products SET unit_price = ? WHERE id = ?");
-                    $upstmt->execute([$new, (int)$p['id']]);
-                    $affect_count++;
-                }
-            } else {
-                $stmt = $pdo->prepare("SELECT id, sku, unit_price FROM products WHERE is_active = true");
+            $stmt = $pdo->prepare("SELECT id, sku, unit_price, {$netPriceSelect}, {$discountSelect} FROM {$table}");
+            if ($target === 'stock') {
                 if (!$stmt->execute()) {
-                    $stmt = $pdo->prepare("SELECT id, sku, sell_price AS unit_price FROM products");
+                    $stmt = $pdo->prepare("SELECT id, sku, sell_price AS unit_price, sell_price AS net_price, 0 AS discount_percentage FROM products");
                     $stmt->execute();
                 }
-                $products = $stmt->fetchAll();
+            } else {
+                $stmt->execute();
+            }
+            $products = $stmt->fetchAll();
 
-                foreach ($products as $p) {
-                    $sku = strtoupper(preg_replace('/^XLS-/i', '', (string)$p['sku']));
-                    if (in_array($sku, array_map('strtoupper', $exclude_skus), true)) continue;
+            foreach ($products as $p) {
+                $sku = strtoupper(preg_replace('/^XLS-/i', '', (string)$p['sku']));
+                $in_list = in_array($sku, array_map('strtoupper', $exclude_skus), true);
+                if ($filter_mode === 'include') {
+                    if (!$in_list) continue;
+                } else {
+                    if ($in_list) continue;
+                }
 
-                    $current = (float)$p['unit_price'];
-                    $new = $type === 'percentage' ? round($current * (1 + $value / 100), 2) : round($current + $value, 2);
-                    
-                    try {
-                        $upstmt = $pdo->prepare("UPDATE products SET unit_price = ? WHERE id = ?");
-                        $upstmt->execute([$new, (int)$p['id']]);
-                        $affect_count++;
-                    } catch (Exception $e1) {
-                        try {
-                            $upstmt = $pdo->prepare("UPDATE products SET sell_price = ? WHERE id = ?");
-                            $upstmt->execute([$new, (int)$p['id']]);
-                            $affect_count++;
-                        } catch(Exception $e2) {}
-                    }
+                $current = (float)$p['unit_price'];
+                $net_price = (float)($p['net_price'] ?? $current);
+                $discount_percentage = (float)($p['discount_percentage'] ?? 0);
+
+                if ($type === 'discount') {
+                    $new_discount = $value;
+                    $new_net = $net_price;
+                    $new = round($new_net * (1 - $new_discount / 100), 2);
+                } else {
+                    $new_discount = $discount_percentage;
+                    $new_net = $type === 'percentage' ? round($net_price * (1 + $value / 100), 2) : round($net_price + $value, 2);
+                    $new = round($new_net * (1 - $new_discount / 100), 2);
+                }
+
+                $setParts = [];
+                $params = [];
+
+                if (db_column_exists($table, 'unit_price')) {
+                    $setParts[] = "unit_price = ?";
+                    $params[] = $new;
+                } elseif (db_column_exists($table, 'sell_price')) {
+                    $setParts[] = "sell_price = ?";
+                    $params[] = $new;
+                }
+
+                if (db_column_exists($table, 'net_price')) {
+                    $setParts[] = "net_price = ?";
+                    $params[] = $new_net;
+                }
+
+                if (db_column_exists($table, 'discount_percentage')) {
+                    $setParts[] = "discount_percentage = ?";
+                    $params[] = $new_discount;
+                }
+
+                if (!empty($setParts)) {
+                    $params[] = (int)$p['id'];
+                    $upstmt = $pdo->prepare("UPDATE {$table} SET " . implode(', ', $setParts) . " WHERE id = ?");
+                    $upstmt->execute($params);
+                    $affect_count++;
                 }
             }
 
@@ -467,23 +526,51 @@ try {
             }
 
             $target = $input['target'] ?? 'stock';
+            $exclude_skus = $input['exclude_skus'] ?? [];
+            $filter_mode = $input['filter_mode'] ?? 'exclude';
             $affect_count = 0;
 
-            if ($target === 'marketplace') {
-                $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET unit_price = net_price WHERE net_price IS NOT NULL");
-                $stmt->execute();
-                $affect_count = $stmt->rowCount();
-            } else {
-                try {
-                    $stmt = $pdo->prepare("UPDATE products SET unit_price = net_price WHERE net_price IS NOT NULL");
+            $table = $target === 'marketplace' ? 'marketplace_ce_products' : 'products';
+
+            // Fetch all products that have a net_price
+            $stmt = $pdo->prepare("SELECT id, sku FROM {$table} WHERE net_price IS NOT NULL");
+            if ($target === 'stock') {
+                if (!$stmt->execute()) {
+                    $stmt = $pdo->prepare("SELECT id, sku FROM products");
                     $stmt->execute();
-                    $affect_count = $stmt->rowCount();
-                } catch (Exception $e1) {
-                    try {
-                        $stmt = $pdo->prepare("UPDATE products SET sell_price = net_price WHERE net_price IS NOT NULL");
-                        $stmt->execute();
-                        $affect_count = $stmt->rowCount();
-                    } catch (Exception $e2) {}
+                }
+            } else {
+                $stmt->execute();
+            }
+            $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($items as $item) {
+                $sku = strtoupper(preg_replace('/^XLS-/i', '', (string)$item['sku']));
+                $in_list = in_array($sku, array_map('strtoupper', $exclude_skus), true);
+                if ($filter_mode === 'include') {
+                    if (!$in_list) continue;
+                } else {
+                    if ($in_list) continue;
+                }
+
+                $setParts = [];
+                $params = [];
+
+                if (db_column_exists($table, 'unit_price')) {
+                    $setParts[] = "unit_price = net_price";
+                } elseif (db_column_exists($table, 'sell_price')) {
+                    $setParts[] = "sell_price = net_price";
+                }
+
+                if (db_column_exists($table, 'discount_percentage')) {
+                    $setParts[] = "discount_percentage = 0";
+                }
+
+                if (!empty($setParts)) {
+                    $params[] = (int)$item['id'];
+                    $upstmt = $pdo->prepare("UPDATE {$table} SET " . implode(', ', $setParts) . " WHERE id = ?");
+                    $upstmt->execute($params);
+                    $affect_count++;
                 }
             }
 

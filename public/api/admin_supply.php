@@ -986,9 +986,23 @@ function ensure_products_extra_columns($pdo): void {
         $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS stock_quantity INTEGER DEFAULT 0");
         $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS reorder_level INTEGER DEFAULT 10");
         $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true");
-    } catch (Exception $ignored) {
-        // En esquemas legados puede fallar; se maneja con inserciones alternativas.
-    }
+    } catch (Exception $ignored) {}
+
+    try {
+        $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS net_price DECIMAL(10,2)");
+    } catch (Exception $ignored) {}
+
+    try {
+        $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_percentage DECIMAL(5,2) DEFAULT 0");
+    } catch (Exception $ignored) {}
+
+    try {
+        $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS net_price DECIMAL(12,2)");
+    } catch (Exception $ignored) {}
+
+    try {
+        $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS discount_percentage DECIMAL(5,2) DEFAULT 0");
+    } catch (Exception $ignored) {}
 }
 
 function ensure_products_sku_integrity_admin_supply($pdo): void {
@@ -2351,17 +2365,26 @@ function create_product_compatible($pdo, array $payload): void {
         $values[] = (int)$payload['reorder_level'];
     }
 
+    $discount = (float)($payload['discount_percentage'] ?? 0);
+    $basePrice = (float)$payload['price'];
+    $finalPrice = $basePrice * (1 - $discount / 100);
+
     if (db_column_exists('products', 'unit_price')) {
         $columns[] = 'unit_price';
-        $values[] = (float)number_format((float)$payload['price'], 2, '.', '');
+        $values[] = (float)number_format($finalPrice, 2, '.', '');
     } elseif (db_column_exists('products', 'sell_price')) {
         $columns[] = 'sell_price';
-        $values[] = (float)number_format((float)$payload['price'], 2, '.', '');
+        $values[] = (float)number_format($finalPrice, 2, '.', '');
     }
 
     if (db_column_exists('products', 'net_price')) {
         $columns[] = 'net_price';
-        $values[] = (float)number_format((float)$payload['price'], 2, '.', '');
+        $values[] = (float)number_format($basePrice, 2, '.', '');
+    }
+
+    if (db_column_exists('products', 'discount_percentage')) {
+        $columns[] = 'discount_percentage';
+        $values[] = $discount;
     }
 
     if (db_column_exists('products', 'is_active')) {
@@ -2426,9 +2449,14 @@ function update_product_compatible($pdo, int $id, array $payload): void {
         if (db_column_exists('products', 'variants_json')) { $sets[] = 'variants_json = ?'; $values[] = $payload['variants_json'] ?? '[]'; }
     if (db_column_exists('products', 'stock_quantity')) { $sets[] = 'stock_quantity = ?'; $values[] = (int)$payload['stock_quantity']; }
     if (db_column_exists('products', 'reorder_level')) { $sets[] = 'reorder_level = ?'; $values[] = (int)$payload['reorder_level']; }
-    if (db_column_exists('products', 'unit_price')) { $sets[] = 'unit_price = ?'; $values[] = (float)number_format((float)$payload['price'], 2, '.', ''); }
-    elseif (db_column_exists('products', 'sell_price')) { $sets[] = 'sell_price = ?'; $values[] = (float)number_format((float)$payload['price'], 2, '.', ''); }
-    if (db_column_exists('products', 'net_price')) { $sets[] = 'net_price = ?'; $values[] = (float)number_format((float)$payload['price'], 2, '.', ''); }
+    $discount = (float)($payload['discount_percentage'] ?? 0);
+    $basePrice = (float)$payload['price'];
+    $finalPrice = $basePrice * (1 - $discount / 100);
+
+    if (db_column_exists('products', 'unit_price')) { $sets[] = 'unit_price = ?'; $values[] = (float)number_format($finalPrice, 2, '.', ''); }
+    elseif (db_column_exists('products', 'sell_price')) { $sets[] = 'sell_price = ?'; $values[] = (float)number_format($finalPrice, 2, '.', ''); }
+    if (db_column_exists('products', 'net_price')) { $sets[] = 'net_price = ?'; $values[] = (float)number_format($basePrice, 2, '.', ''); }
+    if (db_column_exists('products', 'discount_percentage')) { $sets[] = 'discount_percentage = ?'; $values[] = $discount; }
     if (db_column_exists('products', 'updated_at')) { $sets[] = 'updated_at = CURRENT_TIMESTAMP'; }
     
     if (empty($sets)) {
@@ -2730,8 +2758,15 @@ function list_stock_products_compatible($pdo, int $limit = 50, int $offset = 0):
         ? "(CASE WHEN is_active IS NULL THEN 1 WHEN LOWER(CAST(is_active AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) AS is_active"
         : (db_column_exists('products', 'active') ? "(CASE WHEN active = 1 THEN 1 ELSE 0 END) AS is_active" : "1 AS is_active");
 
+    $netPriceSelect = db_column_exists('products', 'net_price')
+        ? "COALESCE(net_price, unit_price, 0) AS net_price"
+        : ($priceSelect !== "0 AS unit_price" ? "COALESCE(unit_price, sell_price, 0) AS net_price" : "0 AS net_price");
+    $discountSelect = db_column_exists('products', 'discount_percentage')
+        ? "COALESCE(discount_percentage, 0) AS discount_percentage"
+        : "0 AS discount_percentage";
+
     // Optimized SQL query with LIMIT and OFFSET (Explicitly cast for PostgreSQL)
-    $sql = "SELECT id, {$skuSelect}, {$nameSelect}, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect} 
+    $sql = "SELECT id, {$skuSelect}, {$nameSelect}, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect}, {$netPriceSelect}, {$discountSelect} 
             FROM products 
             ORDER BY id DESC 
             LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
@@ -2906,6 +2941,7 @@ try {
             $price = (float)($_POST['price'] ?? ($input['price'] ?? 0));
             $stockQty = (int)($_POST['stock_quantity'] ?? ($input['stock_quantity'] ?? 50));
             $reorder = (int)($_POST['reorder_level'] ?? ($input['reorder_level'] ?? 10));
+            $discount = (float)($_POST['discount_percentage'] ?? ($input['discount_percentage'] ?? 0));
             $allowSeedSku = in_array((string)($_POST['allow_seed_sku'] ?? ($input['allow_seed_sku'] ?? '0')), ['1', 'true', 'TRUE', 'yes', 'on'], true);
 
             if ($sku === '' || $name === '') {
@@ -2965,6 +3001,7 @@ try {
                 'description' => $description,
                 'barcode' => $barcode,
                 'price' => $price,
+                'discount_percentage' => $discount,
                 'stock_quantity' => max(0, $stockQty),
                 'reorder_level' => max(0, $reorder),
                 'image_url' => $imageUrl
@@ -3032,6 +3069,7 @@ try {
             $price = (float)($input['price'] ?? 0);
             $stockQty = (int)($input['stock_quantity'] ?? 50);
             $reorder = (int)($input['reorder_level'] ?? 10);
+            $discount = (float)($input['discount_percentage'] ?? 0);
             $imageUrl = sanitize($input['image_url'] ?? 'images/products/default-product.svg');
             $isVisible = normalize_bool_admin_supply($input['is_visible'] ?? null, true);
             $allowSeedSku = in_array((string)($input['allow_seed_sku'] ?? '0'), ['1', 'true', 'TRUE', 'yes', 'on'], true);
@@ -3123,8 +3161,9 @@ try {
                     'category' => $category,
                     'description' => $description,
                     'barcode' => $barcode,
-                        'price' => $price,
-                        'variants_json' => $variantsJson,
+                    'price' => $price,
+                    'discount_percentage' => $discount,
+                    'variants_json' => $variantsJson,
                     'stock_quantity' => max(0, $stockQty),
                     'reorder_level' => max(0, $reorder),
                     'image_url' => $finalImageUrl,
@@ -3191,15 +3230,16 @@ try {
                 $variantsJson = json_encode($finalGallery, JSON_UNESCAPED_UNICODE);
             
                 create_product_compatible($pdo, [
-                'sku' => $sku,
-                'name' => $name,
-                'category' => $category,
-                'description' => $description,
-                'barcode' => $barcode,
-                'price' => $price,
-                'stock_quantity' => max(0, $stockQty),
-                'reorder_level' => max(0, $reorder),
-                'image_url' => $imageUrl,
+                    'sku' => $sku,
+                    'name' => $name,
+                    'category' => $category,
+                    'description' => $description,
+                    'barcode' => $barcode,
+                    'price' => $price,
+                    'discount_percentage' => $discount,
+                    'stock_quantity' => max(0, $stockQty),
+                    'reorder_level' => max(0, $reorder),
+                    'image_url' => $imageUrl,
                     'is_active' => $isVisible,
                     'variants_json' => $variantsJson
                 ]);
@@ -4512,6 +4552,13 @@ try {
             $selectDescription = $mkDescriptionCol !== null ? ('COALESCE(' . $mkDescriptionCol . ", '') AS description") : "'' AS description";
             $selectCondition = $mkConditionCol !== null ? ('COALESCE(' . $mkConditionCol . ", 'Seminuevo') AS condition_label") : "'Seminuevo' AS condition_label";
             $selectPrice = $mkPriceCol !== null ? ('COALESCE(' . $mkPriceCol . ', 0) AS unit_price') : '0 AS unit_price';
+            $selectNetPrice = db_column_exists('marketplace_ce_products', 'net_price')
+                ? "COALESCE(net_price, unit_price, 0) AS net_price"
+                : ($mkPriceCol !== null ? "COALESCE({$mkPriceCol}, 0) AS net_price" : "0 AS net_price");
+            $selectDiscount = db_column_exists('marketplace_ce_products', 'discount_percentage')
+                ? "COALESCE(discount_percentage, 0) AS discount_percentage"
+                : "0 AS discount_percentage";
+
             $selectStock = $mkStockCol !== null ? ('COALESCE(' . $mkStockCol . ', 0) AS stock_quantity') : '0 AS stock_quantity';
             $selectImage = $mkImageCol !== null ? ('COALESCE(' . $mkImageCol . ", 'images/products/default-product.svg') AS image_url") : "'images/products/default-product.svg' AS image_url";
             $selectActive = $mkActiveCol !== null
@@ -4535,7 +4582,7 @@ try {
             $total = $countStmt ? (int)$countStmt->fetchColumn() : 0;
 
             $stmt = $pdo->query(
-                'SELECT id, ' . $selectSku . ', ' . $selectName . ', ' . $selectCategory . ', ' . $selectDescription . ', ' . $selectCondition . ', ' . $selectPrice . ', ' . $selectStock . ', ' . $selectImage . ', ' . $selectActive . ', ' . $selectCreatedAt . ', ' . $selectUpdatedAt .
+                'SELECT id, ' . $selectSku . ', ' . $selectName . ', ' . $selectCategory . ', ' . $selectDescription . ', ' . $selectCondition . ', ' . $selectPrice . ', ' . $selectNetPrice . ', ' . $selectDiscount . ', ' . $selectStock . ', ' . $selectImage . ', ' . $selectActive . ', ' . $selectCreatedAt . ', ' . $selectUpdatedAt .
                 ' FROM marketplace_ce_products' . $whereActive . ' ORDER BY ' . $orderExpr . ' LIMIT ' . (int)$perPage . ' OFFSET ' . (int)$offset
             );
             $items = $stmt ? $stmt->fetchAll() : [];
@@ -4573,6 +4620,9 @@ try {
             $unitPrice = (float)number_format((float)($_POST['unit_price'] ?? ($input['unit_price'] ?? 0)), 2, '.', '');
             $stockQuantity = (int)($_POST['stock_quantity'] ?? ($input['stock_quantity'] ?? 1));
             $isActive = isset($_POST['is_active']) ? !empty($_POST['is_active']) : (isset($input['is_active']) ? !empty($input['is_active']) : true);
+            $discount = (float)($_POST['discount_percentage'] ?? ($input['discount_percentage'] ?? 0));
+            $basePrice = $unitPrice;
+            $finalPrice = $basePrice * (1 - $discount / 100);
 
             // Get all gallery images from disk BEFORE save to include them in variants_json
             $galleryImages = list_product_gallery_files_admin_supply($sku);
@@ -4636,8 +4686,9 @@ try {
                 $values = [$sku, $name, $description];
 
                 if ($mkConditionCol !== null) { $sets[] = $mkConditionCol . ' = ?'; $values[] = $conditionLabel; }
-                if ($mkPriceCol !== null) { $sets[] = $mkPriceCol . ' = ?'; $values[] = $unitPrice; }
-                if (db_column_exists('marketplace_ce_products', 'net_price')) { $sets[] = 'net_price = ?'; $values[] = $unitPrice; }
+                if ($mkPriceCol !== null) { $sets[] = $mkPriceCol . ' = ?'; $values[] = $finalPrice; }
+                if (db_column_exists('marketplace_ce_products', 'net_price')) { $sets[] = 'net_price = ?'; $values[] = $basePrice; }
+                if (db_column_exists('marketplace_ce_products', 'discount_percentage')) { $sets[] = 'discount_percentage = ?'; $values[] = $discount; }
                 if ($mkStockCol !== null) { $sets[] = $mkStockCol . ' = ?'; $values[] = max(0, $stockQuantity); }
                 
                 // Preserve existing gallery images if any, or use newly uploaded ones
@@ -4675,8 +4726,9 @@ try {
                 $values = [$sku, $name, $description];
 
                 if ($mkConditionCol !== null) { $columns[] = $mkConditionCol; $placeholders[] = '?'; $values[] = $conditionLabel; }
-                if ($mkPriceCol !== null) { $columns[] = $mkPriceCol; $placeholders[] = '?'; $values[] = $unitPrice; }
-                if (db_column_exists('marketplace_ce_products', 'net_price')) { $columns[] = 'net_price'; $placeholders[] = '?'; $values[] = $unitPrice; }
+                if ($mkPriceCol !== null) { $columns[] = $mkPriceCol; $placeholders[] = '?'; $values[] = $finalPrice; }
+                if (db_column_exists('marketplace_ce_products', 'net_price')) { $columns[] = 'net_price'; $placeholders[] = '?'; $values[] = $basePrice; }
+                if (db_column_exists('marketplace_ce_products', 'discount_percentage')) { $columns[] = 'discount_percentage'; $placeholders[] = '?'; $values[] = $discount; }
                 if ($mkStockCol !== null) { $columns[] = $mkStockCol; $placeholders[] = '?'; $values[] = max(0, $stockQuantity); }
                 
                 // Add gallery images to variants_json for new items too

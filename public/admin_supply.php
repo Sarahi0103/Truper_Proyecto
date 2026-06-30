@@ -83,6 +83,25 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
             border-color: rgba(255, 102, 0, 0.4);
             transform: translateY(-1px);
         }
+        .exclude-chip.include-chip {
+            background: rgba(0, 200, 83, 0.08);
+            border: 1px solid rgba(0, 200, 83, 0.25);
+            color: #00c853;
+        }
+        .exclude-chip.include-chip:hover {
+            background: rgba(0, 200, 83, 0.15);
+            border-color: rgba(0, 200, 83, 0.4);
+        }
+        .exclude-chip.include-chip .exclude-chip-sku {
+            background: rgba(0, 200, 83, 0.2);
+            color: #00e676;
+        }
+        .exclude-chip.include-chip .exclude-chip-remove {
+            color: #00c853;
+        }
+        .exclude-chip.include-chip .exclude-chip-remove:hover {
+            color: #00e676;
+        }
         .exclude-chip-sku {
             font-weight: bold;
             background: rgba(255, 102, 0, 0.2);
@@ -691,6 +710,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
 
                 <div class="grid grid-3">
                     <div class="form-group"><label>Nivel reorden</label><input id="newProductReorder" type="number" min="0" step="1" value="10"></div>
+                    <div class="form-group"><label>Descuento (%)</label><input id="newProductDiscount" type="number" min="0" max="100" step="0.01" value="0"></div>
                 </div>
 
                 <div class="grid grid-2 mt-2">
@@ -1110,7 +1130,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                 <h3>Ajuste de Precios Masivo</h3>
                 <p class="text-muted">Aplica un cambio de precio a múltiples productos. Usa % para porcentaje o $ para monto fijo.</p>
                 
-                <div class="grid grid-4 mt-2" style="align-items: flex-end;">
+                <div class="grid grid-3 mt-2">
                     <div class="form-group">
                         <label>Aplicar a</label>
                         <select id="priceAdjustTarget">
@@ -1121,26 +1141,37 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                     <div class="form-group">
                         <label>Tipo de ajuste</label>
                         <select id="priceAdjustType">
-                            <option value="percentage">Porcentaje (%)</option>
-                            <option value="fixed">Monto fijo ($)</option>
+                            <option value="percentage">Ajustar Precio: Porcentaje (%)</option>
+                            <option value="fixed">Ajustar Precio: Monto fijo ($)</option>
+                            <option value="discount">Asignar Descuento (%)</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Valor (ej: 10 o -5)</label>
                         <input id="priceAdjustValue" type="number" placeholder="0" step="0.01">
                     </div>
+                </div>
+
+                <div class="grid grid-2 mt-2">
                     <div class="form-group">
-                        <button class="btn btn-primary" onclick="applyPriceAdjustment()" style="width: 100%; display: block;">Calcular preview</button>
+                        <label>Filtro de productos (Modo)</label>
+                        <select id="priceFilterMode" onchange="onPriceFilterModeChange()">
+                            <option value="exclude">Excluir productos de la lista (Aplicar al resto)</option>
+                            <option value="include">Aplicar únicamente a los productos agregados a la lista</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="align-items: flex-end; display: flex;">
+                        <button class="btn btn-primary" onclick="applyPriceAdjustment()" style="width: 100%;">Calcular preview</button>
                     </div>
                 </div>
 
                 <div class="form-group mt-2" style="position: relative;">
-                    <label>Excluir productos</label>
+                    <label id="priceFilterListLabel">Excluir productos (Lista)</label>
                     <input id="priceExcludeSkus" type="hidden" value="">
                     
                     <!-- Selected product chips container -->
                     <div id="excludeProductChips" class="exclude-chips-container">
-                        <span class="text-muted" style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.4); padding-left: 0.25rem;">Ningún producto excluido</span>
+                        <span id="priceEmptyListText" class="text-muted" style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.4); padding-left: 0.25rem;">Ningún producto excluido</span>
                     </div>
 
                     <!-- Product search input -->
@@ -1166,7 +1197,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                 <hr style="border: 0; border-top: 1px solid var(--ui-border-soft); margin: 2rem 0 1.5rem 0;">
                 
                 <h3>Restaurar Precios Neto</h3>
-                <p class="text-muted">Revierte los precios actuales a los precios neto originales de cada producto.</p>
+                <p class="text-muted">Revierte los precios actuales a los precios neto originales de cada producto. <strong>Respeta la lista de productos y el modo de filtro (incluir/excluir) configurado arriba.</strong> También restablece el descuento a 0%.</p>
                 
                 <div class="grid grid-3 mt-2" style="align-items: flex-end;">
                     <div class="form-group">
@@ -1216,7 +1247,10 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
 
                 <div class="grid grid-3">
                     <div class="form-group"><label>Precio</label><input id="marketplacePrice" type="number" min="0" step="0.01" value="0"></div>
+                    <div class="form-group"><label>Descuento (%)</label><input id="marketplaceDiscount" type="number" min="0" max="100" step="0.01" value="0"></div>
                     <div class="form-group"><label>Stock</label><input id="marketplaceStock" type="number" min="0" step="1" value="1"></div>
+                </div>
+                <div class="grid grid-3">
                     <div class="form-group"><label>Visibilidad CE</label><select id="marketplaceActive"><option value="1">✅ Visible en Marketplace</option><option value="0">🔒 Oculto (revisar antes de publicar)</option></select></div>
                 </div>
 
@@ -1539,7 +1573,29 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
                 <div><span class="variant-pill">${escapeHtml(condition)}</span></div>
                 <span class="stock-badge ${stockClass}">${stockText}${stock}</span>
                 <div style="margin-top:4px;"><span class="badge ${stateBadgeClass}">Estado: ${stateLabel}</span></div>
-                <div class="catalog-price">${formatAdminMoney(unitPrice)}</div>
+                ${(() => {
+                    const discount = Number(item.discount_percentage || 0);
+                    const netPrice = Number(item.net_price || unitPrice);
+                    if (discount > 0) {
+                        return `
+                            <div style="display:flex; flex-direction:column; gap:2px; margin-top:4px;">
+                                <div style="display:flex; align-items:center; gap:6px;">
+                                    <span style="text-decoration:line-through; color:rgba(255,255,255,0.4); font-size:0.8rem;">
+                                        ${formatAdminMoney(netPrice)}
+                                    </span>
+                                    <span style="background:rgba(255, 102, 0, 0.15); color:#ff6600; font-size:0.7rem; font-weight:bold; padding:1px 4px; border-radius:4px;">
+                                        ${discount}% OFF
+                                    </span>
+                                </div>
+                                <div class="catalog-price" style="font-size:1.05rem; font-weight:bold; color:#fff; margin:0;">
+                                    ${formatAdminMoney(unitPrice)}
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        return `<div class="catalog-price">${formatAdminMoney(unitPrice)}</div>`;
+                    }
+                })()}
                 ${withActions ? `<div class="product-actions">${actions}</div>` : '<div class="text-muted" style="font-size:12px;margin-top:8px;">Vista previa del diseño en portada.</div>'}
                 ${inactive ? '<div class="text-muted" style="font-size:12px;margin-top:6px;">Producto oculto/desactivado.</div>' : ''}
             </div>
@@ -1591,13 +1647,20 @@ function updateStockPreview() {
     const galleryCover = (galleryState && galleryState.cover) ? galleryState.cover : '';
     const finalImg = galleryCover && !galleryCover.includes('default-product.svg') ? galleryCover : coverImg;
     const normFinalImg = (finalImg && !finalImg.startsWith('/') && !finalImg.startsWith('blob:') && !finalImg.startsWith('http')) ? '/' + finalImg : finalImg;
+    
+    const basePrice = parseFloat(document.getElementById('newProductPrice')?.value || 0);
+    const discount = parseFloat(document.getElementById('newProductDiscount')?.value || 0);
+    const finalPrice = basePrice * (1 - discount / 100);
+
     const item = {
         id: 0,
         sku: sku || '00000',
         name: document.getElementById('newProductName')?.value || 'Nombre del producto',
         category: selectedCategories.join(', ') || 'General',
         description: document.getElementById('newProductDescription')?.value || 'Descripción pendiente',
-        unit_price: document.getElementById('newProductPrice')?.value || 0,
+        unit_price: finalPrice,
+        net_price: basePrice,
+        discount_percentage: discount,
         stock_quantity: document.getElementById('newProductStock')?.value || 0,
         reorder_level: document.getElementById('newProductReorder')?.value || 10,
         image_url: normFinalImg,
@@ -1618,6 +1681,11 @@ function updateMarketplacePreview() {
     const galleryCover = (galleryState && galleryState.cover) ? galleryState.cover : '';
     const finalImg = galleryCover && !galleryCover.includes('default-product.svg') ? galleryCover : coverImg;
     const normFinalImg = (finalImg && !finalImg.startsWith('/') && !finalImg.startsWith('blob:') && !finalImg.startsWith('http')) ? '/' + finalImg : finalImg;
+    
+    const basePrice = parseFloat(document.getElementById('marketplacePrice')?.value || 0);
+    const discount = parseFloat(document.getElementById('marketplaceDiscount')?.value || 0);
+    const finalPrice = basePrice * (1 - discount / 100);
+
     const item = {
         id: Number(document.getElementById('marketplaceEditId')?.value || 0),
         sku: sku || '00000',
@@ -1625,7 +1693,9 @@ function updateMarketplacePreview() {
         category: selectedCategories.join(', ') || 'Marketplace CE',
         description: document.getElementById('marketplaceDescription')?.value || 'Descripción pendiente',
         condition_label: document.getElementById('marketplaceCondition')?.value || 'Seminuevo',
-        unit_price: document.getElementById('marketplacePrice')?.value || 0,
+        unit_price: finalPrice,
+        net_price: basePrice,
+        discount_percentage: discount,
         stock_quantity: document.getElementById('marketplaceStock')?.value || 1,
         image_url: normFinalImg,
         is_active: Number(document.getElementById('marketplaceActive')?.value || 1)
@@ -1934,6 +2004,7 @@ async function applyPriceAdjustment() {
     const type = document.getElementById('priceAdjustType').value;
     const value = parseFloat(document.getElementById('priceAdjustValue').value || 0);
     const excludeSkus = (document.getElementById('priceExcludeSkus').value || '').split(',').map(s => s.trim().toUpperCase()).filter(s => s);
+    const filterMode = document.getElementById('priceFilterMode').value;
 
     if (value === 0 || isNaN(value)) {
         document.getElementById('pricePreview').style.display = 'none';
@@ -1944,7 +2015,7 @@ async function applyPriceAdjustment() {
         const res = await fetch('/api/products.php?action=preview-price-adjustment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ target, type, value, exclude_skus: excludeSkus })
+            body: JSON.stringify({ target, type, value, exclude_skus: excludeSkus, filter_mode: filterMode })
         });
         const data = await res.json();
         if (!data.success || !Array.isArray(data.preview)) {
@@ -1952,7 +2023,7 @@ async function applyPriceAdjustment() {
             return;
         }
 
-        pricePreviewData = { target, type, value, exclude_skus: excludeSkus, affected: data.count || 0 };
+        pricePreviewData = { target, type, value, exclude_skus: excludeSkus, filter_mode: filterMode, affected: data.count || 0 };
         const preview = data.preview.slice(0, 5);
         
         const content = document.getElementById('pricePreviewContent');
@@ -1962,18 +2033,47 @@ async function applyPriceAdjustment() {
                 <thead>
                     <tr style="border-bottom: 1px solid var(--ui-border);">
                         <th style="padding: 0.5rem; text-align: left;">Producto</th>
-                        <th style="padding: 0.5rem; text-align: right;">Precio actual</th>
-                        <th style="padding: 0.5rem; text-align: right;">Nuevo precio</th>
+                        <th style="padding: 0.5rem; text-align: right;">Estado actual (Original/Final)</th>
+                        <th style="padding: 0.5rem; text-align: right;">Estado nuevo (Original/Final)</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${preview.map(item => `
-                        <tr style="border-bottom: 1px solid var(--ui-border-soft);">
-                            <td style="padding: 0.5rem;">${escapeHtml(item.name)}</td>
-                            <td style="padding: 0.5rem; text-align: right;">${formatAdminMoney(item.current_price)}</td>
-                            <td style="padding: 0.5rem; text-align: right; color: var(--color-naranja); font-weight: 600;">${formatAdminMoney(item.new_price)}</td>
-                        </tr>
-                    `).join('')}
+                    ${preview.map(item => {
+                        const curDiscount = Number(item.discount_percentage || 0);
+                        const curNet = Number(item.net_price || item.current_price);
+                        const curPrice = Number(item.current_price);
+                        
+                        const newDiscount = Number(item.new_discount || 0);
+                        const newNet = Number(item.new_net_price || item.new_price);
+                        const newPrice = Number(item.new_price);
+                        
+                        return `
+                            <tr style="border-bottom: 1px solid var(--ui-border-soft);">
+                                <td style="padding: 0.5rem; vertical-align: top;">
+                                    <div style="font-weight: 500;">${escapeHtml(item.name)}</div>
+                                    <small style="color: rgba(255,255,255,0.4)">SKU: ${escapeHtml(item.sku)}</small>
+                                </td>
+                                <td style="padding: 0.5rem; text-align: right; vertical-align: top;">
+                                    <div style="text-decoration: line-through; color: rgba(255,255,255,0.4); font-size: 0.8rem;">
+                                        ${formatAdminMoney(curNet)}
+                                    </div>
+                                    <div>
+                                        <strong>${formatAdminMoney(curPrice)}</strong>
+                                        ${curDiscount > 0 ? `<span style="color:#ff6600; font-size: 0.75rem; font-weight: bold;"> (${curDiscount}%)</span>` : ''}
+                                    </div>
+                                </td>
+                                <td style="padding: 0.5rem; text-align: right; vertical-align: top; color: #00c853;">
+                                    <div style="text-decoration: line-through; color: rgba(0, 200, 83, 0.4); font-size: 0.8rem;">
+                                        ${formatAdminMoney(newNet)}
+                                    </div>
+                                    <div>
+                                        <strong>${formatAdminMoney(newPrice)}</strong>
+                                        ${newDiscount > 0 ? `<span style="color:#00e676; font-size: 0.75rem; font-weight: bold;"> (${newDiscount}%)</span>` : ''}
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
                 </tbody>
             </table>
             ${data.count > 5 ? `<p class="text-muted" style="font-size: 0.85rem; margin-top: 1rem;">+ ${data.count - 5} productos más...</p>` : ''}
@@ -2023,7 +2123,10 @@ async function revertToNetPrices() {
     const resultBox = document.getElementById('priceRevertResult');
     if (!resultBox) return;
 
-    const confirmRevert = confirm(`¿Estás seguro de que deseas restaurar los precios neto originales para todos los productos de tipo "${target === 'marketplace' ? 'Marketplace CE' : 'Stock'}"? Esta acción sobrescribirá los precios actuales.`);
+    const excludeSkus = (document.getElementById('priceExcludeSkus').value || '').split(',').map(s => s.trim().toUpperCase()).filter(s => s);
+    const filterMode = document.getElementById('priceFilterMode').value;
+
+    const confirmRevert = confirm(`¿Estás seguro de que deseas restaurar los precios neto originales para los productos seleccionados de tipo "${target === 'marketplace' ? 'Marketplace CE' : 'Stock'}"? Esta acción sobrescribirá los precios actuales y eliminará los descuentos.`);
     if (!confirmRevert) return;
 
     resultBox.innerHTML = '<div class="alert alert-info">Restaurando precios, por favor espera...</div>';
@@ -2032,7 +2135,7 @@ async function revertToNetPrices() {
         const res = await fetch('/api/products.php?action=revert-to-net-prices', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ target })
+            body: JSON.stringify({ target, exclude_skus: excludeSkus, filter_mode: filterMode })
         });
         const data = await res.json();
         if (data.success) {
@@ -2047,6 +2150,28 @@ async function revertToNetPrices() {
         console.error('Error reverting to net prices:', e);
         resultBox.innerHTML = '<div class="alert alert-error">Error de conexión</div>';
     }
+}
+
+function onPriceFilterModeChange() {
+    const mode = document.getElementById('priceFilterMode').value;
+    const label = document.getElementById('priceFilterListLabel');
+    const emptyText = document.getElementById('priceEmptyListText');
+    const searchInput = document.getElementById('excludeProductSearch');
+    
+    if (mode === 'include') {
+        if (label) label.textContent = 'Productos seleccionados para incluir';
+        if (emptyText && emptyText.textContent.includes('Ningún producto')) {
+            emptyText.textContent = 'Ningún producto agregado a la lista';
+        }
+        if (searchInput) searchInput.placeholder = '🔍 Buscar producto por nombre o SKU para agregar a la lista...';
+    } else {
+        if (label) label.textContent = 'Excluir productos (Lista)';
+        if (emptyText && emptyText.textContent.includes('Ningún producto')) {
+            emptyText.textContent = 'Ningún producto excluido';
+        }
+        if (searchInput) searchInput.placeholder = '🔍 Buscar producto por nombre o SKU para excluir...';
+    }
+    updateExcludedChips();
 }
 
 // Bulk Price Adjustment - Product Exclusion Search and Selection Logic
@@ -2221,17 +2346,23 @@ function updateExcludedChips() {
     }
 
     if (skusArray.length === 0) {
-        container.innerHTML = '<span class="text-muted" style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.4); padding-left: 0.25rem;">Ningún producto excluido</span>';
+        const mode = document.getElementById('priceFilterMode')?.value || 'exclude';
+        container.innerHTML = `<span id="priceEmptyListText" class="text-muted" style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.4); padding-left: 0.25rem;">${mode === 'include' ? 'Ningún producto agregado a la lista' : 'Ningún producto excluido'}</span>`;
         return;
     }
 
-    container.innerHTML = Array.from(excludedProductsMap.entries()).map(([sku, name]) => `
-        <div class="exclude-chip" data-sku="${escapeHtml(sku)}">
-            <span class="exclude-chip-sku">${escapeHtml(sku)}</span>
-            <span class="exclude-chip-name" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
-            <button type="button" class="exclude-chip-remove" title="Eliminar exclusión">&times;</button>
-        </div>
-    `).join('');
+    container.innerHTML = Array.from(excludedProductsMap.entries()).map(([sku, name]) => {
+        const mode = document.getElementById('priceFilterMode')?.value || 'exclude';
+        const prefix = mode === 'include' ? 'Incluir: ' : 'Excluir: ';
+        return `
+            <div class="exclude-chip ${mode === 'include' ? 'include-chip' : ''}" data-sku="${escapeHtml(sku)}">
+                <span style="font-weight:bold; font-size:10px; margin-right:4px;">${prefix}</span>
+                <span class="exclude-chip-sku">${escapeHtml(sku)}</span>
+                <span class="exclude-chip-name" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
+                <button type="button" class="exclude-chip-remove" title="Eliminar">&times;</button>
+            </div>
+        `;
+    }).join('');
 }
 
 let _homepageUpdatesCount = 0;
@@ -3358,6 +3489,7 @@ function resetProductForm() {
     document.getElementById('newProductPrice').value = '0';
     document.getElementById('newProductStock').value = '50';
     document.getElementById('newProductReorder').value = '10';
+    document.getElementById('newProductDiscount').value = '0';
     document.getElementById('newProductDescription').value = '';
     document.getElementById('newProductImageRef').value = 'images/products/default-product.svg';
     document.getElementById('newProductVisible').value = '0';
@@ -3391,9 +3523,10 @@ async function fillProductFormById(id) {
     document.getElementById('newProductSeedMode').value = isSeedOnly ? '1' : '0';
     document.getElementById('newProductSku').value = displayProductCode(item.sku || '');
     document.getElementById('newProductName').value = item.name || '';
-    document.getElementById('newProductPrice').value = String(item.unit_price || 0);
+    document.getElementById('newProductPrice').value = String(item.net_price || item.unit_price || 0);
     document.getElementById('newProductStock').value = String(item.stock_quantity || 0);
     document.getElementById('newProductReorder').value = String(item.reorder_level || 10);
+    document.getElementById('newProductDiscount').value = String(item.discount_percentage || 0);
     document.getElementById('newProductDescription').value = item.description || '';
     const imageRefSelect = document.getElementById('newProductImageRef');
     const itemImage = item.image_url || 'images/products/default-product.svg';
@@ -6182,6 +6315,7 @@ async function createProductByAdmin() {
         category: selectedCategories.join(', '),
         description: document.getElementById('newProductDescription')?.value?.trim() || '',
         price: price,
+        discount_percentage: parseFloat(document.getElementById('newProductDiscount')?.value || 0),
         stock_quantity: stock,
         reorder_level: reorder,
         image_url: document.getElementById('newProductImageRef').value || 'images/products/default-product.svg',
@@ -6245,6 +6379,7 @@ function resetMarketplaceForm() {
     document.getElementById('marketplaceName').value = '';
     document.getElementById('marketplaceCondition').value = 'Seminuevo';
     document.getElementById('marketplacePrice').value = '0';
+    document.getElementById('marketplaceDiscount').value = '0';
     document.getElementById('marketplaceStock').value = '1';
     document.getElementById('marketplaceActive').value = '0';
     document.getElementById('marketplaceDescription').value = '';
@@ -6275,7 +6410,8 @@ async function fillMarketplaceForm(item) {
     document.getElementById('marketplaceSku').value = item.sku || '';
     document.getElementById('marketplaceName').value = item.name || '';
     document.getElementById('marketplaceCondition').value = item.condition_label || 'Seminuevo';
-    document.getElementById('marketplacePrice').value = parseFloat(Number(item.unit_price || 0).toFixed(2));
+    document.getElementById('marketplacePrice').value = parseFloat(Number(item.net_price || item.unit_price || 0).toFixed(2));
+    document.getElementById('marketplaceDiscount').value = String(item.discount_percentage || 0);
     document.getElementById('marketplaceStock').value = String(item.stock_quantity || 0);
     document.getElementById('marketplaceActive').value = Number(item.is_active) ? '1' : '0';
     document.getElementById('marketplaceDescription').value = item.description || '';
@@ -6614,6 +6750,7 @@ async function saveMarketplaceCeByAdmin() {
         condition_label: document.getElementById('marketplaceCondition')?.value || 'Seminuevo',
         category: selectedCategories.join(', '),
         unit_price: price,
+        discount_percentage: parseFloat(document.getElementById('marketplaceDiscount')?.value || 0),
         stock_quantity: stock,
         is_active: document.getElementById('marketplaceActive')?.value === '1' ? 1 : 0,
         description: document.getElementById('marketplaceDescription')?.value?.trim() || '',

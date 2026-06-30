@@ -12,12 +12,12 @@ if ($product_id > 0) {
     try {
         $queries = [];
         if ($source === 'ce') {
-            $queries[] = "SELECT id, sku, name, description, unit_price, category, stock_quantity, NULL::text AS technical_specs, image_url, variants_json FROM marketplace_ce_products WHERE id = ? AND is_active = true AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(marketplace_ce_products.category) AND pc.is_active = false) LIMIT 1";
+            $queries[] = "SELECT id, sku, name, description, unit_price, COALESCE(net_price, unit_price, 0) AS net_price, COALESCE(discount_percentage, 0) AS discount_percentage, category, stock_quantity, NULL::text AS technical_specs, image_url, variants_json FROM marketplace_ce_products WHERE id = ? AND is_active = true AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(marketplace_ce_products.category) AND pc.is_active = false) LIMIT 1";
         } elseif ($source === 'product') {
-            $queries[] = "SELECT id, sku, name, description, unit_price, category, stock_quantity, technical_specs, image_url, variants_json FROM products WHERE id = ? AND is_active = true AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(products.category) AND pc.is_active = false) LIMIT 1";
+            $queries[] = "SELECT id, sku, name, description, unit_price, COALESCE(net_price, unit_price, 0) AS net_price, COALESCE(discount_percentage, 0) AS discount_percentage, category, stock_quantity, technical_specs, image_url, variants_json FROM products WHERE id = ? AND is_active = true AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(products.category) AND pc.is_active = false) LIMIT 1";
         } else {
-            $queries[] = "SELECT id, sku, name, description, unit_price, category, stock_quantity, technical_specs, image_url, variants_json FROM products WHERE id = ? AND is_active = true AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(products.category) AND pc.is_active = false) LIMIT 1";
-            $queries[] = "SELECT id, sku, name, description, unit_price, category, stock_quantity, NULL::text AS technical_specs, image_url, variants_json FROM marketplace_ce_products WHERE id = ? AND is_active = true AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(marketplace_ce_products.category) AND pc.is_active = false) LIMIT 1";
+            $queries[] = "SELECT id, sku, name, description, unit_price, COALESCE(net_price, unit_price, 0) AS net_price, COALESCE(discount_percentage, 0) AS discount_percentage, category, stock_quantity, technical_specs, image_url, variants_json FROM products WHERE id = ? AND is_active = true AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(products.category) AND pc.is_active = false) LIMIT 1";
+            $queries[] = "SELECT id, sku, name, description, unit_price, COALESCE(net_price, unit_price, 0) AS net_price, COALESCE(discount_percentage, 0) AS discount_percentage, category, stock_quantity, NULL::text AS technical_specs, image_url, variants_json FROM marketplace_ce_products WHERE id = ? AND is_active = true AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(marketplace_ce_products.category) AND pc.is_active = false) LIMIT 1";
         }
 
         foreach ($queries as $sql) {
@@ -807,7 +807,23 @@ $stock = (int)($product['stock_quantity'] ?? 0);
                     </div>
 
                     <div class="detail-price-box">
-                        <div class="detail-price">$<?php echo number_format((float)$product['unit_price'], 2, '.', ','); ?></div>
+                        <?php if (isset($product['discount_percentage']) && (float)$product['discount_percentage'] > 0): ?>
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="text-decoration: line-through; color: rgba(255, 255, 255, 0.4); font-size: 1.1rem;">
+                                        $<?php echo number_format((float)$product['net_price'], 2, '.', ','); ?>
+                                    </span>
+                                    <span style="background: rgba(255, 102, 0, 0.15); color: var(--color-naranja, #ff6600); font-size: 0.85rem; font-weight: bold; padding: 3px 8px; border-radius: 6px;">
+                                        <?php echo (float)$product['discount_percentage']; ?>% DESCUENTO
+                                    </span>
+                                </div>
+                                <div class="detail-price" style="font-size: 2.2rem; color: #fff; font-weight: 800;">
+                                    $<?php echo number_format((float)$product['unit_price'], 2, '.', ','); ?>
+                                </div>
+                            </div>
+                        <?php else: ?>
+                            <div class="detail-price">$<?php echo number_format((float)$product['unit_price'], 2, '.', ','); ?></div>
+                        <?php endif; ?>
                         <div class="detail-stock <?php echo $stock > 10 ? 'in-stock' : ($stock > 0 ? 'low-stock' : 'out-of-stock'); ?>">
                             <span>📦</span>
                             <span>
