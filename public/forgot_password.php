@@ -231,7 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
     <div class="auth-wrapper">
         <div class="logo">
-            <span class="logo-brand">Ferretería <span class="logo-bold">FOX</span></span>
+            <img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 44px; width: auto; object-fit: contain;">
             <h1>Recuperar Contraseña</h1>
         </div>
         

@@ -134,7 +134,7 @@ $column_count = $is_admin ? 7 : 6;
 <body>
 <header>
     <div class="header-content">
-        <a href="dashboard.php" class="logo"><span class="logo-brand">Ferretería <span class="logo-bold">FOX</span></span></a>
+        <a href="dashboard.php" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 44px; width: auto; object-fit: contain;"></a>
                             <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>

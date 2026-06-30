@@ -527,7 +527,7 @@ if (is_logged_in() && !$force_login_screen) {
         <!-- Left Panel -->
         <aside class="auth-panel">
             <div class="auth-logo">
-                <span class="logo-brand">Ferretería <span class="logo-bold">FOX</span></span>
+                <img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 44px; width: auto; object-fit: contain;">
             </div>
 
             <h2 class="auth-heading">Bienvenido de<br>vuelta</h2>
@@ -556,7 +556,7 @@ if (is_logged_in() && !$force_login_screen) {
         <div class="auth-form-panel">
             <div class="auth-form-inner">
                 <div class="mobile-logo-wrap" style="display: none; justify-content: center; margin-bottom: 1.5rem;">
-                    <span class="logo-brand">Ferretería <span class="logo-bold">FOX</span></span>
+                    <img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 44px; width: auto; object-fit: contain;">
                 </div>
 
                 <a href="index.php" class="auth-back" onclick="if(window.history.length>1){window.history.back();return false;}">

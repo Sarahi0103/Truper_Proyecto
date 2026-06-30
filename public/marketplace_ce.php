@@ -530,7 +530,7 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
 
     <header>
         <div class="header-content">
-            <a href="index.php" class="logo"><span class="logo-brand">Ferretería <span class="logo-bold">FOX</span></span></a>
+            <a href="index.php" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 44px; width: auto; object-fit: contain;"></a>
                         <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>

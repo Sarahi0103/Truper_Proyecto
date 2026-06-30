@@ -287,7 +287,7 @@ if (is_logged_in()) {
     <div class="login-container">
         <div class="auth-shell">
             <aside class="auth-side">
-                <div class="login-logo"><span class="logo-brand">Ferretería <span class="logo-bold">FOX</span></span></div>
+                <div class="login-logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 44px; width: auto; object-fit: contain;"></div>
                 <h2>Solo Administradores</h2>
                 <p>Acceso restringido al panel administrativo, abastecimiento, caja y analítica interna.</p>
                 <ul>
@@ -300,7 +300,7 @@ if (is_logged_in()) {
             <div class="auth-form-wrap">
                 <div class="login-box">
                     <div class="mobile-logo-wrap" style="display: none; justify-content: center; margin-bottom: 1.5rem;">
-                        <span class="logo-brand">Ferretería <span class="logo-bold">FOX</span></span>
+                        <img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 44px; width: auto; object-fit: contain;">
                     </div>
                     <div class="auth-back-row">
                         <a href="index.php" class="auth-back-link">← Volver a productos</a>
