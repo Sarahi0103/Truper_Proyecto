@@ -52,9 +52,9 @@ html {
     }
 
     .logo img {
-        height: 28px !important;
+        height: 38px !important;
         width: auto !important;
-        max-width: 120px !important;
+        max-width: 160px !important;
         object-fit: contain;
     }
 
@@ -416,9 +416,9 @@ html {
     }
 
     .logo img {
-        height: 32px !important;
+        height: 44px !important;
         width: auto !important;
-        max-width: 140px !important;
+        max-width: 180px !important;
         object-fit: contain;
     }
 
@@ -547,7 +547,7 @@ html {
     }
 
     .logo img {
-        height: 36px !important;
+        height: 48px !important;
         width: auto !important;
     }
 
