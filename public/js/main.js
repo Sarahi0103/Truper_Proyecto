@@ -915,11 +915,174 @@ const styleSheet = document.createElement('style');
 styleSheet.textContent = shortcutsStyles;
 document.head.appendChild(styleSheet);
 
-// Inicializar atajos de teclado
+// Sistema global de persistencia de formularios al recargar la página
+function initFormPersistence() {
+    const STORAGE_PREFIX = 'truper_form_persist_';
+    const currentPath = window.location.pathname;
+    let isRestoring = false;
+
+    function getInputKey(input) {
+        if (!input || !input.tagName) return null;
+        
+        const type = (input.type || '').toLowerCase();
+        if (['password', 'file', 'submit', 'button', 'reset', 'image'].includes(type)) {
+            return null;
+        }
+
+        if (type === 'hidden') {
+            const nameOrId = (input.name || input.id || '').toLowerCase();
+            if (nameOrId.includes('csrf') || nameOrId.includes('token') || nameOrId.includes('_nocache')) {
+                return null;
+            }
+        }
+
+        let keyIdentifier = '';
+        if (input.id) {
+            keyIdentifier = `id_${input.id}`;
+        } else if (input.name) {
+            keyIdentifier = `name_${input.name}`;
+        } else {
+            const allInputs = Array.from(document.querySelectorAll('input, textarea, select'));
+            const index = allInputs.indexOf(input);
+            if (index !== -1) {
+                keyIdentifier = `idx_${index}`;
+            }
+        }
+
+        if (!keyIdentifier) return null;
+        return `${STORAGE_PREFIX}${currentPath}_${keyIdentifier}`;
+    }
+
+    function saveFieldValue(input) {
+        if (isRestoring) return;
+        const key = getInputKey(input);
+        if (!key) return;
+
+        const type = (input.type || '').toLowerCase();
+        let value = null;
+
+        if (type === 'checkbox') {
+            value = input.checked ? '1' : '0';
+        } else if (type === 'radio') {
+            if (input.checked) {
+                value = input.value;
+            } else {
+                return;
+            }
+        } else {
+            value = input.value;
+        }
+
+        try {
+            if (value !== null && value !== undefined) {
+                sessionStorage.setItem(key, JSON.stringify({
+                    value: value,
+                    type: type,
+                    updated: Date.now()
+                }));
+            }
+        } catch (e) {}
+    }
+
+    function restoreAllFields() {
+        if (isRestoring) return;
+        isRestoring = true;
+
+        try {
+            const inputs = document.querySelectorAll('input, textarea, select');
+            inputs.forEach(input => {
+                const key = getInputKey(input);
+                if (!key) return;
+
+                const storedRaw = sessionStorage.getItem(key);
+                if (!storedRaw) return;
+
+                const stored = JSON.parse(storedRaw);
+                const type = (input.type || '').toLowerCase();
+
+                if (type === 'checkbox') {
+                    const shouldCheck = stored.value === '1';
+                    if (input.checked !== shouldCheck) {
+                        input.checked = shouldCheck;
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                } else if (type === 'radio') {
+                    if (input.value === stored.value && !input.checked) {
+                        input.checked = true;
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                } else {
+                    if (input.value !== stored.value && stored.value !== null && stored.value !== undefined) {
+                        input.value = stored.value;
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }
+            });
+        } catch (e) {
+        } finally {
+            isRestoring = false;
+        }
+    }
+
+    function clearSavedFields() {
+        try {
+            const keysToRemove = [];
+            for (let i = 0; i < sessionStorage.length; i++) {
+                const key = sessionStorage.key(i);
+                if (key && key.startsWith(`${STORAGE_PREFIX}${currentPath}_`)) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(k => sessionStorage.removeItem(k));
+        } catch (e) {}
+    }
+
+    document.addEventListener('input', (e) => {
+        if (e.target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
+            saveFieldValue(e.target);
+        }
+    }, true);
+
+    document.addEventListener('change', (e) => {
+        if (e.target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
+            saveFieldValue(e.target);
+        }
+    }, true);
+
+    document.addEventListener('submit', (e) => {
+        clearSavedFields();
+    }, true);
+
+    restoreAllFields();
+
+    let debounceTimeout = null;
+    const observer = new MutationObserver((mutations) => {
+        let hasAddedNodes = false;
+        for (const mutation of mutations) {
+            if (mutation.addedNodes.length > 0) {
+                hasAddedNodes = true;
+                break;
+            }
+        }
+        if (hasAddedNodes) {
+            if (debounceTimeout) clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(() => {
+                restoreAllFields();
+            }, 100);
+        }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+}
+
+// Inicializar atajos de teclado y persistencia de formularios
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         window.keyboardShortcuts = new KeyboardShortcuts();
+        initFormPersistence();
     });
 } else {
     window.keyboardShortcuts = new KeyboardShortcuts();
+    initFormPersistence();
 }

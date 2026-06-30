@@ -5282,7 +5282,20 @@ function renderProductGallery(images, sku, mode = 'stock') {
         return;
     }
 
-    status.textContent = `Galer\u00eda para ${sku}: ${images.length} imagen(es). Usa Drag & Drop para reordenar.`;
+    if (mode === 'stock') {
+        status.innerHTML = `
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+            <span>Galer\u00eda para ${escapeHtml(sku)}: ${images.length} imagen(es). Usa Drag & Drop para reordenar.</span>
+            <button class="btn btn-small btn-primary" type="button" 
+                    style="font-size:11px; padding:3px 10px; background:var(--color-naranja, #ff6600); border-color:var(--color-naranja, #ff6600); color:#fff; display:inline-flex; align-items:center; gap:5px; border-radius:6px; font-weight:600;" 
+                    title="Descargar paquete comprimido en ZIP con t\u00edtulos por c\u00f3digo SKU" 
+                    onclick="downloadPackageGalleryImages('${escapeHtml(sku)}')">
+                \uD83D\uDCE6 Descargar paquete (ZIP)
+            </button>
+        </div>`;
+    } else {
+        status.textContent = `Galer\u00eda para ${sku}: ${images.length} imagen(es). Usa Drag & Drop para reordenar.`;
+    }
 
     // Helper: convierte ruta relativa a URL absoluta desde ra\u00edz del sitio
     const toSrc = (img) => {
@@ -5314,6 +5327,7 @@ function renderProductGallery(images, sku, mode = 'stock') {
                     ${images.map((_, pos) => `<option value="${pos + 1}" ${pos === idx ? 'selected' : ''}>${pos + 1}</option>`).join('')}
                 </select>
                 ${!isCover ? `<button class="btn btn-small btn-secondary" type="button" style="font-size:10px;padding:2px 5px;" title="Usar como portada" onclick="galleryCoverByIndex('${escapeHtml(sku)}', ${idx}, '${mode}')">\u2605</button>` : ''}
+                ${mode === 'stock' ? `<button class="btn btn-small btn-secondary" type="button" style="font-size:10px;padding:2px 6px;background:#2b2d42;border-color:#4a4e69;color:#fff;" title="Descargar esta imagen individual con su c\u00f3digo SKU" onclick="downloadSingleGalleryImage('${escapeHtml(sku)}', ${idx}, '${mode}')">\uD83D\uDCE5</button>` : ''}
                 <button class="btn btn-small btn-danger" type="button" style="font-size:10px;padding:2px 6px;" title="Eliminar imagen" onclick="galleryDeleteByIndex('${escapeHtml(sku)}', ${idx}, '${mode}')">&#x2715;</button>
             </div>
         </div>`;
@@ -5410,6 +5424,54 @@ async function galleryMoveByIndex(sku, currentIndex, targetPosition, mode) {
     const [moved] = images.splice(currentIndex, 1);
     images.splice(targetIndex, 0, moved);
     await reorderGalleryImages(sku, images, mode);
+}
+
+async function downloadSingleGalleryImage(sku, idx, mode) {
+    const img = galleryGetByIndex(idx, mode);
+    if (!img) { showGalleryResult(mode, 'Imagen no encontrada para descargar', 'error'); return; }
+    
+    let ext = 'jpg';
+    if (img.includes('.webp')) ext = 'webp';
+    else if (img.includes('.png')) ext = 'png';
+    else if (img.includes('.gif')) ext = 'gif';
+    else if (img.includes('.jpeg')) ext = 'jpg';
+    else if (img.startsWith('data:image/')) {
+        const match = img.match(/^data:image\/(\w+);/);
+        if (match) ext = match[1] === 'jpeg' ? 'jpg' : match[1];
+    }
+    
+    const label = idx === 0 ? 'portada' : (idx + 1);
+    const filename = `${sku}_${label}.${ext}`;
+    
+    try {
+        const cleanSrc = (img.startsWith('blob:') || img.startsWith('http') || img.startsWith('//') || img.startsWith('data:')) 
+            ? img 
+            : (img.startsWith('/') ? img : '/' + img);
+            
+        const response = await fetch(cleanSrc);
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+    } catch (err) {
+        const a = document.createElement('a');
+        a.href = img;
+        a.download = filename;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+}
+
+function downloadPackageGalleryImages(sku) {
+    if (!sku) return;
+    window.location.href = `/api/admin_supply.php?action=download-gallery-zip&sku=${encodeURIComponent(sku)}`;
 }
 
 

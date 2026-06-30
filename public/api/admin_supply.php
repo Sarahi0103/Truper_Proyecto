@@ -3537,6 +3537,95 @@ try {
             }
             break;
 
+        case 'download-gallery-zip':
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $sku = normalize_sku_admin_supply($_GET['sku'] ?? '');
+            if (!is_valid_numeric_sku_admin_supply($sku)) {
+                $response = ['success' => false, 'message' => 'SKU inválido'];
+                break;
+            }
+
+            $images = list_product_gallery_images_admin_supply($sku);
+            if (empty($images)) {
+                $response = ['success' => false, 'message' => 'No hay imágenes para este SKU'];
+                break;
+            }
+
+            if (!class_exists('ZipArchive')) {
+                $response = ['success' => false, 'message' => 'Soporte ZIP no disponible en el servidor'];
+                break;
+            }
+
+            $zip = new ZipArchive();
+            $tmpFile = tempnam(sys_get_temp_dir(), 'zip_gall_');
+            if ($zip->open($tmpFile, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+                $response = ['success' => false, 'message' => 'No se pudo crear el paquete ZIP'];
+                break;
+            }
+
+            $publicDir = realpath(__DIR__ . '/..');
+            $idx = 1;
+            $added = 0;
+
+            foreach ($images as $imgRel) {
+                if (strpos($imgRel, 'data:image/') === 0) {
+                    if (preg_match('/^data:image\/(\w+);base64,(.+)$/', $imgRel, $matches)) {
+                        $ext = $matches[1] === 'jpeg' ? 'jpg' : $matches[1];
+                        $data = base64_decode($matches[2]);
+                        $filename = $sku . '_' . ($idx === 1 ? 'portada' : $idx) . '.' . $ext;
+                        $zip->addFromString($filename, $data);
+                        $added++;
+                        $idx++;
+                    }
+                    continue;
+                }
+
+                $parsedPath = parse_url($imgRel, PHP_URL_PATH);
+                $imgClean = ltrim((string)$parsedPath, '/');
+                $filePath = realpath($publicDir . '/' . $imgClean);
+                
+                if (!$filePath) {
+                    $filePath = $publicDir . '/' . $imgClean;
+                }
+
+                if (file_exists($filePath) && is_file($filePath)) {
+                    $ext = strtolower(pathinfo($filePath, PATH_EXTENSION) ?: 'jpg');
+                    $filename = $sku . '_' . ($idx === 1 ? 'portada' : $idx) . '.' . $ext;
+                    $zip->addFile($filePath, $filename);
+                    $added++;
+                    $idx++;
+                }
+            }
+
+            $zip->close();
+
+            if ($added === 0 || !file_exists($tmpFile) || filesize($tmpFile) === 0) {
+                if (file_exists($tmpFile)) @unlink($tmpFile);
+                $response = ['success' => false, 'message' => 'No se pudieron procesar las imágenes del paquete'];
+                break;
+            }
+
+            if (ob_get_length()) {
+                ob_end_clean();
+            } else {
+                ob_clean();
+            }
+
+            header('Content-Type: application/zip');
+            header('Content-Disposition: attachment; filename="' . $sku . '_paquete_imagenes.zip"');
+            header('Content-Length: ' . filesize($tmpFile));
+            header('Cache-Control: no-cache, no-store, must-revalidate');
+            header('Pragma: no-cache');
+            header('Expires: 0');
+
+            readfile($tmpFile);
+            @unlink($tmpFile);
+            exit;
+
         case 'mark-sku-deleted':
             // Función deprecada: el seeder ya no existe, responder OK por compatibilidad
             $response = ['success' => true, 'message' => 'Sin efecto (seeder eliminado)'];
