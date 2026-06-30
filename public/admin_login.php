@@ -56,34 +56,50 @@ if (is_logged_in()) {
         }
 
         .auth-side {
-            background: radial-gradient(circle at 0% 0%, rgba(255, 127, 0, 0.12), transparent 70%), #0a0a0c !important;
+            background: radial-gradient(circle at 50% 30%, rgba(255, 127, 0, 0.15), transparent 65%), #0a0a0c !important;
             border-right: 1px solid #222222 !important;
-            padding: 3.5rem 3rem !important;
+            padding: 3.5rem 2.5rem !important;
             display: flex !important;
             flex-direction: column !important;
+            align-items: center !important;
             justify-content: center !important;
+            text-align: center !important;
         }
 
         .login-logo {
-            margin-bottom: 2rem !important;
+            margin-bottom: 2.5rem !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            width: 100% !important;
+        }
+
+        .login-logo img {
+            width: 85% !important;
+            max-width: 260px !important;
+            height: auto !important;
+            object-fit: contain !important;
+            filter: drop-shadow(0 4px 20px rgba(255, 127, 0, 0.3)) !important;
         }
 
         .auth-side h2 {
-            font-size: 2rem !important;
+            font-size: 1.8rem !important;
             font-weight: 800 !important;
             color: #ffffff !important;
             letter-spacing: -0.02em !important;
-            margin: 0 0 1rem 0 !important;
+            margin: 0 0 0.75rem 0 !important;
             background: linear-gradient(90deg, #ffffff, #ffb347) !important;
             -webkit-background-clip: text !important;
             -webkit-text-fill-color: transparent !important;
+            text-align: center !important;
         }
 
         .auth-side p {
             color: #aaaaaa !important;
-            font-size: 0.95rem !important;
+            font-size: 0.9rem !important;
             line-height: 1.6 !important;
-            margin: 0 0 2rem 0 !important;
+            margin: 0 0 1.75rem 0 !important;
+            text-align: center !important;
         }
 
         .auth-side ul {
@@ -97,9 +113,10 @@ if (is_logged_in()) {
 
         .auth-side ul li {
             color: #888888 !important;
-            font-size: 0.9rem !important;
+            font-size: 0.88rem !important;
             display: flex !important;
             align-items: center !important;
+            justify-content: center !important;
             gap: 10px !important;
             font-weight: 500 !important;
         }
@@ -287,7 +304,9 @@ if (is_logged_in()) {
     <div class="login-container">
         <div class="auth-shell">
             <aside class="auth-side">
-                <div class="login-logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 44px; width: auto; object-fit: contain;"></div>
+                <div class="login-logo">
+                    <img src="img/logo_fox.png" alt="Ferretería FOX">
+                </div>
                 <h2>Solo Administradores</h2>
                 <p>Acceso restringido al panel administrativo, abastecimiento, caja y analítica interna.</p>
                 <ul>

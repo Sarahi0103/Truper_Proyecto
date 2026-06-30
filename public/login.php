@@ -88,14 +88,16 @@ if (is_logged_in() && !$force_login_screen) {
         .auth-panel {
             position: relative;
             background:
-                radial-gradient(ellipse 90% 60% at 0% 0%, rgba(255,127,0,0.13), transparent 65%),
+                radial-gradient(ellipse 90% 60% at 50% 20%, rgba(255,127,0,0.13), transparent 65%),
                 radial-gradient(ellipse 60% 50% at 100% 100%, rgba(255,80,0,0.07), transparent 60%),
                 var(--bg-side);
             border-right: 1px solid var(--border);
-            padding: 3.5rem 3rem;
+            padding: 3.5rem 2.5rem;
             display: flex;
             flex-direction: column;
+            align-items: center;
             justify-content: center;
+            text-align: center;
             overflow: hidden;
         }
 
@@ -116,12 +118,18 @@ if (is_logged_in() && !$force_login_screen) {
         .auth-logo {
             position: relative;
             margin-bottom: 2.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
         }
 
         .auth-logo img {
-            height: 44px;
-            width: auto;
+            width: 85%;
+            max-width: 240px;
+            height: auto;
             object-fit: contain;
+            filter: drop-shadow(0 4px 20px rgba(255, 127, 0, 0.3));
         }
 
         .auth-logo-badge {
@@ -158,7 +166,7 @@ if (is_logged_in() && !$force_login_screen) {
         }
 
         .auth-heading {
-            font-size: 2rem;
+            font-size: 1.85rem;
             font-weight: 800;
             letter-spacing: -0.03em;
             line-height: 1.2;
@@ -167,6 +175,7 @@ if (is_logged_in() && !$force_login_screen) {
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            text-align: center;
         }
 
         .auth-desc {
@@ -527,7 +536,7 @@ if (is_logged_in() && !$force_login_screen) {
         <!-- Left Panel -->
         <aside class="auth-panel">
             <div class="auth-logo">
-                <img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 44px; width: auto; object-fit: contain;">
+                <img src="img/logo_fox.png" alt="Ferretería FOX">
             </div>
 
             <h2 class="auth-heading">Bienvenido de<br>vuelta</h2>
