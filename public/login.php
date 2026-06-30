@@ -17,8 +17,8 @@ if (is_logged_in() && !$force_login_screen) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Iniciar Sesión Cliente - Truper Platform</title>
-    <meta name="description" content="Accede a tu cuenta de cliente Truper. Gestiona pedidos, pagos, promociones y más.">
+    <title>Iniciar Sesión Cliente - Ferretería FOX</title>
+    <meta name="description" content="Accede a tu cuenta de cliente de Ferretería FOX. Gestiona pedidos, pagos, promociones y más.">
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -527,7 +527,7 @@ if (is_logged_in() && !$force_login_screen) {
         <!-- Left Panel -->
         <aside class="auth-panel">
             <div class="auth-logo">
-                <img src="img/logo_truper.1.1.png" alt="Truper Logo">
+                <span class="logo-brand">Ferretería <span class="logo-bold">FOX</span></span>
             </div>
 
             <h2 class="auth-heading">Bienvenido de<br>vuelta</h2>
@@ -556,7 +556,7 @@ if (is_logged_in() && !$force_login_screen) {
         <div class="auth-form-panel">
             <div class="auth-form-inner">
                 <div class="mobile-logo-wrap" style="display: none; justify-content: center; margin-bottom: 1.5rem;">
-                    <img src="img/logo_truper.1.1.png" alt="Truper Logo" style="height: 40px; width: auto; object-fit: contain;">
+                    <span class="logo-brand">Ferretería <span class="logo-bold">FOX</span></span>
                 </div>
 
                 <a href="index.php" class="auth-back" onclick="if(window.history.length>1){window.history.back();return false;}">

@@ -8,7 +8,7 @@ $csrfToken = Security::generateCSRFToken();
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro - Truper</title>
+    <title>Registro - Ferretería FOX</title>
     <link rel="stylesheet" href="/assets/css/style.css">
     <link rel="stylesheet" href="/assets/css/auth.css">
 </head>

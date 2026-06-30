@@ -1,6 +1,6 @@
 <?php
 /**
- * TRUPER PLATFORM - Performance Metrics Endpoint
+ * FERRETERÍA FOX - Performance Metrics Endpoint
  * Provides basic performance metrics for monitoring
  * 
  * Usage: /metrics.php

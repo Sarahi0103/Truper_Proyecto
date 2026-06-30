@@ -70,8 +70,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$error) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Restablecer Contraseña - Truper Platform</title>
-    <meta name="description" content="Restablece tu contraseña de Truper Platform">
+    <title>Restablecer Contraseña - Ferretería FOX</title>
+    <meta name="description" content="Restablece tu contraseña de Ferretería FOX">
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -244,7 +244,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$error) {
 <body>
     <div class="auth-wrapper">
         <div class="logo">
-            <img src="/truper_logo2.png" alt="Truper Logo">
+            <span class="logo-brand">Ferretería <span class="logo-bold">FOX</span></span>
             <h1>Restablecer Contraseña</h1>
         </div>
         

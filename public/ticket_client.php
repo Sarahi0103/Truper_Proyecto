@@ -227,7 +227,7 @@ function downloadClientTicketPdf() {
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
-    doc.text('TRUPER - TICKET CLIENTE', 6, y);
+    doc.text('FERRETERÍA FOX - TICKET CLIENTE', 6, y);
     y += 7;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);

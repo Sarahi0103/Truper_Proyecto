@@ -16,14 +16,14 @@ $csrfToken = Security::generateCSRFToken();
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mi Perfil - Truper</title>
+    <title>Mi Perfil - Ferretería FOX</title>
     <link rel="stylesheet" href="/assets/css/style.css">
     <link rel="stylesheet" href="/assets/css/forms.css">
 </head>
 <body>
     <nav class="navbar">
         <div class="nav-container">
-            <div class="logo">Truper</div>
+            <div class="logo">Ferretería <span class="logo-bold">FOX</span></div>
             <ul class="nav-menu">
                 <li><a href="/views/dashboard.php">Dashboard</a></li>
                 <li><a href="/views/profile.php">Perfil</a></li>

@@ -31,13 +31,13 @@ $payment_status = $payment_tracker->getPaymentStatus($order_id);
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detalle de Orden #<?php echo $order_id; ?> - Truper</title>
+    <title>Detalle de Orden #<?php echo $order_id; ?> - Ferretería FOX</title>
     <link rel="stylesheet" href="/assets/css/style.css">
 </head>
 <body>
     <nav class="navbar">
         <div class="nav-container">
-            <div class="logo">Truper</div>
+            <div class="logo">Ferretería <span class="logo-bold">FOX</span></div>
             <ul class="nav-menu">
                 <li><a href="/views/my_orders.php">← Volver</a></li>
                 <li><a href="/views/dashboard.php">Dashboard</a></li>

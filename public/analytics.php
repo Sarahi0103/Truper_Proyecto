@@ -17,7 +17,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Estadísticas y Análisis - Truper Platform</title>
+    <title>Estadísticas y Análisis - Ferretería FOX</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css?v=4.1">
@@ -31,7 +31,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
     <!-- HEADER -->
     <header>
         <div class="header-content">
-            <a href="dashboard.php" class="logo"><img src="img/logo_truper.1.1.png" alt="Truper" style="height: 40px; width: auto; object-fit: contain;"></a>
+            <a href="dashboard.php" class="logo"><span class="logo-brand">Ferretería <span class="logo-bold">FOX</span></span></a>
                                     <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
@@ -446,7 +446,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin');
             </div>
         </div>
         <div class="footer-bottom">
-            <p>&copy; 2026 Truper Platform. Todos los derechos reservados.</p>
+            <p>&copy; 2026 Ferretería FOX. Todos los derechos reservados.</p>
         </div>
     </footer>
 

@@ -202,7 +202,7 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Marketplace CE — Artículos de segunda mano | Truper</title>
-    <meta name="description" content="Marketplace CE de Truper: herramientas y artículos de medio uso con precio accesible. Consulta disponibilidad y cotiza fácilmente.">
+    <meta name="description" content="Marketplace CE de Ferretería FOX: herramientas y artículos de medio uso con precio accesible. Consulta disponibilidad y cotiza fácilmente.">
     <link rel="stylesheet" href="css/styles.css?v=4.1">
     <link rel="stylesheet" href="css/theme.css?v=4.1">
     <link rel="stylesheet" href="css/responsive-complete.css?v=5.0">
@@ -530,7 +530,7 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
 
     <header>
         <div class="header-content">
-            <a href="index.php" class="logo"><img src="img/logo_truper.1.1.png" alt="Truper" style="height: 40px; width: auto; object-fit: contain;"></a>
+            <a href="index.php" class="logo"><span class="logo-brand">Ferretería <span class="logo-bold">FOX</span></span></a>
                         <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
@@ -752,7 +752,7 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
     </aside>
 
     <footer>
-        <div class="footer-bottom">&copy; 2026 Truper Platform — Marketplace CE</div>
+        <div class="footer-bottom">&copy; 2026 Ferretería FOX — Marketplace CE</div>
     </footer>
 
     <script src="js/jspdf.umd.min.js"></script>

@@ -90,7 +90,7 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title><?php echo htmlspecialchars($update['title'], ENT_QUOTES, 'UTF-8'); ?> - Truper</title>
+    <title><?php echo htmlspecialchars($update['title'], ENT_QUOTES, 'UTF-8'); ?> - Ferretería FOX</title>
     <link rel="stylesheet" href="<?php echo asset_url('css/styles.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_url('css/theme.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_url('css/responsive-complete.css'); ?>">
@@ -574,7 +574,7 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
     <!-- HEADER -->
     <header>
         <div class="header-content">
-            <a href="index.php" class="logo"><img src="img/logo_truper.1.1.png" alt="Truper" style="height: 40px; width: auto; object-fit: contain;"></a>
+            <a href="index.php" class="logo"><span class="logo-brand">Ferretería <span class="logo-bold">FOX</span></span></a>
             <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
@@ -920,7 +920,7 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
 
     <!-- FOOTER -->
     <footer>
-        <div class="footer-bottom">&copy; 2026 Truper Platform</div>
+        <div class="footer-bottom">&copy; 2026 Ferretería FOX</div>
     </footer>
 
     <script src="<?php echo asset_url('js/main.js'); ?>"></script>

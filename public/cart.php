@@ -25,7 +25,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Mi Carrito - Truper Platform</title>
+    <title>Mi Carrito - Ferretería FOX</title>
     <link rel="stylesheet" href="css/styles.css?v=4.1">
     <link rel="stylesheet" href="css/theme.css?v=4.1">
     <link rel="stylesheet" href="css/responsive-complete.css?v=5.0">
@@ -406,7 +406,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
 <body class="catalog-minimal">
     <header>
         <div class="header-content">
-            <a href="index.php" class="logo"><img src="img/logo_truper.1.1.png" alt="Truper" style="height: 40px; width: auto; object-fit: contain;"></a>
+            <a href="index.php" class="logo"><span class="logo-brand">Ferretería <span class="logo-bold">FOX</span></span></a>
                         <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
@@ -499,7 +499,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
     </main>
 
     <footer style="margin-top: 3rem; padding: 2rem; text-align: center; border-top: 1px solid var(--theme-border); color: var(--theme-text-muted);">
-        <p>&copy; 2026 Truper Platform</p>
+        <p>&copy; 2026 Ferretería FOX</p>
     </footer>
 
     <script src="js/jspdf.umd.min.js"></script>

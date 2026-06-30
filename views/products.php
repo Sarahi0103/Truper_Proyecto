@@ -18,14 +18,14 @@ if ($category_filter) {
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catálogo de Productos - Truper</title>
+    <title>Catálogo de Productos - Ferretería FOX</title>
     <link rel="stylesheet" href="/assets/css/style.css">
     <link rel="stylesheet" href="/assets/css/products.css">
 </head>
 <body>
     <nav class="navbar">
         <div class="nav-container">
-            <div class="logo">Truper</div>
+            <div class="logo">Ferretería <span class="logo-bold">FOX</span></div>
             <ul class="nav-menu">
                 <li><a href="/index.php">Inicio</a></li>
                 <li><a href="/views/products.php">Catálogo</a></li>
@@ -92,7 +92,7 @@ if ($category_filter) {
     </div>
 
     <footer class="footer">
-        <p>&copy; 2024 Truper. Todos los derechos reservados.</p>
+        <p>&copy; 2026 Ferretería FOX. Todos los derechos reservados.</p>
     </footer>
 
     <script src="/assets/js/products.js"></script>

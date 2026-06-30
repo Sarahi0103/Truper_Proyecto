@@ -11,7 +11,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Validación de Tickets - Truper Platform</title>
+    <title>Validación de Tickets - Ferretería FOX</title>
     <link rel="stylesheet" href="css/styles.css?v=4.2">
     <link rel="stylesheet" href="css/theme.css?v=2.5">
     <link rel="stylesheet" href="css/dashboard.css">
@@ -455,7 +455,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
     <!-- HEADER -->
     <header>
         <div class="header-content">
-            <a href="dashboard.php" class="logo"><img src="img/logo_truper.1.1.png" alt="Truper" style="height: 40px; width: auto; object-fit: contain;"></a>
+            <a href="dashboard.php" class="logo"><span class="logo-brand">Ferretería <span class="logo-bold">FOX</span></span></a>
             <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
@@ -1005,7 +1005,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                     <div class="ticket-footer">
                         <p>Este documento es comprobante de validación de ticket.</p>
                         <p>Fecha de impresión: ${new Date().toLocaleString('es-MX')}</p>
-                        <p>Truper Platform - Sistema de Gestión</p>
+                        <p>Ferretería FOX - Sistema de Gestión</p>
                     </div>
                 </body>
                 </html>

@@ -35,14 +35,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $reset_link = "https://" . $_SERVER['HTTP_HOST'] . "/reset_password.php?token=" . $token;
                 
                 // Enviar email (simulado - en producción usar servicio real)
-                $subject = "Restablecer tu contraseña - Truper Platform";
+                $subject = "Restablecer tu contraseña - Ferretería FOX";
                 $message = "Hola " . $user['name'] . ",\n\n";
                 $message .= "Hemos recibido una solicitud para restablecer tu contraseña.\n\n";
                 $message .= "Haz clic en el siguiente enlace para restablecer tu contraseña:\n";
                 $message .= $reset_link . "\n\n";
                 $message .= "Este enlace expirará en 1 hora.\n\n";
                 $message .= "Si no solicitaste este cambio, ignora este email.\n\n";
-                $message .= "Saludos,\nEquipo Truper Platform";
+                $message .= "Saludos,\nEquipo Ferretería FOX";
                 
                 // En producción usar mail() o servicio de email real
                 // mail($email, $subject, $message);
@@ -63,8 +63,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Recuperar Contraseña - Truper Platform</title>
-    <meta name="description" content="Recupera tu contraseña de Truper Platform">
+    <title>Recuperar Contraseña - Ferretería FOX</title>
+    <meta name="description" content="Recupera tu contraseña de Ferretería FOX">
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -231,7 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
     <div class="auth-wrapper">
         <div class="logo">
-            <img src="/truper_logo2.png" alt="Truper Logo">
+            <span class="logo-brand">Ferretería <span class="logo-bold">FOX</span></span>
             <h1>Recuperar Contraseña</h1>
         </div>
         

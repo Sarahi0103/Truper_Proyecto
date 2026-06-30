@@ -13,7 +13,7 @@ $column_count = $is_admin ? 7 : 6;
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Mayoreo - Truper Platform</title>
+    <title>Mayoreo - Ferretería FOX</title>
     <link rel="stylesheet" href="css/styles.css?v=4.1">
     <link rel="stylesheet" href="css/theme.css?v=4.1">
     <link rel="stylesheet" href="css/dashboard.css">
@@ -134,7 +134,7 @@ $column_count = $is_admin ? 7 : 6;
 <body>
 <header>
     <div class="header-content">
-        <a href="dashboard.php" class="logo"><img src="img/logo_truper.1.1.png" alt="Truper" style="height: 40px; width: auto; object-fit: contain;"></a>
+        <a href="dashboard.php" class="logo"><span class="logo-brand">Ferretería <span class="logo-bold">FOX</span></span></a>
                             <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
@@ -565,7 +565,7 @@ function downloadWholesalePdf(id) {
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(22);
-  doc.text('TRUPER PLATFORM', 15, 18);
+  doc.text('FERRETERÍA FOX', 15, 18);
   
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
@@ -698,7 +698,7 @@ function downloadWholesalePdf(id) {
   doc.setTextColor(100, 100, 100);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
-  doc.text('* Esta cotización es de carácter informativo y está sujeta a aprobación por el administrador de Truper Platform.', 15, y);
+  doc.text('* Esta cotización es de carácter informativo y está sujeta a aprobación por el administrador de Ferretería FOX.', 15, y);
   y += 4;
   doc.text('* Los términos comerciales y de entrega se formalizarán una vez que se notifique la aprobación del pedido.', 15, y);
   

@@ -11,7 +11,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Tickets sin Registro - Truper Platform</title>
+    <title>Tickets sin Registro - Ferretería FOX</title>
     <link rel="stylesheet" href="css/styles.css?v=4.2">
     <link rel="stylesheet" href="css/theme.css?v=4.1">
     <link rel="stylesheet" href="css/dashboard.css">
@@ -552,7 +552,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
     <!-- HEADER -->
     <header>
         <div class="header-content">
-            <a href="dashboard.php" class="logo"><img src="img/logo_truper.1.1.png" alt="Truper" style="height: 40px; width: auto; object-fit: contain;"></a>
+            <a href="dashboard.php" class="logo"><span class="logo-brand">Ferretería <span class="logo-bold">FOX</span></span></a>
             <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
@@ -1277,7 +1277,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                 <body onload="window.print(); window.close();">
                     <div class="ticket-box">
                         <div class="header">
-                            <img src="img/logo_truper.1.1.png" class="logo"><br>
+                            <span class="logo-brand">Ferretería <span class="logo-bold">FOX</span></span><br>
                             <span class="title">COMPROBANTE DE COMPRA (INVITADO)</span><br>
                             <strong>Folio: ${selectedTicket.folio}</strong>
                         </div>
@@ -1314,7 +1314,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                             </tbody>
                         </table>
                         <div class="footer">
-                            <p>¡Gracias por tu compra en Truper Platform!</p>
+                            <p>¡Gracias por tu compra en Ferretería FOX!</p>
                             <p>Este comprobante cuenta con vigencia de 30 días naturales a partir de la fecha de emisión.</p>
                         </div>
                     </div>

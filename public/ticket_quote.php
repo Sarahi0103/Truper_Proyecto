@@ -206,7 +206,7 @@ function ticket_quote_product_code($item) {
         |
         <a href="#" onclick="downloadTicketPdf(); return false;">Descargar PDF</a>
     </div>
-    <h1>TRUPER - TICKET</h1>
+    <h1>FERRETERÍA FOX - TICKET</h1>
     <div class="row"><strong>Folio:</strong> <?php echo htmlspecialchars($folio, ENT_QUOTES, 'UTF-8'); ?></div>
     <div class="row"><strong>Fecha:</strong> <?php echo htmlspecialchars($issuedAt, ENT_QUOTES, 'UTF-8'); ?></div>
     <div class="row"><strong>Cliente:</strong> <?php echo htmlspecialchars($client, ENT_QUOTES, 'UTF-8'); ?></div>
@@ -263,7 +263,7 @@ function downloadTicketPdf() {
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
-    doc.text('TRUPER - TICKET', 6, y);
+    doc.text('FERRETERÍA FOX - TICKET', 6, y);
     y += 7;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);

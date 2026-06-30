@@ -424,12 +424,31 @@ header {
 
 .logo {
     font-size: 1.8rem;
-    font-weight: bold;
     color: var(--color-naranja);
     text-decoration: none;
     display: flex;
     align-items: center;
     gap: 0.5rem;
+}
+
+.logo-brand {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.7rem;
+    font-weight: normal;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    line-height: 1;
+}
+
+.logo-bold {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #ffffff;
 }
 
 .logo img {

@@ -11,7 +11,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Historial de Tickets - Truper Platform</title>
+    <title>Historial de Tickets - Ferretería FOX</title>
     <link rel="stylesheet" href="css/styles.css?v=4.2">
     <link rel="stylesheet" href="css/theme.css?v=4.1">
     <link rel="stylesheet" href="css/dashboard.css">
@@ -134,7 +134,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
     <!-- HEADER -->
     <header>
         <div class="header-content">
-            <a href="dashboard.php" class="logo"><img src="img/logo_truper.1.1.png" alt="Truper" style="height: 40px; width: auto; object-fit: contain;"></a>
+            <a href="dashboard.php" class="logo"><span class="logo-brand">Ferretería <span class="logo-bold">FOX</span></span></a>
                                     <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
@@ -329,12 +329,12 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
     <footer>
         <div class="footer-content">
             <div class="footer-section">
-                <h4>Truper Platform</h4>
+                <h4>Ferretería FOX</h4>
                 <p>Módulo de Historial y Auditoría de Ventas</p>
             </div>
         </div>
         <div class="footer-bottom">
-            <p>&copy; 2026 Truper Platform. Todos los derechos reservados.</p>
+            <p>&copy; 2026 Ferretería FOX. Todos los derechos reservados.</p>
         </div>
     </footer>
 
@@ -698,7 +698,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             doc.setTextColor(255, 255, 255);
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(22);
-            doc.text('TRUPER PLATFORM', 15, 18);
+            doc.text('FERRETERÍA FOX', 15, 18);
             
             doc.setFontSize(11);
             doc.setFont('helvetica', 'normal');

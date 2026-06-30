@@ -13,8 +13,8 @@ if (is_logged_in()) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Registro de Cliente - Truper Platform</title>
-    <meta name="description" content="Crea tu cuenta de cliente Truper. Accede a pedidos, promociones y beneficios exclusivos.">
+    <title>Registro de Cliente - Ferretería FOX</title>
+    <meta name="description" content="Crea tu cuenta de cliente de Ferretería FOX. Accede a pedidos, promociones y beneficios exclusivos.">
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -443,7 +443,7 @@ if (is_logged_in()) {
         <!-- Left Panel -->
         <aside class="auth-panel">
             <div class="auth-logo">
-                <img src="img/logo_truper.1.1.png" alt="Truper Logo">
+                <span class="logo-brand">Ferretería <span class="logo-bold">FOX</span></span>
             </div>
 
             <h2 class="auth-heading">Crea tu cuenta<br>de cliente</h2>

@@ -18,7 +18,7 @@ if ($isLogged) {
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Checkout - Truper Platform</title>
+    <title>Checkout - Ferretería FOX</title>
     <link rel="stylesheet" href="css/styles.css?v=4.1">
     <link rel="stylesheet" href="css/theme.css?v=4.1">
     <link rel="stylesheet" href="css/responsive-complete.css?v=5.0">
@@ -206,7 +206,7 @@ if ($isLogged) {
 <body data-theme="light">
     <header>
         <div class="header-content">
-            <a href="index.php" class="logo"><img src="img/logo_truper.1.1.png" alt="Truper" style="height: 40px; width: auto; object-fit: contain;"></a>
+            <a href="index.php" class="logo"><span class="logo-brand">Ferretería <span class="logo-bold">FOX</span></span></a>
                                     <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
@@ -466,7 +466,7 @@ if ($isLogged) {
     </main>
 
     <footer style="margin-top: 3rem; padding: 2rem; text-align: center; border-top: 1px solid var(--theme-border); color: var(--theme-text-muted);">
-        <p>&copy; 2026 Truper Platform</p>
+        <p>&copy; 2026 Ferretería FOX</p>
     </footer>
 
     <script src="js/main.js?v=2.6"></script>

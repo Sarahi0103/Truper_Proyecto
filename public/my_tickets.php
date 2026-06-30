@@ -11,7 +11,7 @@ $userName = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8'
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Mis Tickets - Truper Platform</title>
+    <title>Mis Tickets - Ferretería FOX</title>
     <link rel="stylesheet" href="css/styles.css?v=4.1">
     <link rel="stylesheet" href="css/theme.css?v=4.1">
     <link rel="stylesheet" href="css/responsive-complete.css?v=5.0">
@@ -86,7 +86,7 @@ $userName = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8'
 
         <div class="header-content">
             <h1>📋 Mis Tickets de Compra</h1>
-            <p>Historial completo de tus transacciones con Truper</p>
+            <p>Historial completo de tus transacciones con Ferretería FOX</p>
         </div>
     </header>
 

@@ -15,7 +15,7 @@ $first_name = explode(' ', $user_name)[0];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Dashboard - Truper Platform</title>
+    <title>Dashboard - Ferretería FOX</title>
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -511,7 +511,7 @@ $first_name = explode(' ', $user_name)[0];
     <!-- HEADER -->
     <header>
         <div class="header-content">
-            <a href="dashboard.php" class="logo"><img src="img/logo_truper.1.1.png" alt="Truper" style="height: 40px; width: auto; object-fit: contain;"></a>
+            <a href="dashboard.php" class="logo"><span class="logo-brand">Ferretería <span class="logo-bold">FOX</span></span></a>
             <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
@@ -580,7 +580,7 @@ $first_name = explode(' ', $user_name)[0];
                         Sistema en línea
                     </div>
                     <h1 id="dbGreeting">Bienvenido, <span><?php echo $first_name; ?></span></h1>
-                    <p class="db-hero-sub">Bienvenido de vuelta a Truper Platform. Aquí está el resumen de hoy.</p>
+                    <p class="db-hero-sub">Bienvenido de vuelta a Ferretería FOX. Aquí está el resumen de hoy.</p>
                 </div>
                 <div class="db-hero-right">
                     <div class="db-hero-visual">
@@ -883,7 +883,7 @@ $first_name = explode(' ', $user_name)[0];
             </div>
         </div>
         <div class="footer-bottom">
-            <p>&copy; 2026 Truper Platform. Todos los derechos reservados.</p>
+            <p>&copy; 2026 Ferretería FOX. Todos los derechos reservados.</p>
         </div>
     </footer>
 

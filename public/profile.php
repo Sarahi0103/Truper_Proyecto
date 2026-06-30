@@ -109,7 +109,7 @@ if (!empty($profile['birthdate'])) {
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Perfil - Truper Platform</title>
+    <title>Perfil - Ferretería FOX</title>
     <link rel="stylesheet" href="css/styles.css?v=4.1">
     <link rel="stylesheet" href="css/theme.css?v=4.1">
     <link rel="stylesheet" href="css/responsive-complete.css?v=5.0">
@@ -450,7 +450,7 @@ if (!empty($profile['birthdate'])) {
     <!-- HEADER -->
     <header>
         <div class="header-content">
-            <a href="index.php" class="logo"><img src="img/logo_truper.1.1.png" alt="Truper" style="height: 40px; width: auto; object-fit: contain;"></a>
+            <a href="index.php" class="logo"><span class="logo-brand">Ferretería <span class="logo-bold">FOX</span></span></a>
                         <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
@@ -659,7 +659,7 @@ if (!empty($profile['birthdate'])) {
             </div>
         </div>
         <div class="footer-bottom">
-            <p>&copy; 2026 Truper Platform. Todos los derechos reservados.</p>
+            <p>&copy; 2026 Ferretería FOX. Todos los derechos reservados.</p>
         </div>
     </footer>
 
