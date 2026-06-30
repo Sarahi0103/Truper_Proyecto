@@ -17,7 +17,7 @@ if (is_logged_in()) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Acceso Administrador - Ferretería FOX</title>
-    <link rel="icon" type="image/png" href="/truper_logo2.png">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' font-family='Georgia, serif' fill='%23ff6600' font-weight='bold'%3EF%3C/text%3E%3C/svg%3E">
     <link rel="stylesheet" href="css/styles.css?v=4.1">
     <link rel="stylesheet" href="css/theme.css?v=4.1">
     <link rel="stylesheet" href="css/responsive-complete.css?v=5.0">

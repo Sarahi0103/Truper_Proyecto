@@ -198,10 +198,10 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <link rel="icon" type="image/png" href="/truper_logo2.png">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' font-family='Georgia, serif' fill='%23ff6600' font-weight='bold'%3EF%3C/text%3E%3C/svg%3E">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Marketplace CE — Artículos de segunda mano | Truper</title>
+    <title>Marketplace CE — Artículos de segunda mano | Ferretería FOX</title>
     <meta name="description" content="Marketplace CE de Ferretería FOX: herramientas y artículos de medio uso con precio accesible. Consulta disponibilidad y cotiza fácilmente.">
     <link rel="stylesheet" href="css/styles.css?v=4.1">
     <link rel="stylesheet" href="css/theme.css?v=4.1">
