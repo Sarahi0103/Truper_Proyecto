@@ -19,7 +19,7 @@ if (is_logged_in() && !$force_login_screen) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Iniciar Sesión Cliente - Ferretería FOX</title>
     <meta name="description" content="Accede a tu cuenta de cliente de Ferretería FOX. Gestiona pedidos, pagos, promociones y más.">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' font-family='Georgia, serif' fill='%23ff6600' font-weight='bold'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="icon" type="image/png" href="/truper_logo2.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
