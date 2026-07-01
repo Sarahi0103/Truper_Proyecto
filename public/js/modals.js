@@ -36,21 +36,39 @@ function showPremiumModal(title, message, icon, onConfirm, onCancel) {
     const cancelBtn = document.getElementById('modalCancel');
     const confirmBtn = document.getElementById('modalConfirm');
     
-    cancelBtn.addEventListener('click', () => {
+    cancelBtn.addEventListener('click', async () => {
+        if (onCancel) {
+            try {
+                await onCancel();
+            } catch (err) {
+                console.error(err);
+            }
+        }
         hidePremiumModal();
-        if (onCancel) onCancel();
     });
     
-    confirmBtn.addEventListener('click', () => {
+    confirmBtn.addEventListener('click', async () => {
+        if (onConfirm) {
+            try {
+                await onConfirm();
+            } catch (err) {
+                console.error(err);
+            }
+        }
         hidePremiumModal();
-        if (onConfirm) onConfirm();
     });
     
     // Cerrar al hacer clic fuera del modal
-    overlay.addEventListener('click', (e) => {
+    overlay.addEventListener('click', async (e) => {
         if (e.target === overlay) {
+            if (onCancel) {
+                try {
+                    await onCancel();
+                } catch (err) {
+                    console.error(err);
+                }
+            }
             hidePremiumModal();
-            if (onCancel) onCancel();
         }
     });
     
