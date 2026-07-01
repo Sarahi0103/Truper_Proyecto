@@ -3437,40 +3437,73 @@ async function deleteStockSelectedItems() {
         '🗑️',
         async () => {
             if (quickBox) quickBox.innerHTML = '<span style="color:#cbd5e1;">Eliminando productos...</span>';
-
-            let successCount = 0;
-            let firstError = '';
-            for (const id of selectedIds) {
-                const res = await apiCall('/admin_supply.php?action=product-delete', 'POST', { id: id });
-                if (res && res.success) {
-                    successCount += 1;
-                } else if (!firstError) {
-                    firstError = (res && res.message) ? res.message : `No se pudo eliminar el producto ${id}`;
-                }
-            }
-
-            if (successCount > 0) {
-                if (quickBox) quickBox.innerHTML = `<span style="color:#22c55e;">${successCount} producto(s) eliminado(s).</span>`;
-                showAlert(`${successCount} producto(s) eliminado(s)`, 'success');
-            }
-            if (firstError) {
-                if (quickBox) quickBox.innerHTML += ` <span style="color:#f87171;">${escapeHtml(firstError)}</span>`;
-                showAlert(firstError, 'error');
-            }
-
-            // Optimistic update: remove deleted products from cache and re-render
+            
+            // Optimistic update: remove deleted products from cache and re-render immediately (0 ms)
+            const previousCache = [...(stockItemsCache || [])];
             try {
                 const idsSet = new Set(selectedIds.map((i) => Number(i)));
                 stockItemsCache = (stockItemsCache || []).filter((p) => !idsSet.has(Number(p.id)));
                 renderStockList();
-                renderStockPagination({ current_page: stockCurrentPage, total_pages: Math.max(1, Math.ceil((stockItemsCache || []).length / (stockPerPage || 50))), total_items: (stockItemsCache || []).length });
+                renderStockPagination({ 
+                    current_page: stockCurrentPage, 
+                    total_pages: Math.max(1, Math.ceil((stockItemsCache || []).length / (stockPerPage || 50))), 
+                    total_items: (stockItemsCache || []).length 
+                });
             } catch (e) {
                 console.warn('Optimistic bulk removal failed:', e);
             }
 
-            // Background sync: refresh stock and marketplace quickly
-            await loadStock(stockCurrentPage);
-            void loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 10);
+            // Procesar las peticiones de borrado al servidor en paralelo en segundo plano para máxima velocidad
+            try {
+                const deletePromises = selectedIds.map(id => 
+                    apiCall('/admin_supply.php?action=product-delete', 'POST', { id: id })
+                );
+                
+                const results = await Promise.all(deletePromises);
+                
+                let successCount = 0;
+                let firstError = '';
+                results.forEach((res, index) => {
+                    if (res && res.success) {
+                        successCount++;
+                    } else if (!firstError) {
+                        firstError = (res && res.message) ? res.message : `No se pudo eliminar el producto ${selectedIds[index]}`;
+                    }
+                });
+
+                if (successCount > 0) {
+                    if (quickBox) quickBox.innerHTML = `<span style="color:#22c55e;">${successCount} producto(s) eliminado(s).</span>`;
+                    showAlert(`${successCount} producto(s) eliminado(s)`, 'success');
+                }
+                
+                if (firstError) {
+                    // Rollback en caso de error
+                    stockItemsCache = previousCache;
+                    renderStockList();
+                    renderStockPagination({ 
+                        current_page: stockCurrentPage, 
+                        total_pages: Math.max(1, Math.ceil((stockItemsCache || []).length / (stockPerPage || 50))), 
+                        total_items: (stockItemsCache || []).length 
+                    });
+                    if (quickBox) quickBox.innerHTML += ` <span style="color:#f87171;">${escapeHtml(firstError)}</span>`;
+                    showAlert(firstError, 'error');
+                } else {
+                    // Sincronización silenciosa en segundo plano
+                    await loadStock(stockCurrentPage);
+                    void loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 10);
+                }
+            } catch (err) {
+                // Rollback ante excepción de red
+                stockItemsCache = previousCache;
+                renderStockList();
+                renderStockPagination({ 
+                    current_page: stockCurrentPage, 
+                    total_pages: Math.max(1, Math.ceil((stockItemsCache || []).length / (stockPerPage || 50))), 
+                    total_items: (stockItemsCache || []).length 
+                });
+                if (quickBox) quickBox.innerHTML = '<span style="color:#f87171;">Error de red al intentar eliminar los productos.</span>';
+                showAlert('Error de red al intentar eliminar los productos', 'error');
+            }
         }
     );
 }
@@ -3589,30 +3622,60 @@ async function deleteProductByAdmin(id) {
     if (!id) return;
     confirmDelete('este producto', async () => {
         const box = document.getElementById('productCreateResult');
-        const res = await apiCall('/admin_supply.php?action=product-delete', 'POST', { id: id });
-        if (!res || !res.success) {
-            if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible eliminar producto')}</div>`;
-            return;
-        }
+        const previousCache = [...(stockItemsCache || [])];
 
-        if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Producto eliminado')}</div>`;
-        if (Number(document.getElementById('newProductEditId').value || 0) === Number(id)) {
-            resetProductForm();
-        }
-        // Optimistic update: remove product from local cache and re-render immediately
+        // 1. Quitar el producto de la vista inmediatamente (0 ms)
         try {
             stockItemsCache = (stockItemsCache || []).filter((p) => Number(p.id) !== Number(id));
             renderStockList();
-            // update pagination based on current cache
-            renderStockPagination({ current_page: stockCurrentPage, total_pages: Math.max(1, Math.ceil((stockItemsCache || []).length / (stockPerPage || 50))), total_items: (stockItemsCache || []).length });
+            renderStockPagination({ 
+                current_page: stockCurrentPage, 
+                total_pages: Math.max(1, Math.ceil((stockItemsCache || []).length / (stockPerPage || 50))), 
+                total_items: (stockItemsCache || []).length 
+            });
         } catch (e) {
             console.warn('Optimistic product removal failed:', e);
         }
 
-        // Background sync to keep server state in sync (non-blocking). Use small per_page for quick refresh.
-        void loadStock(stockCurrentPage);
-        void loadSupplierProducts();
-        void loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 10);
+        if (Number(document.getElementById('newProductEditId').value || 0) === Number(id)) {
+            resetProductForm();
+        }
+
+        // 2. Procesar la petición al servidor en segundo plano
+        try {
+            const res = await apiCall('/admin_supply.php?action=product-delete', 'POST', { id: id });
+            if (!res || !res.success) {
+                // Rollback en caso de fallo
+                stockItemsCache = previousCache;
+                renderStockList();
+                renderStockPagination({ 
+                    current_page: stockCurrentPage, 
+                    total_pages: Math.max(1, Math.ceil((stockItemsCache || []).length / (stockPerPage || 50))), 
+                    total_items: (stockItemsCache || []).length 
+                });
+                const errMsg = (res && res.message) ? res.message : 'No fue posible eliminar producto';
+                if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml(errMsg)}</div>`;
+                showAlert(errMsg, 'error');
+            } else {
+                if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Producto eliminado')}</div>`;
+                showAlert('Producto eliminado correctamente', 'success');
+                // Sincronización silenciosa de fondo
+                void loadStock(stockCurrentPage);
+                void loadSupplierProducts();
+                void loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 10);
+            }
+        } catch (err) {
+            // Rollback ante excepción de red
+            stockItemsCache = previousCache;
+            renderStockList();
+            renderStockPagination({ 
+                current_page: stockCurrentPage, 
+                total_pages: Math.max(1, Math.ceil((stockItemsCache || []).length / (stockPerPage || 50))), 
+                total_items: (stockItemsCache || []).length 
+            });
+            if (box) box.innerHTML = `<div class="alert alert-error">Error de red al intentar eliminar el producto</div>`;
+            showAlert('Error de red al intentar eliminar el producto', 'error');
+        }
     });
 }
 

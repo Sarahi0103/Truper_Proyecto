@@ -624,23 +624,32 @@ function db_table_exists($table_name) {
 
 function db_column_exists($table_name, $column_name) {
     global $pdo;
+    static $cache = [];
+    $cacheKey = strtolower($table_name) . '.' . strtolower($column_name);
+    if (isset($cache[$cacheKey])) {
+        return $cache[$cacheKey];
+    }
     try {
         $stmt = $pdo->prepare("SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE LOWER(table_name) = LOWER(?) AND LOWER(column_name) = LOWER(?) AND table_schema = current_schema())");
         $stmt->execute([$table_name, $column_name]);
         if ((bool)$stmt->fetchColumn()) {
+            $cache[$cacheKey] = true;
             return true;
         }
 
         $stmt = $pdo->prepare("SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE LOWER(table_name) = LOWER(?) AND LOWER(column_name) = LOWER(?) AND table_schema = 'public')");
         $stmt->execute([$table_name, $column_name]);
         if ((bool)$stmt->fetchColumn()) {
+            $cache[$cacheKey] = true;
             return true;
         }
 
         // Last-resort lookup for databases where tables are in non-default schemas.
         $stmt = $pdo->prepare("SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE LOWER(table_name) = LOWER(?) AND LOWER(column_name) = LOWER(?))");
         $stmt->execute([$table_name, $column_name]);
-        return (bool)$stmt->fetchColumn();
+        $res = (bool)$stmt->fetchColumn();
+        $cache[$cacheKey] = $res;
+        return $res;
     } catch (Exception $e) {
         return false;
     }
