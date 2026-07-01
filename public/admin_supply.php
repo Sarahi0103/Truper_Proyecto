@@ -585,7 +585,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
 <body>
 <header>
     <div class="header-content">
-        <a href="dashboard.php" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 44px; width: auto; object-fit: contain;"></a>
+        <a href="dashboard.php" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 42px; width: auto; object-fit: contain;"></a>
         <button class="hamburger-btn" aria-label="Toggle menu">
             <span></span>
             <span></span>
@@ -6875,6 +6875,20 @@ function onCsvFileSelected(input, zoneId, labelId) {
 function parseCsvText(text) {
     const rows = [];
     const lines = text.split(/\r?\n/);
+    if (lines.length === 0) return rows;
+
+    // Detectar automáticamente el delimitador (, o ;) basándonos en la primera línea con texto
+    let delimiter = ',';
+    for (const line of lines) {
+        if (line.trim() === '') continue;
+        const commaCount = (line.match(/,/g) || []).length;
+        const semiCount = (line.match(/;/g) || []).length;
+        if (semiCount > commaCount) {
+            delimiter = ';';
+        }
+        break;
+    }
+
     for (const line of lines) {
         if (line.trim() === '') continue;
         const cols = [];
@@ -6884,7 +6898,7 @@ function parseCsvText(text) {
             if (ch === '"') {
                 if (inQuotes && line[ci + 1] === '"') { current += '"'; ci++; }
                 else inQuotes = !inQuotes;
-            } else if (ch === ',' && !inQuotes) {
+            } else if (ch === delimiter && !inQuotes) {
                 cols.push(current.trim()); current = '';
             } else {
                 current += ch;
@@ -6921,9 +6935,34 @@ async function processCsvUpload() {
             return;
         }
 
-        const headers = allRows[0].map(h => h.toLowerCase().replace(/^\ufeff/, '')); // strip BOM
+        // Buscar de forma dinámica el índice de la línea que contiene los encabezados reales
+        let headerIndex = -1;
+        for (let i = 0; i < Math.min(10, allRows.length); i++) {
+            const row = allRows[i].map(c => String(c).toLowerCase().replace(/^\ufeff/, '').trim());
+            if (row.includes('sku') && row.includes('name')) {
+                headerIndex = i;
+                break;
+            }
+        }
+
+        if (headerIndex === -1) {
+            headerIndex = 0;
+        }
+
+        const headers = allRows[headerIndex].map(h => h.toLowerCase().replace(/^\ufeff/, '').trim()); // strip BOM
+        
+        // Validar columnas mínimas requeridas para el catálogo
+        const requiredHeaders = ['sku', 'name', 'category', 'unit_price', 'stock_quantity'];
+        const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+        if (missingHeaders.length > 0) {
+            progressBox.textContent = `Error: Falta(n) columna(s) requerida(s): ${missingHeaders.join(', ')}. Cabecera detectada en fila ${headerIndex + 1}: "${allRows[headerIndex].join(',')}". Asegúrate de usar la plantilla correcta y que no sea un archivo de Excel normal (.xlsx).`;
+            progressBox.className = 'csv-progress-label error';
+            if (progressWrap) progressWrap.style.display = 'block';
+            return;
+        }
+
         const data = [];
-        for (let i = 1; i < allRows.length; i++) {
+        for (let i = headerIndex + 1; i < allRows.length; i++) {
             const cols = allRows[i];
             if (cols.every(c => c === '')) continue;
             const rowData = {};
@@ -6949,7 +6988,9 @@ async function processCsvUpload() {
             try {
                 const res = await apiCall('/admin_supply.php?action=product-batch-save', 'POST', { products: batch });
                 if (res && res.success) {
-                    successCount += res.processed || batch.length;
+                    const proc = (res.processed !== undefined && res.processed !== null) ? Number(res.processed) : batch.length;
+                    successCount += proc;
+                    errorCount += (batch.length - proc);
                 } else {
                     errorCount += batch.length;
                 }
@@ -7022,9 +7063,34 @@ async function processMarketplaceCsvUpload() {
             return;
         }
 
-        const headers = allRows[0].map(h => h.toLowerCase().replace(/^\ufeff/, ''));
+        // Buscar de forma dinámica el índice de la línea que contiene los encabezados reales
+        let headerIndex = -1;
+        for (let i = 0; i < Math.min(10, allRows.length); i++) {
+            const row = allRows[i].map(c => String(c).toLowerCase().replace(/^\ufeff/, '').trim());
+            if (row.includes('sku') && row.includes('name')) {
+                headerIndex = i;
+                break;
+            }
+        }
+
+        if (headerIndex === -1) {
+            headerIndex = 0;
+        }
+
+        const headers = allRows[headerIndex].map(h => h.toLowerCase().replace(/^\ufeff/, '').trim());
+        
+        // Validar columnas mínimas requeridas para Marketplace CE
+        const requiredHeaders = ['sku', 'name', 'unit_price', 'stock_quantity'];
+        const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+        if (missingHeaders.length > 0) {
+            progressBox.textContent = `Error: Falta(n) columna(s) requerida(s): ${missingHeaders.join(', ')}. Cabecera detectada en fila ${headerIndex + 1}: "${allRows[headerIndex].join(',')}". Asegúrate de usar la plantilla correcta y que no sea un archivo de Excel normal (.xlsx).`;
+            progressBox.className = 'csv-progress-label error';
+            if (progressWrap) progressWrap.style.display = 'block';
+            return;
+        }
+
         const data = [];
-        for (let i = 1; i < allRows.length; i++) {
+        for (let i = headerIndex + 1; i < allRows.length; i++) {
             const cols = allRows[i];
             if (cols.every(c => c === '')) continue;
             const rowData = {};
@@ -7050,7 +7116,9 @@ async function processMarketplaceCsvUpload() {
             try {
                 const res = await apiCall('/admin_supply.php?action=marketplace-batch-save', 'POST', { products: batch });
                 if (res && res.success) {
-                    successCount += res.processed || batch.length;
+                    const proc = (res.processed !== undefined && res.processed !== null) ? Number(res.processed) : batch.length;
+                    successCount += proc;
+                    errorCount += (batch.length - proc);
                 } else {
                     errorCount += batch.length;
                 }

@@ -452,7 +452,7 @@ header {
 }
 
 .logo img {
-    height: 52px;
+    height: 42px;
     width: auto;
     display: block;
     object-fit: contain;
@@ -461,6 +461,41 @@ header {
 .logo:hover {
     color: var(--color-naranja);
     transition: var(--transition);
+}
+
+/* ===== Back Links & Arrows Custom Styles (iOS/Mac/Safari Compatible) ===== */
+.back-link-fox, .auth-back-link, .auth-back-row a {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.4rem !important;
+    color: #888888 !important;
+    font-size: 0.9rem !important;
+    font-weight: 700 !important;
+    text-decoration: none !important;
+    transition: all 0.2s ease !important;
+    vertical-align: middle !important;
+}
+
+.back-link-fox:hover, .auth-back-link:hover, .auth-back-row a:hover {
+    color: var(--color-naranja) !important;
+}
+
+.arrow-icon {
+    width: 16px;
+    height: 16px;
+    stroke-width: 2.5;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    display: inline-block;
+    vertical-align: middle;
+    transition: transform 0.2s ease;
+}
+
+.back-link-fox:hover .arrow-icon, .auth-back-link:hover .arrow-icon, .auth-back-row a:hover .arrow-icon {
+    transform: translateX(-3px);
 }
 
 .nav-menu {

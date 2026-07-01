@@ -194,7 +194,7 @@ if ($orderId && $isLogged) {
 <body data-theme="light">
     <header>
         <div class="header-content">
-            <a href="index.php" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 44px; width: auto; object-fit: contain;"></a>
+            <a href="index.php" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 42px; width: auto; object-fit: contain;"></a>
                                     <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
@@ -370,7 +370,7 @@ if ($orderId && $isLogged) {
                     <div class="success-title" style="color: #EF4444;">Error: Pedido no encontrado</div>
                     <div class="success-subtitle">No pudimos encontrar tu pedido. Por favor intenta de nuevo.</div>
                     <div style="margin-top: 2rem;">
-                        <a href="orders.php" class="btn btn-primary">← Volver a Pedidos</a>
+                        <a href="orders.php" class="btn btn-primary"><svg class="arrow-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>Volver a Pedidos</a>
                     </div>
                 </div>
             <?php endif; ?>

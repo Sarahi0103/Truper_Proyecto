@@ -162,7 +162,7 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') 
     <!-- HEADER -->
     <header>
         <div class="header-content">
-            <a href="dashboard.php" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 44px; width: auto; object-fit: contain;"></a>
+            <a href="dashboard.php" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 42px; width: auto; object-fit: contain;"></a>
                                     <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>

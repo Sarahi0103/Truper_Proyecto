@@ -443,7 +443,7 @@ if (is_logged_in()) {
         <!-- Left Panel -->
         <aside class="auth-panel">
             <div class="auth-logo">
-                <img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 44px; width: auto; object-fit: contain;">
+                <img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 42px; width: auto; object-fit: contain;">
             </div>
 
             <h2 class="auth-heading">Crea tu cuenta<br>de cliente</h2>

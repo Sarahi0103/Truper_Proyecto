@@ -4337,6 +4337,7 @@ try {
                 $response = ['success' => false, 'message' => 'No hay productos para procesar'];
                 break;
             }
+            error_log('DEBUG BATCH SAVE: count=' . count($products) . '; first=' . json_encode($products[0] ?? null));
             $processed = 0;
             $pdo->beginTransaction();
             try {

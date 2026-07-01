@@ -305,7 +305,7 @@ if (is_logged_in()) {
         <div class="auth-shell">
             <aside class="auth-side">
                 <div class="login-logo">
-                    <img src="img/logo_fox.png" alt="Ferretería FOX">
+                    <img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 42px; width: auto; object-fit: contain;">
                 </div>
                 <h2>Solo Administradores</h2>
                 <p>Acceso restringido al panel administrativo, abastecimiento, caja y analítica interna.</p>
@@ -319,10 +319,10 @@ if (is_logged_in()) {
             <div class="auth-form-wrap">
                 <div class="login-box">
                     <div class="mobile-logo-wrap" style="display: none; justify-content: center; margin-bottom: 1.5rem;">
-                        <img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 44px; width: auto; object-fit: contain;">
+                        <img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 42px; width: auto; object-fit: contain;">
                     </div>
                     <div class="auth-back-row">
-                        <a href="index.php" class="auth-back-link">← Volver a productos</a>
+                        <a href="index.php" class="auth-back-link"><svg class="arrow-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>Volver a productos</a>
                     </div>
                     <div class="login-header">
                         <h1 class="login-title">Iniciar Sesión Administrador</h1>

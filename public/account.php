@@ -228,7 +228,7 @@ $company_whatsapp = htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8
 <body>
 <header>
     <div class="header-content">
-        <a href="index.php" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 44px; width: auto; object-fit: contain;"></a>
+        <a href="index.php" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 42px; width: auto; object-fit: contain;"></a>
                     <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>

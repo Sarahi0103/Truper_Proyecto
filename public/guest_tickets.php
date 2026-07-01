@@ -552,7 +552,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
     <!-- HEADER -->
     <header>
         <div class="header-content">
-            <a href="dashboard.php" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 44px; width: auto; object-fit: contain;"></a>
+            <a href="dashboard.php" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 42px; width: auto; object-fit: contain;"></a>
             <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
@@ -1277,7 +1277,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                 <body onload="window.print(); window.close();">
                     <div class="ticket-box">
                         <div class="header">
-                            <img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 44px; width: auto; object-fit: contain;"><br>
+                            <img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 42px; width: auto; object-fit: contain;"><br>
                             <span class="title">COMPROBANTE DE COMPRA (INVITADO)</span><br>
                             <strong>Folio: ${selectedTicket.folio}</strong>
                         </div>

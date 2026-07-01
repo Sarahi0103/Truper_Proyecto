@@ -244,7 +244,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$error) {
 <body>
     <div class="auth-wrapper">
         <div class="logo">
-            <img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 44px; width: auto; object-fit: contain;">
+            <img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 42px; width: auto; object-fit: contain;">
             <h1>Restablecer Contraseña</h1>
         </div>
         
@@ -278,7 +278,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$error) {
             <?php endif; ?>
             
             <div class="back-link">
-                <a href="/login.php">← Volver al Login</a>
+                <a href="/login.php"><svg class="arrow-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>Volver al Login</a>
             </div>
         <?php endif; ?>
     </div>
