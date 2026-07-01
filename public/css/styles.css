@@ -234,7 +234,12 @@ textarea {
     z-index: 9999;
     opacity: 0;
     visibility: hidden;
-    transition: all 0.3s ease;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    
+    /* Solución para Safari en Mac/iOS: Forzar aceleración por hardware para evitar el bug de backdrop-filter invisible */
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    will-change: opacity, visibility;
 }
 
 .modal-overlay.active {
