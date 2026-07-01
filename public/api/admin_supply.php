@@ -378,23 +378,26 @@ function force_delete_product_dependencies_admin_supply(PDO $pdo, int $productId
         return 0;
     }
 
-    $sql = "
-        SELECT tc.table_schema, tc.table_name, kcu.column_name
-        FROM information_schema.table_constraints tc
-        JOIN information_schema.key_column_usage kcu
-          ON tc.constraint_name = kcu.constraint_name
-         AND tc.table_schema = kcu.table_schema
-        JOIN information_schema.constraint_column_usage ccu
-          ON ccu.constraint_name = tc.constraint_name
-         AND ccu.table_schema = tc.table_schema
-        WHERE tc.constraint_type = 'FOREIGN KEY'
-          AND ccu.table_name = 'products'
-          AND ccu.column_name = 'id'
-        ORDER BY tc.table_schema, tc.table_name
-    ";
+    static $refs = null;
+    if ($refs === null) {
+        $sql = "
+            SELECT tc.table_schema, tc.table_name, kcu.column_name
+            FROM information_schema.table_constraints tc
+            JOIN information_schema.key_column_usage kcu
+              ON tc.constraint_name = kcu.constraint_name
+             AND tc.table_schema = kcu.table_schema
+            JOIN information_schema.constraint_column_usage ccu
+              ON ccu.constraint_name = tc.constraint_name
+             AND ccu.table_schema = tc.table_schema
+            WHERE tc.constraint_type = 'FOREIGN KEY'
+              AND ccu.table_name = 'products'
+              AND ccu.column_name = 'id'
+            ORDER BY tc.table_schema, tc.table_name
+        ";
 
-    $stmt = $pdo->query($sql);
-    $refs = $stmt ? ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+        $stmt = $pdo->query($sql);
+        $refs = $stmt ? ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+    }
 
     $deletedRows = 0;
     foreach ($refs as $ref) {
@@ -2827,7 +2830,7 @@ if (PHP_SAPI !== 'cli') {
 
 try {
     // CSRF validation for POST requests to write endpoints
-    $write_actions = ['product-save', 'product-delete', 'marketplace-save', 'marketplace-delete', 'stock-update', 'toggle-visibility', 'product-batch-save', 'upload-marketplace-images'];
+    $write_actions = ['product-save', 'product-delete', 'marketplace-save', 'marketplace-delete', 'stock-update', 'toggle-visibility', 'product-batch-save', 'upload-marketplace-images', 'product-bulk-delete'];
     if ($method === 'POST' && in_array($action, $write_actions, true)) {
         require_csrf_token();
     }
@@ -3443,6 +3446,116 @@ try {
                         $response = ['success' => false, 'message' => 'Error al eliminar: ' . $e->getMessage()];
                     }
                 }
+            break;
+
+        case 'product-bulk-delete':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            $ids = $input['ids'] ?? [];
+            if (!is_array($ids) || count($ids) === 0) {
+                $response = ['success' => false, 'message' => 'No hay productos para eliminar'];
+                break;
+            }
+
+            $processed = 0;
+            $pdo->beginTransaction();
+            try {
+                // Obtener SKUs e imágenes de todos los productos en una sola consulta
+                $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                $stmt = $pdo->prepare("SELECT id, sku, image_url, variants_json FROM products WHERE id IN ($placeholders)");
+                $stmt->execute($ids);
+                $products = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+                $skus = [];
+                $imagesToDelete = [];
+                foreach ($products as $p) {
+                    $sku = normalize_sku_admin_supply($p['sku'] ?? '');
+                    if ($sku !== '') {
+                        $skus[] = $sku;
+                    }
+                    if (!empty($p['image_url']) && strpos($p['image_url'], 'default-product.svg') === false) {
+                        $imagesToDelete[] = ['sku' => $sku, 'path' => $p['image_url']];
+                    }
+                    if (!empty($p['variants_json'])) {
+                        $variants = json_decode($p['variants_json'], true) ?: [];
+                        foreach ($variants as $img) {
+                            $img = trim((string)$img);
+                            if ($img !== '' && strpos($img, 'default-product.svg') === false) {
+                                $imagesToDelete[] = ['sku' => $sku, 'path' => $img];
+                            }
+                        }
+                    }
+                }
+
+                // 1. Borrar imágenes físicas en disco
+                foreach ($imagesToDelete as $img) {
+                    delete_product_gallery_file_admin_supply($img['sku'], $img['path']);
+                }
+
+                // 2. Limpiar registros de Marketplace CE
+                if (!empty($skus)) {
+                    $mktPlaceholders = implode(',', array_fill(0, count($skus), '?'));
+                    // Obtener imágenes de Marketplace para borrar del disco
+                    $stmt = $pdo->prepare("SELECT id, sku, image_url, variants_json FROM marketplace_ce_products WHERE sku IN ($mktPlaceholders)");
+                    $stmt->execute($skus);
+                    $mktProducts = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                    foreach ($mktProducts as $mp) {
+                        $sku = normalize_sku_admin_supply($mp['sku']);
+                        if (!empty($mp['image_url']) && strpos($mp['image_url'], 'default-product.svg') === false) {
+                            delete_product_gallery_file_admin_supply($sku, $mp['image_url']);
+                        }
+                        if (!empty($mp['variants_json'])) {
+                            $vars = json_decode($mp['variants_json'], true) ?: [];
+                            foreach ($vars as $v) {
+                                $v = trim((string)$v);
+                                if ($v !== '' && strpos($v, 'default-product.svg') === false) {
+                                    delete_product_gallery_file_admin_supply($sku, $v);
+                                }
+                            }
+                        }
+                    }
+                    // Borrar de la BD
+                    $stmt = $pdo->prepare("DELETE FROM marketplace_ce_products WHERE sku IN ($mktPlaceholders)");
+                    $stmt->execute($skus);
+                }
+
+                // 3. Limpiar dependencias y borrar productos
+                foreach ($ids as $id) {
+                    force_delete_product_dependencies_admin_supply($pdo, (int)$id);
+                }
+
+                $stmt = $pdo->prepare("DELETE FROM products WHERE id IN ($placeholders)");
+                $stmt->execute($ids);
+                $productDeleted = $stmt->rowCount();
+
+                // Limpiar caché
+                if (function_exists('apcu_delete')) {
+                    apcu_delete('product_codes_cache');
+                }
+                $cacheFile = sys_get_temp_dir() . '/truper_codes.json';
+                if (file_exists($cacheFile)) {
+                    @unlink($cacheFile);
+                }
+
+                // Limpiar carpetas vacías de galería
+                foreach (array_unique($skus) as $sku) {
+                    if (is_valid_numeric_sku_admin_supply($sku)) {
+                        foreach (image_storage_roots_admin_supply() as $imagesRoot) {
+                            @rmdir($imagesRoot . '/products/gallery/' . $sku);
+                            @rmdir($imagesRoot . '/products/by_code/' . $sku);
+                        }
+                    }
+                }
+
+                $pdo->commit();
+                $response = ['success' => true, 'message' => "$productDeleted producto(s) eliminado(s) de la base de datos"];
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                $response = ['success' => false, 'message' => 'Error al eliminar en lote: ' . $e->getMessage()];
+            }
             break;
 
         case 'product-visibility':

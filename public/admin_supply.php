@@ -3135,10 +3135,10 @@ async function deleteClientTicket(folio) {
 let stockCurrentPage = 1;
 const stockPerPage = 50;
 
-async function loadStock(page = 1, customPerPage = null) {
+async function loadStock(page = 1, customPerPage = null, silent = false) {
     const box = document.getElementById('stockRows');
     const caption = document.getElementById('stockListCaption');
-    if (box) box.innerHTML = '<div style="padding:2rem; text-align:center;"><span class="spinner"></span><p class="text-muted">Cargando catálogo...</p></div>';
+    if (!silent && box) box.innerHTML = '<div style="padding:2rem; text-align:center;"><span class="spinner"></span><p class="text-muted">Cargando catálogo...</p></div>';
     
     stockCurrentPage = page;
     // Use custom per_page if provided (for faster loading after save), otherwise use default
@@ -3453,30 +3453,17 @@ async function deleteStockSelectedItems() {
                 console.warn('Optimistic bulk removal failed:', e);
             }
 
-            // Procesar las peticiones de borrado al servidor en paralelo en segundo plano para máxima velocidad
+            // Procesar la petición de borrado al servidor en una sola llamada en lote
             try {
-                const deletePromises = selectedIds.map(id => 
-                    apiCall('/admin_supply.php?action=product-delete', 'POST', { id: id })
-                );
+                const res = await apiCall('/admin_supply.php?action=product-bulk-delete', 'POST', { ids: selectedIds });
                 
-                const results = await Promise.all(deletePromises);
-                
-                let successCount = 0;
-                let firstError = '';
-                results.forEach((res, index) => {
-                    if (res && res.success) {
-                        successCount++;
-                    } else if (!firstError) {
-                        firstError = (res && res.message) ? res.message : `No se pudo eliminar el producto ${selectedIds[index]}`;
-                    }
-                });
-
-                if (successCount > 0) {
-                    if (quickBox) quickBox.innerHTML = `<span style="color:#22c55e;">${successCount} producto(s) eliminado(s).</span>`;
-                    showAlert(`${successCount} producto(s) eliminado(s)`, 'success');
-                }
-                
-                if (firstError) {
+                if (res && res.success) {
+                    if (quickBox) quickBox.innerHTML = `<span style="color:#22c55e;">${selectedIds.length} producto(s) eliminado(s).</span>`;
+                    showAlert(`${selectedIds.length} producto(s) eliminado(s)`, 'success');
+                    // Sincronización silenciosa en segundo plano (sin borrar pantalla ni spinner)
+                    await loadStock(stockCurrentPage, null, true);
+                    void loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 10);
+                } else {
                     // Rollback en caso de error
                     stockItemsCache = previousCache;
                     renderStockList();
@@ -3485,12 +3472,9 @@ async function deleteStockSelectedItems() {
                         total_pages: Math.max(1, Math.ceil((stockItemsCache || []).length / (stockPerPage || 50))), 
                         total_items: (stockItemsCache || []).length 
                     });
-                    if (quickBox) quickBox.innerHTML += ` <span style="color:#f87171;">${escapeHtml(firstError)}</span>`;
-                    showAlert(firstError, 'error');
-                } else {
-                    // Sincronización silenciosa en segundo plano
-                    await loadStock(stockCurrentPage);
-                    void loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 10);
+                    const errMsg = (res && res.message) ? res.message : 'No fue posible eliminar los productos';
+                    if (quickBox) quickBox.innerHTML = ` <span style="color:#f87171;">${escapeHtml(errMsg)}</span>`;
+                    showAlert(errMsg, 'error');
                 }
             } catch (err) {
                 // Rollback ante excepción de red
@@ -3659,8 +3643,8 @@ async function deleteProductByAdmin(id) {
             } else {
                 if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Producto eliminado')}</div>`;
                 showAlert('Producto eliminado correctamente', 'success');
-                // Sincronización silenciosa de fondo
-                void loadStock(stockCurrentPage);
+                // Sincronización silenciosa de fondo (sin borrar pantalla ni spinner)
+                void loadStock(stockCurrentPage, null, true);
                 void loadSupplierProducts();
                 void loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 10);
             }
