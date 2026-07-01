@@ -5267,6 +5267,19 @@ try {
             ];
             break;
 
+        case 'stock-export':
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+            // Obtener todos los productos de stock sin límite de paginación
+            $items = list_stock_products_compatible($pdo, 50000, 0);
+            $response = [
+                'success' => true,
+                'items' => $items
+            ];
+            break;
+
         case 'calendar-list':
             if ($method !== 'GET') {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];

@@ -15,6 +15,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
     <link rel="stylesheet" href="css/theme.css?v=4.1">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/responsive-complete.css?v=5.0">
+    <script src="js/jspdf.umd.min.js"></script>
     <style>
         /* Estilos para badges de estatus de visitas */
         .visit-status-badge {
@@ -756,6 +757,12 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                     <input id="stockSearch" type="text" placeholder="Buscar por código, nombre o categoría..." style="flex:1; min-width:250px; margin-bottom:0;">
                     <button class="btn btn-primary" onclick="openAutoPoModal()" style="background:var(--color-naranja, #ff6600); border-color:var(--color-naranja, #ff6600); display:inline-flex; align-items:center; gap:6px; margin:0;">
                         <span>📦</span> Generar Orden Automática
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportAllProductsToPdf()" style="background:#27272a; border-color:#3f3f46; display:inline-flex; align-items:center; gap:6px; margin:0; color:#ffffff;">
+                        <span>📄</span> Exportar PDF
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportAllProductsToExcel()" style="background:#15803d; border-color:#166534; display:inline-flex; align-items:center; gap:6px; margin:0; color:#ffffff;">
+                        <span>📊</span> Exportar Excel
                     </button>
                 </div>
                 <div class="admin-section-subtitle mt-3">📤 Carga Masiva (CSV)</div>
@@ -7781,6 +7788,242 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 });
+
+// FUNCIONES DE EXPORTACIÓN (PDF / EXCEL)
+async function exportAllProductsToPdf() {
+    showAlert('Preparando exportación a PDF...', 'info');
+    
+    try {
+        const res = await apiCall('/admin_supply.php?action=stock-export', 'GET', null, { silent: true });
+        if (!res || !res.success || !Array.isArray(res.items)) {
+            showAlert('No fue posible obtener los productos para exportar.', 'error');
+            return;
+        }
+
+        const items = res.items;
+        if (items.length === 0) {
+            showAlert('No hay productos en el catálogo para exportar.', 'warning');
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+        
+        const pageHeight = doc.internal.pageSize.height; // ~279.4 mm
+        const pageWidth = doc.internal.pageSize.width; // ~215.9 mm
+        const margin = 15;
+        const contentWidth = pageWidth - (margin * 2);
+        
+        let pageNum = 1;
+
+        // Función para dibujar encabezado de página
+        const drawHeader = (doc) => {
+            // Línea naranja premium superior
+            doc.setFillColor(255, 102, 0); // #ff6600
+            doc.rect(margin, margin, contentWidth, 3, 'F');
+            
+            // Título
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.setTextColor(33, 37, 41);
+            doc.text('FERRETERÍA FOX', margin, margin + 12);
+            
+            // Subtítulo
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.setTextColor(100, 116, 139);
+            doc.text('Reporte de Catálogo de Productos Completo', margin, margin + 17);
+            
+            // Fecha
+            const dateStr = new Date().toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
+            doc.text(`Generado: ${dateStr}`, pageWidth - margin, margin + 12, { align: 'right' });
+            doc.text(`Total productos: ${items.length}`, pageWidth - margin, margin + 17, { align: 'right' });
+            
+            // Separador
+            doc.setDrawColor(226, 232, 240);
+            doc.setLineWidth(0.5);
+            doc.line(margin, margin + 21, pageWidth - margin, margin + 21);
+        };
+
+        // Función para dibujar pie de página
+        const drawFooter = (doc, currentPage) => {
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(148, 163, 184);
+            
+            // Texto pie de página
+            doc.text('Ferretería FOX - Módulo de Abastecimiento y Stock', margin, pageHeight - margin);
+            doc.text(`Página ${currentPage}`, pageWidth - margin, pageHeight - margin, { align: 'right' });
+        };
+
+        drawHeader(doc);
+        
+        // Configuración de la tabla
+        let y = margin + 28;
+        
+        // Cabeceras de tabla
+        const headers = [
+            { name: 'Código', width: 25 },
+            { name: 'Nombre de Producto', width: 85 },
+            { name: 'Categoría', width: 40 },
+            { name: 'Precio', width: 20, align: 'right' },
+            { name: 'Stock', width: 16, align: 'right' }
+        ];
+        
+        // Dibujar cabeceras de tabla
+        const drawTableHeaders = (doc, startY) => {
+            doc.setFillColor(248, 250, 252);
+            doc.rect(margin, startY, contentWidth, 8, 'F');
+            
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            doc.setTextColor(71, 85, 105);
+            
+            let currentX = margin + 2;
+            headers.forEach(h => {
+                const align = h.align || 'left';
+                if (align === 'right') {
+                    doc.text(h.name, currentX + h.width - 4, startY + 5.5, { align: 'right' });
+                } else {
+                    doc.text(h.name, currentX, startY + 5.5);
+                }
+                currentX += h.width;
+            });
+            
+            doc.setDrawColor(203, 213, 225);
+            doc.setLineWidth(0.3);
+            doc.line(margin, startY + 8, pageWidth - margin, startY + 8);
+        };
+        
+        drawTableHeaders(doc, y);
+        y += 8;
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(51, 65, 85);
+        
+        let rowCount = 0;
+        
+        for (const item of items) {
+            // Verificar si necesitamos salto de página antes de escribir la fila
+            if (y > pageHeight - margin - 15) {
+                drawFooter(doc, pageNum);
+                doc.addPage();
+                pageNum++;
+                drawHeader(doc);
+                y = margin + 28;
+                drawTableHeaders(doc, y);
+                y += 8;
+                
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(8.5);
+                doc.setTextColor(51, 65, 85);
+            }
+            
+            // Alternar color de fondo de filas
+            if (rowCount % 2 === 1) {
+                doc.setFillColor(251, 252, 253);
+                doc.rect(margin, y, contentWidth, 7, 'F');
+            }
+            
+            const skuVal = displayProductCode(item.sku || '');
+            const nameVal = item.name || '';
+            const catVal = item.category || '';
+            const priceVal = `$${Number(item.net_price || item.unit_price || 0).toFixed(2)}`;
+            const stockVal = String(item.stock_quantity || 0);
+            
+            let currentX = margin + 2;
+            
+            // Escribir celdas truncando texto largo
+            doc.text(skuVal, currentX, y + 4.5);
+            currentX += headers[0].width;
+            
+            const nameTrunc = nameVal.length > 50 ? nameVal.substring(0, 47) + '...' : nameVal;
+            doc.text(nameTrunc, currentX, y + 4.5);
+            currentX += headers[1].width;
+            
+            const catTrunc = catVal.length > 25 ? catVal.substring(0, 22) + '...' : catVal;
+            doc.text(catTrunc, currentX, y + 4.5);
+            currentX += headers[2].width;
+            
+            doc.text(priceVal, currentX + headers[3].width - 4, y + 4.5, { align: 'right' });
+            currentX += headers[3].width;
+            
+            doc.text(stockVal, currentX + headers[4].width - 4, y + 4.5, { align: 'right' });
+            
+            // Línea divisoria muy sutil
+            doc.setDrawColor(241, 245, 249);
+            doc.setLineWidth(0.2);
+            doc.line(margin, y + 7, pageWidth - margin, y + 7);
+            
+            y += 7;
+            rowCount++;
+        }
+        
+        // Dibujar pie de página de la última página
+        drawFooter(doc, pageNum);
+        
+        doc.save('catalogo_productos_ferreteria_fox.pdf');
+        showAlert('PDF descargado con éxito.', 'success');
+    } catch (err) {
+        console.error(err);
+        showAlert('Ocurrió un error al generar el PDF.', 'error');
+    }
+}
+
+async function exportAllProductsToExcel() {
+    showAlert('Preparando exportación a Excel...', 'info');
+    
+    try {
+        const res = await apiCall('/admin_supply.php?action=stock-export', 'GET', null, { silent: true });
+        if (!res || !res.success || !Array.isArray(res.items)) {
+            showAlert('No fue posible obtener los productos para exportar.', 'error');
+            return;
+        }
+
+        const items = res.items;
+        if (items.length === 0) {
+            showAlert('No hay productos en el catálogo para exportar.', 'warning');
+            return;
+        }
+
+        // Definir cabeceras compatibles con la Carga Masiva
+        const headers = ['sku', 'name', 'category', 'description', 'unit_price', 'stock_quantity', 'reorder_level'];
+        
+        // Crear las líneas de datos usando punto y coma (;) para compatibilidad nativa con Excel en español
+        let csvContent = headers.join(';') + '\r\n';
+        
+        items.forEach(item => {
+            const skuVal = displayProductCode(item.sku || '');
+            const nameVal = (item.name || '').replace(/;/g, ',').replace(/\r?\n/g, ' ');
+            const catVal = (item.category || '').replace(/;/g, ',').replace(/\r?\n/g, ' ');
+            const descVal = (item.description || '').replace(/;/g, ',').replace(/\r?\n/g, ' ');
+            const priceVal = String(item.net_price || item.unit_price || 0);
+            const stockVal = String(item.stock_quantity || 0);
+            const reorderVal = String(item.reorder_level || 10);
+            
+            const row = [skuVal, nameVal, catVal, descVal, priceVal, stockVal, reorderVal];
+            csvContent += row.join(';') + '\r\n';
+        });
+
+        // Crear Blob con BOM para forzar a Excel a abrirlo como UTF-8
+        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'catalogo_productos_ferreteria_fox.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        showAlert('Archivo Excel (CSV) descargado con éxito.', 'success');
+    } catch (err) {
+        console.error(err);
+        showAlert('Ocurrió un error al generar el archivo Excel.', 'error');
+    }
+}
 
 </script>
     <script src="js/mobile-optimize.js"></script>
