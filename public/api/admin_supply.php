@@ -4719,6 +4719,62 @@ try {
             ];
             break;
 
+        case 'marketplace-export':
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            $mkSkuCol = sku_column_for_table_admin_supply('marketplace_ce_products');
+            $mkNameCol = name_column_for_table_admin_supply('marketplace_ce_products');
+            $mkCategoryCol = first_existing_column_admin_supply('marketplace_ce_products', ['category', 'categoria']);
+            $mkDescriptionCol = first_existing_column_admin_supply('marketplace_ce_products', ['description', 'details', 'descripcion']);
+            $mkConditionCol = first_existing_column_admin_supply('marketplace_ce_products', ['condition_label', 'condition', 'estado']);
+            $mkPriceCol = first_existing_column_admin_supply('marketplace_ce_products', ['unit_price', 'sell_price', 'price']);
+            $mkStockCol = first_existing_column_admin_supply('marketplace_ce_products', ['stock_quantity', 'stock']);
+            $mkImageCol = first_existing_column_admin_supply('marketplace_ce_products', ['image_url', 'image', 'photo_url']);
+            $mkActiveCol = first_existing_column_admin_supply('marketplace_ce_products', ['is_active', 'active']);
+
+            $selectSku = $mkSkuCol !== null ? ('COALESCE(' . $mkSkuCol . ", '') AS sku") : "'' AS sku";
+            $selectName = $mkNameCol !== null ? ('COALESCE(' . $mkNameCol . ", '') AS name") : "'' AS name";
+            $selectCategory = $mkCategoryCol !== null ? ('COALESCE(' . $mkCategoryCol . ", 'Marketplace CE') AS category") : "'Marketplace CE' AS category";
+            $selectDescription = $mkDescriptionCol !== null ? ('COALESCE(' . $mkDescriptionCol . ", '') AS description") : "'' AS description";
+            $selectCondition = $mkConditionCol !== null ? ('COALESCE(' . $mkConditionCol . ", 'Seminuevo') AS condition_label") : "'Seminuevo' AS condition_label";
+            $selectPrice = $mkPriceCol !== null ? ('COALESCE(' . $mkPriceCol . ', 0) AS unit_price') : '0 AS unit_price';
+            $selectNetPrice = db_column_exists('marketplace_ce_products', 'net_price')
+                ? "COALESCE(net_price, unit_price, 0) AS net_price"
+                : ($mkPriceCol !== null ? "COALESCE({$mkPriceCol}, 0) AS net_price" : "0 AS net_price");
+            $selectDiscount = db_column_exists('marketplace_ce_products', 'discount_percentage')
+                ? "COALESCE(discount_percentage, 0) AS discount_percentage"
+                : "0 AS discount_percentage";
+
+            $selectStock = $mkStockCol !== null ? ('COALESCE(' . $mkStockCol . ', 0) AS stock_quantity') : '0 AS stock_quantity';
+            $selectImage = $mkImageCol !== null ? ('COALESCE(' . $mkImageCol . ", 'images/products/default-product.svg') AS image_url") : "'images/products/default-product.svg' AS image_url";
+            $selectActive = $mkActiveCol !== null
+                ? ("(CASE WHEN " . $mkActiveCol . " IS NULL THEN 1 WHEN LOWER(CAST(" . $mkActiveCol . " AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) AS is_active")
+                : '1 AS is_active';
+            $selectCreatedAt = db_column_exists('marketplace_ce_products', 'created_at') ? 'created_at' : 'NULL AS created_at';
+            $selectUpdatedAt = db_column_exists('marketplace_ce_products', 'updated_at') ? 'updated_at' : 'NULL AS updated_at';
+            $orderExpr = db_column_exists('marketplace_ce_products', 'created_at') ? 'created_at DESC' : 'id DESC';
+
+            $stmt = $pdo->query(
+                'SELECT id, ' . $selectSku . ', ' . $selectName . ', ' . $selectCategory . ', ' . $selectDescription . ', ' . $selectCondition . ', ' . $selectPrice . ', ' . $selectNetPrice . ', ' . $selectDiscount . ', ' . $selectStock . ', ' . $selectImage . ', ' . $selectActive . ', ' . $selectCreatedAt . ', ' . $selectUpdatedAt .
+                ' FROM marketplace_ce_products ORDER BY ' . $orderExpr . ' LIMIT 50000'
+            );
+            $items = $stmt ? $stmt->fetchAll() : [];
+
+            // Normalize unit_price
+            $items = array_map(function ($item) {
+                $item['unit_price'] = number_format((float)($item['unit_price'] ?? 0), 2, '.', '');
+                return $item;
+            }, $items);
+
+            $response = [
+                'success' => true,
+                'items' => $items
+            ];
+            break;
+
         case 'marketplace-save':
             if ($method !== 'POST') {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];

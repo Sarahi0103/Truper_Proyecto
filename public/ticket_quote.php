@@ -129,6 +129,16 @@ function ticket_quote_product_code($item) {
     return $productId > 0 ? ('ID-' . $productId) : 'N/A';
 }
 
+// Convertir truper_logo2.png a base64
+$logoPath = __DIR__ . '/truper_logo2.png';
+if (!file_exists($logoPath)) {
+    $logoPath = __DIR__ . '/../truper_logo2.png';
+}
+$logoBase64 = '';
+if (file_exists($logoPath)) {
+    $logoData = file_get_contents($logoPath);
+    $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData);
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -258,30 +268,71 @@ function downloadTicketPdf() {
     }
 
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit: 'mm', format: [80, 180] });
-    let y = 8;
+    
+    // Base64 logo from PHP
+    const logoBase64 = <?php echo json_encode($logoBase64); ?>;
+    
+    // Dynamic height calculation
+    const items = Array.isArray(ticketData.items) ? ticketData.items : [];
+    let dynamicHeight = 75; // Base height for header, meta, totals, margins
+    items.forEach(item => {
+        const nameLength = String(item.name || '').length;
+        const nameLines = Math.ceil(nameLength / 32);
+        dynamicHeight += (nameLines * 4.5) + 8;
+    });
+    dynamicHeight = Math.max(120, Math.round(dynamicHeight));
 
+    const doc = new jsPDF({ unit: 'mm', format: [80, dynamicHeight] });
+    let y = 6;
+
+    // Logo on top-left
+    if (logoBase64) {
+        doc.addImage(logoBase64, 'JPEG', 6, y, 12, 14);
+    }
+
+    // Header text beside logo
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.text('FERRETERÍA FOX - TICKET', 6, y);
-    y += 7;
+    doc.setFontSize(11);
+    doc.setTextColor(33, 37, 41);
+    doc.text('FERRETERÍA FOX', 20, y + 4);
+    
+    doc.setFontSize(9);
+    doc.text('TICKET DE COTIZACIÓN', 20, y + 8);
+    
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text('Codigo ticket: ' + ticketData.folio, 6, y);
-    y += 5;
-    doc.text('Fecha: ' + ticketData.issuedAt, 6, y);
-    y += 5;
-    doc.text('Codigo cliente: ' + ticketData.client, 6, y);
-    y += 4;
+    doc.setFontSize(7.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text('Folio: ' + ticketData.folio, 20, y + 12);
+    
+    y += 16;
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.3);
     doc.line(6, y, 74, y);
     y += 5;
+
+    // Meta info
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(71, 85, 105);
+    doc.text('Fecha: ' + ticketData.issuedAt, 6, y);
+    y += 4.5;
+    doc.text('Cliente: ' + ticketData.client, 6, y);
+    y += 4.5;
+    
+    doc.line(6, y, 74, y);
+    y += 5;
+
+    // Title
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
+    doc.setFontSize(9);
+    doc.setTextColor(33, 37, 41);
     doc.text('Detalle de productos', 6, y);
     y += 5;
+    
+    // Items
     doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
 
-    const items = Array.isArray(ticketData.items) ? ticketData.items : [];
     if (items.length > 0) {
         items.forEach((item, idx) => {
             const qty = Number(item.quantity || 0);
@@ -290,34 +341,55 @@ function downloadTicketPdf() {
             const unitPrice = Number(item.price ?? item.unit_price ?? 0);
             const lineTotal = qty * unitPrice;
 
-            const productLine = name.length > 36 ? name.slice(0, 36) + '...' : name;
-            doc.text(productLine, 6, y);
+            // Handle name wrapping properly
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(8.5);
+            doc.setTextColor(33, 37, 41);
+            
+            const splitName = doc.splitTextToSize(name, 68);
+            splitName.forEach(line => {
+                doc.text(line, 6, y);
+                y += 4;
+            });
+            
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(100, 116, 139);
+            doc.text('Código: ' + code.replace(/^XLS-/i, ''), 6, y);
             y += 4;
-            doc.setFontSize(9);
-            doc.text('Codigo: ' + code.replace(/^XLS-/i, ''), 6, y);
-            y += 4;
-            doc.setFontSize(10);
+            
+            doc.setFontSize(8.5);
+            doc.setTextColor(71, 85, 105);
             doc.text(qty + ' x ' + money(unitPrice), 6, y);
             doc.text(money(lineTotal), 74, y, { align: 'right' });
             y += 5;
 
             if (idx < (items.length - 1)) {
-                doc.setDrawColor(220);
+                doc.setDrawColor(241, 245, 249);
+                doc.setLineWidth(0.2);
                 doc.line(6, y - 1, 74, y - 1);
                 y += 2;
             }
         });
     }
 
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.3);
     doc.line(6, y, 74, y);
     y += 6;
+
+    // Totals
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
+    doc.setFontSize(11);
+    doc.setTextColor(255, 102, 0);
     doc.text('TOTAL: ' + money(ticketData.total), 74, y, { align: 'right' });
     y += 7;
+    
+    // Footer
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text('Gracias por su compra', 6, y);
+    doc.setFontSize(8.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Gracias por su compra', 40, y, { align: 'center' });
 
     doc.save('ticket-' + ticketData.folio + '.pdf');
 }

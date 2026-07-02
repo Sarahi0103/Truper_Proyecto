@@ -2758,3 +2758,8 @@ footer {
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+/* Hacer el logo más grande en la página web */
+.logo img, .login-logo img, .mobile-logo-wrap img {
+    height: 54px !important;
+}

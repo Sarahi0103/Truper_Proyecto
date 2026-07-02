@@ -131,8 +131,19 @@
         const scrollY = window.pageYOffset || document.documentElement.scrollTop;
 
         let top, left;
+        let position = step.position;
 
-        switch (step.position) {
+        // Auto-adjust vertical position if screen height is constrained
+        if (position === 'bottom' && targetRect.bottom + tooltipRect.height + 40 > window.innerHeight) {
+            position = 'top';
+        } else if (position === 'top' && targetRect.top - tooltipRect.height - 40 < 0) {
+            position = 'bottom';
+        }
+
+        // Apply updated position class to keep arrow matches
+        tooltip.className = `onboarding-tooltip ${position}`;
+
+        switch (position) {
             case 'top':
                 top = targetRect.top + scrollY - tooltipRect.height - 20;
                 left = targetRect.left + scrollX + (targetRect.width / 2) - (tooltipRect.width / 2);

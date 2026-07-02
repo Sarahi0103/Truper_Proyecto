@@ -166,7 +166,7 @@
     return sku.replace(/^XLS-/i, '');
   }
 
-  function drawTicketPdf(format, overrideFolio = null) {
+  async function drawTicketPdf(format, overrideFolio = null) {
     const cart = getCart();
     if (cart.length === 0) {
       if (window.showAlert) window.showAlert('No hay productos en el carrito', 'warning');
@@ -184,71 +184,142 @@
     const meta = getTicketMeta();
     const total = cart.reduce((sum, item) => sum + toNumber(item.unit_price) * toNumber(item.quantity), 0);
 
-    const isA4 = false;
+    // Fetch the logo and convert it to Base64
+    let logoBase64 = '';
+    try {
+      const response = await fetch('/truper_logo2.png');
+      if (response.ok) {
+        const blob = await response.blob();
+        logoBase64 = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
+      }
+    } catch (e) {
+      console.warn('Could not load logo for ticket PDF:', e);
+    }
+
+    // Dynamic height calculation
+    let dynamicHeight = 75; // Base height for header, meta, totals, margins
+    cart.forEach(item => {
+      const nameLength = String(item.name || '').length;
+      const nameLines = Math.ceil(nameLength / 32);
+      dynamicHeight += (nameLines * 4.5) + 8;
+    });
+    dynamicHeight = Math.max(120, Math.round(dynamicHeight));
+
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({
-      orientation: 'portrait',
       unit: 'mm',
-      format: isA4 ? 'a4' : [210, 80]
+      format: [80, dynamicHeight]
     });
 
-    let y = 12;
+    let y = 6;
+
+    // Logo on top-left
+    if (logoBase64) {
+      doc.addImage(logoBase64, 'JPEG', 6, y, 12, 14);
+    }
+
+    // Header text beside logo
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.text('TRUPER - TICKET', 10, y);
-    y += 8;
-
+    doc.setFontSize(11);
+    doc.setTextColor(33, 37, 41);
+    doc.text('FERRETERÍA FOX', 20, y + 4);
+    
+    doc.setFontSize(9);
+    doc.text('TICKET DE COMPRA', 20, y + 8);
+    
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text(`Codigo ticket: ${folio}`, 10, y);
-    y += 5;
-    doc.text(`Fecha: ${date}`, 10, y);
-    y += 5;
-    doc.text(`Codigo cliente: ${meta.clientCode}`, 10, y);
-    y += 6;
-
-    doc.setDrawColor(120);
-    doc.line(10, y, isA4 ? 200 : 70, y);
+    doc.setFontSize(7.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text('Folio: ' + folio, 20, y + 12);
+    
+    y += 16;
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.3);
+    doc.line(6, y, 74, y);
     y += 5;
 
+    // Meta info
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(71, 85, 105);
+    doc.text('Fecha: ' + date, 6, y);
+    y += 4.5;
+    doc.text('Código cliente: ' + meta.clientCode, 6, y);
+    y += 4.5;
+    
+    doc.line(6, y, 74, y);
+    y += 5;
+
+    // Title
     doc.setFont('helvetica', 'bold');
-    doc.text('Detalle de productos', 10, y);
+    doc.setFontSize(9);
+    doc.setTextColor(33, 37, 41);
+    doc.text('Detalle de productos', 6, y);
     y += 5;
+    
+    // Items
     doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
 
-    cart.forEach((item) => {
-      if (y > 180) {
-        doc.addPage();
-        y = 12;
-      }
+    cart.forEach((item, idx) => {
+      const qty = Number(item.quantity || 0);
+      const name = String(item.name || 'Producto');
+      const code = String(item.sku || 'N/A');
+      const unitPrice = Number(item.unit_price || 0);
+      const lineTotal = qty * unitPrice;
 
-      const lineTotal = toNumber(item.unit_price) * toNumber(item.quantity);
-      const lineText = `${item.name} x${item.quantity}`;
-      const wrapped = doc.splitTextToSize(lineText, isA4 ? 95 : 58);
-
-      wrapped.forEach((line) => {
-        doc.text(line, 10, y);
+      // Handle name wrapping properly
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.setTextColor(33, 37, 41);
+      
+      const splitName = doc.splitTextToSize(name, 68);
+      splitName.forEach(line => {
+        doc.text(line, 6, y);
         y += 4;
       });
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.text('Código: ' + formatProductCodeForTicket(code), 6, y);
+      y += 4;
+      
+      doc.setFontSize(8.5);
+      doc.setTextColor(71, 85, 105);
+      doc.text(qty + ' x ' + money(unitPrice), 6, y);
+      doc.text(money(lineTotal), 74, y, { align: 'right' });
+      y += 5;
 
-      doc.setFontSize(9);
-      doc.text(`Codigo: ${formatProductCodeForTicket(item.sku || 'N/A')}`, 10, y);
-      doc.text(`Precio: ${money(lineTotal)}`, 70, y, { align: 'right' });
-      y += 4;
-      doc.setDrawColor(200);
-      doc.line(10, y, 70, y);
-      y += 4;
-      doc.setFontSize(10);
+      if (idx < (cart.length - 1)) {
+        doc.setDrawColor(241, 245, 249);
+        doc.setLineWidth(0.2);
+        doc.line(6, y - 1, 74, y - 1);
+        y += 2;
+      }
     });
 
-    y += 2;
-    doc.line(10, y, isA4 ? 200 : 70, y);
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.3);
+    doc.line(6, y, 74, y);
     y += 6;
+
+    // Totals
     doc.setFont('helvetica', 'bold');
-    doc.text(`Total: ${money(total)}`, isA4 ? 160 : 58, y, { align: 'right' });
-    y += 6;
+    doc.setFontSize(11);
+    doc.setTextColor(255, 102, 0);
+    doc.text('TOTAL: ' + money(total), 74, y, { align: 'right' });
+    y += 7;
+    
+    // Footer
     doc.setFont('helvetica', 'normal');
-    doc.text('Gracias por su compra', 10, y);
+    doc.setFontSize(8.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Gracias por su compra', 40, y, { align: 'center' });
 
     doc.save(`ticket-${folio}.pdf`);
 
