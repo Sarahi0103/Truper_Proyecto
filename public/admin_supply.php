@@ -7471,6 +7471,13 @@ function downloadCsvPoDraft(index) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+    // Prevenir que la rueda del mouse cambie los valores de los inputs tipo number al hacer scroll
+    document.addEventListener('wheel', function (e) {
+        if (document.activeElement && document.activeElement.type === 'number') {
+            document.activeElement.blur();
+        }
+    });
+
     setupTabs();
     renderPoItems();
     // Carga inmediata: solo la pestaña activa (Stock)
@@ -7664,7 +7671,7 @@ document.addEventListener('DOMContentLoaded', function () {
         stockBulkSelect.addEventListener('dblclick', editStockSelectedItem);
     }
 
-    ['newProductName', 'newProductPrice', 'newProductStock', 'newProductReorder', 'newProductDescription', 'newProductImageRef', 'newProductVisible'].forEach((id) => {
+    ['newProductName', 'newProductPrice', 'newProductDiscount', 'newProductStock', 'newProductReorder', 'newProductDescription', 'newProductImageRef', 'newProductVisible'].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', updateStockPreview);
         if (el && el.tagName === 'SELECT') el.addEventListener('change', updateStockPreview);
@@ -7704,7 +7711,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    ['marketplaceName', 'marketplaceCondition', 'marketplacePrice', 'marketplaceStock', 'marketplaceDescription', 'marketplaceActive', 'marketplaceImageRef'].forEach((id) => {
+    ['marketplaceName', 'marketplaceCondition', 'marketplacePrice', 'marketplaceDiscount', 'marketplaceStock', 'marketplaceDescription', 'marketplaceActive', 'marketplaceImageRef'].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', updateMarketplacePreview);
         if (el && el.tagName === 'SELECT') el.addEventListener('change', updateMarketplacePreview);
