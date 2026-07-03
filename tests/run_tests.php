@@ -6,6 +6,7 @@
 require_once __DIR__ . '/DatabaseTest.php';
 require_once __DIR__ . '/LoggerTest.php';
 require_once __DIR__ . '/ImageCompressionTest.php';
+require_once __DIR__ . '/ZipUploadTest.php';
 
 echo "============================================================\n";
 echo "🧪 EJECUTANDO SUITE DE PRUEBAS DE OPTIMIZACIÓN - TRUPER PLATFORM\n";
@@ -14,7 +15,8 @@ echo "============================================================\n\n";
 $tests = [
     'DatabaseTest',
     'LoggerTest',
-    'ImageCompressionTest'
+    'ImageCompressionTest',
+    'ZipUploadTest'
 ];
 
 $allPassed = true;

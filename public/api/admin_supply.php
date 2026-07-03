@@ -2071,7 +2071,108 @@ function purge_gallery_image_references_admin_supply($pdo, string $sku, string $
     }
 }
 
-function store_product_image_for_sku_admin_supply(array $file, string $sku): string {
+function clean_temporary_extract_dir(string $dir): void {
+    if (!is_dir($dir)) {
+        return;
+    }
+    try {
+        $files = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST
+        );
+        foreach ($files as $fileinfo) {
+            $todo = ($fileinfo->isDir() ? 'rmdir' : 'unlink');
+            @$todo($fileinfo->getRealPath());
+        }
+        @rmdir($dir);
+    } catch (Exception $ignored) {}
+}
+
+function process_uploaded_files_and_zips(array $files, string $sku, array &$errors): array {
+    $uploaded = [];
+    foreach ($files as $file) {
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            $errors[] = "Error de carga: " . ($file['error'] ?? 'desconocido');
+            continue;
+        }
+
+        $tmpPath = $file['tmp_name'] ?? '';
+        if ($tmpPath === '') {
+            continue;
+        }
+
+        $originalName = (string)($file['name'] ?? '');
+        $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+
+        if ($ext === 'zip') {
+            if (!class_exists('ZipArchive')) {
+                $errors[] = "El servidor no tiene soporte para extraer archivos ZIP (falta la clase ZipArchive en PHP)";
+                continue;
+            }
+
+            $zip = new ZipArchive();
+            if ($zip->open($tmpPath) === true) {
+                $tempExtractDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'truper_zip_' . uniqid() . '_' . time();
+                if (@mkdir($tempExtractDir, 0777, true)) {
+                    $zip->extractTo($tempExtractDir);
+                    $zip->close();
+
+                    $directoryIterator = new RecursiveDirectoryIterator($tempExtractDir);
+                    $iterator = new RecursiveIteratorIterator($directoryIterator);
+                    $allowedExt = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+
+                    $extractedFiles = [];
+                    foreach ($iterator as $info) {
+                        if ($info->isFile()) {
+                            $extractedFiles[] = $info->getPathname();
+                        }
+                    }
+                    sort($extractedFiles);
+
+                    foreach ($extractedFiles as $filePath) {
+                        $fileName = basename($filePath);
+                        if (strpos($filePath, '__MACOSX') !== false || strpos($fileName, '.') === 0) {
+                            continue;
+                        }
+
+                        $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+                        if (in_array($fileExt, $allowedExt, true)) {
+                            $mockFile = [
+                                'name' => $fileName,
+                                'type' => 'image/' . ($fileExt === 'jpg' ? 'jpeg' : $fileExt),
+                                'tmp_name' => $filePath,
+                                'error' => UPLOAD_ERR_OK,
+                                'size' => filesize($filePath)
+                            ];
+
+                            try {
+                                $uploaded[] = store_product_image_for_sku_admin_supply($mockFile, $sku, true);
+                            } catch (Exception $e) {
+                                $errors[] = "Error al procesar {$fileName} en ZIP: " . $e->getMessage();
+                            }
+                        }
+                    }
+                    clean_temporary_extract_dir($tempExtractDir);
+                } else {
+                    $errors[] = "No se pudo crear directorio temporal para extraer ZIP";
+                }
+            } else {
+                $errors[] = "No se pudo abrir el archivo ZIP: {$originalName}";
+            }
+        } elseif ($ext === 'rar') {
+            $errors[] = "Formato .rar no soportado directamente. Por favor comprime tu carpeta en formato .zip.";
+        } else {
+            try {
+                $uploaded[] = store_product_image_for_sku_admin_supply($file, $sku, false);
+            } catch (Exception $e) {
+                $errors[] = "Error al procesar {$originalName}: " . $e->getMessage();
+            }
+        }
+    }
+    return $uploaded;
+}
+
+function store_product_image_for_sku_admin_supply(array $file, string $sku, bool $isLocal = false): string {
     if (!is_valid_numeric_sku_admin_supply($sku)) {
         throw new Exception('SKU inválido para galería');
     }
@@ -2081,7 +2182,7 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
     }
 
     $tmp = $file['tmp_name'] ?? '';
-    if ($tmp === '' || (!is_uploaded_file($tmp) && PHP_SAPI !== 'cli')) {
+    if ($tmp === '' || (!$isLocal && !is_uploaded_file($tmp) && PHP_SAPI !== 'cli')) {
         throw new Exception('Archivo de imagen inválido');
     }
 
@@ -2202,8 +2303,15 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
             }
         } else {
             // GD no pudo procesar, mover archivo directo
-            if (!move_uploaded_file($tmp, $destPath)) {
-                throw new Exception("No se pudo mover archivo de imagen: " . error_get_last()['message'] ?? 'error desconocido');
+            if ($isLocal) {
+                if (!@copy($tmp, $destPath)) {
+                    throw new Exception("No se pudo copiar archivo de imagen local");
+                }
+            } else {
+                $err = error_get_last();
+                if (!move_uploaded_file($tmp, $destPath)) {
+                    throw new Exception("No se pudo mover archivo de imagen: " . ($err['message'] ?? 'error desconocido'));
+                }
             }
 
             if ($incomingHash !== '') {
@@ -2211,8 +2319,15 @@ function store_product_image_for_sku_admin_supply(array $file, string $sku): str
             }
         }
     } else {
-        if (!move_uploaded_file($tmp, $destPath)) {
-            throw new Exception("No se pudo mover archivo de imagen (GD no disponible): " . error_get_last()['message'] ?? 'error desconocido');
+        if ($isLocal) {
+            if (!@copy($tmp, $destPath)) {
+                throw new Exception("No se pudo copiar archivo de imagen local (GD no disponible)");
+            }
+        } else {
+            $err = error_get_last();
+            if (!move_uploaded_file($tmp, $destPath)) {
+                throw new Exception("No se pudo mover archivo de imagen (GD no disponible): " . ($err['message'] ?? 'error desconocido'));
+            }
         }
 
         if ($incomingHash !== '') {
@@ -2972,15 +3087,17 @@ try {
             }
 
             $imageUrl = sanitize($_POST['image_url'] ?? ($input['image_url'] ?? 'images/products/default-product.svg'));
-            if (isset($_FILES['image'])) {
-                $imageUrl = store_product_image_for_sku_admin_supply($_FILES['image'], $sku);
+            $uploadedFilesForProduct = [];
+            if (isset($_FILES['image']) && ($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
+                $uploadedFilesForProduct = [$_FILES['image']];
             } elseif (isset($_FILES['images']) && is_array($_FILES['images']['name'] ?? null)) {
-                $uploadedFiles = normalize_uploaded_files($_FILES['images']);
-                foreach ($uploadedFiles as $uploadedFile) {
-                    if (($uploadedFile['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
-                        $imageUrl = store_product_image_for_sku_admin_supply($uploadedFile, $sku);
-                        break;
-                    }
+                $uploadedFilesForProduct = normalize_uploaded_files($_FILES['images']);
+            }
+            if (!empty($uploadedFilesForProduct)) {
+                $uploadErrors = [];
+                $savedImages = process_uploaded_files_and_zips($uploadedFilesForProduct, $sku, $uploadErrors);
+                if (!empty($savedImages)) {
+                    $imageUrl = $savedImages[0];
                 }
             }
 
@@ -3805,19 +3922,8 @@ try {
             }
 
             $files = isset($fileInput['name']) && is_array($fileInput['name']) ? normalize_uploaded_files($fileInput) : [$fileInput];
-            $uploaded = [];
             $uploadErrors = [];
-            foreach ($files as $file) {
-                if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-                    $uploadErrors[] = "Error de carga: " . ($file['error'] ?? 'desconocido');
-                    continue;
-                }
-                try {
-                    $uploaded[] = store_product_image_for_sku_admin_supply($file, $sku);
-                } catch (Exception $e) {
-                    $uploadErrors[] = "Error al procesar imagen: " . $e->getMessage();
-                }
-            }
+            $uploaded = process_uploaded_files_and_zips($files, $sku, $uploadErrors);
 
             if (empty($uploaded)) {
                 $message = 'No se pudieron subir las imágenes';
@@ -4847,8 +4953,12 @@ try {
             }
 
             $imageUrl = sanitize($_POST['image_url'] ?? ($input['image_url'] ?? 'images/products/default-product.svg'));
-            if (isset($_FILES['image']) && ($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
-                $imageUrl = store_product_image_for_sku_admin_supply($_FILES['image'], $sku);
+            if (isset($_FILES['image']) && ($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
+                $uploadErrors = [];
+                $savedImages = process_uploaded_files_and_zips([$_FILES['image']], $sku, $uploadErrors);
+                if (!empty($savedImages)) {
+                    $imageUrl = $savedImages[0];
+                }
             }
 
             if ($id > 0) {

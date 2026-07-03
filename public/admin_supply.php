@@ -717,9 +717,9 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                 <div class="grid grid-2 mt-2">
                     <div class="form-group">
                         <label>Subir nuevas imágenes</label>
-                        <input id="newProductImages" type="file" accept="image/*" multiple style="margin-bottom: 0.5rem;">
+                        <input id="newProductImages" type="file" accept="image/*,.zip,.rar" multiple style="margin-bottom: 0.5rem;">
                         <button class="btn btn-secondary btn-small" type="button" onclick="uploadProductImages()">Cargar e integrar a galería</button>
-                        <small class="text-muted">Al seleccionar archivos se subirán automáticamente.</small>
+                        <small class="text-muted">Al seleccionar archivos se subirán automáticamente. Se admiten imágenes y carpetas comprimidas en formato .zip.</small>
                     </div>
                     <div class="form-group">
                         <label>Imagen de referencia existente (Evita duplicidad)</label>
@@ -1266,9 +1266,9 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                 <div class="grid grid-2 mt-2">
                     <div class="form-group">
                         <label>Subir nuevas imágenes</label>
-                        <input id="marketplaceImages" type="file" accept="image/*" multiple style="margin-bottom: 0.5rem;">
+                        <input id="marketplaceImages" type="file" accept="image/*,.zip,.rar" multiple style="margin-bottom: 0.5rem;">
                         <button class="btn btn-secondary btn-small" type="button" onclick="uploadMarketplaceImages()">Cargar e integrar a galería</button>
-                        <small class="text-muted">Al seleccionar archivos se subirán automáticamente.</small>
+                        <small class="text-muted">Al seleccionar archivos se subirán automáticamente. Se admiten imágenes y carpetas comprimidas en formato .zip.</small>
                     </div>
                     <div class="form-group">
                         <label>Imagen de referencia existente (Evita duplicidad)</label>
@@ -6038,6 +6038,11 @@ async function uploadProductImages() {
         const uploadProgress = document.getElementById('uploadProgress');
         const compressedFiles = await Promise.all(
             files.map(async (file, idx) => {
+                const ext = file.name.split('.').pop().toLowerCase();
+                const isImage = (file.type && file.type.startsWith('image/')) || ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext);
+                if (!isImage) {
+                    return file;
+                }
                 try {
                     const compressed = await compressImage(file);
                     const progress = Math.floor((idx + 1) / files.length * 80); // 0-80% for compression
@@ -6179,6 +6184,11 @@ async function uploadMarketplaceImages() {
 
         const compressedFiles = await Promise.all(
             files.map(async (file, idx) => {
+                const ext = file.name.split('.').pop().toLowerCase();
+                const isImage = (file.type && file.type.startsWith('image/')) || ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext);
+                if (!isImage) {
+                    return file;
+                }
                 try {
                     const compressed = await compressImage(file);
                     const progress = Math.floor((idx + 1) / files.length * 80); // 0-80% for compression
