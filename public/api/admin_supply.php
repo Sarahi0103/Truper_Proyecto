@@ -2114,46 +2114,43 @@ function process_uploaded_files_and_zips(array $files, string $sku, array &$erro
             if ($zip->open($tmpPath) === true) {
                 $tempExtractDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'truper_zip_' . uniqid() . '_' . time();
                 if (@mkdir($tempExtractDir, 0777, true)) {
-                    $zip->extractTo($tempExtractDir);
-                    $zip->close();
-
-                    $directoryIterator = new RecursiveDirectoryIterator($tempExtractDir);
-                    $iterator = new RecursiveIteratorIterator($directoryIterator);
                     $allowedExt = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
-
-                    $extractedFiles = [];
-                    foreach ($iterator as $info) {
-                        if ($info->isFile()) {
-                            $extractedFiles[] = $info->getPathname();
-                        }
-                    }
-                    sort($extractedFiles);
-
-                    foreach ($extractedFiles as $filePath) {
-                        $fileName = basename($filePath);
-                        if (strpos($filePath, '__MACOSX') !== false || strpos($fileName, '.') === 0) {
+                    
+                    for ($i = 0; $i < $zip->numFiles; $i++) {
+                        $entryName = $zip->getNameIndex($i);
+                        $baseName = basename($entryName);
+                        
+                        // Ignorar directorios y archivos de sistema de macOS/Windows
+                        if (substr($entryName, -1) === '/' || strpos($entryName, '__MACOSX') !== false || (isset($baseName[0]) && $baseName[0] === '.')) {
                             continue;
                         }
 
-                        $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+                        $fileExt = strtolower(pathinfo($entryName, PATHINFO_EXTENSION));
                         if (in_array($fileExt, $allowedExt, true)) {
-                            $mockFile = [
-                                'name' => $fileName,
-                                'type' => 'image/' . ($fileExt === 'jpg' ? 'jpeg' : $fileExt),
-                                'tmp_name' => $filePath,
-                                'error' => UPLOAD_ERR_OK,
-                                'size' => filesize($filePath)
-                            ];
+                            if ($zip->extractTo($tempExtractDir, $entryName)) {
+                                $filePath = $tempExtractDir . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $entryName);
+                                if (is_file($filePath)) {
+                                    $mockFile = [
+                                        'name' => $baseName,
+                                        'type' => 'image/' . ($fileExt === 'jpg' ? 'jpeg' : $fileExt),
+                                        'tmp_name' => $filePath,
+                                        'error' => UPLOAD_ERR_OK,
+                                        'size' => filesize($filePath)
+                                    ];
 
-                            try {
-                                $uploaded[] = store_product_image_for_sku_admin_supply($mockFile, $sku, true);
-                            } catch (Exception $e) {
-                                $errors[] = "Error al procesar {$fileName} en ZIP: " . $e->getMessage();
+                                    try {
+                                        $uploaded[] = store_product_image_for_sku_admin_supply($mockFile, $sku, true);
+                                    } catch (Exception $e) {
+                                        $errors[] = "Error al procesar {$entryName} en ZIP: " . $e->getMessage();
+                                    }
+                                }
                             }
                         }
                     }
+                    $zip->close();
                     clean_temporary_extract_dir($tempExtractDir);
                 } else {
+                    $zip->close();
                     $errors[] = "No se pudo crear directorio temporal para extraer ZIP";
                 }
             } else {
