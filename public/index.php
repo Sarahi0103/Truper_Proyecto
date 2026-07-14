@@ -361,12 +361,12 @@ function homepage_update_label($type) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Ferretería FOX - Catálogo de Productos</title>
-    <meta name="description" content="Catálogo digital de Ferretería FOX en Colinas del Roble, Zapopan, Jalisco. Productos Truper, herramientas, material eléctrico, fontanería y artículos de segunda mano Marketplace CE.">
-    <meta name="keywords" content="Ferretería FOX, Truper, Zapopan, Jalisco, herramientas, material eléctrico, fontanería, cerrajería, herrería, Marketplace CE">
+    <meta name="description" content="Catálogo digital de Ferretería FOX en Fraccionamiento Colinas del Roble, C.P. 45645, Jalisco. Productos Truper, herramientas, material eléctrico, fontanería y artículos de segunda mano Marketplace CE.">
+    <meta name="keywords" content="Ferretería FOX, Truper, Colinas del Roble, Jalisco, herramientas, material eléctrico, fontanería, cerrajería, herrería, Marketplace CE">
     
     <!-- Open Graph (Facebook / WhatsApp sharing preview) -->
     <meta property="og:title" content="Ferretería FOX - Catálogo de Productos">
-    <meta property="og:description" content="Explora nuestro catálogo completo de herramientas Truper y artículos CE en Zapopan, Jal.">
+    <meta property="og:description" content="Explora nuestro catálogo completo de herramientas Truper y artículos CE en Fraccionamiento Colinas del Roble, C.P. 45645, Jal.">
     <meta property="og:image" content="/img/logo_fox.png">
     <meta property="og:type" content="website">
 
@@ -382,9 +382,9 @@ function homepage_update_label($type) {
       "address": {
         "@type": "PostalAddress",
         "streetAddress": "Fraccionamiento Colinas del Roble",
-        "addressLocality": "Zapopan",
-        "addressRegion": "Jal.",
-        "postalCode": "45650",
+        "addressLocality": "Colinas del Roble",
+        "addressRegion": "Jalisco",
+        "postalCode": "45645",
         "addressCountry": "MX"
       },
       "geo": {
