@@ -5078,18 +5078,66 @@ try {
             $offset = ($page - 1) * $perPage;
 
             $onlyActive = isset($_GET['active']) && $_GET['active'] === '1';
-            $whereActive = '';
+            $search = sanitize($_GET['search'] ?? '');
+            $sort = sanitize($_GET['sort'] ?? 'newest');
+
+            $whereClauses = [];
+            $params = [];
+
             if ($onlyActive && $mkActiveCol !== null) {
-                $whereActive = ' WHERE (CASE WHEN ' . $mkActiveCol . " IS NULL THEN 1 WHEN LOWER(CAST(" . $mkActiveCol . " AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
+                $whereClauses[] = '(CASE WHEN ' . $mkActiveCol . " IS NULL THEN 1 WHEN LOWER(CAST(" . $mkActiveCol . " AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
             }
 
-            $countStmt = $pdo->query('SELECT COUNT(*) FROM marketplace_ce_products' . $whereActive);
+            if ($search !== '') {
+                $whereClauses[] = '(' . $mkSkuCol . ' ILIKE ? OR ' . $mkNameCol . ' ILIKE ? OR ' . $mkConditionCol . ' ILIKE ?)';
+                $params[] = '%' . $search . '%';
+                $params[] = '%' . $search . '%';
+                $params[] = '%' . $search . '%';
+            }
+
+            $whereSql = '';
+            if (!empty($whereClauses)) {
+                $whereSql = ' WHERE ' . implode(' AND ', $whereClauses);
+            }
+
+            // Sorting mapping
+            $orderExpr = 'id DESC';
+            switch ($sort) {
+                case 'newest':
+                    $orderExpr = db_column_exists('marketplace_ce_products', 'created_at') ? 'created_at DESC, id DESC' : 'id DESC';
+                    break;
+                case 'oldest':
+                    $orderExpr = db_column_exists('marketplace_ce_products', 'created_at') ? 'created_at ASC, id ASC' : 'id ASC';
+                    break;
+                case 'name_asc':
+                    $orderExpr = $mkNameCol . ' ASC';
+                    break;
+                case 'name_desc':
+                    $orderExpr = $mkNameCol . ' DESC';
+                    break;
+                case 'stock_low':
+                    $orderExpr = $mkStockCol . ' ASC';
+                    break;
+                case 'stock_high':
+                    $orderExpr = $mkStockCol . ' DESC';
+                    break;
+                case 'price_low':
+                    $orderExpr = $mkPriceCol . ' ASC';
+                    break;
+                case 'price_high':
+                    $orderExpr = $mkPriceCol . ' DESC';
+                    break;
+            }
+
+            $countSql = 'SELECT COUNT(*) FROM marketplace_ce_products' . $whereSql;
+            $countStmt = $pdo->prepare($countSql);
+            $countStmt->execute($params);
             $total = $countStmt ? (int)$countStmt->fetchColumn() : 0;
 
-            $stmt = $pdo->query(
-                'SELECT id, ' . $selectSku . ', ' . $selectName . ', ' . $selectCategory . ', ' . $selectDescription . ', ' . $selectCondition . ', ' . $selectPrice . ', ' . $selectNetPrice . ', ' . $selectDiscount . ', ' . $selectStock . ', ' . $selectImage . ', ' . $selectActive . ', ' . $selectCreatedAt . ', ' . $selectUpdatedAt .
-                ' FROM marketplace_ce_products' . $whereActive . ' ORDER BY ' . $orderExpr . ' LIMIT ' . (int)$perPage . ' OFFSET ' . (int)$offset
-            );
+            $sql = 'SELECT id, ' . $selectSku . ', ' . $selectName . ', ' . $selectCategory . ', ' . $selectDescription . ', ' . $selectCondition . ', ' . $selectPrice . ', ' . $selectNetPrice . ', ' . $selectDiscount . ', ' . $selectStock . ', ' . $selectImage . ', ' . $selectActive . ', ' . $selectCreatedAt . ', ' . $selectUpdatedAt .
+                ' FROM marketplace_ce_products' . $whereSql . ' ORDER BY ' . $orderExpr . ' LIMIT ' . (int)$perPage . ' OFFSET ' . (int)$offset;
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
             $items = $stmt ? $stmt->fetchAll() : [];
 
             // Normalize unit_price to avoid floating-point imprecision from PostgreSQL

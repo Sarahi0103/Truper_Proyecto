@@ -1317,6 +1317,16 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                 <h3>Artículos CE registrados</h3>
                 <div class="admin-search-row" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:1rem;">
                     <input id="marketplaceSearch" type="text" placeholder="Buscar por SKU, nombre o condición..." style="flex:1; min-width:250px; margin-bottom:0;">
+                    <select id="marketplaceSortSelect" onchange="loadMarketplaceCeAdmin(1)" style="flex:1; min-width:200px; margin-bottom:0; font-weight:600; cursor:pointer;">
+                        <option value="newest">Lo más nuevo</option>
+                        <option value="oldest">Lo más viejo</option>
+                        <option value="name_asc">Abecedario A-Z</option>
+                        <option value="name_desc">Abecedario Z-A</option>
+                        <option value="stock_low">Stock: Menor a Mayor</option>
+                        <option value="stock_high">Stock: Mayor a Menor</option>
+                        <option value="price_low">Precio: Menor a Mayor</option>
+                        <option value="price_high">Precio: Mayor a Menor</option>
+                    </select>
                     <button class="btn btn-secondary" onclick="exportAllMarketplaceToPdf()" style="background:#27272a; border-color:#3f3f46; display:inline-flex; align-items:center; gap:6px; margin:0; color:#ffffff;">
                         <span>📄</span> Exportar PDF
                     </button>
@@ -6663,7 +6673,11 @@ async function loadMarketplaceCeAdmin(page = 1, customPerPage = null) {
     marketplaceCurrentPage = page;
     // Use custom per_page if provided (for faster loading after save), otherwise use default
     const perPageToUse = customPerPage !== null ? customPerPage : marketplacePerPage;
-    const res = await apiCall(`/admin_supply.php?action=marketplace-list&page=${page}&per_page=${perPageToUse}&_=${Date.now()}`, 'GET', null, { silent: true });
+    
+    const query = (document.getElementById('marketplaceSearch')?.value || '').trim();
+    const sort = document.getElementById('marketplaceSortSelect')?.value || 'newest';
+
+    const res = await apiCall(`/admin_supply.php?action=marketplace-list&page=${page}&per_page=${perPageToUse}&search=${encodeURIComponent(query)}&sort=${sort}&_=${Date.now()}`, 'GET', null, { silent: true });
 
     if (!res || !res.success || !Array.isArray(res.items)) {
         if (box) box.innerHTML = '<p class="text-muted">No fue posible cargar artículos CE.</p>';
@@ -8104,7 +8118,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const marketplaceSearch = document.getElementById('marketplaceSearch');
     if (marketplaceSearch) {
-        marketplaceSearch.addEventListener('input', renderMarketplaceList);
+        marketplaceSearch.addEventListener('input', debounce(() => loadMarketplaceCeAdmin(1), 300));
     }
 
     const marketplaceBulkSelect = document.getElementById('marketplaceBulkSelect');
