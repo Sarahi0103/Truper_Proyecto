@@ -389,8 +389,8 @@ function homepage_update_label($type) {
       },
       "geo": {
         "@type": "GeoCoordinates",
-        "latitude": 20.6139,
-        "longitude": -103.4190
+        "latitude": 20.5049398,
+        "longitude": -103.3957862
       },
       "openingHoursSpecification": {
         "@type": "OpeningHoursSpecification",
