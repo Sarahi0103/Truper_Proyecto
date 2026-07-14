@@ -673,6 +673,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
             <button class="tab-button" data-tab="pricesTab">Precios</button>
             <button class="tab-button" data-tab="marketplaceTab">Marketplace CE</button>
             <button class="tab-button" data-tab="categoriesTab">Categorías</button>
+            <button class="tab-button" data-tab="quickEditTab">⚡ Edición Rápida</button>
         </div>
 
         <section id="stockTab" class="tab-content active admin-tab-panel">
@@ -755,6 +756,16 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                 <h3>Control de Existencias</h3>
                 <div class="admin-search-row" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:1rem;">
                     <input id="stockSearch" type="text" placeholder="Buscar por código, nombre o categoría..." style="flex:1; min-width:250px; margin-bottom:0;">
+                    <select id="stockSortSelect" onchange="loadStock(1)" style="flex:1; min-width:200px; margin-bottom:0; font-weight:600; cursor:pointer;">
+                        <option value="newest">Lo más nuevo</option>
+                        <option value="oldest">Lo más viejo</option>
+                        <option value="name_asc">Abecedario A-Z</option>
+                        <option value="name_desc">Abecedario Z-A</option>
+                        <option value="stock_low">Stock: Menor a Mayor</option>
+                        <option value="stock_high">Stock: Mayor a Menor</option>
+                        <option value="price_low">Precio: Menor a Mayor</option>
+                        <option value="price_high">Precio: Mayor a Menor</option>
+                    </select>
                     <button class="btn btn-primary" onclick="openAutoPoModal()" style="background:var(--color-naranja, #ff6600); border-color:var(--color-naranja, #ff6600); display:inline-flex; align-items:center; gap:6px; margin:0;">
                         <span>📦</span> Generar Orden Automática
                     </button>
@@ -818,12 +829,15 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
         <section id="updatesTab" class="tab-content admin-tab-panel">
             <div class="card mb-3 admin-editor-card">
                 <div class="card-body">
-                    <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.25rem;">
+                    <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.25rem; width:100%;">
                         <span style="background:var(--theme-accent);color:#fff;border-radius:8px;padding:5px 12px;font-weight:700;font-size:0.85rem;letter-spacing:.03em;">📢 PORTADA</span>
-                        <div>
+                        <div style="flex:1;">
                             <h3 style="margin:0;">Noticias y promociones de portada</h3>
                             <p class="text-muted" style="margin:0;font-size:0.85rem;">Administra el carrusel automático que se muestra en la página principal.</p>
                         </div>
+                        <button type="button" class="btn btn-secondary btn-small" onclick="resetUpdateForm()" style="margin:0; display:inline-flex; align-items:center; gap:6px; background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.12); color:#fff;">
+                            <span>➕</span> Crear Nueva Publicación
+                        </button>
                     </div>
                     <hr style="border:none;border-top:1px solid var(--theme-border);margin:1rem 0;">
 
@@ -939,7 +953,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
 
                     <div class="d-flex align-center" style="gap:0.75rem;flex-wrap:wrap;margin-top:1.25rem;">
                         <button class="btn btn-primary" type="button" onclick="saveHomepageUpdate()" id="updateSaveButton">💾 Guardar publicación</button>
-                        <button class="btn btn-secondary" type="button" onclick="resetUpdateForm()">✕ Cancelar</button>
+                        <button class="btn btn-secondary" type="button" onclick="resetUpdateForm()">✕ Limpiar / Nueva publicación</button>
                     </div>
 
                     <div id="updateResult" class="mt-3"></div>
@@ -1393,6 +1407,75 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                         <h3>Categorías Registradas</h3>
                         <div id="categoriesList" class="text-muted">Cargando categorías...</div>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="quickEditTab" class="tab-content admin-tab-panel">
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.25rem; width:100%; flex-wrap:wrap;">
+                        <span style="background:var(--theme-accent, #ff7f00);color:#fff;border-radius:8px;padding:5px 12px;font-weight:700;font-size:0.85rem;letter-spacing:.03em;">⚡ EDICIÓN RÁPIDA</span>
+                        <div style="flex:1; min-width: 250px;">
+                            <h3 style="margin:0;">Edición Rápida de Categorías y Precios</h3>
+                            <p class="text-muted" style="margin:0;font-size:0.85rem;">Busca y edita precios y categorías al instante sin entrar al formulario completo.</p>
+                        </div>
+                    </div>
+                    <hr style="border:none;border-top:1px solid var(--theme-border);margin:1rem 0;">
+
+                    <!-- Filtros y Búsqueda -->
+                    <div class="grid grid-4" style="gap:1rem; align-items:flex-end;">
+                        <div class="form-group">
+                            <label>Tipo de inventario</label>
+                            <select id="quickEditTarget" onchange="onQuickEditParamsChange()">
+                                <option value="stock">📦 Stock (Catálogo General)</option>
+                                <option value="marketplace">🏪 Marketplace CE</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Código (SKU) o Nombre</label>
+                            <input id="quickEditSearch" type="text" placeholder="Ej: 12345 o Escalera" oninput="onQuickEditSearchInput()">
+                        </div>
+                        <div class="form-group">
+                            <label>Filtrar por Categoría</label>
+                            <select id="quickEditFilterCategory" onchange="onQuickEditParamsChange()">
+                                <option value="">Todas las categorías</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Ordenar por</label>
+                            <select id="quickEditSort" onchange="onQuickEditParamsChange()">
+                                <option value="sku_asc">Código: Menor a Mayor</option>
+                                <option value="sku_desc">Código: Mayor a Menor</option>
+                                <option value="price_asc">Precio: Menor a Mayor</option>
+                                <option value="price_desc">Precio: Mayor a Menor</option>
+                                <option value="name_asc">Nombre: A - Z</option>
+                                <option value="name_desc">Nombre: Z - A</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de Resultados -->
+            <div class="card">
+                <div class="card-body" style="padding:0; overflow-x:auto;">
+                    <table class="table" style="width:100%; border-collapse:collapse; margin:0;">
+                        <thead>
+                            <tr style="border-bottom:1px solid var(--theme-border);">
+                                <th style="padding:1rem; text-align:left;">Código (SKU)</th>
+                                <th style="padding:1rem; text-align:left;">Nombre</th>
+                                <th style="padding:1rem; text-align:left; width:260px;">Categoría</th>
+                                <th style="padding:1rem; text-align:left; width:160px;">Precio Neto ($)</th>
+                                <th style="padding:1rem; text-align:center; width:120px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quickEditTableBody">
+                            <tr>
+                                <td colspan="5" style="padding:2rem; text-align:center;" class="text-muted">Cargando productos para edición rápida...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </section>
@@ -2635,7 +2718,7 @@ function fillUpdateForm(update) {
 
 async function loadHomepageUpdatesAdmin() {
     const box = document.getElementById('updatesList');
-    const res = await apiCall('/admin_supply.php?action=updates-list', 'GET', null, { silent: true });
+    const res = await apiCall(`/admin_supply.php?action=updates-list&_=${Date.now()}`, 'GET', null, { silent: true });
 
     if (!res || !res.success || !Array.isArray(res.items)) {
         if (box) box.innerHTML = '<p class="text-muted">No fue posible cargar publicaciones.</p>';
@@ -2800,13 +2883,19 @@ async function saveHomepageUpdate() {
         
         if (box) box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Publicación guardada')}</div>`;
         
+        const afterSave = () => {
+            resetUpdateForm();
+            loadHomepageUpdatesAdmin();
+        };
+
         // Mostrar modal premium de éxito
         if (window.showPremiumModal) {
             window.showPremiumModal(
                 '¡Portada Actualizada!',
                 'La publicación se ha guardado correctamente y los cambios ya son visibles en la portada.',
                 '✨',
-                () => {}
+                afterSave,
+                afterSave
             );
             const cancelBtn = document.getElementById('modalCancel');
             if (cancelBtn) cancelBtn.style.display = 'none';
@@ -2814,10 +2903,8 @@ async function saveHomepageUpdate() {
             if (confirmBtn) confirmBtn.textContent = 'Aceptar';
         } else {
             showAlert('Publicación guardada y portada actualizada', 'success');
+            afterSave();
         }
-
-        resetUpdateForm();
-        loadHomepageUpdatesAdmin();
     } catch (error) {
         if (box) box.innerHTML = `<div class="alert alert-error">Error de conexión: ${escapeHtml(error.message)}</div>`;
     }
@@ -3156,7 +3243,10 @@ async function loadStock(page = 1, customPerPage = null, silent = false) {
     stockCurrentPage = page;
     // Use custom per_page if provided (for faster loading after save), otherwise use default
     const perPageToUse = customPerPage !== null ? customPerPage : stockPerPage;
-    const res = await apiCall(`/admin_supply.php?action=stock&page=${page}&per_page=${perPageToUse}&_=${Date.now()}`, 'GET', null, { silent: true });
+    const query = (document.getElementById('stockSearch')?.value || '').trim();
+    const sort = document.getElementById('stockSortSelect')?.value || 'newest';
+    
+    const res = await apiCall(`/admin_supply.php?action=stock&page=${page}&per_page=${perPageToUse}&search=${encodeURIComponent(query)}&sort=${sort}&_=${Date.now()}`, 'GET', null, { silent: true });
     const body = document.getElementById('stockRows');
     
     if (!res || !res.success || !Array.isArray(res.items)) {
@@ -3382,7 +3472,33 @@ function renderStockList() {
 
     if (!body) return;
 
-    const filtered = stockItemsCache.filter((item) => {
+    // Apply sorting client-side as well, to ensure consistency when items are updated locally
+    const sort = document.getElementById('stockSortSelect')?.value || 'newest';
+    let sortedItems = [...stockItemsCache];
+    
+    sortedItems.sort((a, b) => {
+        switch (sort) {
+            case 'oldest':
+                return Number(a.id || 0) - Number(b.id || 0);
+            case 'name_asc':
+                return String(a.name || '').localeCompare(String(b.name || ''));
+            case 'name_desc':
+                return String(b.name || '').localeCompare(String(a.name || ''));
+            case 'stock_low':
+                return Number(a.stock_quantity || 0) - Number(b.stock_quantity || 0);
+            case 'stock_high':
+                return Number(b.stock_quantity || 0) - Number(a.stock_quantity || 0);
+            case 'price_low':
+                return Number(a.unit_price || 0) - Number(b.unit_price || 0);
+            case 'price_high':
+                return Number(b.unit_price || 0) - Number(a.unit_price || 0);
+            case 'newest':
+            default:
+                return Number(b.id || 0) - Number(a.id || 0);
+        }
+    });
+
+    const filtered = sortedItems.filter((item) => {
         const code = displayProductCode(item.sku || '').toLowerCase();
         const name = String(item.name || '').toLowerCase();
         const cat = String(item.category || '').toLowerCase();
@@ -6439,6 +6555,9 @@ async function createProductByAdmin() {
     void loadStock(stockPageBeforeSave);
     void loadSupplierProducts();
     void loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 10);
+    if (typeof loadQuickEditProducts === 'function') {
+        void loadQuickEditProducts();
+    }
     activateAdminSupplyTab('stockTab', 'productCreateResult');
 }
 
@@ -6865,6 +6984,9 @@ async function saveMarketplaceCeByAdmin() {
         loadMarketplaceCeAdmin(marketplaceCurrentPage || 1, 25),
         loadStock(stockCurrentPage || 1, 25)
     ]);
+    if (typeof loadQuickEditProducts === 'function') {
+        void loadQuickEditProducts();
+    }
 
     activateAdminSupplyTab('marketplaceTab', 'marketplaceResult');
 }
@@ -7239,6 +7361,307 @@ async function processMarketplaceCsvUpload() {
 // (uploadMarketplaceImages is defined above — duplicate removed)
 
 
+// ============================================================
+// QUICK EDIT FEATURE
+// ============================================================
+let _quickEditCategories = [];
+let _quickEditSearchTimeout = null;
+let _currentlySavingRows = new Set();
+
+async function initQuickEditTab() {
+    await loadQuickEditCategories();
+    await loadQuickEditProducts();
+}
+
+async function loadQuickEditCategories() {
+    const res = await apiCall(`/admin_supply.php?action=categories-list&active=1&_=${Date.now()}`, 'GET', null, { silent: true });
+    const selectFilter = document.getElementById('quickEditFilterCategory');
+    if (selectFilter) {
+        selectFilter.innerHTML = '<option value="">Todas las categorías</option>';
+    }
+    
+    if (res && res.success && Array.isArray(res.items)) {
+        _quickEditCategories = res.items.map(cat => cat.name).filter(Boolean);
+        _quickEditCategories.sort();
+        
+        if (selectFilter) {
+            _quickEditCategories.forEach(catName => {
+                const opt = document.createElement('option');
+                opt.value = catName;
+                opt.textContent = catName;
+                selectFilter.appendChild(opt);
+            });
+        }
+    }
+}
+
+function onQuickEditSearchInput() {
+    clearTimeout(_quickEditSearchTimeout);
+    _quickEditSearchTimeout = setTimeout(() => {
+        loadQuickEditProducts();
+    }, 450);
+}
+
+function onQuickEditParamsChange() {
+    loadQuickEditProducts();
+}
+
+async function loadQuickEditProducts() {
+    const tableBody = document.getElementById('quickEditTableBody');
+    if (!tableBody) return;
+
+    tableBody.innerHTML = `
+        <tr>
+            <td colspan="5" style="padding:2rem; text-align:center;" class="text-muted">
+                Cargando productos...
+            </td>
+        </tr>
+    `;
+
+    const target = document.getElementById('quickEditTarget')?.value || 'stock';
+    const search = document.getElementById('quickEditSearch')?.value?.trim() || '';
+    const category = document.getElementById('quickEditFilterCategory')?.value || '';
+    const sort = document.getElementById('quickEditSort')?.value || 'sku_asc';
+
+    const url = `/admin_supply.php?action=quick-products-list&target=${encodeURIComponent(target)}&search=${encodeURIComponent(search)}&category=${encodeURIComponent(category)}&sort=${encodeURIComponent(sort)}&_=${Date.now()}`;
+    const res = await apiCall(url, 'GET', null, { silent: true });
+
+    if (!res || !res.success || !Array.isArray(res.items)) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="5" style="padding:2rem; text-align:center; color:var(--theme-accent, #ff7f00);">
+                    No fue posible obtener la lista de productos.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    if (res.items.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="5" style="padding:2rem; text-align:center;" class="text-muted">
+                    No se encontraron productos con los filtros seleccionados.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tableBody.innerHTML = '';
+
+    res.items.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid var(--theme-border)';
+        tr.setAttribute('data-id', item.id);
+
+        // SKU column
+        const tdSku = document.createElement('td');
+        tdSku.style.padding = '0.75rem 1rem';
+        tdSku.innerHTML = `<strong>${escapeHtml(item.sku || '')}</strong>`;
+        tr.appendChild(tdSku);
+
+        // Name column
+        const tdName = document.createElement('td');
+        tdName.style.padding = '0.75rem 1rem';
+        tdName.innerHTML = `<span class="text-muted" style="font-size:0.85rem; display:block; max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(item.name || '')}">${escapeHtml(item.name || '')}</span>`;
+        tr.appendChild(tdName);
+
+        // Category select column
+        const tdCat = document.createElement('td');
+        tdCat.style.padding = '0.75rem 1rem';
+        const select = document.createElement('select');
+        select.className = 'quick-cat-select';
+        select.style.width = '100%';
+        select.style.background = '#111';
+        select.style.border = '1px solid #222';
+        select.style.color = '#fff';
+        select.style.padding = '4px 8px';
+        select.style.borderRadius = '6px';
+
+        // Add options
+        const itemCat = String(item.category || '').trim();
+        const availableCats = [..._quickEditCategories];
+        if (itemCat && !availableCats.includes(itemCat)) {
+            availableCats.push(itemCat);
+        }
+        if (!availableCats.includes('General')) {
+            availableCats.unshift('General');
+        }
+
+        availableCats.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = c;
+            if (c === itemCat) opt.selected = true;
+            select.appendChild(opt);
+        });
+        select.setAttribute('data-orig', itemCat);
+        tdCat.appendChild(select);
+        tr.appendChild(tdCat);
+
+        // Price input column
+        const tdPrice = document.createElement('td');
+        tdPrice.style.padding = '0.75rem 1rem';
+        
+        const priceInput = document.createElement('input');
+        priceInput.type = 'number';
+        priceInput.className = 'quick-price-input';
+        priceInput.value = (Number(item.price) || 0).toFixed(2);
+        priceInput.step = '0.01';
+        priceInput.min = '0';
+        priceInput.style.width = '100%';
+        priceInput.style.background = '#111';
+        priceInput.style.border = '1px solid #222';
+        priceInput.style.color = '#fff';
+        priceInput.style.padding = '4px 8px';
+        priceInput.style.borderRadius = '6px';
+        priceInput.style.textAlign = 'right';
+        priceInput.setAttribute('data-orig', (Number(item.price) || 0).toFixed(2));
+        
+        const discountVal = Number(item.discount || 0);
+        priceInput.setAttribute('data-discount', discountVal);
+        tdPrice.appendChild(priceInput);
+
+        // Add discount details if discount > 0
+        const finalPriceVal = Number(item.final_price || item.price || 0);
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'quick-price-info';
+        infoDiv.style.fontSize = '0.75rem';
+        infoDiv.style.marginTop = '2px';
+        infoDiv.style.textAlign = 'right';
+        
+        if (discountVal > 0) {
+            infoDiv.style.color = 'var(--theme-accent, #ff7f00)';
+            infoDiv.innerHTML = `Final: <strong>$${finalPriceVal.toFixed(2)}</strong> (-${discountVal}%)`;
+        } else {
+            infoDiv.style.color = 'rgba(255,255,255,0.3)';
+            infoDiv.innerHTML = 'Sin descuento activo';
+        }
+        tdPrice.appendChild(infoDiv);
+        tr.appendChild(tdPrice);
+
+        // Action column
+        const tdAction = document.createElement('td');
+        tdAction.style.padding = '0.75rem 1rem';
+        tdAction.style.textAlign = 'center';
+        
+        const saveBtn = document.createElement('button');
+        saveBtn.className = 'btn btn-primary btn-small';
+        saveBtn.style.padding = '4px 12px';
+        saveBtn.style.fontSize = '0.8rem';
+        saveBtn.style.borderRadius = '6px';
+        saveBtn.innerHTML = '💾 Guardar';
+        
+        // Bind auto-saves and manual save
+        select.onchange = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn);
+        priceInput.onchange = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn);
+        priceInput.onblur = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn);
+        saveBtn.onclick = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn);
+        
+        tdAction.appendChild(saveBtn);
+        tr.appendChild(tdAction);
+
+        // Allow save on Enter key inside price input
+        priceInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                saveQuickEditRow(item.id, target, select, priceInput, saveBtn);
+            }
+        });
+
+        // Dynamic price update inside infoDiv as user types
+        priceInput.addEventListener('input', () => {
+            const currentVal = parseFloat(priceInput.value) || 0;
+            if (discountVal > 0) {
+                const newFinal = currentVal * (1 - discountVal / 100);
+                infoDiv.innerHTML = `Final: <strong>$${newFinal.toFixed(2)}</strong> (-${discountVal}%)`;
+            }
+        });
+
+        tableBody.appendChild(tr);
+    });
+}
+
+async function saveQuickEditRow(id, target, selectEl, priceInputEl, buttonEl) {
+    if (_currentlySavingRows.has(id)) return;
+    _currentlySavingRows.add(id);
+
+    const category = selectEl.value;
+    const price = parseFloat(priceInputEl.value) || 0;
+    const origCategory = selectEl.getAttribute('data-orig');
+    const origPrice = parseFloat(priceInputEl.getAttribute('data-orig')) || 0;
+    const discountVal = parseFloat(priceInputEl.getAttribute('data-discount')) || 0;
+
+    // Skip if there are no changes
+    if (category === origCategory && price === origPrice) {
+        _currentlySavingRows.delete(id);
+        return;
+    }
+
+    if (price < 0) {
+        showAlert('El precio no puede ser menor a 0', 'warning');
+        _currentlySavingRows.delete(id);
+        return;
+    }
+
+    const originalText = buttonEl.innerHTML;
+    buttonEl.disabled = true;
+    buttonEl.innerHTML = '⏳...';
+
+    const payload = {
+        id: id,
+        target: target,
+        category: category,
+        price: price
+    };
+
+    const res = await apiCall('/admin_supply.php?action=quick-product-save', 'POST', payload);
+
+    buttonEl.disabled = false;
+    buttonEl.innerHTML = originalText;
+    _currentlySavingRows.delete(id);
+
+    if (res && res.success) {
+        showAlert(res.message || 'Cambios guardados con éxito', 'success');
+        
+        // Update original markers
+        selectEl.setAttribute('data-orig', category);
+        priceInputEl.setAttribute('data-orig', price.toFixed(2));
+
+        // Update infoDiv text with updated final price
+        const infoDiv = priceInputEl.closest('td')?.querySelector('.quick-price-info');
+        if (infoDiv && discountVal > 0 && typeof res.final_price !== 'undefined') {
+            infoDiv.innerHTML = `Final: <strong>$${Number(res.final_price).toFixed(2)}</strong> (-${discountVal}%)`;
+        }
+
+        // Show quick feedback on button
+        buttonEl.innerHTML = '✅ Guardado';
+        buttonEl.style.background = '#22c55e';
+        buttonEl.style.borderColor = '#22c55e';
+        buttonEl.style.color = '#ffffff';
+        setTimeout(() => {
+            buttonEl.innerHTML = '💾 Guardar';
+            buttonEl.style.background = '';
+            buttonEl.style.borderColor = '';
+            buttonEl.style.color = '';
+        }, 1800);
+
+        const row = selectEl.closest('tr');
+        if (row) {
+            const origBg = row.style.background;
+            row.style.background = 'rgba(34, 197, 94, 0.15)';
+            setTimeout(() => {
+                row.style.background = origBg;
+            }, 600);
+        }
+        void loadStock(stockCurrentPage || 1, null, true);
+        void loadMarketplaceCeAdmin(marketplaceCurrentPage || 1);
+    } else {
+        showAlert((res && res.message) ? res.message : 'No fue posible guardar los cambios', 'error');
+    }
+}
+
+
 function goToClientsTab() {
     const tabButton = document.querySelector('[data-tab="clientsTab"]');
     if (tabButton) {
@@ -7549,6 +7972,19 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    var quickEditBtn = document.querySelector('[data-tab="quickEditTab"]');
+    if (quickEditBtn) {
+        var _qeLoaded = false;
+        quickEditBtn.addEventListener('click', function () {
+            if (!_qeLoaded) {
+                _qeLoaded = true;
+                initQuickEditTab();
+            } else {
+                loadQuickEditProducts();
+            }
+        });
+    }
+
     const supplierInput = document.getElementById('poSupplier');
     if (supplierInput) {
         supplierInput.addEventListener('input', loadMappedProductsBySupplier);
@@ -7663,7 +8099,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const stockSearch = document.getElementById('stockSearch');
     if (stockSearch) {
-        stockSearch.addEventListener('input', debounce(renderStockList, 300));
+        stockSearch.addEventListener('input', debounce(() => loadStock(1), 300));
     }
 
     const marketplaceSearch = document.getElementById('marketplaceSearch');

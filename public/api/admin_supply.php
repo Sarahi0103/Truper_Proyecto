@@ -2837,7 +2837,7 @@ function homepage_updates_active_column_admin_supply(): ?string {
     return first_existing_column_admin_supply('homepage_updates', ['is_active', 'active']);
 }
 
-function list_stock_products_compatible($pdo, int $limit = 50, int $offset = 0): array {
+function list_stock_products_compatible($pdo, int $limit = 50, int $offset = 0, string $search = '', string $sort = ''): array {
     try {
         $pdo->exec("CREATE TABLE IF NOT EXISTS products (id SERIAL PRIMARY KEY)");
     } catch (Exception $ignored) {
@@ -2850,7 +2850,6 @@ function list_stock_products_compatible($pdo, int $limit = 50, int $offset = 0):
         $nameColumn = 'description';
     }
     $nameSelect = $nameColumn !== null ? "COALESCE({$nameColumn}, '') AS name" : "'' AS name";
-    $nameOrderExpr = $nameColumn !== null ? $nameColumn . ' ASC' : 'id ASC';
     $categorySelect = db_column_exists('products', 'category')
         ? "COALESCE(category, 'General') AS category"
         : "'General' AS category";
@@ -2880,15 +2879,92 @@ function list_stock_products_compatible($pdo, int $limit = 50, int $offset = 0):
         ? "COALESCE(discount_percentage, 0) AS discount_percentage"
         : "0 AS discount_percentage";
 
-    // Optimized SQL query with LIMIT and OFFSET (Explicitly cast for PostgreSQL)
+    $whereClauses = [];
+    $params = [];
+    if ($search !== '') {
+        $searchTerms = [];
+        if ($skuColumn !== null) {
+            $searchTerms[] = "{$skuColumn} ILIKE ?";
+            $params[] = "%$search%";
+        }
+        if ($nameColumn !== null) {
+            $searchTerms[] = "{$nameColumn} ILIKE ?";
+            $params[] = "%$search%";
+        }
+        if (db_column_exists('products', 'category')) {
+            $searchTerms[] = "category ILIKE ?";
+            $params[] = "%$search%";
+        }
+        if (db_column_exists('products', 'description')) {
+            $searchTerms[] = "description ILIKE ?";
+            $params[] = "%$search%";
+        }
+        if (!empty($searchTerms)) {
+            $whereClauses[] = "(" . implode(" OR ", $searchTerms) . ")";
+        }
+    }
+
+    $orderExpr = 'id DESC'; // default: lo más nuevo
+    if (!empty($sort)) {
+        switch ($sort) {
+            case 'oldest':
+                $orderExpr = 'id ASC';
+                break;
+            case 'name_asc':
+                if ($nameColumn !== null) {
+                    $orderExpr = "{$nameColumn} ASC";
+                } else {
+                    $orderExpr = 'id ASC';
+                }
+                break;
+            case 'name_desc':
+                if ($nameColumn !== null) {
+                    $orderExpr = "{$nameColumn} DESC";
+                } else {
+                    $orderExpr = 'id DESC';
+                }
+                break;
+            case 'stock_low':
+                if (db_column_exists('products', 'stock_quantity')) {
+                    $orderExpr = "stock_quantity ASC";
+                }
+                break;
+            case 'stock_high':
+                if (db_column_exists('products', 'stock_quantity')) {
+                    $orderExpr = "stock_quantity DESC";
+                }
+                break;
+            case 'price_low':
+                if (db_column_exists('products', 'unit_price')) {
+                    $orderExpr = "unit_price ASC";
+                }
+                break;
+            case 'price_high':
+                if (db_column_exists('products', 'unit_price')) {
+                    $orderExpr = "unit_price DESC";
+                }
+                break;
+        }
+    }
+
     $sql = "SELECT id, {$skuSelect}, {$nameSelect}, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect}, {$netPriceSelect}, {$discountSelect} 
-            FROM products 
-            ORDER BY id DESC 
-            LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
+            FROM products";
+    
+    if (!empty($whereClauses)) {
+        $sql .= " WHERE " . implode(" AND ", $whereClauses);
+    }
+    
+    $sql .= " ORDER BY {$orderExpr} LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
 
     try {
-        $stmt = $pdo->query($sql);
-        $items = $stmt ? $stmt->fetchAll() : [];
+        if (!empty($params)) {
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $items = $stmt ? $stmt->fetchAll() : [];
+        } else {
+            $stmt = $pdo->query($sql);
+            $items = $stmt ? $stmt->fetchAll() : [];
+        }
         
         // Resolve image fallback for the current page only
         $items = array_map('apply_catalog_image_fallback_admin_supply', $items);
@@ -2899,9 +2975,51 @@ function list_stock_products_compatible($pdo, int $limit = 50, int $offset = 0):
     }
 }
 
-function count_stock_products_compatible($pdo): int {
+function count_stock_products_compatible($pdo, string $search = ''): int {
+    $skuColumn = sku_column_for_table_admin_supply('products');
+    $nameColumn = name_column_for_table_admin_supply('products');
+    if ($nameColumn === null && db_column_exists('products', 'description')) {
+        $nameColumn = 'description';
+    }
+
+    $whereClauses = [];
+    $params = [];
+    if ($search !== '') {
+        $searchTerms = [];
+        if ($skuColumn !== null) {
+            $searchTerms[] = "{$skuColumn} ILIKE ?";
+            $params[] = "%$search%";
+        }
+        if ($nameColumn !== null) {
+            $searchTerms[] = "{$nameColumn} ILIKE ?";
+            $params[] = "%$search%";
+        }
+        if (db_column_exists('products', 'category')) {
+            $searchTerms[] = "category ILIKE ?";
+            $params[] = "%$search%";
+        }
+        if (db_column_exists('products', 'description')) {
+            $searchTerms[] = "description ILIKE ?";
+            $params[] = "%$search%";
+        }
+        if (!empty($searchTerms)) {
+            $whereClauses[] = "(" . implode(" OR ", $searchTerms) . ")";
+        }
+    }
+
+    $sql = "SELECT COUNT(*) FROM products";
+    if (!empty($whereClauses)) {
+        $sql .= " WHERE " . implode(" AND ", $whereClauses);
+    }
+
     try {
-        return (int)$pdo->query("SELECT COUNT(*) FROM products")->fetchColumn();
+        if (!empty($params)) {
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            return (int)$stmt->fetchColumn();
+        } else {
+            return (int)$pdo->query($sql)->fetchColumn();
+        }
     } catch (Exception $e) {
         return 0;
     }
@@ -3166,6 +3284,176 @@ try {
                 }
             } catch (Throwable $e) {
                 error_log('auto_sync_stock_after_change (create) failed: ' . $e->getMessage());
+            }
+        case 'quick-products-list':
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $target = sanitize($_GET['target'] ?? 'stock'); // 'stock' or 'marketplace'
+            $search = sanitize($_GET['search'] ?? '');
+            $categoryFilter = sanitize($_GET['category'] ?? '');
+            $sort = sanitize($_GET['sort'] ?? 'sku_asc');
+
+            $table = ($target === 'marketplace') ? 'marketplace_ce_products' : 'products';
+
+            // Check columns
+            $skuCol = sku_column_for_table_admin_supply($table) ?: 'sku';
+            $nameCol = ($target === 'marketplace') ? 'name' : (ensure_products_name_column_admin_supply($pdo) ?: 'name');
+            $priceCol = db_column_exists($table, 'net_price') ? 'net_price' : (db_column_exists($table, 'unit_price') ? 'unit_price' : 'sell_price');
+            
+            $discountCol = db_column_exists($table, 'discount_percentage') ? 'discount_percentage' : '0';
+            $finalPriceCol = db_column_exists($table, 'unit_price') ? 'unit_price' : (db_column_exists($table, 'sell_price') ? 'sell_price' : '0');
+
+            $whereClauses = [];
+            $params = [];
+
+            if ($search !== '') {
+                $whereClauses[] = '(' . $skuCol . ' ILIKE ? OR ' . $nameCol . ' ILIKE ?)';
+                $params[] = '%' . $search . '%';
+                $params[] = '%' . $search . '%';
+            }
+
+            if ($categoryFilter !== '') {
+                $whereClauses[] = 'category = ?';
+                $params[] = $categoryFilter;
+            }
+
+            $whereSql = '';
+            if (!empty($whereClauses)) {
+                $whereSql = ' WHERE ' . implode(' AND ', $whereClauses);
+            }
+
+            // Sorting mapping
+            $orderSql = 'id DESC';
+            switch ($sort) {
+                case 'sku_asc':
+                    $orderSql = $skuCol . ' ASC';
+                    break;
+                case 'sku_desc':
+                    $orderSql = $skuCol . ' DESC';
+                    break;
+                case 'price_asc':
+                    $orderSql = $priceCol . ' ASC';
+                    break;
+                case 'price_desc':
+                    $orderSql = $priceCol . ' DESC';
+                    break;
+                case 'name_asc':
+                    $orderSql = $nameCol . ' ASC';
+                    break;
+                case 'name_desc':
+                    $orderSql = $nameCol . ' DESC';
+                    break;
+            }
+
+            try {
+                $sql = "SELECT id, {$skuCol} as sku, {$nameCol} as name, category, {$priceCol} as price, CAST({$discountCol} AS NUMERIC) as discount, CAST({$finalPriceCol} AS NUMERIC) as final_price FROM {$table} {$whereSql} ORDER BY {$orderSql} LIMIT 100";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute($params);
+                $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                $response = [
+                    'success' => true,
+                    'items' => $items
+                ];
+            } catch (Exception $e) {
+                $response = ['success' => false, 'message' => 'Error al obtener productos: ' . $e->getMessage()];
+            }
+            break;
+
+        case 'quick-product-save':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $id = (int)($input['id'] ?? 0);
+            $target = sanitize($input['target'] ?? 'stock');
+            $category = sanitize($input['category'] ?? 'General');
+            $price = (float)($input['price'] ?? 0);
+
+            if ($id <= 0) {
+                $response = ['success' => false, 'message' => 'ID de producto inválido'];
+                break;
+            }
+
+            if ($price < 0) {
+                $response = ['success' => false, 'message' => 'El precio no puede ser menor a 0'];
+                break;
+            }
+
+            try {
+                if ($target === 'marketplace') {
+                    // Get current discount for marketplace product
+                    $check = $pdo->prepare('SELECT COALESCE(discount_percentage, 0) as discount_percentage FROM marketplace_ce_products WHERE id = ?');
+                    $check->execute([$id]);
+                    $discount = (float)($check->fetchColumn() ?: 0);
+                    $finalPrice = $price * (1 - $discount / 100);
+
+                    $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET category = ?, net_price = ?, unit_price = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?');
+                    $stmt->execute([$category, $price, $finalPrice, $id]);
+                    
+                    $response = [
+                        'success' => true, 
+                        'message' => 'Producto de Marketplace actualizado',
+                        'final_price' => (float)number_format($finalPrice, 2, '.', '')
+                    ];
+                } else {
+                    // Get current discount for stock product
+                    $check = $pdo->prepare('SELECT COALESCE(discount_percentage, 0) as discount_percentage, sku FROM products WHERE id = ?');
+                    $check->execute([$id]);
+                    $row = $check->fetch(PDO::FETCH_ASSOC);
+                    $discount = 0.0;
+                    $sku = '';
+                    if ($row) {
+                        $discount = (float)$row['discount_percentage'];
+                        $sku = (string)$row['sku'];
+                    }
+                    $finalPrice = $price * (1 - $discount / 100);
+
+                    $sets = ['category = ?'];
+                    $values = [$category];
+
+                    if (db_column_exists('products', 'unit_price')) {
+                        $sets[] = 'unit_price = ?';
+                        $values[] = (float)number_format($finalPrice, 2, '.', '');
+                    } elseif (db_column_exists('products', 'sell_price')) {
+                        $sets[] = 'sell_price = ?';
+                        $values[] = (float)number_format($finalPrice, 2, '.', '');
+                    }
+                    if (db_column_exists('products', 'net_price')) {
+                        $sets[] = 'net_price = ?';
+                        $values[] = (float)number_format($price, 2, '.', '');
+                    }
+                    
+                    if (db_column_exists('products', 'updated_at')) {
+                        $sets[] = 'updated_at = CURRENT_TIMESTAMP';
+                    }
+
+                    $values[] = $id;
+                    $stmt = $pdo->prepare('UPDATE products SET ' . implode(', ', $sets) . ' WHERE id = ?');
+                    $stmt->execute($values);
+
+                    if ($sku) {
+                        try {
+                            if (function_exists('auto_sync_stock_after_change')) {
+                                @auto_sync_stock_after_change($pdo, $sku);
+                            }
+                        } catch (Throwable $e) {
+                            error_log('auto_sync_stock_after_change failed in quick-save: ' . $e->getMessage());
+                        }
+                    }
+
+                    $response = [
+                        'success' => true, 
+                        'message' => 'Producto de Catálogo actualizado',
+                        'final_price' => (float)number_format($finalPrice, 2, '.', '')
+                    ];
+                }
+            } catch (Exception $e) {
+                $response = ['success' => false, 'message' => 'Error al guardar los cambios: ' . $e->getMessage()];
             }
             break;
 
@@ -5415,8 +5703,11 @@ try {
             $per_page = max(10, min(200, (int)($_GET['per_page'] ?? 50)));
             $offset = ($page - 1) * $per_page;
             
-            $items = list_stock_products_compatible($pdo, $per_page, $offset);
-            $total = count_stock_products_compatible($pdo);
+            $search = sanitize($_GET['search'] ?? '');
+            $sort = sanitize($_GET['sort'] ?? '');
+            
+            $items = list_stock_products_compatible($pdo, $per_page, $offset, $search, $sort);
+            $total = count_stock_products_compatible($pdo, $search);
             
             $response = [
                 'success' => true, 

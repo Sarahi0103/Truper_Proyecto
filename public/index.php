@@ -44,7 +44,7 @@ try {
         AND pc.is_active = false
     )";
 
-    $stmt = $pdo->prepare("SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, COALESCE(net_price, unit_price, sell_price, 0) AS net_price, COALESCE(discount_percentage, 0) AS discount_percentage, category, description, technical_specs, stock_quantity, image_url, variants_json FROM products" . $visibilityWhere . " ORDER BY name LIMIT 200");
+    $stmt = $pdo->prepare("SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, COALESCE(net_price, unit_price, sell_price, 0) AS net_price, COALESCE(discount_percentage, 0) AS discount_percentage, category, description, technical_specs, stock_quantity, image_url, variants_json FROM products" . $visibilityWhere . " ORDER BY name LIMIT 5000");
     $stmt->execute();
     $products = $stmt->fetchAll();
 } catch (Exception $e) {
