@@ -295,6 +295,55 @@ try {
     // Si la tabla no existe o hay error, mantenemos $quickCategories generado dinámicamente
 }
 
+// Compile normalized products list for JS-based search, filtering, sorting, and infinite scroll
+$jsonProducts = [];
+foreach ($products as $product) {
+    $rawSku = (string)($product['sku'] ?? '');
+    $displaySku = normalize_product_code($rawSku);
+    $productName = decode_legacy_entities((string)($product['name'] ?? ''));
+    $productDescription = decode_legacy_entities((string)($product['description'] ?? ''));
+    $productCategory = decode_legacy_entities((string)($product['category'] ?? ''));
+    $imagePath = !empty($product['image_url']) ? $product['image_url'] : 'images/products/default-product.svg';
+    $galleryImages = catalog_resolve_gallery_images_by_sku($displaySku, $product, $pdo);
+    if (empty($galleryImages)) {
+        $galleryImages = [$imagePath];
+    }
+    $variants = [];
+    if (!empty($product['variants_json'])) {
+        $decoded = json_decode($product['variants_json'], true);
+        if (is_array($decoded)) {
+            foreach ($decoded as $item) {
+                $itemStr = (string)$item;
+                if (strpos($itemStr, 'images/') === false &&
+                    strpos($itemStr, 'data:image/') === false &&
+                    stripos($itemStr, '.jpg') === false &&
+                    stripos($itemStr, '.jpeg') === false &&
+                    stripos($itemStr, '.png') === false &&
+                    stripos($itemStr, '.gif') === false &&
+                    stripos($itemStr, '.webp') === false &&
+                    stripos($itemStr, '.svg') === false) {
+                    $variants[] = $itemStr;
+                }
+            }
+        }
+    }
+    $stock = (int)($product['stock_quantity'] ?? 0);
+    
+    $jsonProducts[] = [
+        'id' => (int)$product['id'],
+        'sku' => $displaySku,
+        'name' => $productName,
+        'desc' => $productDescription,
+        'cat' => $productCategory !== '' ? $productCategory : 'General',
+        'price' => (float)$product['unit_price'],
+        'net_price' => (float)$product['net_price'],
+        'discount' => (float)$product['discount_percentage'],
+        'stock' => $stock,
+        'imgs' => $galleryImages,
+        'variants' => $variants
+    ];
+}
+
 $isLogged = is_logged_in();
 $isAdmin = (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee');
 $showSessionExpiredNotice = (($_GET['error'] ?? '') === 'expired');
@@ -560,115 +609,116 @@ function homepage_update_label($type) {
             </div>
 
             <div class="catalog-grid-min">
-                <?php foreach ($products as $product): ?>
-                    <?php
-                        $rawSku = (string)($product['sku'] ?? '');
-                        $displaySku = normalize_product_code($rawSku);
-                        $productName = decode_legacy_entities((string)($product['name'] ?? ''));
-                        $productDescription = decode_legacy_entities((string)($product['description'] ?? ''));
-                        $productCategory = decode_legacy_entities((string)($product['category'] ?? ''));
-                        $imagePath = !empty($product['image_url']) ? $product['image_url'] : 'images/products/default-product.svg';
-                        $galleryImages = catalog_resolve_gallery_images_by_sku($displaySku, $product, $pdo);
-                        if (empty($galleryImages)) {
-                            $galleryImages = [$imagePath];
-                        }
-                        $variants = [];
-                        if (!empty($product['variants_json'])) {
-                            $decoded = json_decode($product['variants_json'], true);
-                            if (is_array($decoded)) {
-                                // Filter out image paths stored in variants_json (keep only real variant labels)
-                                foreach ($decoded as $item) {
-                                    $itemStr = (string)$item;
-                                    if (strpos($itemStr, 'images/') === false &&
-                                        strpos($itemStr, 'data:image/') === false &&
-                                        stripos($itemStr, '.jpg') === false &&
-                                        stripos($itemStr, '.jpeg') === false &&
-                                        stripos($itemStr, '.png') === false &&
-                                        stripos($itemStr, '.gif') === false &&
-                                        stripos($itemStr, '.webp') === false &&
-                                        stripos($itemStr, '.svg') === false) {
-                                        $variants[] = $itemStr;
-                                    }
-                                }
-                            }
-                        }
-                        $stock = (int)($product['stock_quantity'] ?? 0);
-                    ?>
+                <?php
+                $initialBatch = array_slice($jsonProducts, 0, 24);
+                foreach ($initialBatch as $p):
+                    $firstImg = !empty($p['imgs'][0]) ? $p['imgs'][0] : 'images/products/default-product.svg';
+                ?>
                     <article class="product-card-min"
                         data-product-card
-                        data-name="<?php echo htmlspecialchars($productName, ENT_QUOTES, 'UTF-8'); ?>"
-                        data-sku="<?php echo htmlspecialchars($displaySku, ENT_QUOTES, 'UTF-8'); ?>"
-                        data-category="<?php echo htmlspecialchars($productCategory, ENT_QUOTES, 'UTF-8'); ?>"
-                        data-price="<?php echo (float)$product['unit_price']; ?>"
-                        data-stock="<?php echo $stock; ?>">
+                        data-name="<?php echo htmlspecialchars(strtolower($p['name']), ENT_QUOTES, 'UTF-8'); ?>"
+                        data-sku="<?php echo htmlspecialchars(strtolower($p['sku']), ENT_QUOTES, 'UTF-8'); ?>"
+                        data-category="<?php echo htmlspecialchars($p['cat'], ENT_QUOTES, 'UTF-8'); ?>"
+                        data-price="<?php echo $p['price']; ?>"
+                        data-stock="<?php echo $p['stock']; ?>">
                         <div class="product-media" data-product-gallery>
-                            <a href="product_detail.php?id=<?php echo (int)$product['id']; ?>" class="product-media-link" aria-label="Ver detalle de <?php echo htmlspecialchars($productName, ENT_QUOTES, 'UTF-8'); ?>"></a>
-                            <?php foreach ($galleryImages as $idx => $galleryImage): ?>
+                            <a href="product_detail.php?id=<?php echo $p['id']; ?>" class="product-media-link" aria-label="Ver detalle de <?php echo htmlspecialchars($p['name'], ENT_QUOTES, 'UTF-8'); ?>"></a>
+                            <?php foreach ($p['imgs'] as $idx => $galleryImage): ?>
                                 <img
                                     class="product-gallery-image <?php echo $idx === 0 ? 'active' : ''; ?>"
                                     src="<?php echo htmlspecialchars($galleryImage, ENT_QUOTES, 'UTF-8'); ?>"
-                                    alt="<?php echo htmlspecialchars($productName, ENT_QUOTES, 'UTF-8'); ?>"
+                                    alt="<?php echo htmlspecialchars($p['name'], ENT_QUOTES, 'UTF-8'); ?>"
                                     loading="lazy"
                                     decoding="async"
                                     fetchpriority="<?php echo $idx === 0 ? 'high' : 'low'; ?>"
                                     width="300"
                                     height="300">
                             <?php endforeach; ?>
-                            <?php if (count($galleryImages) > 1): ?>
+                            <?php if (count($p['imgs']) > 1): ?>
                                 <button type="button" class="gallery-nav gallery-prev" data-gallery-prev aria-label="Imagen anterior">&#10094;</button>
                                 <button type="button" class="gallery-nav gallery-next" data-gallery-next aria-label="Imagen siguiente">&#10095;</button>
-                                <div class="gallery-counter"><span data-gallery-current>1</span>/<?php echo count($galleryImages); ?></div>
+                                <div class="gallery-counter"><span data-gallery-current>1</span>/<?php echo count($p['imgs']); ?></div>
                             <?php endif; ?>
                         </div>
                         <div class="product-content">
-                            <div class="catalog-tag"><?php echo htmlspecialchars($productCategory !== '' ? $productCategory : 'General', ENT_QUOTES, 'UTF-8'); ?></div>
-                            <div class="product-code-label"><strong>Código:</strong> <strong><?php echo htmlspecialchars($displaySku, ENT_QUOTES, 'UTF-8'); ?></strong></div>
-                            <h3 class="product-title"><?php echo htmlspecialchars($productName, ENT_QUOTES, 'UTF-8'); ?></h3>
-                            <p class="product-spec"><?php echo htmlspecialchars($productDescription !== '' ? $productDescription : 'Descripción pendiente', ENT_QUOTES, 'UTF-8'); ?></p>
+                            <div class="catalog-tag"><?php echo htmlspecialchars($p['cat'], ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div class="product-code-label"><strong>Código:</strong> <strong><?php echo htmlspecialchars($p['sku'], ENT_QUOTES, 'UTF-8'); ?></strong></div>
+                            <h3 class="product-title"><?php echo htmlspecialchars($p['name'], ENT_QUOTES, 'UTF-8'); ?></h3>
+                            <p class="product-spec"><?php echo htmlspecialchars($p['desc'] !== '' ? $p['desc'] : 'Descripción pendiente', ENT_QUOTES, 'UTF-8'); ?></p>
                             <div>
-                                <?php if (!empty($variants)): ?>
-                                    <?php foreach ($variants as $variant): ?>
+                                <?php if (!empty($p['variants'])): ?>
+                                    <?php foreach ($p['variants'] as $variant): ?>
                                         <span class="variant-pill"><?php echo htmlspecialchars((string)$variant, ENT_QUOTES, 'UTF-8'); ?></span>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <span class="variant-pill">Modelo Estandar</span>
                                 <?php endif; ?>
                             </div>
-                            <span class="stock-badge <?php echo $stock <= 10 ? 'stock-low' : 'stock-ok'; ?>">
-                                <?php echo $stock <= 10 ? 'Stock bajo: ' : 'Stock: '; ?><?php echo $stock; ?>
+                            <span class="stock-badge <?php echo $p['stock'] <= 10 ? 'stock-low' : 'stock-ok'; ?>">
+                                <?php echo $p['stock'] <= 10 ? 'Stock bajo: ' : 'Stock: '; ?><?php echo $p['stock']; ?>
                             </span>
-                            <?php if (isset($product['discount_percentage']) && (float)$product['discount_percentage'] > 0): ?>
+                            <?php if ($p['discount'] > 0): ?>
                                 <div class="catalog-price-container" style="display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px;">
                                     <div class="original-price-wrap" style="display: flex; align-items: center; gap: 8px;">
                                         <span class="price-base" style="text-decoration: line-through; color: rgba(255, 255, 255, 0.4); font-size: 0.85rem;">
-                                            $<?php echo number_format((float)$product['net_price'], 2, '.', ','); ?>
+                                            $<?php echo number_format($p['net_price'], 2, '.', ','); ?>
                                         </span>
                                         <span class="discount-badge" style="background: rgba(255, 102, 0, 0.15); color: var(--color-naranja, #ff6600); font-size: 0.75rem; font-weight: bold; padding: 2px 6px; border-radius: 4px;">
-                                            <?php echo (float)$product['discount_percentage']; ?>% OFF
+                                            <?php echo $p['discount']; ?>% OFF
                                         </span>
                                     </div>
                                     <div class="catalog-price" style="color: #fff; font-weight: 700; font-size: 1.2rem; padding: 0;">
-                                        $<?php echo number_format((float)$product['unit_price'], 2, '.', ','); ?>
+                                        $<?php echo number_format($p['price'], 2, '.', ','); ?>
                                     </div>
                                 </div>
                             <?php else: ?>
-                                <div class="catalog-price"><?php echo '$' . number_format((float)$product['unit_price'], 2, '.', ','); ?></div>
+                                <div class="catalog-price">$<?php echo number_format($p['price'], 2, '.', ','); ?></div>
                             <?php endif; ?>
                             <div class="product-actions">
                                 <button
                                     type="button"
                                     class="btn btn-primary btn-small"
                                     data-add-product
-                                    data-id="<?php echo (int)$product['id']; ?>"
-                                    data-sku="<?php echo htmlspecialchars($displaySku, ENT_QUOTES, 'UTF-8'); ?>"
-                                    data-name="<?php echo htmlspecialchars($productName, ENT_QUOTES, 'UTF-8'); ?>"
-                                    data-image="<?php echo htmlspecialchars($galleryImages[0] ?? $imagePath, ENT_QUOTES, 'UTF-8'); ?>"
-                                    data-price="<?php echo (float)$product['unit_price']; ?>">Agregar</button>
+                                    data-id="<?php echo $p['id']; ?>"
+                                    data-sku="<?php echo htmlspecialchars($p['sku'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-name="<?php echo htmlspecialchars($p['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-image="<?php echo htmlspecialchars($firstImg, ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-price="<?php echo $p['price']; ?>">Agregar</button>
                             </div>
                         </div>
                     </article>
                 <?php endforeach; ?>
             </div>
+
+            <!-- Empty State -->
+            <div id="catalogEmptyState" style="display: none; text-align: center; padding: 4rem 2rem; color: #888; grid-column: 1 / -1;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">🔍</div>
+                <h3 style="color: #fff; margin-bottom: 0.5rem;">No se encontraron productos</h3>
+                <p>Intenta con otros términos de búsqueda o filtros.</p>
+            </div>
+
+            <!-- Loading Spinner for Infinite Scroll -->
+            <div id="catalogLoading" style="display: none; justify-content: center; align-items: center; padding: 2rem 0; grid-column: 1 / -1;">
+                <div class="premium-spinner"></div>
+            </div>
+
+            <!-- Infinite Scroll Sentinel -->
+            <div id="catalogSentinel" style="height: 20px; margin-bottom: 2rem; grid-column: 1 / -1;"></div>
+
+            <!-- CSS style for premium spinner -->
+            <style>
+                .premium-spinner {
+                    width: 40px;
+                    height: 40px;
+                    border: 3px solid rgba(255, 127, 0, 0.1);
+                    border-radius: 50%;
+                    border-top-color: var(--theme-accent, #ff7f00);
+                    animation: spin 0.8s linear infinite;
+                }
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+            </style>
         </section>
     </main>
 
@@ -700,6 +750,7 @@ function homepage_update_label($type) {
     <script src="<?php echo asset_url('js/jspdf.umd.min.js'); ?>"></script>
     <script src="<?php echo asset_url('js/main.js'); ?>"></script>
     <script src="<?php echo asset_url('js/modals.js'); ?>"></script>
+    <script id="products-data" type="application/json"><?php echo json_encode($jsonProducts); ?></script>
     <script>
         window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8"); ?>';
     </script>

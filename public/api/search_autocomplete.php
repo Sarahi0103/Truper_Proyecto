@@ -26,10 +26,10 @@ try {
             sku,
             name,
             category,
-            price,
+            unit_price AS price,
             'catalog' as source
-        FROM productos 
-        WHERE visible = true 
+        FROM products 
+        WHERE is_active = true 
         AND (name ILIKE ? OR sku ILIKE ? OR category ILIKE ?)
         ORDER BY 
             CASE 
@@ -44,14 +44,13 @@ try {
     $searchPattern = "%$query%";
     $exactPattern = "$query%";
     
-    $stmt->execute([
-        $searchPattern,
-        $searchPattern,
-        $searchPattern,
-        $exactPattern,
-        $exactPattern,
-        $limit
-    ]);
+    $stmt->bindValue(1, $searchPattern, PDO::PARAM_STR);
+    $stmt->bindValue(2, $searchPattern, PDO::PARAM_STR);
+    $stmt->bindValue(3, $searchPattern, PDO::PARAM_STR);
+    $stmt->bindValue(4, $exactPattern, PDO::PARAM_STR);
+    $stmt->bindValue(5, $exactPattern, PDO::PARAM_STR);
+    $stmt->bindValue(6, (int)$limit, PDO::PARAM_INT);
+    $stmt->execute();
     
     $catalogResults = $stmt->fetchAll();
     
@@ -63,10 +62,10 @@ try {
                 sku,
                 name,
                 category,
-                price,
+                unit_price AS price,
                 'marketplace' as source
-            FROM marketplace_ce 
-            WHERE visible = true 
+            FROM marketplace_ce_products 
+            WHERE is_active = true 
             AND (name ILIKE ? OR sku ILIKE ? OR category ILIKE ?)
             ORDER BY 
                 CASE 
@@ -78,14 +77,13 @@ try {
             LIMIT ?
         ");
         
-        $stmtMarket->execute([
-            $searchPattern,
-            $searchPattern,
-            $searchPattern,
-            $exactPattern,
-            $exactPattern,
-            $limit
-        ]);
+        $stmtMarket->bindValue(1, $searchPattern, PDO::PARAM_STR);
+        $stmtMarket->bindValue(2, $searchPattern, PDO::PARAM_STR);
+        $stmtMarket->bindValue(3, $searchPattern, PDO::PARAM_STR);
+        $stmtMarket->bindValue(4, $exactPattern, PDO::PARAM_STR);
+        $stmtMarket->bindValue(5, $exactPattern, PDO::PARAM_STR);
+        $stmtMarket->bindValue(6, (int)$limit, PDO::PARAM_INT);
+        $stmtMarket->execute();
         
         $marketplaceResults = $stmtMarket->fetchAll();
     } catch (Exception $e) {
