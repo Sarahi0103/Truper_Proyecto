@@ -402,6 +402,11 @@ foreach ($dbProductGroups as $g) {
         'count' => $productGroupCounts[mb_strtolower($gName)] ?? 0
     ];
 }
+
+// Storefront display: Only show groups that have products assigned (count > 0)
+$activeProductGroups = array_values(array_filter($availableProductGroups, function($g) {
+    return (int)($g['count'] ?? 0) > 0;
+}));
 $dbGroupColorMap = [];
 foreach ($availableProductGroups as $ag) {
     $dbGroupColorMap[mb_strtolower($ag['name'])] = $ag['color'];
@@ -707,7 +712,7 @@ function homepage_update_label($type) {
                 </div>
 
                 <!-- Apartado de Agrupaciones de Productos -->
-                <?php if (!empty($availableProductGroups)): ?>
+                <?php if (!empty($activeProductGroups)): ?>
                 <div class="catalog-colors-bar" style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-top:0.85rem; padding:0.75rem 1.1rem; background:rgba(20,20,24,0.85); border:1px solid rgba(255,255,255,0.1); border-radius:14px; backdrop-filter:blur(10px); box-shadow:0 4px 20px rgba(0,0,0,0.4);">
                     <span style="font-size:0.85rem; font-weight:700; color:var(--theme-accent, #ff7f00); margin-right:4px; text-transform:uppercase; letter-spacing:0.04em;">
                         AGRUPACIONES:
@@ -718,7 +723,7 @@ function homepage_update_label($type) {
                     <button type="button" class="btn btn-ghost btn-small color-chip-filter" data-color-filter="__NONE__" data-grp-color="#64748b" style="--grp-color:#64748b;">
                         Sin agrupación
                     </button>
-                    <?php foreach ($availableProductGroups as $gInfo): 
+                    <?php foreach ($activeProductGroups as $gInfo): 
                         $grpName = $gInfo['name'];
                         $grpColor = !empty($gInfo['color']) ? $gInfo['color'] : '#FF7F00';
                     ?>
@@ -742,17 +747,17 @@ function homepage_update_label($type) {
             </div>
 
             <div class="catalog-filters">
+                <?php if (!empty($activeProductGroups)): ?>
                 <select id="filterGroup" style="min-width:210px; font-weight:600; border-color:var(--theme-accent, #ff7f00); cursor:pointer;">
                     <option value="">Todos los Grupos de Productos</option>
                     <option value="__NONE__">Sin agrupación</option>
-                    <?php if (!empty($availableProductGroups)): ?>
-                        <?php foreach ($availableProductGroups as $gInfo): ?>
-                            <option value="<?php echo htmlspecialchars($gInfo['name'], ENT_QUOTES, 'UTF-8'); ?>">
-                                <?php echo htmlspecialchars($gInfo['name'], ENT_QUOTES, 'UTF-8'); ?> (<?php echo $gInfo['count']; ?>)
-                            </option>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
+                    <?php foreach ($activeProductGroups as $gInfo): ?>
+                        <option value="<?php echo htmlspecialchars($gInfo['name'], ENT_QUOTES, 'UTF-8'); ?>">
+                            <?php echo htmlspecialchars($gInfo['name'], ENT_QUOTES, 'UTF-8'); ?> (<?php echo $gInfo['count']; ?>)
+                        </option>
+                    <?php endforeach; ?>
                 </select>
+                <?php endif; ?>
                 <select id="filterStock">
                     <option value="">Todo stock</option>
                     <option value="available">Solo disponibles</option>

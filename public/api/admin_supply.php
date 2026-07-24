@@ -1033,23 +1033,6 @@ function ensure_product_groups_table($pdo): void {
         try {
             $pdo->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_product_groups_name ON product_groups (name)");
         } catch (Exception $ignored) {}
-
-        $stmt = $pdo->query("SELECT COUNT(*) FROM product_groups");
-        if ((int)$stmt->fetchColumn() === 0) {
-            $defaults = [
-                ['Herrería', '#EF4444'],
-                ['Kit herramienta', '#A855F7'],
-                ['Material eléctrico', '#0EA5E9'],
-                ['Fontanería', '#14B8A6'],
-                ['Cerrajería', '#F59E0B']
-            ];
-            foreach ($defaults as $d) {
-                try {
-                    $stmtIns = $pdo->prepare("INSERT INTO product_groups (name, color) VALUES (?, ?)");
-                    $stmtIns->execute([$d[0], $d[1]]);
-                } catch (Exception $ignored) {}
-            }
-        }
     } catch (Exception $ignored) {}
 }
 
