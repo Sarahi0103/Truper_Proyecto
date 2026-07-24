@@ -13,7 +13,7 @@ function showPremiumModal(title, message, icon, onConfirm, onCancel) {
     
     modal.innerHTML = `
         <div class="modal-premium-header">
-            <div class="modal-premium-icon">${icon}</div>
+            ${icon ? `<div class="modal-premium-icon">${icon}</div>` : ''}
             <h3 class="modal-premium-title">${title}</h3>
         </div>
         <div class="modal-premium-content">

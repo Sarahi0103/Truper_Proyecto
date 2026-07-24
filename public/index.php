@@ -44,7 +44,10 @@ try {
         AND pc.is_active = false
     )";
 
-    $stmt = $pdo->prepare("SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, COALESCE(net_price, unit_price, sell_price, 0) AS net_price, COALESCE(discount_percentage, 0) AS discount_percentage, category, description, technical_specs, stock_quantity, image_url, variants_json FROM products" . $visibilityWhere . " ORDER BY name LIMIT 5000");
+    $groupSelect = db_column_exists('products', 'product_group') ? "COALESCE(product_group, '') AS product_group" : "'' AS product_group";
+    $colorSelect = db_column_exists('products', 'color') ? "COALESCE(color, '') AS color" : "'' AS color";
+
+    $stmt = $pdo->prepare("SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, COALESCE(net_price, unit_price, sell_price, 0) AS net_price, COALESCE(discount_percentage, 0) AS discount_percentage, category, description, technical_specs, stock_quantity, image_url, variants_json, {$groupSelect}, {$colorSelect} FROM products" . $visibilityWhere . " ORDER BY name LIMIT 5000");
     $stmt->execute();
     $products = $stmt->fetchAll();
 } catch (Exception $e) {
@@ -273,19 +276,25 @@ usort($quickCategories, function ($a, $b) use ($priorityCategories, $normalizeCa
     return strcasecmp((string)$a, (string)$b);
 });
 
-// Intento de cargar categorías desde la tabla oficial para consistencia
+// Intento de cargar categorías desde la tabla oficial para consistencia y sincronizar colores dinámicos
+$dbRawCategoryColors = [];
+$dbCategoryColors = [];
 try {
-    $catStmt = $pdo->query("SELECT name FROM product_categories WHERE is_active = true ORDER BY sort_order ASC, name ASC");
+    $catStmt = $pdo->query("SELECT name, color FROM product_categories WHERE is_active = true ORDER BY sort_order ASC, name ASC");
     if ($catStmt) {
-        $dbCats = $catStmt->fetchAll(PDO::FETCH_COLUMN);
+        $dbCats = $catStmt->fetchAll(PDO::FETCH_ASSOC);
         if (!empty($dbCats)) {
             $uniqueDbCats = [];
-            foreach ($dbCats as $c) {
-                $c = trim((string)$c);
+            foreach ($dbCats as $row) {
+                $c = trim((string)($row['name'] ?? ''));
                 if ($c === '') continue;
                 $key = $normalizeCategoryKey($c);
                 if (!isset($uniqueDbCats[$key])) {
                     $uniqueDbCats[$key] = $c;
+                }
+                if (!empty($row['color'])) {
+                    $dbRawCategoryColors[$key] = $row['color'];
+                    $dbCategoryColors[$key] = create_category_color_style($row['color']);
                 }
             }
             $quickCategories = array_values($uniqueDbCats);
@@ -340,8 +349,62 @@ foreach ($products as $product) {
         'discount' => (float)$product['discount_percentage'],
         'stock' => $stock,
         'imgs' => $galleryImages,
-        'variants' => $variants
+        'variants' => $variants,
+        'color' => !empty($product['color']) ? trim((string)$product['color']) : '',
+        'group' => !empty($product['product_group']) ? trim((string)$product['product_group']) : ''
     ];
+}
+
+// Fetch saved product groups from database only — completely separate from categories
+$dbProductGroups = [];
+try {
+    $pgStmt = $pdo->query("SELECT id, name, color FROM product_groups ORDER BY name ASC");
+    if ($pgStmt) {
+        $dbProductGroups = $pgStmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+} catch (Exception $ignored) {}
+
+// Build colorProductGroups (for category color pills) separately — still needed for categories bar
+$colorProductGroups = [];
+foreach ($products as $idx => $product) {
+    $p = $jsonProducts[$idx];
+    $cat = $p['cat'];
+    $key = $normalizeCategoryKey($cat);
+    $customColor = !empty($product['color']) ? trim((string)$product['color']) : null;
+    $catStyle = get_category_color_style($cat, $customColor ?? ($dbRawCategoryColors[$key] ?? null));
+    $colorHex = strtoupper($catStyle['border']);
+    if (!isset($colorProductGroups[$colorHex])) {
+        $colorProductGroups[$colorHex] = ['color' => $colorHex, 'style' => $catStyle, 'categories' => [], 'count' => 0];
+    }
+    $colorProductGroups[$colorHex]['count']++;
+    if (!in_array($cat, $colorProductGroups[$colorHex]['categories'], true)) {
+        $colorProductGroups[$colorHex]['categories'][] = $cat;
+    }
+}
+
+// Build product group counts purely from product_group field — NEVER mix with categories
+$productGroupCounts = [];
+foreach ($products as $product) {
+    $grp = !empty($product['product_group']) ? trim((string)$product['product_group']) : '';
+    if ($grp !== '') {
+        $productGroupCounts[mb_strtolower($grp)] = ($productGroupCounts[mb_strtolower($grp)] ?? 0) + 1;
+    }
+}
+
+// availableProductGroups = DB groups with counts (only groups defined by admin)
+$availableProductGroups = [];
+foreach ($dbProductGroups as $g) {
+    $gName = trim($g['name']);
+    if ($gName === '') continue;
+    $availableProductGroups[] = [
+        'name'  => $gName,
+        'color' => strtoupper($g['color'] ?? '#FF7F00'),
+        'count' => $productGroupCounts[mb_strtolower($gName)] ?? 0
+    ];
+}
+$dbGroupColorMap = [];
+foreach ($availableProductGroups as $ag) {
+    $dbGroupColorMap[mb_strtolower($ag['name'])] = $ag['color'];
 }
 
 $isLogged = is_logged_in();
@@ -462,6 +525,56 @@ function homepage_update_label($type) {
     <link rel="stylesheet" href="<?php echo asset_url('css/responsive-complete.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_url('css/dark-mode-auto.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_url('css/onboarding.css'); ?>">
+    <style>
+        .color-chip-filter {
+            border-radius: 20px !important;
+            font-size: 0.82rem !important;
+            padding: 5px 14px !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid var(--grp-color, rgba(255, 255, 255, 0.2)) !important;
+            color: rgba(255, 255, 255, 0.85) !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 7px !important;
+            font-weight: 600 !important;
+            cursor: pointer !important;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            opacity: 0.8;
+        }
+        .color-chip-filter:hover {
+            opacity: 1 !important;
+            background: rgba(255, 255, 255, 0.12) !important;
+            color: #ffffff !important;
+            transform: translateY(-1px);
+        }
+        .color-chip-filter.active {
+            opacity: 1 !important;
+            background: var(--grp-color, var(--theme-accent, #ff7f00)) !important;
+            color: #ffffff !important;
+            border-color: #ffffff !important;
+            box-shadow: 0 0 14px var(--grp-color, rgba(255, 127, 0, 0.6)) !important;
+            font-weight: 700 !important;
+            transform: scale(1.05) !important;
+        }
+        .color-chip-filter.active .cat-dot {
+            background: #ffffff !important;
+            border-color: #ffffff !important;
+            box-shadow: 0 0 8px #ffffff !important;
+        }
+        .color-chip-filter .count-badge {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .color-chip-filter.active .count-badge {
+            background: rgba(0, 0, 0, 0.5);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+    </style>
     <link rel="stylesheet" href="<?php echo asset_url('css/catalog-min.css'); ?>">
 </head>
 <body class="catalog-minimal" data-client-code="<?php echo htmlspecialchars($clientTicketCode, ENT_QUOTES, 'UTF-8'); ?>" data-client-number="<?php echo htmlspecialchars($clientTicketNumber, ENT_QUOTES, 'UTF-8'); ?>">
@@ -579,13 +692,49 @@ function homepage_update_label($type) {
                 <div class="catalog-categories-title">Categorías</div>
                 <div class="catalog-categories-actions">
                     <button type="button" class="btn btn-ghost btn-small active" data-quick-category="">Todas</button>
-                    <?php foreach ($quickCategories as $categoryName): ?>
+                    <?php foreach ($quickCategories as $categoryName):
+                        $catStyle = get_category_color_style($categoryName, $dbRawCategoryColors[$normalizeCategoryKey($categoryName)] ?? null);
+                    ?>
                         <button
                             type="button"
-                            class="btn btn-ghost btn-small"
-                            data-quick-category="<?php echo htmlspecialchars($categoryName, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($categoryName, ENT_QUOTES, 'UTF-8'); ?></button>
+                            class="btn btn-ghost btn-small category-colored-pill"
+                            style="--cat-bg: <?php echo $catStyle['bg']; ?>; --cat-border: <?php echo $catStyle['border']; ?>; --cat-color: <?php echo $catStyle['color']; ?>; --cat-dot: <?php echo $catStyle['dot']; ?>;"
+                            data-quick-category="<?php echo htmlspecialchars($categoryName, ENT_QUOTES, 'UTF-8'); ?>">
+                            <span class="cat-dot" style="background: <?php echo $catStyle['dot']; ?>;"></span>
+                            <?php echo htmlspecialchars($categoryName, ENT_QUOTES, 'UTF-8'); ?>
+                        </button>
                     <?php endforeach; ?>
                 </div>
+
+                <!-- Apartado de Agrupaciones de Productos -->
+                <?php if (!empty($availableProductGroups)): ?>
+                <div class="catalog-colors-bar" style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-top:0.85rem; padding:0.75rem 1.1rem; background:rgba(20,20,24,0.85); border:1px solid rgba(255,255,255,0.1); border-radius:14px; backdrop-filter:blur(10px); box-shadow:0 4px 20px rgba(0,0,0,0.4);">
+                    <span style="font-size:0.85rem; font-weight:700; color:var(--theme-accent, #ff7f00); margin-right:4px; text-transform:uppercase; letter-spacing:0.04em;">
+                        AGRUPACIONES:
+                    </span>
+                    <button type="button" class="btn btn-ghost btn-small color-chip-filter active" data-color-filter="" data-grp-color="#ff7f00" style="--grp-color:#ff7f00;">
+                        Todas las agrupaciones
+                    </button>
+                    <button type="button" class="btn btn-ghost btn-small color-chip-filter" data-color-filter="__NONE__" data-grp-color="#64748b" style="--grp-color:#64748b;">
+                        Sin agrupación
+                    </button>
+                    <?php foreach ($availableProductGroups as $gInfo): 
+                        $grpName = $gInfo['name'];
+                        $grpColor = !empty($gInfo['color']) ? $gInfo['color'] : '#FF7F00';
+                    ?>
+                        <button type="button" 
+                                class="btn btn-ghost btn-small color-chip-filter" 
+                                data-color-filter="<?php echo htmlspecialchars($grpName, ENT_QUOTES, 'UTF-8'); ?>"
+                                data-grp-color="<?php echo $grpColor; ?>"
+                                style="--grp-color:<?php echo $grpColor; ?>;"
+                                title="Agrupación: <?php echo htmlspecialchars($grpName, ENT_QUOTES, 'UTF-8'); ?>">
+                            <span class="cat-dot" style="background:<?php echo $grpColor; ?>; width:11px; height:11px; border-radius:50%; border:1.5px solid #ffffff; box-shadow:0 0 6px <?php echo $grpColor; ?>;"></span>
+                            <?php echo htmlspecialchars($grpName, ENT_QUOTES, 'UTF-8'); ?>
+                            <span class="count-badge"><?php echo $gInfo['count']; ?></span>
+                        </button>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
             </div>
 
             <div class="catalog-toolbar">
@@ -593,6 +742,17 @@ function homepage_update_label($type) {
             </div>
 
             <div class="catalog-filters">
+                <select id="filterGroup" style="min-width:210px; font-weight:600; border-color:var(--theme-accent, #ff7f00); cursor:pointer;">
+                    <option value="">Todos los Grupos de Productos</option>
+                    <option value="__NONE__">Sin agrupación</option>
+                    <?php if (!empty($availableProductGroups)): ?>
+                        <?php foreach ($availableProductGroups as $gInfo): ?>
+                            <option value="<?php echo htmlspecialchars($gInfo['name'], ENT_QUOTES, 'UTF-8'); ?>">
+                                <?php echo htmlspecialchars($gInfo['name'], ENT_QUOTES, 'UTF-8'); ?> (<?php echo $gInfo['count']; ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </select>
                 <select id="filterStock">
                     <option value="">Todo stock</option>
                     <option value="available">Solo disponibles</option>
@@ -641,7 +801,20 @@ function homepage_update_label($type) {
                             <?php endif; ?>
                         </div>
                         <div class="product-content">
-                            <div class="catalog-tag"><?php echo htmlspecialchars($p['cat'], ENT_QUOTES, 'UTF-8'); ?></div>
+                            <?php $catStyle = get_category_color_style($p['cat']); ?>
+                            <div class="catalog-tag category-colored-tag" style="background: <?php echo $catStyle['bg']; ?>; color: <?php echo $catStyle['color']; ?>; border: 1px solid <?php echo $catStyle['border']; ?>;">
+                                <span class="cat-dot" style="background: <?php echo $catStyle['dot']; ?>;"></span>
+                                <?php echo htmlspecialchars($p['cat'], ENT_QUOTES, 'UTF-8'); ?>
+                            </div>
+                            <?php if (!empty($p['group'])): 
+                                $grpTrim = trim((string)$p['group']);
+                                $grpColor = $dbGroupColorMap[mb_strtolower($grpTrim)] ?? '#FF7F00';
+                            ?>
+                                <div class="catalog-tag group-colored-tag" style="background:rgba(0,0,0,0.5); color:#ffffff; border:1px solid <?php echo $grpColor; ?>; font-weight:600; margin-top:3px;">
+                                    <span class="cat-dot" style="background:<?php echo $grpColor; ?>; box-shadow:0 0 6px <?php echo $grpColor; ?>;"></span>
+                                    <?php echo htmlspecialchars($grpTrim, ENT_QUOTES, 'UTF-8'); ?>
+                                </div>
+                            <?php endif; ?>
                             <div class="product-code-label"><strong>Código:</strong> <strong><?php echo htmlspecialchars($p['sku'], ENT_QUOTES, 'UTF-8'); ?></strong></div>
                             <h3 class="product-title"><?php echo htmlspecialchars($p['name'], ENT_QUOTES, 'UTF-8'); ?></h3>
                             <p class="product-spec"><?php echo htmlspecialchars($p['desc'] !== '' ? $p['desc'] : 'Descripción pendiente', ENT_QUOTES, 'UTF-8'); ?></p>
@@ -750,9 +923,11 @@ function homepage_update_label($type) {
     <script src="<?php echo asset_url('js/jspdf.umd.min.js'); ?>"></script>
     <script src="<?php echo asset_url('js/main.js'); ?>"></script>
     <script src="<?php echo asset_url('js/modals.js'); ?>"></script>
+    <script id="product-groups-data" type="application/json"><?php echo json_encode($availableProductGroups); ?></script>
     <script id="products-data" type="application/json"><?php echo json_encode($jsonProducts); ?></script>
     <script>
         window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8"); ?>';
+        window.categoryColorMap = <?php echo json_encode(array_merge(get_category_color_map(), $dbCategoryColors)); ?>;
     </script>
     <script src="<?php echo asset_url('js/catalog.js'); ?>"></script>
     <script>

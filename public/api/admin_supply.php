@@ -707,7 +707,7 @@ function record_matches_normalized_sku_admin_supply($pdo, string $table, int $id
     }
 }
 
-function insert_category_and_get_id_admin_supply($pdo, string $name, int $sortOrder, bool $isActive, string $context = 'stock'): int {
+function insert_category_and_get_id_admin_supply($pdo, string $name, int $sortOrder, bool $isActive, string $context = 'stock', string $color = ''): int {
     $name = trim((string)$name);
     if ($name === '') {
         return 0;
@@ -728,16 +728,17 @@ function insert_category_and_get_id_admin_supply($pdo, string $name, int $sortOr
         // Continue with insertion
     }
     
-    // PostgreSQL supports RETURNING; MySQL/MariaDB may not.
-    // Try binding is_active as boolean first.
-    try {
-        $stmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order, is_active, context) VALUES (?, ?, ?, ?) RETURNING id");
-        $stmt->execute([$name, $sortOrder, $isActive, $context]);
-        $createdId = (int)$stmt->fetchColumn();
-        if ($createdId > 0) {
-            return $createdId;
-        }
-    } catch (Exception $ignored) {
+    // Try inserting with color column first
+    if ($color !== '' && db_column_exists('product_categories', 'color')) {
+        try {
+            $stmt = $pdo->prepare("INSERT INTO product_categories (name, color, sort_order, is_active, context) VALUES (?, ?, ?, ?, ?) RETURNING id");
+            $stmt->execute([$name, $color, $sortOrder, $isActive, $context]);
+            $createdId = (int)$stmt->fetchColumn();
+            if ($createdId > 0) {
+                return $createdId;
+            }
+        } catch (Exception $ignored) {}
+    }
         // Fallback 1: try binding is_active as integer
         try {
             $stmt = $pdo->prepare("INSERT INTO product_categories (name, sort_order, is_active, context) VALUES (?, ?, ?, ?) RETURNING id");
@@ -763,7 +764,6 @@ function insert_category_and_get_id_admin_supply($pdo, string $name, int $sortOr
                 }
             }
         }
-    }
     
     try {
         $findStmt = $pdo->prepare("SELECT id FROM product_categories WHERE LOWER(name) = LOWER(?) ORDER BY id DESC LIMIT 1");
@@ -838,6 +838,9 @@ function ensure_product_categories_runtime_admin_supply($pdo): void {
     }
     if (!db_column_exists('product_categories', 'is_active')) {
         try { $pdo->exec("ALTER TABLE product_categories ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT true"); } catch (Exception $ignored) {}
+    }
+    if (!db_column_exists('product_categories', 'color')) {
+        try { $pdo->exec("ALTER TABLE product_categories ADD COLUMN color VARCHAR(50) DEFAULT NULL"); } catch (Exception $ignored) {}
     }
     if (!db_column_exists('product_categories', 'created_at')) {
         try { $pdo->exec("ALTER TABLE product_categories ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"); } catch (Exception $ignored) {}
@@ -996,6 +999,14 @@ function ensure_products_extra_columns($pdo): void {
     } catch (Exception $ignored) {}
 
     try {
+        $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS color VARCHAR(50)");
+    } catch (Exception $ignored) {}
+
+    try {
+        $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS product_group VARCHAR(100)");
+    } catch (Exception $ignored) {}
+
+    try {
         $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_percentage DECIMAL(5,2) DEFAULT 0");
     } catch (Exception $ignored) {}
 
@@ -1005,6 +1016,40 @@ function ensure_products_extra_columns($pdo): void {
 
     try {
         $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS discount_percentage DECIMAL(5,2) DEFAULT 0");
+    } catch (Exception $ignored) {}
+
+    ensure_product_groups_table($pdo);
+}
+
+function ensure_product_groups_table($pdo): void {
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS product_groups (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            color VARCHAR(50) DEFAULT '#FF7F00',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )");
+
+        try {
+            $pdo->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_product_groups_name ON product_groups (name)");
+        } catch (Exception $ignored) {}
+
+        $stmt = $pdo->query("SELECT COUNT(*) FROM product_groups");
+        if ((int)$stmt->fetchColumn() === 0) {
+            $defaults = [
+                ['Herrería', '#EF4444'],
+                ['Kit herramienta', '#A855F7'],
+                ['Material eléctrico', '#0EA5E9'],
+                ['Fontanería', '#14B8A6'],
+                ['Cerrajería', '#F59E0B']
+            ];
+            foreach ($defaults as $d) {
+                try {
+                    $stmtIns = $pdo->prepare("INSERT INTO product_groups (name, color) VALUES (?, ?)");
+                    $stmtIns->execute([$d[0], $d[1]]);
+                } catch (Exception $ignored) {}
+            }
+        }
     } catch (Exception $ignored) {}
 }
 
@@ -2548,6 +2593,8 @@ function update_product_compatible($pdo, int $id, array $payload): void {
     if ($nameColumn !== null) { $sets[] = $nameColumn . ' = ?'; $values[] = $payload['name']; }
     if (db_column_exists('products', 'description') && $nameColumn !== 'description') { $sets[] = 'description = ?'; $values[] = $payload['description']; }
     if (db_column_exists('products', 'category')) { $sets[] = 'category = ?'; $values[] = $payload['category']; }
+    if (db_column_exists('products', 'color') && array_key_exists('color', $payload)) { $sets[] = 'color = ?'; $values[] = !empty($payload['color']) ? trim((string)$payload['color']) : null; }
+    if (db_column_exists('products', 'product_group') && array_key_exists('product_group', $payload)) { $sets[] = 'product_group = ?'; $values[] = !empty($payload['product_group']) ? trim((string)$payload['product_group']) : null; }
     // Handle barcode carefully: avoid inserting empty string which may violate unique constraint.
     if (db_column_exists('products', 'barcode')) {
         if (array_key_exists('barcode', $payload)) {
@@ -2947,7 +2994,14 @@ function list_stock_products_compatible($pdo, int $limit = 50, int $offset = 0, 
         }
     }
 
-    $sql = "SELECT id, {$skuSelect}, {$nameSelect}, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect}, {$netPriceSelect}, {$discountSelect} 
+    $colorSelect = db_column_exists('products', 'color')
+        ? "COALESCE(color, '') AS color"
+        : "'' AS color";
+    $groupSelect = db_column_exists('products', 'product_group')
+        ? "COALESCE(product_group, '') AS product_group"
+        : "'' AS product_group";
+
+    $sql = "SELECT id, {$skuSelect}, {$nameSelect}, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect}, {$netPriceSelect}, {$discountSelect}, {$colorSelect}, {$groupSelect} 
             FROM products";
     
     if (!empty($whereClauses)) {
@@ -3060,7 +3114,7 @@ if (PHP_SAPI !== 'cli') {
 
 try {
     // CSRF validation for POST requests to write endpoints
-    $write_actions = ['product-save', 'product-delete', 'marketplace-save', 'marketplace-delete', 'stock-update', 'toggle-visibility', 'product-batch-save', 'upload-marketplace-images', 'product-bulk-delete'];
+    $write_actions = ['product-save', 'product-delete', 'marketplace-save', 'marketplace-delete', 'stock-update', 'toggle-visibility', 'product-batch-save', 'upload-marketplace-images', 'product-bulk-delete', 'quick-batch-visibility', 'quick-product-save'];
     if ($method === 'POST' && in_array($action, $write_actions, true)) {
         require_csrf_token();
     }
@@ -3348,15 +3402,33 @@ try {
                     break;
             }
 
+            $page = max(1, (int)($_GET['page'] ?? 1));
+            $per_page = max(10, min(2000, (int)($_GET['per_page'] ?? 50)));
+            $offset = ($page - 1) * $per_page;
+
+            $activeCol = db_column_exists($table, 'is_active') ? 'is_active' : (db_column_exists($table, 'active') ? 'active' : '1');
+
             try {
-                $sql = "SELECT id, {$skuCol} as sku, {$nameCol} as name, category, {$priceCol} as price, CAST({$discountCol} AS NUMERIC) as discount, CAST({$finalPriceCol} AS NUMERIC) as final_price FROM {$table} {$whereSql} ORDER BY {$orderSql} LIMIT 100";
+                // Count total
+                $countSql = "SELECT COUNT(*) FROM {$table} {$whereSql}";
+                $countStmt = $pdo->prepare($countSql);
+                $countStmt->execute($params);
+                $totalItems = (int)$countStmt->fetchColumn();
+
+                $sql = "SELECT id, {$skuCol} as sku, {$nameCol} as name, category, {$priceCol} as price, CAST({$discountCol} AS NUMERIC) as discount, CAST({$finalPriceCol} AS NUMERIC) as final_price, (CASE WHEN {$activeCol} IS NULL THEN 1 WHEN LOWER(CAST({$activeCol} AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) as is_active FROM {$table} {$whereSql} ORDER BY {$orderSql} LIMIT {$per_page} OFFSET {$offset}";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute($params);
                 $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 $response = [
                     'success' => true,
-                    'items' => $items
+                    'items' => $items,
+                    'pagination' => [
+                        'current_page' => $page,
+                        'per_page' => $per_page,
+                        'total_items' => $totalItems,
+                        'total_pages' => max(1, (int)ceil($totalItems / $per_page))
+                    ]
                 ];
             } catch (Exception $e) {
                 $response = ['success' => false, 'message' => 'Error al obtener productos: ' . $e->getMessage()];
@@ -3454,6 +3526,110 @@ try {
                 }
             } catch (Exception $e) {
                 $response = ['success' => false, 'message' => 'Error al guardar los cambios: ' . $e->getMessage()];
+            }
+            break;
+
+        case 'groups-list':
+            ensure_product_groups_table($pdo);
+            $stmtGrp = $pdo->query("SELECT id, name, color FROM product_groups ORDER BY name ASC");
+            $groups = $stmtGrp->fetchAll(PDO::FETCH_ASSOC);
+            $response = ['success' => true, 'items' => $groups];
+            break;
+
+        case 'groups-save':
+            $grpName = trim($input['name'] ?? '');
+            $grpColor = strtoupper(trim($input['color'] ?? '#FF7F00'));
+            if ($grpName === '') {
+                $response = ['success' => false, 'message' => 'El nombre de la agrupación es requerido.'];
+                break;
+            }
+            if (!preg_match('/^#[0-9A-F]{6}$/i', $grpColor)) {
+                $grpColor = '#FF7F00';
+            }
+            ensure_product_groups_table($pdo);
+            $stmtCheck = $pdo->prepare("SELECT id FROM product_groups WHERE LOWER(name) = LOWER(?)");
+            $stmtCheck->execute([$grpName]);
+            $existingGrpId = $stmtCheck->fetchColumn();
+            if ($existingGrpId) {
+                $stmtUp = $pdo->prepare("UPDATE product_groups SET color = ? WHERE id = ?");
+                $stmtUp->execute([$grpColor, $existingGrpId]);
+                $savedGrpId = (int)$existingGrpId;
+            } else {
+                $stmtIns = $pdo->prepare("INSERT INTO product_groups (name, color) VALUES (?, ?)");
+                $stmtIns->execute([$grpName, $grpColor]);
+                $savedGrpId = (int)$pdo->lastInsertId();
+                if ($savedGrpId === 0) {
+                    // PostgreSQL doesn't support lastInsertId() without sequence name; fetch it
+                    $stmtFetch = $pdo->prepare("SELECT id FROM product_groups WHERE LOWER(name) = LOWER(?) LIMIT 1");
+                    $stmtFetch->execute([$grpName]);
+                    $savedGrpId = (int)($stmtFetch->fetchColumn() ?: 0);
+                }
+            }
+            $response = ['success' => true, 'group' => ['id' => $savedGrpId, 'name' => $grpName, 'color' => $grpColor]];
+            break;
+
+        case 'groups-delete':
+            $delId = (int)($input['id'] ?? 0);
+            $delName = trim($input['name'] ?? '');
+            ensure_product_groups_table($pdo);
+            if ($delId > 0) {
+                $stmtDel = $pdo->prepare("DELETE FROM product_groups WHERE id = ?");
+                $stmtDel->execute([$delId]);
+            } elseif ($delName !== '') {
+                $stmtDel = $pdo->prepare("DELETE FROM product_groups WHERE LOWER(name) = LOWER(?)");
+                $stmtDel->execute([$delName]);
+            }
+            $response = ['success' => true];
+            break;
+
+        case 'quick-batch-visibility':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Metodo no permitido'];
+                break;
+            }
+
+            $target = sanitize($input['target'] ?? 'all');
+            $isVisible = normalize_bool_admin_supply($input['is_visible'] ?? null, true);
+
+            $updatedCount = 0;
+            $val = $isVisible ? 1 : 0;
+
+            try {
+                if ($target === 'stock' || $target === 'all') {
+                    if (db_column_exists('products', 'is_active')) {
+                        $stmt = $pdo->prepare("UPDATE products SET is_active = ?");
+                        $stmt->execute([$val]);
+                        $updatedCount += $stmt->rowCount();
+                    } elseif (db_column_exists('products', 'active')) {
+                        $stmt = $pdo->prepare("UPDATE products SET active = ?");
+                        $stmt->execute([$val]);
+                        $updatedCount += $stmt->rowCount();
+                    }
+                }
+
+                if ($target === 'marketplace' || $target === 'all') {
+                    if (db_column_exists('marketplace_ce_products', 'is_active')) {
+                        $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET is_active = ?");
+                        $stmt->execute([$val]);
+                        $updatedCount += $stmt->rowCount();
+                    } elseif (db_column_exists('marketplace_ce_products', 'active')) {
+                        $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET active = ?");
+                        $stmt->execute([$val]);
+                        $updatedCount += $stmt->rowCount();
+                    }
+                }
+
+                $msg = $isVisible 
+                    ? "Se han activado/visibilizado todos los productos ($updatedCount registros actualizados)."
+                    : "Se han ocultado todos los productos ($updatedCount registros actualizados).";
+
+                $response = [
+                    'success' => true,
+                    'message' => $msg,
+                    'updated_count' => $updatedCount
+                ];
+            } catch (Exception $e) {
+                $response = ['success' => false, 'message' => 'Error al actualizar visibilidad masiva: ' . $e->getMessage()];
             }
             break;
 
@@ -3572,7 +3748,9 @@ try {
                     'stock_quantity' => max(0, $stockQty),
                     'reorder_level' => max(0, $reorder),
                     'image_url' => $finalImageUrl,
-                    'is_active' => $isVisible
+                    'is_active' => $isVisible,
+                    'color' => sanitize($input['color'] ?? ''),
+                    'product_group' => sanitize($input['product_group'] ?? '')
                 ]);
 
                 if (!empty($finalGallery)) {
@@ -4639,8 +4817,20 @@ try {
             }
             $whereStr = !empty($where) ? " WHERE " . implode(" AND ", $where) : "";
 
-            $stmt = $pdo->query("SELECT id, {$nameSelect}, {$orderSelect}, {$activeSelect}, " . (db_column_exists('product_categories', 'context') ? "context" : "'stock' AS context") . " FROM product_categories" . $whereStr . " ORDER BY " . (db_column_exists('product_categories', 'sort_order') ? 'sort_order ASC, ' : '') . "name ASC");
-            $response = ['success' => true, 'items' => $stmt->fetchAll()];
+            $colorSelect = db_column_exists('product_categories', 'color')
+                ? "color"
+                : "'' AS color";
+
+            $stmt = $pdo->query("SELECT id, {$nameSelect}, {$orderSelect}, {$activeSelect}, {$colorSelect}, " . (db_column_exists('product_categories', 'context') ? "context" : "'stock' AS context") . " FROM product_categories" . $whereStr . " ORDER BY " . (db_column_exists('product_categories', 'sort_order') ? 'sort_order ASC, ' : '') . "name ASC");
+            $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($items as &$item) {
+                if (empty($item['color']) && !empty($item['name'])) {
+                    $style = get_category_color_style($item['name']);
+                    $item['color'] = $style['border'];
+                }
+            }
+            unset($item);
+            $response = ['success' => true, 'items' => $items];
             break;
 
         case 'categories-save':
@@ -4677,18 +4867,20 @@ try {
                 }
             }
 
+            $color = sanitize($input['color'] ?? ($_POST['color'] ?? ''));
+
             if ($id > 0) {
                 $updated = false;
 
-                // Full update path (newest schema)
+                // Full update path with color
                 try {
-                    $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, sort_order = ?, is_active = ?, context = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-                    $stmt->execute([$name, $sortOrder, $isActive, $context, $id]);
+                    $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, color = ?, sort_order = ?, is_active = ?, context = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+                    $stmt->execute([$name, $color, $sortOrder, $isActive, $context, $id]);
                     $updated = true;
                 } catch (Exception $ignored) {
                     try {
-                        $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, sort_order = ?, is_active = ?, context = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-                        $stmt->execute([$name, $sortOrder, $isActive ? 1 : 0, $context, $id]);
+                        $stmt = $pdo->prepare("UPDATE product_categories SET name = ?, color = ?, sort_order = ?, is_active = ?, context = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+                        $stmt->execute([$name, $color, $sortOrder, $isActive ? 1 : 0, $context, $id]);
                         $updated = true;
                     } catch (Exception $ignored2) {
                     }
@@ -4739,9 +4931,9 @@ try {
             } else {
                 $createdId = 0;
 
-                // Full insert path (newest schema)
+                // Full insert path with color
                 try {
-                    $createdId = insert_category_and_get_id_admin_supply($pdo, $name, $sortOrder, $isActive, $context);
+                    $createdId = insert_category_and_get_id_admin_supply($pdo, $name, $sortOrder, $isActive, $context, $color);
                 } catch (Exception $ignored) {
                 }
 
@@ -5748,7 +5940,7 @@ try {
                 break;
             }
             $page = max(1, (int)($_GET['page'] ?? 1));
-            $per_page = max(10, min(200, (int)($_GET['per_page'] ?? 50)));
+            $per_page = max(10, min(2000, (int)($_GET['per_page'] ?? 50)));
             $offset = ($page - 1) * $per_page;
             
             $search = sanitize($_GET['search'] ?? '');

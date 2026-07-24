@@ -1,6 +1,7 @@
 (function () {
   const STORAGE_CART = 'truper_cart';
   let selectedQuickCategory = '';
+  let selectedColorFilter = '';
 
   let allProducts = [];
   try {
@@ -11,6 +12,22 @@
   } catch (err) {
     console.error('Error parsing products data:', err);
   }
+
+  let productGroupsColorsMap = {};
+  try {
+    const grpEl = document.getElementById('product-groups-data');
+    if (grpEl) {
+      const grps = JSON.parse(grpEl.textContent) || [];
+      grps.forEach((g) => {
+        if (g && g.name) {
+          productGroupsColorsMap[String(g.name).trim().toLowerCase()] = g.color || '#FF7F00';
+        }
+      });
+    }
+  } catch (err) {
+    console.error('Error parsing product groups data:', err);
+  }
+  window.productGroupsColorsMap = productGroupsColorsMap;
 
   let filteredProducts = [...allProducts];
   let currentPage = 1;
@@ -352,7 +369,53 @@
       .replace(/'/g, '&#039;');
   }
 
+  function getCategoryColorStyleJS(catName) {
+    const map = window.categoryColorMap || {};
+    const key = String(catName || '').trim().toLowerCase()
+      .replace(/[áä]/g, 'a')
+      .replace(/[éë]/g, 'e')
+      .replace(/[íï]/g, 'i')
+      .replace(/[óö]/g, 'o')
+      .replace(/[úü]/g, 'u')
+      .replace(/ñ/g, 'n');
+
+    if (map[key]) {
+      return map[key];
+    }
+
+    const defaultMap = {
+      'material electrico': { bg: 'rgba(14, 165, 233, 0.18)', border: '#0ea5e9', color: '#38bdf8', dot: '#0ea5e9' },
+      'fontaneria': { bg: 'rgba(20, 184, 166, 0.18)', border: '#14b8a6', color: '#2dd4bf', dot: '#14b8a6' },
+      'cerrajeria': { bg: 'rgba(245, 158, 11, 0.18)', border: '#f59e0b', color: '#fbbf24', dot: '#f59e0b' },
+      'herreria': { bg: 'rgba(239, 68, 68, 0.18)', border: '#ef4444', color: '#f87171', dot: '#ef4444' },
+      'herramientas': { bg: 'rgba(168, 85, 247, 0.18)', border: '#a855f7', color: '#c084fc', dot: '#a855f7' },
+      'pintura': { bg: 'rgba(16, 185, 129, 0.18)', border: '#10b981', color: '#34d399', dot: '#10b981' },
+      'automotriz': { bg: 'rgba(236, 72, 153, 0.18)', border: '#ec4899', color: '#f472b6', dot: '#ec4899' },
+      'jardineria': { bg: 'rgba(132, 204, 22, 0.18)', border: '#84cc16', color: '#a3e635', dot: '#84cc16' },
+      'fijacion': { bg: 'rgba(99, 102, 241, 0.18)', border: '#6366f1', color: '#818cf8', dot: '#6366f1' },
+      'medicion': { bg: 'rgba(251, 146, 60, 0.18)', border: '#fb923c', color: '#fdba74', dot: '#fb923c' },
+      'marketplace ce': { bg: 'rgba(255, 102, 0, 0.2)', border: '#ff6600', color: '#ff9933', dot: '#ff6600' }
+    };
+
+    if (defaultMap[key]) {
+      return defaultMap[key];
+    }
+
+    let hash = 0;
+    for (let i = 0; i < key.length; i++) {
+      hash = key.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const hue = Math.abs(hash) % 360;
+    return {
+      bg: `hsla(${hue}, 80%, 60%, 0.18)`,
+      border: `hsl(${hue}, 80%, 55%)`,
+      color: `hsl(${hue}, 80%, 55%)`,
+      dot: `hsl(${hue}, 80%, 55%)`
+    };
+  }
+
   function renderProductCard(p) {
+    const catStyle = getCategoryColorStyleJS(p.cat);
     const skuEscaped = escapeHtml(p.sku);
     const nameEscaped = escapeHtml(p.name);
     const catEscaped = escapeHtml(p.cat);
@@ -430,7 +493,14 @@
           ${navHtml}
         </div>
         <div class="product-content">
-          <div class="catalog-tag">${catEscaped}</div>
+          <div class="catalog-tag category-colored-tag" style="background:${catStyle.bg}; color:${catStyle.color}; border:1px solid ${catStyle.border};"><span class="cat-dot" style="background:${catStyle.dot};"></span>${catEscaped}</div>
+          ${(() => {
+            if (!p.group || !p.group.trim()) return '';
+            const grpTrim = p.group.trim();
+            const grpEscaped = escapeHtml(grpTrim);
+            const grpColor = (productGroupsColorsMap && productGroupsColorsMap[grpTrim.toLowerCase()]) || '#FF7F00';
+            return `<div class="catalog-tag group-colored-tag" style="background:rgba(0,0,0,0.5); color:#ffffff; border:1px solid ${grpColor}; font-weight:600; margin-top:3px;"><span class="cat-dot" style="background:${grpColor}; box-shadow:0 0 6px ${grpColor};"></span>${grpEscaped}</div>`;
+          })()}
           <div class="product-code-label"><strong>Código:</strong> <strong>${skuEscaped}</strong></div>
           <h3 class="product-title">${nameEscaped}</h3>
           <p class="product-spec">${descEscaped}</p>
@@ -551,9 +621,24 @@
     });
   }
 
+  const COLOR_NAME_ALIASES = {
+    '#EF4444': 'rojo red herrería herreria',
+    '#0EA5E9': 'azul blue eléctrico electrico material',
+    '#14B8A6': 'verde teal fontanería fontaneria',
+    '#F59E0B': 'dorado amarillo cerrajería cerrajeria',
+    '#A855F7': 'morado púrpura purpura herramientas',
+    '#10B981': 'esmeralda verde pintura',
+    '#EC4899': 'rosa magenta automotriz',
+    '#84CC16': 'lima verde jardinería jardineria',
+    '#6366F1': 'índigo indigo fijación fijacion',
+    '#FB923C': 'naranja medición medicion',
+    '#FF6600': 'naranja truper marketplace'
+  };
+
   function applyFilters() {
     const query = (document.getElementById('catalogSearch')?.value || '').toLowerCase().trim();
     const category = selectedQuickCategory || '';
+    const groupFilter = (document.getElementById('filterGroup')?.value || '').toLowerCase().trim();
     const stockMode = document.getElementById('filterStock')?.value || '';
     const sortMode = document.getElementById('filterSort')?.value || 'name_asc';
 
@@ -561,7 +646,10 @@
 
     filteredProducts = allProducts.filter(p => {
       if (searchTokens.length > 0) {
-        const textToSearch = `${p.name.toLowerCase()} ${p.sku.toLowerCase()} ${p.cat.toLowerCase()}`;
+        const catStyle = getCategoryColorStyleJS(p.cat, p.color || null);
+        const hex = (catStyle.border || '').toUpperCase();
+        const colorAlias = COLOR_NAME_ALIASES[hex] || '';
+        const textToSearch = `${p.name.toLowerCase()} ${p.sku.toLowerCase()} ${p.cat.toLowerCase()} ${(p.group || '').toLowerCase()} ${(p.color || '').toLowerCase()} ${hex.toLowerCase()} ${colorAlias.toLowerCase()}`;
         const matchAll = searchTokens.every(token => textToSearch.includes(token));
         if (!matchAll) return false;
       }
@@ -569,6 +657,15 @@
         const categoryTokens = p.cat.split(/\s*,\s*/).map(normalizeCategory);
         const normSelected = normalizeCategory(category);
         if (!categoryTokens.includes(normSelected)) return false;
+      }
+      const activeGroup = (selectedColorFilter !== '' ? selectedColorFilter : (document.getElementById('filterGroup')?.value || '')).trim();
+      if (activeGroup) {
+        const prodGroup = (p.group || '').trim();
+        if (activeGroup.toUpperCase() === '__NONE__') {
+          if (prodGroup !== '') return false;
+        } else {
+          if (prodGroup.toLowerCase() !== activeGroup.toLowerCase()) return false;
+        }
       }
       if (stockMode) {
         if (stockMode === 'available' && p.stock <= 0) return false;
@@ -721,20 +818,44 @@
       if (el && el.tagName === 'SELECT') el.addEventListener('change', applyFilters);
     });
 
-    const clearFilters = document.getElementById('clearFilters');
-    if (clearFilters) {
-      clearFilters.addEventListener('click', () => {
-        const search = document.getElementById('catalogSearch');
-        const stock = document.getElementById('filterStock');
-        const sort = document.getElementById('filterSort');
-        if (search) search.value = '';
-        if (stock) stock.value = '';
-        if (sort) sort.value = 'name_asc';
-        selectedQuickCategory = '';
-        document.querySelectorAll('[data-quick-category]').forEach((btn) => {
-          btn.classList.toggle('active', (btn.dataset.quickCategory || '') === '');
-        });
+    function syncGroupUI(val) {
+      const targetVal = (val || '').trim();
+      const groupSelect = document.getElementById('filterGroup');
+      if (groupSelect) {
+        let matchedOptionVal = targetVal;
+        for (let i = 0; i < groupSelect.options.length; i++) {
+          if (groupSelect.options[i].value.trim().toLowerCase() === targetVal.toLowerCase()) {
+            matchedOptionVal = groupSelect.options[i].value;
+            break;
+          }
+        }
+        if (groupSelect.value !== matchedOptionVal) {
+          groupSelect.value = matchedOptionVal;
+        }
+      }
+      document.querySelectorAll('.color-chip-filter').forEach((btn) => {
+        const btnVal = (btn.dataset.colorFilter || '').trim();
+        btn.classList.toggle('active', btnVal.toLowerCase() === targetVal.toLowerCase());
+      });
+    }
+
+    const groupSelectEl = document.getElementById('filterGroup');
+    if (groupSelectEl) {
+      groupSelectEl.addEventListener('change', () => {
+        selectedColorFilter = groupSelectEl.value;
+        syncGroupUI(selectedColorFilter);
         applyFilters();
+      });
+    }
+
+    const colorFilterButtons = document.querySelectorAll('.color-chip-filter');
+    if (colorFilterButtons.length > 0) {
+      colorFilterButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          selectedColorFilter = btn.dataset.colorFilter || '';
+          syncGroupUI(selectedColorFilter);
+          applyFilters();
+        });
       });
     }
 

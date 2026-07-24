@@ -673,10 +673,52 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
             <button class="tab-button" data-tab="pricesTab">Precios</button>
             <button class="tab-button" data-tab="marketplaceTab">Marketplace CE</button>
             <button class="tab-button" data-tab="categoriesTab">Categorías</button>
-            <button class="tab-button" data-tab="quickEditTab">⚡ Edición Rápida</button>
+            <button class="tab-button" data-tab="quickEditTab">Edición Rápida</button>
         </div>
 
         <section id="stockTab" class="tab-content active admin-tab-panel">
+            <!-- Formulario y Administrador de Agrupaciones de Productos (Ubicado ARRIBA del Formulario de Stock) -->
+            <div class="card mb-3 admin-editor-card" style="border:1px solid var(--theme-accent, #ff7f00); background:rgba(20,20,24,0.85); backdrop-filter:blur(10px);">
+                <div class="card-body" style="padding:1.1rem 1.25rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.75rem;">
+                        <h4 style="margin:0; color:var(--theme-accent, #ff7f00); font-weight:700;">
+                            Crear / Administrar Agrupación de Productos
+                        </h4>
+                        <small class="text-muted">Crea agrupaciones con su color distintivo para vincular varios productos.</small>
+                    </div>
+
+                    <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap; background:rgba(255,255,255,0.03); padding:0.85rem; border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
+                        <input type="text" id="topGroupFormName" placeholder="Nombre de la Agrupación (ej. Kit herramienta, Oferta Truper...)" maxlength="100" style="flex:2; min-width:220px; font-weight:600;">
+                        
+                        <div style="display:flex; align-items:center; gap:6px; background:rgba(0,0,0,0.3); padding:4px 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.1);">
+                            <input type="color" id="topGroupFormColor" value="#A855F7" onchange="syncTopGroupColorPreview(this.value)" style="width:38px; height:34px; padding:2px; border-radius:6px; border:1px solid var(--theme-border); cursor:pointer; background:#222;" title="Seleccionar color">
+                            <input type="text" id="topGroupFormHex" value="#A855F7" oninput="syncTopGroupColorPreview(this.value)" style="width:85px; text-transform:uppercase; font-weight:700; text-align:center; padding:4px; font-size:0.85rem;">
+                            <span id="topGroupFormColorPreviewDot" style="width:22px; height:22px; border-radius:50%; background:#A855F7; border:2px solid #ffffff; box-shadow:0 0 6px #A855F7; display:inline-block;" title="Color seleccionado"></span>
+                        </div>
+
+                        <!-- Paleta de colores rápida -->
+                        <div style="display:flex; gap:4px; align-items:center;">
+                            <button type="button" class="btn btn-ghost btn-small" onclick="syncTopGroupColorPreview('#EF4444')" style="padding:2px 5px; border-radius:50%; background:#EF4444; width:22px; height:22px; border:1px solid #fff;" title="Rojo"></button>
+                            <button type="button" class="btn btn-ghost btn-small" onclick="syncTopGroupColorPreview('#0EA5E9')" style="padding:2px 5px; border-radius:50%; background:#0EA5E9; width:22px; height:22px; border:1px solid #fff;" title="Azul"></button>
+                            <button type="button" class="btn btn-ghost btn-small" onclick="syncTopGroupColorPreview('#14B8A6')" style="padding:2px 5px; border-radius:50%; background:#14B8A6; width:22px; height:22px; border:1px solid #fff;" title="Verde"></button>
+                            <button type="button" class="btn btn-ghost btn-small" onclick="syncTopGroupColorPreview('#F59E0B')" style="padding:2px 5px; border-radius:50%; background:#F59E0B; width:22px; height:22px; border:1px solid #fff;" title="Dorado"></button>
+                            <button type="button" class="btn btn-ghost btn-small" onclick="syncTopGroupColorPreview('#A855F7')" style="padding:2px 5px; border-radius:50%; background:#A855F7; width:22px; height:22px; border:1px solid #fff;" title="Morado"></button>
+                            <button type="button" class="btn btn-ghost btn-small" onclick="syncTopGroupColorPreview('#10B981')" style="padding:2px 5px; border-radius:50%; background:#10B981; width:22px; height:22px; border:1px solid #fff;" title="Esmeralda"></button>
+                            <button type="button" class="btn btn-ghost btn-small" onclick="syncTopGroupColorPreview('#EC4899')" style="padding:2px 5px; border-radius:50%; background:#EC4899; width:22px; height:22px; border:1px solid #fff;" title="Rosa"></button>
+                            <button type="button" class="btn btn-ghost btn-small" onclick="syncTopGroupColorPreview('#FF6600')" style="padding:2px 5px; border-radius:50%; background:#FF6600; width:22px; height:22px; border:1px solid #fff;" title="Naranja"></button>
+                        </div>
+
+                        <button type="button" class="btn btn-primary" onclick="saveTopProductGroup()" style="background:var(--theme-accent, #ff7f00); border-color:var(--theme-accent, #ff7f00); font-weight:700; white-space:nowrap; padding:8px 18px;">
+                            Guardar Agrupación
+                        </button>
+                    </div>
+                    <div id="topGroupFormResult" style="margin-top:6px;"></div>
+
+                    <!-- Panel de Agrupaciones Guardadas con Contador -->
+                    <div id="stockColorSwatchesContainer" style="margin-top:0.85rem;"></div>
+                </div>
+            </div>
+
             <div class="card mb-3 admin-editor-card admin-editor-card-stock"><div class="card-body">
                 <div class="section-kicker section-kicker-stock">Stock interno</div>
                 <h3>Agregar Producto</h3>
@@ -702,6 +744,19 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                         </select>
                         <small class="text-muted">Usa Ctrl/Cmd para seleccionar múltiples categorías. Gestión en la pestaña Categorías.</small>
                     </div>
+                </div>
+
+                <!-- Selector de Agrupación de Productos -->
+                <div class="form-group" style="margin-top:0.75rem; margin-bottom:1.25rem; background:rgba(255,255,255,0.02); padding:0.85rem 1rem; border:1px solid rgba(255,255,255,0.06); border-radius:10px;">
+                    <label style="font-weight:700; color:var(--theme-accent, #ff7f00);">
+                        Agrupación del Producto (Opcional)
+                    </label>
+                    <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap; margin-top:0.35rem;">
+                        <select id="newProductGroupSelect" style="flex:1; min-width:260px; font-weight:600; cursor:pointer;">
+                            <option value="">(Sin agrupación / Producto individual)</option>
+                        </select>
+                    </div>
+                    <small class="text-muted" style="display:block; margin-top:4px;">Solo selecciona una agrupación si deseas vincular este producto a un grupo (ej. "Kit herramienta"). Puedes crear más agrupaciones en el formulario superior.</small>
                 </div>
 
                 <div class="grid grid-3">
@@ -754,28 +809,6 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
 
             <div class="card"><div class="card-body">
                 <h3>Control de Existencias</h3>
-                <div class="admin-search-row" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:1rem;">
-                    <input id="stockSearch" type="text" placeholder="Buscar por código, nombre o categoría..." style="flex:1; min-width:250px; margin-bottom:0;">
-                    <select id="stockSortSelect" onchange="loadStock(1)" style="flex:1; min-width:200px; margin-bottom:0; font-weight:600; cursor:pointer;">
-                        <option value="newest">Lo más nuevo</option>
-                        <option value="oldest">Lo más viejo</option>
-                        <option value="name_asc">Abecedario A-Z</option>
-                        <option value="name_desc">Abecedario Z-A</option>
-                        <option value="stock_low">Stock: Menor a Mayor</option>
-                        <option value="stock_high">Stock: Mayor a Menor</option>
-                        <option value="price_low">Precio: Menor a Mayor</option>
-                        <option value="price_high">Precio: Mayor a Menor</option>
-                    </select>
-                    <button class="btn btn-primary" onclick="openAutoPoModal()" style="background:var(--color-naranja, #ff6600); border-color:var(--color-naranja, #ff6600); display:inline-flex; align-items:center; gap:6px; margin:0;">
-                        <span>📦</span> Generar Orden Automática
-                    </button>
-                    <button class="btn btn-secondary" onclick="exportAllProductsToPdf()" style="background:#27272a; border-color:#3f3f46; display:inline-flex; align-items:center; gap:6px; margin:0; color:#ffffff;">
-                        <span>📄</span> Exportar PDF
-                    </button>
-                    <button class="btn btn-secondary" onclick="exportAllProductsToExcel()" style="background:#15803d; border-color:#166534; display:inline-flex; align-items:center; gap:6px; margin:0; color:#ffffff;">
-                        <span>📊</span> Exportar Excel
-                    </button>
-                </div>
                 <div class="admin-section-subtitle mt-3">📤 Carga Masiva (CSV)</div>
                 <div class="csv-upload-panel" id="stockCsvPanel">
                     <!-- Columnas requeridas -->
@@ -820,9 +853,40 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                     </div>
                     <div id="stockQuickResult" class="text-muted" style="font-size:12px; margin-top:8px;"></div>
                 </div>
-                <div id="stockPagination" class="mt-3"></div>
-                <div id="stockListCaption" class="admin-list-caption">Cargando productos...</div>
+
+                <!-- Buscador y Filtros (Ubicado justo debajo de Gestión Rápida) -->
+                <div class="admin-section-subtitle mt-3">🔍 Buscador y Filtro de Existencias</div>
+                <div class="admin-search-row" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:0.5rem; margin-bottom:1rem;">
+                    <input id="stockSearch" type="text" placeholder="Buscar por código, nombre..." oninput="renderStockList()" style="flex:2; min-width:220px; margin-bottom:0;">
+                    <select id="stockCategoryFilter" onchange="renderStockList()" style="flex:1; min-width:170px; margin-bottom:0; font-weight:600; cursor:pointer;">
+                        <option value="">Todas las categorías</option>
+                    </select>
+                    <select id="stockSortSelect" onchange="renderStockList()" style="flex:1; min-width:170px; margin-bottom:0; font-weight:600; cursor:pointer;">
+                        <option value="newest">Lo más nuevo</option>
+                        <option value="oldest">Lo más viejo</option>
+                        <option value="name_asc">Abecedario A-Z</option>
+                        <option value="name_desc">Abecedario Z-A</option>
+                        <option value="stock_low">Stock: Menor a Mayor</option>
+                        <option value="stock_high">Stock: Mayor a Menor</option>
+                        <option value="price_low">Precio: Menor a Mayor</option>
+                        <option value="price_high">Precio: Mayor a Menor</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="openAutoPoModal()" style="background:var(--color-naranja, #ff6600); border-color:var(--color-naranja, #ff6600); display:inline-flex; align-items:center; gap:6px; margin:0;">
+                        <span>📦</span> Generar Orden Auto
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportAllProductsToPdf()" style="background:#27272a; border-color:#3f3f46; display:inline-flex; align-items:center; gap:6px; margin:0; color:#ffffff;">
+                        <span>📄</span> PDF
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportAllProductsToExcel()" style="background:#15803d; border-color:#166534; display:inline-flex; align-items:center; gap:6px; margin:0; color:#ffffff;">
+                        <span>📊</span> Excel
+                    </button>
+                </div>
+                <!-- Paginador Superior sobre Productos -->
+                <div id="stockPaginationTop" style="margin-top:0.75rem; margin-bottom:0.75rem;"></div>
+                <div id="stockListCaption" class="admin-list-caption" style="margin-top:1rem;">Cargando productos...</div>
                 <div id="stockRows"><p class="text-muted">Cargando...</p></div>
+                <div id="stockPaginationBottom" class="mt-3"></div>
+                <div id="stockPagination" style="display:none;"></div>
             </div></div>
         </section>
 
@@ -1399,6 +1463,27 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                         </div>
                         <input id="categoryOrder" type="hidden" value="0">
                         <div class="form-group">
+                            <label>Color de la Categoría</label>
+                            <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+                                <input id="categoryColor" type="color" value="#ff7f00" style="width:48px; height:42px; padding:2px; border:1px solid #333; border-radius:8px; cursor:pointer; background:#111;" oninput="setCategoryColor(this.value)">
+                                <input id="categoryColorText" type="text" placeholder="#FF7F00" value="#FF7F00" style="width:100px; font-weight:700; text-transform:uppercase;" oninput="if(/^#[0-9A-F]{6}$/i.test(this.value)){ setCategoryColor(this.value); }">
+                                <div style="display:flex; align-items:center; gap:6px; background:rgba(255,255,255,0.06); padding:4px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.12);">
+                                    <span id="categoryColorPreviewDot" style="display:inline-block; width:22px; height:22px; border-radius:50%; background:#ff7f00; border:2px solid #ffffff; box-shadow:0 2px 6px rgba(0,0,0,0.5); flex-shrink:0;"></span>
+                                    <span style="font-size:0.8rem;" class="text-muted">Color Seleccionado</span>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;" id="categoryColorPresets">
+                                <button type="button" class="btn btn-small" onclick="setCategoryColor('#0ea5e9')" style="background:#0ea5e9; width:26px; height:26px; border-radius:50%; border:2px solid #fff; padding:0; cursor:pointer;" title="Azul"></button>
+                                <button type="button" class="btn btn-small" onclick="setCategoryColor('#14b8a6')" style="background:#14b8a6; width:26px; height:26px; border-radius:50%; border:2px solid #fff; padding:0; cursor:pointer;" title="Turquesa"></button>
+                                <button type="button" class="btn btn-small" onclick="setCategoryColor('#f59e0b')" style="background:#f59e0b; width:26px; height:26px; border-radius:50%; border:2px solid #fff; padding:0; cursor:pointer;" title="Dorado"></button>
+                                <button type="button" class="btn btn-small" onclick="setCategoryColor('#ef4444')" style="background:#ef4444; width:26px; height:26px; border-radius:50%; border:2px solid #fff; padding:0; cursor:pointer;" title="Rojo"></button>
+                                <button type="button" class="btn btn-small" onclick="setCategoryColor('#a855f7')" style="background:#a855f7; width:26px; height:26px; border-radius:50%; border:2px solid #fff; padding:0; cursor:pointer;" title="Púrpura"></button>
+                                <button type="button" class="btn btn-small" onclick="setCategoryColor('#10b981')" style="background:#10b981; width:26px; height:26px; border-radius:50%; border:2px solid #fff; padding:0; cursor:pointer;" title="Verde"></button>
+                                <button type="button" class="btn btn-small" onclick="setCategoryColor('#ec4899')" style="background:#ec4899; width:26px; height:26px; border-radius:50%; border:2px solid #fff; padding:0; cursor:pointer;" title="Rosa"></button>
+                                <button type="button" class="btn btn-small" onclick="setCategoryColor('#ff6600')" style="background:#ff6600; width:26px; height:26px; border-radius:50%; border:2px solid #fff; padding:0; cursor:pointer;" title="Naranja Truper"></button>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top:1rem;">
                             <label>Estado</label>
                             <select id="categoryActive">
                                 <option value="1">Activo</option>
@@ -1425,10 +1510,18 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
             <div class="card mb-3">
                 <div class="card-body">
                     <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.25rem; width:100%; flex-wrap:wrap;">
-                        <span style="background:var(--theme-accent, #ff7f00);color:#fff;border-radius:8px;padding:5px 12px;font-weight:700;font-size:0.85rem;letter-spacing:.03em;">⚡ EDICIÓN RÁPIDA</span>
+                        <span style="background:var(--theme-accent, #ff7f00);color:#fff;border-radius:8px;padding:5px 12px;font-weight:700;font-size:0.85rem;letter-spacing:.03em;">EDICIÓN RÁPIDA</span>
                         <div style="flex:1; min-width: 250px;">
-                            <h3 style="margin:0;">Edición Rápida de Categorías y Precios</h3>
-                            <p class="text-muted" style="margin:0;font-size:0.85rem;">Busca y edita precios y categorías al instante sin entrar al formulario completo.</p>
+                            <h3 style="margin:0;">Edición Rápida de Categorías, Precios y Visibilidad</h3>
+                            <p class="text-muted" style="margin:0;font-size:0.85rem;">Busca, edita precios, categorías y cambia la visibilidad al instante.</p>
+                        </div>
+                        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-left:auto;">
+                            <button type="button" class="btn btn-small" onclick="quickEditBatchVisibility(true)" style="background:#198754; color:#fff; border:none; border-radius:6px; font-weight:600; padding:7px 14px; cursor:pointer; font-size:0.85rem; display:inline-flex; align-items:center; gap:5px;" title="Hacer visibles todos los productos en la tienda">
+                                Visualizar Todos
+                            </button>
+                            <button type="button" class="btn btn-small" onclick="quickEditBatchVisibility(false)" style="background:#dc3545; color:#fff; border:none; border-radius:6px; font-weight:600; padding:7px 14px; cursor:pointer; font-size:0.85rem; display:inline-flex; align-items:center; gap:5px;" title="Ocultar todos los productos en la tienda">
+                                Ocultar Todos
+                            </button>
                         </div>
                     </div>
                     <hr style="border:none;border-top:1px solid var(--theme-border);margin:1rem 0;">
@@ -1468,6 +1561,8 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
             </div>
 
             <!-- Tabla de Resultados -->
+            <!-- Paginador Superior sobre Productos -->
+            <div id="quickEditPaginationTop" style="margin-bottom:1rem;"></div>
             <div class="card">
                 <div class="card-body" style="padding:0; overflow-x:auto;">
                     <table class="table" style="width:100%; border-collapse:collapse; margin:0;">
@@ -1475,19 +1570,21 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                             <tr style="border-bottom:1px solid var(--theme-border);">
                                 <th style="padding:1rem; text-align:left;">Código (SKU)</th>
                                 <th style="padding:1rem; text-align:left;">Nombre</th>
-                                <th style="padding:1rem; text-align:left; width:260px;">Categoría</th>
-                                <th style="padding:1rem; text-align:left; width:160px;">Precio Neto ($)</th>
-                                <th style="padding:1rem; text-align:center; width:120px;">Acciones</th>
+                                <th style="padding:1rem; text-align:left; width:240px;">Categoría</th>
+                                <th style="padding:1rem; text-align:left; width:150px;">Precio Neto ($)</th>
+                                <th style="padding:1rem; text-align:center; width:130px;">Visibilidad</th>
+                                <th style="padding:1rem; text-align:center; width:110px;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="quickEditTableBody">
                             <tr>
-                                <td colspan="5" style="padding:2rem; text-align:center;" class="text-muted">Cargando productos para edición rápida...</td>
+                                <td colspan="6" style="padding:2rem; text-align:center;" class="text-muted">Cargando productos para edición rápida...</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
+            <div id="quickEditPaginationBottom"></div>
         </section>
     </div>
 </main>
@@ -1672,7 +1769,19 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
                 <img class="product-gallery-image active" src="${getSafeImageSrc(imageUrl)}" alt="${escapeHtml(name)}" loading="lazy">
             </div>
             <div class="product-content">
-                <div class="catalog-tag">${escapeHtml(category)}</div>
+                ${(() => {
+                    const customHex = item.color || item.category_color || null;
+                    const catStyle = typeof getCategoryColorStyleJS === 'function' ? getCategoryColorStyleJS(category, customHex) : { bg:'rgba(255,127,0,0.15)', border:'#ff7f00', color:'#ff9933', dot:'#ff7f00' };
+                    const grpName = String(item.product_group || '').trim();
+                    const grpData = grpName && Array.isArray(savedProductGroupsCache)
+                        ? savedProductGroupsCache.find(g => g.name && g.name.toLowerCase() === grpName.toLowerCase())
+                        : null;
+                    const grpColor = grpData ? String(grpData.color || '#FF7F00') : '#FF7F00';
+                    const grpBadge = grpName
+                        ? `<div class="catalog-tag" style="background:rgba(0,0,0,0.35); color:#fff; border:1px solid ${grpColor}; margin-top:3px;"><span class="cat-dot" style="background:${grpColor};"></span>${escapeHtml(grpName)}</div>`
+                        : '';
+                    return `<div class="catalog-tag category-colored-tag" style="background:${catStyle.bg}; color:${catStyle.color}; border:1px solid ${catStyle.border};"><span class="cat-dot" style="background:${catStyle.dot};"></span>${escapeHtml(category)}</div>${grpBadge}`;
+                })()}
                 <div class="product-code-label"><strong>Código:</strong> <strong>${escapeHtml(sku)}</strong></div>
                 <h3 class="product-title">${escapeHtml(name)}</h3>
                 <p class="product-spec">${escapeHtml(description)}</p>
@@ -3265,27 +3374,106 @@ async function loadStock(page = 1, customPerPage = null, silent = false) {
     }
 
     stockItemsCache = res.items;
+    await loadProductGroups();
     renderStockList();
     renderStockPagination(res.pagination);
     updateStockPreview();
 }
 
-function renderStockPagination(pagination) {
-    const container = document.getElementById('stockPagination');
-    if (!container || !pagination) return;
+function renderAdvancedPaginationHTML(pagination, loadFunctionName, idPrefix = 'pg') {
+    if (!pagination) return '';
 
-    const { current_page, total_pages, total_items } = pagination;
-    
-    container.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem; padding:1rem; background:var(--ui-surface-soft); border-radius:12px;">
-            <div class="text-muted">Total: <strong>${total_items}</strong> productos</div>
-            <div style="display:flex; gap:0.5rem; align-items:center;">
-                <button class="btn btn-small" ${current_page <= 1 ? 'disabled' : ''} onclick="loadStock(${current_page - 1})">Anterior</button>
-                <span class="text-muted">Página <strong>${current_page}</strong> de ${total_pages}</span>
-                <button class="btn btn-small btn-primary" ${current_page >= total_pages ? 'disabled' : ''} onclick="loadStock(${current_page + 1})">Ver más</button>
+    const currentPage = parseInt(pagination.current_page || 1, 10);
+    const totalPages = Math.max(1, parseInt(pagination.total_pages || 1, 10));
+    const totalItems = parseInt(pagination.total_items || 0, 10);
+    const perPage = parseInt(pagination.per_page || 50, 10);
+
+    const fromItem = totalItems === 0 ? 0 : (currentPage - 1) * perPage + 1;
+    const toItem = Math.min(totalItems, currentPage * perPage);
+
+    let pageNumbers = [];
+    const delta = 2;
+    const left = currentPage - delta;
+    const right = currentPage + delta;
+
+    for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || (i >= left && i <= right)) {
+            pageNumbers.push(i);
+        }
+    }
+
+    let pagesButtonsHTML = '';
+    let l = null;
+
+    pageNumbers.forEach(i => {
+        if (l) {
+            if (i - l === 2) {
+                pagesButtonsHTML += `<button type="button" class="btn btn-small" onclick="${loadFunctionName}(${l + 1})" style="padding:3px 9px; min-width:32px; border-radius:6px; background:#111; color:#ccc; border:1px solid #222;">${l + 1}</button>`;
+            } else if (i - l !== 1) {
+                pagesButtonsHTML += `<span style="padding:0 4px; color:#666; align-self:center;">...</span>`;
+            }
+        }
+        
+        const isActive = i === currentPage;
+        const btnStyle = isActive
+            ? 'background:var(--theme-accent, #ff7f00); color:#fff; font-weight:700; border:1px solid var(--theme-accent, #ff7f00); box-shadow:0 2px 8px rgba(255,127,0,0.3);'
+            : 'background:#111; color:#ccc; border:1px solid #222;';
+            
+        pagesButtonsHTML += `<button type="button" class="btn btn-small" onclick="${loadFunctionName}(${i})" style="padding:4px 10px; min-width:34px; border-radius:6px; font-size:0.85rem; ${btnStyle}">${i}</button>`;
+        l = i;
+    });
+
+    const perPageOptions = [25, 50, 100, 250, 500];
+    let perPageOptionsHTML = perPageOptions.map(opt => `<option value="${opt}" ${opt === perPage ? 'selected' : ''}>${opt} por pág.</option>`).join('');
+
+    return `
+        <div class="advanced-pagination-toolbar" style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:0.75rem; margin-top:1rem; margin-bottom:0.5rem; padding:0.75rem 1.2rem; background:rgba(20,20,22,0.85); border:1px solid rgba(255,255,255,0.08); border-radius:12px; backdrop-filter:blur(8px);">
+            <div style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+                <span class="text-muted" style="font-size:0.85rem;">
+                    Mostrando <strong>${fromItem} - ${toItem}</strong> de <strong>${totalItems}</strong> productos
+                </span>
+                <div style="display:flex; align-items:center; gap:0.4rem; font-size:0.85rem;" class="text-muted">
+                    <label for="${idPrefix}PerPageSelect">Mostrar:</label>
+                    <select id="${idPrefix}PerPageSelect" onchange="${loadFunctionName}(1, parseInt(this.value, 10))" style="background:#111; color:#fff; border:1px solid #333; padding:3px 8px; border-radius:6px; font-size:0.8rem; cursor:pointer;">
+                        ${perPageOptionsHTML}
+                    </select>
+                </div>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                <button type="button" class="btn btn-small" ${currentPage <= 1 ? 'disabled style="opacity:0.4; cursor:not-allowed;"' : ''} onclick="${loadFunctionName}(${currentPage - 1})" style="padding:4px 12px; border-radius:6px; font-size:0.85rem;">
+                    &laquo; Anterior
+                </button>
+
+                <div style="display:flex; gap:3px; align-items:center; flex-wrap:wrap;">
+                    ${pagesButtonsHTML}
+                </div>
+
+                <button type="button" class="btn btn-small btn-primary" ${currentPage >= totalPages ? 'disabled style="opacity:0.4; cursor:not-allowed;"' : ''} onclick="${loadFunctionName}(${currentPage + 1})" style="padding:4px 12px; border-radius:6px; font-size:0.85rem; font-weight:600;">
+                    Siguiente &raquo;
+                </button>
+
+                <div style="display:flex; align-items:center; gap:4px; margin-left:0.5rem; padding-left:0.5rem; border-left:1px solid rgba(255,255,255,0.1);">
+                    <span class="text-muted" style="font-size:0.8rem;">Pág:</span>
+                    <input type="number" id="${idPrefix}JumpInput" min="1" max="${totalPages}" value="${currentPage}" style="width:60px; background:#222 !important; border:1px solid var(--theme-accent, #ff7f00) !important; color:#ffffff !important; font-weight:700 !important; padding:4px 6px; border-radius:6px; text-align:center; font-size:0.9rem;" onkeydown="if(event.key==='Enter'){ const p=parseInt(this.value,10); if(p>=1 && p<=${totalPages}){ ${loadFunctionName}(p); } }">
+                    <button type="button" class="btn btn-small btn-ghost" onclick="const p=parseInt(document.getElementById('${idPrefix}JumpInput').value,10); if(p>=1 && p<=${totalPages}){ ${loadFunctionName}(p); }" style="padding:3px 8px; font-size:0.8rem; border-radius:6px;">
+                        Ir
+                    </button>
+                </div>
             </div>
         </div>
     `;
+}
+
+function renderStockPagination(pagination) {
+    const containerTop = document.getElementById('stockPaginationTop');
+    const containerBottom = document.getElementById('stockPaginationBottom') || document.getElementById('stockPagination');
+    if (!pagination) return;
+
+    const html = renderAdvancedPaginationHTML(pagination, 'loadStock', 'stockPg');
+
+    if (containerTop) containerTop.innerHTML = html;
+    if (containerBottom) containerBottom.innerHTML = '';
 }
 
 async function deleteCategoryQuickFromSelect(selectId, resultId) {
@@ -3475,10 +3663,112 @@ function updateStockQuickSelection(items = stockItemsCache) {
     });
 }
 
+function editTopGroup(name, hex) {
+    const nameInput = document.getElementById('topGroupFormName');
+    if (nameInput) nameInput.value = name;
+    if (typeof syncTopGroupColorPreview === 'function') syncTopGroupColorPreview(hex);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function deleteProductGroupByName(name) {
+    if (!name) return;
+    confirmDelete(`la agrupación "${name}"`, async () => {
+        const res = await apiCall('/admin_supply.php?action=groups-delete', 'POST', { name });
+        if (res && res.success) {
+            showAlert(`Agrupación "${name}" eliminada.`, 'success');
+            await loadProductGroups();
+            await loadStock(stockCurrentPage || 1);
+        } else {
+            showAlert(res?.message || 'No fue posible eliminar la agrupación.', 'error');
+        }
+    });
+}
+
+let selectedStockColorFilter = '';
+
+function renderStockColorSwatches() {
+    const container = document.getElementById('stockColorSwatchesContainer');
+    if (!container) return;
+
+    const countsMap = {};
+    if (Array.isArray(stockItemsCache)) {
+        stockItemsCache.forEach(item => {
+            const grp = String(item.product_group || '').trim();
+            if (grp) {
+                countsMap[grp.toUpperCase()] = (countsMap[grp.toUpperCase()] || 0) + 1;
+            }
+        });
+    }
+
+    const allGroups = [];
+    const seenNames = new Set();
+
+    if (Array.isArray(savedProductGroupsCache)) {
+        savedProductGroupsCache.forEach(grp => {
+            const name = String(grp.name || '').trim();
+            if (!name || seenNames.has(name.toUpperCase())) return;
+            seenNames.add(name.toUpperCase());
+            allGroups.push({
+                id: grp.id || 0,
+                name: name,
+                color: String(grp.color || '#FF7F00').toUpperCase(),
+                count: countsMap[name.toUpperCase()] || 0
+            });
+        });
+    }
+
+    let noGroupCount = 0;
+    if (Array.isArray(stockItemsCache)) {
+        noGroupCount = stockItemsCache.filter(it => !String(it.product_group || '').trim()).length;
+    }
+
+    let html = `
+        <div class="stock-colors-bar" style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; padding:0.75rem 1.1rem; background:rgba(20,20,24,0.85); border:1px solid rgba(255,255,255,0.1); border-radius:14px; backdrop-filter:blur(10px); box-shadow:0 4px 20px rgba(0,0,0,0.4);">
+            <span style="font-size:0.85rem; font-weight:700; color:var(--theme-accent, #ff7f00); margin-right:4px; text-transform:uppercase; letter-spacing:0.04em;">
+                Agrupaciones Guardadas:
+            </span>
+            <button type="button" class="btn btn-small ${selectedStockColorFilter === '' ? 'btn-primary' : 'btn-ghost'}" onclick="filterStockByColor('')" style="border-radius:20px; font-size:0.8rem; padding:4px 14px; font-weight:600; cursor:pointer;">
+                Todos los productos (${stockItemsCache ? stockItemsCache.length : 0})
+            </button>
+            <button type="button" class="btn btn-small ${selectedStockColorFilter === '__NONE__' ? 'btn-primary' : 'btn-ghost'}" onclick="filterStockByColor('__NONE__')" style="border-radius:20px; font-size:0.8rem; padding:4px 14px; font-weight:600; cursor:pointer; border:1px solid rgba(255,255,255,0.25);">
+                Sin agrupación (${noGroupCount})
+            </button>
+    `;
+
+    allGroups.forEach(group => {
+        const isActive = selectedStockColorFilter.toUpperCase() === group.name.toUpperCase();
+        const btnStyle = isActive
+            ? `background:${group.color}; color:#fff; border:2px solid #fff; font-weight:700; box-shadow:0 0 12px ${group.color};`
+            : `background:rgba(255,255,255,0.06); border:1px solid ${group.color}; color:#ffffff; font-weight:600;`;
+
+        html += `
+            <div style="display:inline-flex; align-items:center; gap:3px; background:rgba(255,255,255,0.03); border-radius:20px; padding:2px; border:1px solid rgba(255,255,255,0.08);">
+                <button type="button" class="btn btn-small" onclick="filterStockByColor('${escapeHtml(group.name)}')" style="border-radius:18px; font-size:0.82rem; padding:4px 10px; display:inline-flex; align-items:center; gap:6px; cursor:pointer; border:none; ${btnStyle}" title="Filtrar por ${escapeHtml(group.name)}">
+                    <span class="cat-dot" style="background:${group.color}; width:11px; height:11px; border-radius:50%; border:1.5px solid #fff; box-shadow:0 0 6px ${group.color};"></span>
+                    ${escapeHtml(group.name)}
+                    <span style="background:rgba(0,0,0,0.4); padding:1px 6px; border-radius:10px; font-size:0.75rem; font-weight:bold; color:#fff; border:1px solid rgba(255,255,255,0.15);">${group.count}</span>
+                </button>
+                <button type="button" onclick="editTopGroup('${escapeHtml(group.name)}', '${group.color}')" style="background:none; border:none; color:rgba(255,255,255,0.6); cursor:pointer; font-size:0.8rem; padding:2px 4px;" title="Editar color/nombre">✏️</button>
+                <button type="button" onclick="deleteProductGroupByName('${escapeHtml(group.name)}')" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:0.8rem; padding:2px 4px;" title="Eliminar agrupación">🗑️</button>
+            </div>
+        `;
+    });
+
+    html += `</div>`;
+    container.innerHTML = html;
+}
+
+function filterStockByColor(name) {
+    selectedStockColorFilter = name ? String(name).toUpperCase() : '';
+    renderStockList();
+    renderStockColorSwatches();
+}
+
 function renderStockList() {
     const body = document.getElementById('stockRows');
     const caption = document.getElementById('stockListCaption');
     const query = (document.getElementById('stockSearch')?.value || '').toLowerCase().trim();
+    const categoryFilter = (document.getElementById('stockCategoryFilter')?.value || '').toLowerCase().trim();
 
     if (!body) return;
 
@@ -3512,7 +3802,18 @@ function renderStockList() {
         const code = displayProductCode(item.sku || '').toLowerCase();
         const name = String(item.name || '').toLowerCase();
         const cat = String(item.category || '').toLowerCase();
-        return `${code} ${name} ${cat}`.includes(query);
+        const grp = String(item.product_group || '').toLowerCase();
+        const matchesQuery = `${code} ${name} ${cat} ${grp}`.includes(query);
+        const matchesCategory = categoryFilter === '' || cat === categoryFilter || normalizeCategoryValue(cat) === normalizeCategoryValue(categoryFilter);
+        
+        let matchesColor = true;
+        if (selectedStockColorFilter === '__NONE__') {
+            matchesColor = !String(item.product_group || '').trim();
+        } else if (selectedStockColorFilter !== '') {
+            const groupName = String(item.product_group || '').trim().toUpperCase();
+            matchesColor = (groupName === selectedStockColorFilter.toUpperCase());
+        }
+        return matchesQuery && matchesCategory && matchesColor;
     });
 
     if (caption) {
@@ -3631,6 +3932,79 @@ async function deleteStockSelectedItems() {
     );
 }
 
+let savedProductGroupsCache = [];
+
+async function loadProductGroups() {
+    const groupSelect = document.getElementById('newProductGroupSelect');
+    const res = await apiCall('/admin_supply.php?action=groups-list', 'GET', null, { silent: true });
+
+    if (res && res.success && Array.isArray(res.items)) {
+        savedProductGroupsCache = res.items;
+    }
+
+    if (groupSelect) {
+        const currentVal = groupSelect.value;
+        groupSelect.innerHTML = '<option value="">(Sin agrupación / Producto individual)</option>';
+
+        savedProductGroupsCache.forEach((grp) => {
+            const name = String(grp.name || '').trim();
+            const color = String(grp.color || '#FF7F00').toUpperCase();
+            if (!name) return;
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            option.dataset.color = color;
+            groupSelect.appendChild(option);
+        });
+
+        if (currentVal) groupSelect.value = currentVal;
+    }
+
+    renderStockColorSwatches();
+}
+
+function syncTopGroupColorPreview(hex) {
+    if (!hex) hex = '#FF7F00';
+    hex = String(hex).trim().toUpperCase();
+    if (hex.indexOf('#') !== 0) hex = '#' + hex;
+    const colorPicker = document.getElementById('topGroupFormColor');
+    const colorHex = document.getElementById('topGroupFormHex');
+    const previewDot = document.getElementById('topGroupFormColorPreviewDot');
+
+    if (colorPicker && /^#[0-9A-F]{6}$/.test(hex)) colorPicker.value = hex;
+    if (colorHex) colorHex.value = hex;
+    if (previewDot) {
+        previewDot.style.background = hex;
+        previewDot.style.boxShadow = `0 0 6px ${hex}`;
+    }
+}
+
+async function saveTopProductGroup() {
+    const nameInput = document.getElementById('topGroupFormName');
+    const colorInput = document.getElementById('topGroupFormHex') || document.getElementById('topGroupFormColor');
+    const box = document.getElementById('topGroupFormResult');
+    const name = nameInput?.value?.trim() || '';
+    let color = colorInput?.value?.trim() || '#FF7F00';
+    if (color.indexOf('#') !== 0) color = '#' + color;
+
+    if (!name) {
+        if (box) box.innerHTML = '<div class="alert alert-error" style="padding:4px 10px; font-size:0.85rem;">Ingresa un nombre para la agrupación.</div>';
+        showAlert('Nombre de agrupación requerido', 'warning');
+        return;
+    }
+
+    const res = await apiCall('/admin_supply.php?action=groups-save', 'POST', { name, color });
+    if (!res || !res.success) {
+        if (box) box.innerHTML = `<div class="alert alert-error" style="padding:4px 10px; font-size:0.85rem;">${escapeHtml((res && res.message) ? res.message : 'No fue posible guardar la agrupación.')}</div>`;
+        return;
+    }
+
+    if (box) box.innerHTML = `<div class="alert alert-success" style="padding:4px 10px; font-size:0.85rem;">Agrupación <strong>${escapeHtml(name)}</strong> guardada correctamente.</div>`;
+    if (nameInput) nameInput.value = '';
+    showAlert(`Agrupación ${name} guardada correctamente`, 'success');
+    await loadProductGroups();
+}
+
 function resetProductForm() {
     setGalleryState('stock', '', [], '');
     
@@ -3649,6 +4023,7 @@ function resetProductForm() {
     document.getElementById('newProductDescription').value = '';
     document.getElementById('newProductImageRef').value = 'images/products/default-product.svg';
     document.getElementById('newProductVisible').value = '0';
+    if (document.getElementById('newProductGroupSelect')) document.getElementById('newProductGroupSelect').value = '';
 
     Array.from(document.getElementById('newProductCategory').options || []).forEach((opt) => {
         opt.selected = false;
@@ -3702,6 +4077,11 @@ async function fillProductFormById(id) {
     }
 
     document.getElementById('newProductVisible').value = Number(item.is_active) ? '1' : '0';
+
+    // Load product groups first so options are available, then set the group value
+    await loadProductGroups();
+    const grpSel = document.getElementById('newProductGroupSelect');
+    if (grpSel) grpSel.value = item.product_group || '';
 
     await loadProductCategories(false);
 
@@ -5212,13 +5592,22 @@ async function loadProductCategories(onlyActive = true) {
         return;
     }
 
-    const fillSelect = function (selectEl) {
+    const fillSelect = function (selectEl, includeAllOption = false) {
         if (!selectEl) return;
+        const previousVal = selectEl.value;
         const selectedValues = new Set(
             Array.from(selectEl.selectedOptions || []).map((option) => normalizeCategoryValue(option.value))
         );
         const seenCategories = new Set();
         selectEl.innerHTML = '';
+
+        if (includeAllOption) {
+            const allOpt = document.createElement('option');
+            allOpt.value = '';
+            allOpt.textContent = 'Todas las categorías';
+            selectEl.appendChild(allOpt);
+        }
+
         res.items.forEach((cat) => {
             const isCatActive = cat.is_active === true || cat.is_active === 't' || cat.is_active === '1' || Number(cat.is_active) === 1;
             if (!isCatActive) {
@@ -5240,10 +5629,42 @@ async function loadProductCategories(onlyActive = true) {
             option.selected = selectedValues.has(categoryNameNormalized);
             selectEl.appendChild(option);
         });
+
+        if (includeAllOption) {
+            const hasPrev = Array.from(selectEl.options).some(opt => opt.value === previousVal);
+            selectEl.value = hasPrev ? previousVal : '';
+        }
     };
 
     fillSelect(categorySelect);
     fillSelect(marketplaceCategorySelect);
+    fillSelect(document.getElementById('quickEditFilterCategory'), true);
+    fillSelect(document.getElementById('stockCategoryFilter'), true);
+
+    const colorGroupSelect = document.getElementById('newProductColorGroup');
+    if (colorGroupSelect) {
+        const currentVal = colorGroupSelect.value;
+        colorGroupSelect.innerHTML = '<option value="">(Por defecto: Usar color de la categoría)</option>';
+        res.items.forEach(cat => {
+            const isCatActive = cat.is_active === true || cat.is_active === 't' || cat.is_active === '1' || Number(cat.is_active) === 1;
+            if (!isCatActive) return;
+            const hex = (cat.color || (typeof getCategoryColorStyleJS === 'function' ? getCategoryColorStyleJS(cat.name).border : '#FF7F00')).toUpperCase();
+            const option = document.createElement('option');
+            option.value = hex;
+            option.textContent = `${cat.name} (${hex})`;
+            option.style.background = hex;
+            option.style.color = '#ffffff';
+            colorGroupSelect.appendChild(option);
+        });
+        const customOpt = document.createElement('option');
+        customOpt.value = 'custom';
+        customOpt.textContent = '🔘 Color Personalizado / Grupo Especial';
+        colorGroupSelect.appendChild(customOpt);
+
+        if (currentVal) {
+            colorGroupSelect.value = currentVal;
+        }
+    }
     console.log('Categories loaded:', res.items.length, 'items');
 
     if (!onlyActive && categoriesListBox) {
@@ -5254,18 +5675,24 @@ async function loadProductCategories(onlyActive = true) {
 
         categoriesListBox.innerHTML = `
             <table>
-                <thead><tr><th>Nombre</th><th>Activa</th><th>Acciones</th></tr></thead>
+                <thead><tr><th>Nombre</th><th style="text-align:center;">Color</th><th>Activa</th><th>Acciones</th></tr></thead>
                 <tbody>
-                    ${res.items.map((cat) => `
+                    ${res.items.map((cat) => {
+                        const catColor = cat.color || (typeof getCategoryColorStyleJS === 'function' ? getCategoryColorStyleJS(cat.name).border : '#ff7f00');
+                        return `
                         <tr>
                             <td>${escapeHtml(cat.name || '')}</td>
+                            <td style="text-align:center;">
+                                <span style="display:inline-block; width:22px; height:22px; border-radius:50%; background:${catColor}; border:2px solid #fff; box-shadow:0 2px 5px rgba(0,0,0,0.3);" title="${catColor}"></span>
+                            </td>
                             <td>${(cat.is_active === true || cat.is_active === 't' || cat.is_active === '1' || Number(cat.is_active) === 1) ? '<span class="badge badge-success">Sí</span>' : '<span class="badge badge-danger">No</span>'}</td>
                             <td>
                                 <button class="btn btn-small btn-secondary" type="button" data-action="edit-category">Editar</button>
                                 <button class="btn btn-small btn-danger" type="button" onclick="deleteCategoryByAdminId(${Number(cat.id || 0)})">Eliminar</button>
                             </td>
                         </tr>
-                    `).join('')}
+                        `;
+                    }).join('')}
                 </tbody>
             </table>
         `;
@@ -5290,6 +5717,26 @@ async function refreshCategoriesUi() {
     updateMarketplacePreview();
 }
 
+function setCategoryColor(hex) {
+    if (!hex) hex = '#FF7F00';
+    hex = String(hex).trim();
+    if (hex.indexOf('#') !== 0) hex = '#' + hex;
+    if (!/^#[0-9a-fA-F]{6}$/.test(hex)) {
+        if (/^#[0-9a-fA-F]{3}$/.test(hex)) {
+            hex = '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
+        } else {
+            hex = '#FF7F00';
+        }
+    }
+    hex = hex.toUpperCase();
+    const colorEl = document.getElementById('categoryColor');
+    const textEl = document.getElementById('categoryColorText');
+    const previewDot = document.getElementById('categoryColorPreviewDot');
+    if (colorEl) colorEl.value = hex;
+    if (textEl) textEl.value = hex;
+    if (previewDot) previewDot.style.background = hex;
+}
+
 function resetCategoryForm() {
     const editId = document.getElementById('categoryEditId');
     const name = document.getElementById('categoryName');
@@ -5302,6 +5749,7 @@ function resetCategoryForm() {
     if (name) name.value = '';
     if (order) order.value = '0';
     if (active) active.value = '1';
+    setCategoryColor('#FF7F00');
     if (saveBtn) saveBtn.textContent = 'Guardar categoría';
     if (box) box.innerHTML = '';
 }
@@ -5313,6 +5761,13 @@ function fillCategoryForm(category) {
     document.getElementById('categoryName').value = category.name || '';
     document.getElementById('categoryOrder').value = String(category.sort_order || 0);
     document.getElementById('categoryActive').value = (category.is_active === true || category.is_active === 't' || category.is_active === '1' || Number(category.is_active) === 1) ? '1' : '0';
+    
+    let color = category.color;
+    if (!color || !/^#[0-9a-fA-F]{3,6}$/.test(color)) {
+        color = typeof getCategoryColorStyleJS === 'function' ? getCategoryColorStyleJS(category.name).border : '#FF7F00';
+    }
+    setCategoryColor(color);
+
     if (saveBtn) saveBtn.textContent = 'Actualizar categoría';
 }
 
@@ -5321,6 +5776,7 @@ async function saveCategoryByAdmin() {
     const categoryName = document.getElementById('categoryName')?.value?.trim() || '';
     const categoryOrder = Number(document.getElementById('categoryOrder')?.value || 0);
     const categoryActive = document.getElementById('categoryActive')?.value === '1';
+    const categoryColor = document.getElementById('categoryColor')?.value || '#ff7f00';
     const box = document.getElementById('categoryResult');
 
     // Validation
@@ -5344,7 +5800,8 @@ async function saveCategoryByAdmin() {
         id: categoryId,
         name: categoryName,
         sort_order: categoryOrder,
-        is_active: categoryActive
+        is_active: categoryActive,
+        color: categoryColor
     };
     const res = await apiCall('/admin_supply.php?action=categories-save', 'POST', payload);
     if (!res || !res.success) {
@@ -6504,20 +6961,26 @@ async function createProductByAdmin() {
         }
     }
 
-    const payload = {
-        id: editId,
-        sku: normalizedSku,
-        name: productName,
-        category: selectedCategories.join(', '),
-        description: document.getElementById('newProductDescription')?.value?.trim() || '',
-        price: price,
-        discount_percentage: parseFloat(document.getElementById('newProductDiscount')?.value || 0),
-        stock_quantity: stock,
-        reorder_level: reorder,
-        image_url: document.getElementById('newProductImageRef').value || 'images/products/default-product.svg',
-        is_visible: Number(document.getElementById('newProductVisible')?.value || 1) === 1 ? 1 : 0,
-        allow_seed_sku: seedMode ? 1 : 0
-    };
+        const selectedGroupOpt = document.getElementById('newProductGroupSelect')?.selectedOptions[0];
+        const groupNameVal = selectedGroupOpt?.value || '';
+        const groupColorVal = selectedGroupOpt?.dataset?.color || '';
+
+        const payload = {
+            id: editId,
+            sku: normalizedSku,
+            name: productName,
+            category: selectedCategories.join(', '),
+            description: document.getElementById('newProductDescription')?.value?.trim() || '',
+            price: price,
+            discount_percentage: parseFloat(document.getElementById('newProductDiscount')?.value || 0),
+            stock_quantity: stock,
+            reorder_level: reorder,
+            image_url: document.getElementById('newProductImageRef').value || 'images/products/default-product.svg',
+            is_visible: Number(document.getElementById('newProductVisible')?.value || 1) === 1 ? 1 : 0,
+            color: groupColorVal,
+            product_group: groupNameVal,
+            allow_seed_sku: seedMode ? 1 : 0
+        };
 
     let res = await apiCall('/admin_supply.php?action=product-save', 'POST', payload);
     if ((!res || !res.success) && editId <= 0) {
@@ -7420,13 +7883,27 @@ function onQuickEditParamsChange() {
     loadQuickEditProducts();
 }
 
-async function loadQuickEditProducts() {
+let quickEditCurrentPage = 1;
+
+function renderQuickEditPagination(pagination) {
+    const containerTop = document.getElementById('quickEditPaginationTop');
+    const containerBottom = document.getElementById('quickEditPaginationBottom');
+    if (!pagination) return;
+
+    const html = renderAdvancedPaginationHTML(pagination, 'loadQuickEditProducts', 'quickPg');
+
+    if (containerTop) containerTop.innerHTML = html;
+    if (containerBottom) containerBottom.innerHTML = html;
+}
+
+async function loadQuickEditProducts(page = 1, customPerPage = null) {
+    quickEditCurrentPage = page;
     const tableBody = document.getElementById('quickEditTableBody');
     if (!tableBody) return;
 
     tableBody.innerHTML = `
         <tr>
-            <td colspan="5" style="padding:2rem; text-align:center;" class="text-muted">
+            <td colspan="6" style="padding:2rem; text-align:center;" class="text-muted">
                 Cargando productos...
             </td>
         </tr>
@@ -7436,14 +7913,16 @@ async function loadQuickEditProducts() {
     const search = document.getElementById('quickEditSearch')?.value?.trim() || '';
     const category = document.getElementById('quickEditFilterCategory')?.value || '';
     const sort = document.getElementById('quickEditSort')?.value || 'sku_asc';
+    const perPageSelect = document.getElementById('quickPgPerPageSelect');
+    const perPage = customPerPage !== null ? customPerPage : (perPageSelect ? parseInt(perPageSelect.value, 10) : 50);
 
-    const url = `/admin_supply.php?action=quick-products-list&target=${encodeURIComponent(target)}&search=${encodeURIComponent(search)}&category=${encodeURIComponent(category)}&sort=${encodeURIComponent(sort)}&_=${Date.now()}`;
+    const url = `/admin_supply.php?action=quick-products-list&target=${encodeURIComponent(target)}&search=${encodeURIComponent(search)}&category=${encodeURIComponent(category)}&sort=${encodeURIComponent(sort)}&page=${page}&per_page=${perPage}&_=${Date.now()}`;
     const res = await apiCall(url, 'GET', null, { silent: true });
 
     if (!res || !res.success || !Array.isArray(res.items)) {
         tableBody.innerHTML = `
             <tr>
-                <td colspan="5" style="padding:2rem; text-align:center; color:var(--theme-accent, #ff7f00);">
+                <td colspan="6" style="padding:2rem; text-align:center; color:var(--theme-accent, #ff7f00);">
                     No fue posible obtener la lista de productos.
                 </td>
             </tr>
@@ -7454,7 +7933,23 @@ async function loadQuickEditProducts() {
     if (res.items.length === 0) {
         tableBody.innerHTML = `
             <tr>
-                <td colspan="5" style="padding:2rem; text-align:center;" class="text-muted">
+                <td colspan="6" style="padding:2rem; text-align:center;" class="text-muted">
+                    No se encontraron productos con los filtros seleccionados.
+                </td>
+            </tr>
+        `;
+        if (res.pagination) renderQuickEditPagination(res.pagination);
+        return;
+    }
+
+    if (res.pagination) {
+        renderQuickEditPagination(res.pagination);
+    }
+
+    if (res.items.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="6" style="padding:2rem; text-align:center;" class="text-muted">
                     No se encontraron productos con los filtros seleccionados.
                 </td>
             </tr>
@@ -7555,6 +8050,37 @@ async function loadQuickEditProducts() {
         tdPrice.appendChild(infoDiv);
         tr.appendChild(tdPrice);
 
+        // Visibilidad column
+        const tdVis = document.createElement('td');
+        tdVis.style.padding = '0.75rem 1rem';
+        tdVis.style.textAlign = 'center';
+
+        const isVisible = item.is_active != 0;
+        const visBtn = document.createElement('button');
+        visBtn.type = 'button';
+        visBtn.className = 'btn btn-small';
+        visBtn.style.padding = '4px 10px';
+        visBtn.style.fontSize = '0.8rem';
+        visBtn.style.borderRadius = '6px';
+        visBtn.style.fontWeight = '600';
+        visBtn.style.cursor = 'pointer';
+
+        if (isVisible) {
+            visBtn.style.background = 'rgba(25, 135, 84, 0.2)';
+            visBtn.style.color = '#2eca8b';
+            visBtn.style.border = '1px solid #198754';
+            visBtn.innerHTML = 'Visible';
+        } else {
+            visBtn.style.background = 'rgba(220, 53, 69, 0.2)';
+            visBtn.style.color = '#ff6b6b';
+            visBtn.style.border = '1px solid #dc3545';
+            visBtn.innerHTML = 'Oculto';
+        }
+
+        visBtn.onclick = () => toggleSingleProductVisibility(item.id, target, !isVisible);
+        tdVis.appendChild(visBtn);
+        tr.appendChild(tdVis);
+
         // Action column
         const tdAction = document.createElement('td');
         tdAction.style.padding = '0.75rem 1rem';
@@ -7594,6 +8120,51 @@ async function loadQuickEditProducts() {
 
         tableBody.appendChild(tr);
     });
+}
+
+async function toggleSingleProductVisibility(id, target, nextState) {
+    const action = target === 'marketplace' ? 'marketplace-visibility' : 'product-visibility';
+    const res = await apiCall(`/admin_supply.php?action=${action}`, 'POST', { id: id, is_visible: nextState });
+    if (res && res.success) {
+        showAlert(res.message || 'Visibilidad actualizada', 'success');
+        loadQuickEditProducts();
+    } else {
+        showAlert(res?.message || 'Error al actualizar visibilidad', 'error');
+    }
+}
+
+function quickEditBatchVisibility(isVisible) {
+    const target = document.getElementById('quickEditTarget')?.value || 'stock';
+    const targetLabel = target === 'marketplace' ? 'Marketplace CE' : (target === 'stock' ? 'Catálogo General (Stock)' : 'todos los inventarios');
+    const stateLabel = isVisible ? 'VISIBLES' : 'OCULTOS';
+
+    const title = isVisible ? 'Visualizar Todos los Productos' : 'Ocultar Todos los Productos';
+    const message = `¿Estás seguro de que deseas hacer <strong>${stateLabel}</strong> todos los productos de <strong>${targetLabel}</strong>?`;
+
+    const executeBatch = async () => {
+        const payload = {
+            target: target,
+            is_visible: isVisible
+        };
+
+        const res = await apiCall('/admin_supply.php?action=quick-batch-visibility', 'POST', payload);
+        if (res && res.success) {
+            showAlert(res.message || `Productos actualizados a ${stateLabel}`, 'success');
+            loadQuickEditProducts();
+        } else {
+            showAlert(res?.message || 'Error al cambiar la visibilidad masiva', 'error');
+        }
+    };
+
+    if (typeof showPremiumModal === 'function') {
+        showPremiumModal(title, message, '', executeBatch);
+    } else if (typeof confirmAction === 'function') {
+        confirmAction(title, message, '', executeBatch);
+    } else {
+        if (confirm(`¿Estás seguro de que deseas hacer ${stateLabel} todos los productos de ${targetLabel}?`)) {
+            executeBatch();
+        }
+    }
 }
 
 async function saveQuickEditRow(id, target, selectEl, priceInputEl, buttonEl) {
@@ -8139,7 +8710,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const newProductCategory = document.getElementById('newProductCategory');
     if (newProductCategory) {
-        newProductCategory.addEventListener('change', updateStockPreview);
+        newProductCategory.addEventListener('change', function () {
+            const groupSelect = document.getElementById('newProductColorGroup');
+            if (groupSelect && groupSelect.value === '') {
+                const selectedOpt = Array.from(newProductCategory.selectedOptions)[0];
+                if (selectedOpt && selectedOpt.value) {
+                    const catName = selectedOpt.value;
+                    const catStyle = typeof getCategoryColorStyleJS === 'function' ? getCategoryColorStyleJS(catName) : { border: '#FF7F00' };
+                    setProductFormColor(catStyle.border);
+                }
+            }
+            updateStockPreview();
+        });
     }
 
     const newProductImages = document.getElementById('newProductImages');

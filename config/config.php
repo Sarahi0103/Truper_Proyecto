@@ -8,6 +8,7 @@ require_once __DIR__ . '/init_dirs.php';
 
 // ===== SEGURIDAD PRIMERA =====
 require_once __DIR__ . '/security.php';
+require_once __DIR__ . '/category_colors.php';
 
 $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
     || (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443);

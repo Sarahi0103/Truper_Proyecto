@@ -2763,3 +2763,61 @@ footer {
 .logo img, .login-logo img, .mobile-logo-wrap img {
     height: 54px !important;
 }
+
+/* ============================================================
+   SISTEMA DE COLORES PARA CATEGORÍAS Y PAGINACIÓN
+   ============================================================ */
+.category-colored-pill {
+    background: var(--cat-bg, rgba(255, 127, 0, 0.15)) !important;
+    color: var(--cat-color, #ff9933) !important;
+    border: 1px solid var(--cat-border, rgba(255, 127, 0, 0.3)) !important;
+    border-radius: 999px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    font-weight: 600 !important;
+    padding: 5px 14px !important;
+    transition: all 0.2s ease !important;
+}
+
+.category-colored-pill:hover,
+.category-colored-pill.active {
+    background: var(--cat-border, #ff7f00) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+    transform: translateY(-1px);
+}
+
+.category-colored-tag {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    border-radius: 6px !important;
+    padding: 3px 9px !important;
+    font-weight: 700 !important;
+    font-size: 0.78rem !important;
+    letter-spacing: 0.02em !important;
+    text-transform: capitalize !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+}
+
+.cat-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.advanced-pagination-toolbar input[type=number]::-webkit-inner-spin-button,
+.advanced-pagination-toolbar input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.advanced-pagination-toolbar input[type=number] {
+    -moz-appearance: textfield;
+    color: #ffffff !important;
+    background-color: #222222 !important;
+    font-weight: 700 !important;
+}
