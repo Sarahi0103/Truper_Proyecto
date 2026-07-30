@@ -7946,18 +7946,14 @@ async function loadQuickEditProducts(page = 1, customPerPage = null) {
         renderQuickEditPagination(res.pagination);
     }
 
-    if (res.items.length === 0) {
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="6" style="padding:2rem; text-align:center;" class="text-muted">
-                    No se encontraron productos con los filtros seleccionados.
-                </td>
-            </tr>
-        `;
-        return;
-    }
-
     tableBody.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+
+    // Prepare category options template base
+    const baseCats = [..._quickEditCategories];
+    if (!baseCats.includes('General')) {
+        baseCats.unshift('General');
+    }
 
     res.items.forEach(item => {
         const tr = document.createElement('tr');
@@ -7988,23 +7984,19 @@ async function loadQuickEditProducts(page = 1, customPerPage = null) {
         select.style.padding = '4px 8px';
         select.style.borderRadius = '6px';
 
-        // Add options
         const itemCat = String(item.category || '').trim();
-        const availableCats = [..._quickEditCategories];
-        if (itemCat && !availableCats.includes(itemCat)) {
-            availableCats.push(itemCat);
-        }
-        if (!availableCats.includes('General')) {
-            availableCats.unshift('General');
+        let catOptions = baseCats;
+        if (itemCat && !catOptions.includes(itemCat)) {
+            catOptions = [...baseCats, itemCat];
         }
 
-        availableCats.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c;
-            opt.textContent = c;
-            if (c === itemCat) opt.selected = true;
-            select.appendChild(opt);
-        });
+        let catOptionsHtml = '';
+        for (let i = 0; i < catOptions.length; i++) {
+            const c = catOptions[i];
+            const isSel = (c === itemCat) ? ' selected' : '';
+            catOptionsHtml += `<option value="${escapeHtml(c)}"${isSel}>${escapeHtml(c)}</option>`;
+        }
+        select.innerHTML = catOptionsHtml;
         select.setAttribute('data-orig', itemCat);
         tdCat.appendChild(select);
         tr.appendChild(tdCat);
@@ -8077,7 +8069,7 @@ async function loadQuickEditProducts(page = 1, customPerPage = null) {
             visBtn.innerHTML = 'Oculto';
         }
 
-        visBtn.onclick = () => toggleSingleProductVisibility(item.id, target, !isVisible);
+        visBtn.onclick = () => toggleSingleProductVisibility(item.id, target, !isVisible, visBtn);
         tdVis.appendChild(visBtn);
         tr.appendChild(tdVis);
 
@@ -8118,16 +8110,38 @@ async function loadQuickEditProducts(page = 1, customPerPage = null) {
             }
         });
 
-        tableBody.appendChild(tr);
+        fragment.appendChild(tr);
     });
+
+    tableBody.appendChild(fragment);
 }
 
-async function toggleSingleProductVisibility(id, target, nextState) {
+async function toggleSingleProductVisibility(id, target, nextState, buttonEl = null) {
     const action = target === 'marketplace' ? 'marketplace-visibility' : 'product-visibility';
     const res = await apiCall(`/admin_supply.php?action=${action}`, 'POST', { id: id, is_visible: nextState });
     if (res && res.success) {
         showAlert(res.message || 'Visibilidad actualizada', 'success');
-        loadQuickEditProducts();
+        if (buttonEl) {
+            const isVisible = !!nextState;
+            if (isVisible) {
+                buttonEl.style.background = 'rgba(25, 135, 84, 0.2)';
+                buttonEl.style.color = '#2eca8b';
+                buttonEl.style.border = '1px solid #198754';
+                buttonEl.innerHTML = 'Visible';
+            } else {
+                buttonEl.style.background = 'rgba(220, 53, 69, 0.2)';
+                buttonEl.style.color = '#ff6b6b';
+                buttonEl.style.border = '1px solid #dc3545';
+                buttonEl.innerHTML = 'Oculto';
+            }
+            buttonEl.onclick = () => toggleSingleProductVisibility(id, target, !isVisible, buttonEl);
+        } else {
+            loadQuickEditProducts();
+        }
+
+        // Sincronizar tarjetas de Stock y Marketplace en segundo plano
+        if (typeof loadStock === 'function') void loadStock(typeof stockCurrentPage !== 'undefined' ? stockCurrentPage : 1, null, true);
+        if (typeof loadMarketplaceCeAdmin === 'function') void loadMarketplaceCeAdmin(typeof marketplaceCurrentPage !== 'undefined' ? marketplaceCurrentPage : 1);
     } else {
         showAlert(res?.message || 'Error al actualizar visibilidad', 'error');
     }
@@ -8151,6 +8165,10 @@ function quickEditBatchVisibility(isVisible) {
         if (res && res.success) {
             showAlert(res.message || `Productos actualizados a ${stateLabel}`, 'success');
             loadQuickEditProducts();
+
+            // Sincronizar tarjetas de Stock y Marketplace en segundo plano
+            if (typeof loadStock === 'function') void loadStock(typeof stockCurrentPage !== 'undefined' ? stockCurrentPage : 1, null, true);
+            if (typeof loadMarketplaceCeAdmin === 'function') void loadMarketplaceCeAdmin(typeof marketplaceCurrentPage !== 'undefined' ? marketplaceCurrentPage : 1);
         } else {
             showAlert(res?.message || 'Error al cambiar la visibilidad masiva', 'error');
         }
@@ -8239,8 +8257,14 @@ async function saveQuickEditRow(id, target, selectEl, priceInputEl, buttonEl) {
                 row.style.background = origBg;
             }, 600);
         }
-        void loadStock(stockCurrentPage || 1, null, true);
-        void loadMarketplaceCeAdmin(marketplaceCurrentPage || 1);
+
+        // Sincronizar tarjetas de Stock y Marketplace en segundo plano
+        if (target === 'stock' || target === 'all') {
+            if (typeof loadStock === 'function') void loadStock(typeof stockCurrentPage !== 'undefined' ? stockCurrentPage : 1, null, true);
+        }
+        if (target === 'marketplace' || target === 'all') {
+            if (typeof loadMarketplaceCeAdmin === 'function') void loadMarketplaceCeAdmin(typeof marketplaceCurrentPage !== 'undefined' ? marketplaceCurrentPage : 1);
+        }
     } else {
         showAlert((res && res.message) ? res.message : 'No fue posible guardar los cambios', 'error');
     }
@@ -8566,6 +8590,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 initQuickEditTab();
             } else {
                 loadQuickEditProducts();
+            }
+        });
+    }
+
+    var stockBtn = document.querySelector('[data-tab="stockTab"]');
+    if (stockBtn) {
+        stockBtn.addEventListener('click', function () {
+            if (typeof loadStock === 'function') {
+                loadStock(typeof stockCurrentPage !== 'undefined' ? stockCurrentPage : 1, null, true);
             }
         });
     }
