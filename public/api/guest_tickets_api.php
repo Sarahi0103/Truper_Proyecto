@@ -189,7 +189,7 @@ try {
             }
 
             // Marcar como cancelado/eliminado
-            $delStmt = $pdo->prepare("UPDATE sales_tickets SET deleted_at = NOW(), pickup_status = 'cancelled', updated_at = NOW() WHERE folio = :folio");
+            $delStmt = $pdo->prepare("UPDATE sales_tickets SET deleted_at = NOW(), order_status = 'canceled', pickup_status = 'cancelled', updated_at = NOW() WHERE folio = :folio");
             $delStmt->execute([':folio' => $folio]);
 
             // Log de auditoría

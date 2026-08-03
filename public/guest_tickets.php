@@ -561,9 +561,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             <nav class="nav-menu">
                 <a href="index.php">Catálogo</a>
                 <a href="marketplace_ce.php">Marketplace CE</a>
-                <?php if ($user_role === 'admin' || $user_role === 'employee'): ?>
-                    <a href="guest_tickets.php" class="active">Tickets sin Registro</a>
-                <?php endif; ?>
+                <a href="order_tracking.php">Seguimiento de Pedidos</a>
                 <div class="nav-dropdown">
                     <button class="nav-dropdown-btn">Mi Cuenta <span class="arrow">▼</span></button>
                     <div class="nav-dropdown-content">
@@ -573,20 +571,37 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                         <a href="profile.php">Perfil</a>
                     </div>
                 </div>
+                <!-- Dropdowns de Administración Separados -->
                 <div class="nav-dropdown">
-                    <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>
-                    <div class="nav-dropdown-content">
-                        <a href="cashier.php">Caja</a>
-                        <a href="admin_supply.php?nocache=true">Abastecimiento</a>
-                        <a href="tickets.php">Tickets</a>
-                        <a href="tasks.php">Tareas</a>
-                        <a href="gastos.php">Gastos</a>
-                        <?php if ($user_role === 'admin'): ?>
-                            <a href="analytics.php">Estadísticas</a>
-                        <?php endif; ?>
+                    <button class="nav-dropdown-btn">Admin Tienda <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 200px;">
+                        <a href="orders.php">Ventas / Pedidos</a>
+                        <a href="order_tracking.php">Seguimiento / Logística</a>
+                        <a href="rma_manager.php">Devoluciones RMA</a>
                     </div>
                 </div>
-            </nav>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Admin Local <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 200px;">
+                        <a href="cashier.php">Caja / Punto de Venta</a>
+                        <a href="b2b_approval.php">Aprobación B2B</a>
+                        <a href="tickets.php">Tickets y Cotizaciones</a>
+                        <a href="ticket_validation.php">Validación de Tickets</a>
+                        <a href="tasks.php">Tareas de Empleados</a>
+                    </div>
+                </div>
+                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Solo Admin <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 220px;">
+                        <a href="admin_supply.php?nocache=true">Abastecimiento / Precios</a>
+                        <a href="accounting_reports.php">Reportes Contables</a>
+                        <a href="gastos.php">Egresos / Gastos</a>
+                        <a href="analytics.php">Estadísticas</a>
+                    </div>
+                </div>
+                <?php endif; ?>
+                </nav>
         </div>
         <div class="user-menu">
             <div class="user-info">
@@ -823,8 +838,14 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                 // Origen display
                 const source = tk.description || 'Stock';
                 const sourceBadge = source === 'Marketplace'
-                    ? '<span class="badge-status" style="background:rgba(23, 162, 184, 0.15); color:#17a2b8; border:1px solid rgba(23,162,184,0.25);">🛍️ Marketplace</span>'
-                    : '<span class="badge-status" style="background:rgba(40, 167, 69, 0.15); color:#28a745; border:1px solid rgba(40,167,69,0.25);">📦 Stock</span>';
+                    ? '<span class="badge-status" style="background:rgba(23, 162, 184, 0.15); color:#17a2b8; border:1px solid rgba(23,162,184,0.25);">Marketplace</span>'
+                    : '<span class="badge-status" style="background:rgba(40, 167, 69, 0.15); color:#28a745; border:1px solid rgba(40,167,69,0.25);">Stock</span>';
+
+                // Modalidad display (Envío a Domicilio vs Retiro en Tienda)
+                const isDelivery = (tk.notes || '').includes('DOMICILIO') || (tk.payment_method || '').includes('Domicilio');
+                const fulfillmentBadge = isDelivery
+                    ? '<span class="badge-status" style="background:rgba(255,127,0,0.15); color:#ff7f00; border:1px solid rgba(255,127,0,0.3); font-weight:700;">🚚 Domicilio</span>'
+                    : '<span class="badge-status" style="background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.3); font-weight:700;">🏬 En Tienda</span>';
 
                 // Expiration display
                 const expDateStr = tk.expiration_date ? safeNewDate(tk.expiration_date).toLocaleDateString('es-MX') : 'N/A';
@@ -843,17 +864,28 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                         <button class="btn-action btn-reactivate" onclick="reactivateTicket(${tk.id})" title="Reactivar ticket por 30 días">🔄 Reactivar</button>
                     `;
                 }
+
+                if (isDelivery) {
+                    actionsHtml += `
+                        <a href="/api/print_blind_label.php?folio=${encodeURIComponent(tk.folio)}" target="_blank" class="btn-action btn-detail" style="background:#1c1917; color:#ff7f00; border:1px solid #444;" title="Imprimir Etiqueta Ciega 4x6''">🏷️ Guía 4x6"</a>
+                    `;
+                }
                 
-                // Delete button always visible for all status values
                 actionsHtml += `
-                    <button class="btn-action btn-cancel" onclick="cancelTicket('${tk.folio}')" title="Eliminar Ticket">🗑️ Eliminar</button>
+                    <a href="/api/b2b_quote_pdf.php?folio=${encodeURIComponent(tk.folio)}" target="_blank" class="btn-action btn-detail" style="background:#1e1e24; color:#60a5fa; border:1px solid #333;" title="Descargar Cotización PDF">📄 PDF</a>
                     <button class="btn-action btn-detail" onclick="openDetails('${tk.folio}')" title="Ver Detalles">👁 Detalle</button>
+                    <button class="btn-action btn-cancel" onclick="cancelTicket('${tk.folio}')" title="Eliminar Ticket">🗑️</button>
                 `;
 
                 html += `
                     <tr id="row-${tk.folio}">
                         <td style="font-family: monospace; font-weight: 700; color: var(--color-naranja, #ff6600);">${tk.folio}</td>
-                        <td>${sourceBadge}</td>
+                        <td>
+                            <div style="display:flex; flex-direction:column; gap:4px;">
+                                ${sourceBadge}
+                                ${fulfillmentBadge}
+                            </div>
+                        </td>
                         <td style="font-weight: 600;">${guestName}</td>
                         <td style="font-size: 0.85rem; color: rgba(255,255,255,0.65);">
                             <div>${tk.email || ''}</div>

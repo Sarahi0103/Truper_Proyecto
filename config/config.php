@@ -612,6 +612,36 @@ function calculateProductPrice($base_price, $quantity, $is_wholesale = false) {
     return $base_price;
 }
 
+function calculateSegmentedProductPrice(array $product, string $userSegment = 'menudeo', int $quantity = 1): float {
+    $basePrice = (float)($product['net_price'] ?? ($product['unit_price'] ?? ($product['sell_price'] ?? ($product['price'] ?? 0))));
+    
+    if ($userSegment === 'contratista' && !empty($product['price_contractor']) && (float)$product['price_contractor'] > 0) {
+        $basePrice = (float)$product['price_contractor'];
+    } elseif ($userSegment === 'escuela_establecimiento' && !empty($product['price_b2b_school']) && (float)$product['price_b2b_school'] > 0) {
+        $basePrice = (float)$product['price_b2b_school'];
+    } elseif ($userSegment === 'mayoreo_ferretero' && !empty($product['price_wholesale']) && (float)$product['price_wholesale'] > 0) {
+        $basePrice = (float)$product['price_wholesale'];
+    }
+
+    // Descuento automático por volumen acumulado
+    if ($quantity >= 100) {
+        $basePrice *= 0.88; // 12% adicional por gran volumen
+    } elseif ($quantity >= 50) {
+        $basePrice *= 0.93; // 7% adicional por volumen medio
+    } elseif ($quantity >= 20) {
+        $basePrice *= 0.97; // 3% adicional
+    }
+
+    return max(0, $basePrice);
+}
+
+function isBirthdayToday(?string $birthDate): bool {
+    if (empty($birthDate)) return false;
+    $raw = substr(trim($birthDate), 0, 10);
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw)) return false;
+    return (date('m-d', strtotime($raw)) === date('m-d'));
+}
+
 function db_table_exists($table_name) {
     global $pdo;
     try {

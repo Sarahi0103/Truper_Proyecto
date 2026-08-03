@@ -59,6 +59,30 @@ try {
                 $sets[] = 'birthday = ?';
                 $values[] = $birthdateDbVal;
             }
+            if (db_column_exists('users', 'birth_date')) {
+                $sets[] = 'birth_date = ?';
+                $values[] = $birthdateDbVal;
+            }
+            if (db_column_exists('users', 'rfc')) {
+                $sets[] = 'rfc = ?';
+                $values[] = strtoupper(trim(sanitize($_POST['rfc'] ?? '')));
+            }
+            if (db_column_exists('users', 'tax_name')) {
+                $sets[] = 'tax_name = ?';
+                $values[] = trim(sanitize($_POST['tax_name'] ?? ''));
+            }
+            if (db_column_exists('users', 'tax_regime')) {
+                $sets[] = 'tax_regime = ?';
+                $values[] = sanitize($_POST['tax_regime'] ?? '');
+            }
+            if (db_column_exists('users', 'zip_code_fiscal')) {
+                $sets[] = 'zip_code_fiscal = ?';
+                $values[] = sanitize($_POST['zip_code_fiscal'] ?? '');
+            }
+            if (db_column_exists('users', 'cfdi_use_default')) {
+                $sets[] = 'cfdi_use_default = ?';
+                $values[] = sanitize($_POST['cfdi_use_default'] ?? 'G03');
+            }
             if (db_column_exists('users', 'updated_at')) {
                 $sets[] = 'updated_at = NOW()';
             }

@@ -455,7 +455,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
     <!-- HEADER -->
     <header>
         <div class="header-content">
-            <a href="dashboard.php" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 42px; width: auto; object-fit: contain;"></a>
+            <a href="index.php" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 42px; width: auto; object-fit: contain;"></a>
             <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
@@ -474,27 +474,44 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                         <a href="profile.php">Perfil</a>
                     </div>
                 </div>
+                <!-- Dropdowns de Administración Separados -->
                 <div class="nav-dropdown">
-                    <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>
-                    <div class="nav-dropdown-content">
-                        <a href="cashier.php">Caja</a>
-                        <a href="admin_supply.php?nocache=true">Abastecimiento</a>
-                        <a href="tickets.php">Tickets</a>
-                        <a href="tasks.php">Tareas</a>
-                        <a href="gastos.php">Gastos</a>
-                        <?php if ($user_role === 'admin'): ?>
-                            <a href="analytics.php">Estadísticas</a>
-                        <?php endif; ?>
+                    <button class="nav-dropdown-btn">Admin Tienda <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 200px;">
+                        <a href="orders.php">Ventas / Pedidos</a>
+                        <a href="order_tracking.php">Seguimiento / Logística</a>
+                        <a href="rma_manager.php">Devoluciones RMA</a>
                     </div>
                 </div>
-            </nav>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Admin Local <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 200px;">
+                        <a href="cashier.php">Caja / Punto de Venta</a>
+                        <a href="b2b_approval.php">Aprobación B2B</a>
+                        <a href="tickets.php">Tickets y Cotizaciones</a>
+                        <a href="ticket_validation.php">Validación de Tickets</a>
+                        <a href="tasks.php">Tareas de Empleados</a>
+                    </div>
+                </div>
+                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Solo Admin <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 220px;">
+                        <a href="admin_supply.php?nocache=true">Abastecimiento / Precios</a>
+                        <a href="accounting_reports.php">Reportes Contables</a>
+                        <a href="gastos.php">Egresos / Gastos</a>
+                        <a href="analytics.php">Estadísticas</a>
+                    </div>
+                </div>
+                <?php endif; ?>
+                </nav>
         </div>
         <div class="user-menu">
             <div class="user-info">
-                <div class="user-name"><?php echo $user_name; ?></div>
-                <div class="user-role"><?php echo $user_role === 'employee' ? 'PERSONAL' : 'ADMIN'; ?></div>
+                <div class="user-name"><?php echo htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8'); ?></div>
+                <div class="user-role"><?php echo ($_SESSION['role'] ?? 'admin') === 'employee' ? 'PERSONAL' : 'ADMIN'; ?></div>
             </div>
-            <button onclick="confirmLogout('../admin_logout.php')" class="btn-logout">Cerrar Sesión</button>
+            <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
         </div>
     </header>
 

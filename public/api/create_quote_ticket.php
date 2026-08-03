@@ -34,11 +34,24 @@ if (empty($items)) {
     exit;
 }
 
+$fulfillmentType = $input['fulfillment_type'] ?? 'delivery'; // 'delivery' or 'pickup'
+$deliveryAddress = sanitize($input['delivery_address'] ?? '');
+$customerName = sanitize($input['customer_name'] ?? 'Invitado (Cotización)');
+
+$shippingJson = json_encode([
+    'fulfillment_type' => $fulfillmentType,
+    'address' => $deliveryAddress,
+    'city' => sanitize($input['city'] ?? 'México'),
+    'postalCode' => sanitize($input['postal_code'] ?? '')
+]);
+
+$orderStatus = ($fulfillmentType === 'pickup') ? 'ready_for_pickup' : 'in_preparation';
+$notesText = ($fulfillmentType === 'pickup') ? 'RETIRO EN TIENDA' : ("ENVÍO A DOMICILIO: " . $deliveryAddress);
+
 try {
     $pdo = $GLOBALS['pdo'];
 
     // 1. Resolver o crear el usuario de cotización de invitado
-    // Usamos un usuario único para agrupar todas las cotizaciones públicas/invitados.
     $guestEmail = 'invitado_cotizacion@truper.com';
     $userStmt = $pdo->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
     $userStmt->execute([$guestEmail]);
@@ -47,7 +60,6 @@ try {
     if ($existingUser) {
         $guestUserId = (int)$existingUser['id'];
     } else {
-        // Crear el usuario guest genérico si no existe
         $dummyPassword = password_hash(bin2hex(random_bytes(16)), PASSWORD_BCRYPT, ['cost' => 12]);
         $insertUser = $pdo->prepare("
             INSERT INTO users (email, password_hash, first_name, last_name, role, phone, birthdate, loyalty_points, is_active, is_verified, created_at, updated_at)
@@ -57,7 +69,6 @@ try {
         $insertUser->execute([$guestEmail, $dummyPassword]);
         $guestUserId = (int)$insertUser->fetchColumn();
         
-        // Crear registro en clients para cumplir integridad
         $clientInsert = $pdo->prepare("INSERT INTO clients (user_id, company_name, created_at, updated_at) VALUES (?, NULL, NOW(), NOW())");
         $clientInsert->execute([$guestUserId]);
     }
@@ -65,7 +76,6 @@ try {
     // 2. Instanciar SalesTicket y crear ticket
     $ticketModel = new SalesTicket($pdo);
 
-    // Detección de Origen
     $isMarketplace = false;
     foreach ($items as $item) {
         if (strpos($item['name'] ?? '', '[CE]') !== false) {
@@ -78,17 +88,17 @@ try {
     $ticketData = [
         'order_id' => null,
         'user_id' => $guestUserId,
-        'customer_name' => 'Invitado (Cotización)',
+        'customer_name' => $customerName,
         'ticket_type' => 'sale',
         'description' => $originSource,
         'subtotal_amount' => $total,
         'tax_amount' => 0,
         'discount_amount' => 0,
         'total_amount' => $total,
-        'payment_method' => 'Cotización',
-        'payment_status' => 'pending', // Dejamos como pending dado que es cotización
+        'payment_method' => ($fulfillmentType === 'pickup') ? 'Retiro en Tienda' : 'Envío a Domicilio',
+        'payment_status' => 'pending',
         'issued_by' => null,
-        'notes' => 'Generado automáticamente desde carrito por WhatsApp',
+        'notes' => $notesText,
         'items' => array_map(function($item) {
             return [
                 'product_id' => !empty($item['id']) ? (int)$item['id'] : null,
@@ -104,10 +114,20 @@ try {
     $result = $ticketModel->createTicket($ticketData);
 
     if ($result['success']) {
+        // Save fulfillment details in sales_tickets
+        try {
+            $upd = $pdo->prepare("UPDATE sales_tickets SET order_status = ?, shipping_address_json = ? WHERE folio = ?");
+            $upd->execute([$orderStatus, $shippingJson, $result['folio']]);
+            
+            $logIns = $pdo->prepare("INSERT INTO order_tracking_history (order_folio, status, notes, changed_by) VALUES (?, ?, ?, 'Sistema')");
+            $logIns->execute([$result['folio'], $orderStatus, $notesText]);
+        } catch (Exception $e) {}
+
         echo json_encode([
             'success' => true,
             'folio' => $result['folio'],
-            'ticket_id' => $result['ticket_id']
+            'ticket_id' => $result['ticket_id'],
+            'fulfillment_type' => $fulfillmentType
         ]);
     } else {
         http_response_code(500);

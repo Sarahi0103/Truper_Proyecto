@@ -21,16 +21,24 @@ try {
     $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS image_url TEXT");
     $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS variants_json TEXT");
     $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS condition_label VARCHAR(80) DEFAULT 'Seminuevo'");
+    $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS show_in_online BOOLEAN DEFAULT TRUE");
+    $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS price_online NUMERIC(15,2)");
+
+    $isOnlineMode = ($_GET['mode'] ?? '') === 'online';
 
     $hasUnitPrice = db_column_exists('marketplace_ce_products', 'unit_price');
     $hasSellPrice = db_column_exists('marketplace_ce_products', 'sell_price');
     $priceExpr = '0';
-    if ($hasUnitPrice && $hasSellPrice) {
-        $priceExpr = 'COALESCE(unit_price, sell_price, 0)';
-    } elseif ($hasUnitPrice) {
-        $priceExpr = 'COALESCE(unit_price, 0)';
-    } elseif ($hasSellPrice) {
-        $priceExpr = 'COALESCE(sell_price, 0)';
+    if ($isOnlineMode) {
+        $priceExpr = 'COALESCE(price_online, unit_price, 0)';
+    } else {
+        if ($hasUnitPrice && $hasSellPrice) {
+            $priceExpr = 'COALESCE(unit_price, sell_price, 0)';
+        } elseif ($hasUnitPrice) {
+            $priceExpr = 'COALESCE(unit_price, 0)';
+        } elseif ($hasSellPrice) {
+            $priceExpr = 'COALESCE(sell_price, 0)';
+        }
     }
 
     $nameExpr = db_column_exists('marketplace_ce_products', 'name') ? 'name' : "''";
@@ -50,6 +58,11 @@ try {
     } else {
         $productsVisibilityWhere = " WHERE 1 = 1";
     }
+
+    if ($isOnlineMode) {
+        $productsVisibilityWhere .= " AND COALESCE(show_in_online, true) = true";
+    }
+
     $productsVisibilityWhere .= " AND NOT EXISTS (
         SELECT 1 FROM product_categories pc 
         WHERE LOWER(pc.name) = LOWER(marketplace_ce_products.category) 
@@ -57,12 +70,16 @@ try {
     )";
 
     $netPriceExpr = db_column_exists('marketplace_ce_products', 'net_price') ? 'COALESCE(net_price, unit_price, 0)' : $priceExpr;
+    if ($isOnlineMode) {
+        $netPriceExpr = 'COALESCE(price_online, net_price, unit_price, 0)';
+    }
     $discountExpr = db_column_exists('marketplace_ce_products', 'discount_percentage') ? 'COALESCE(discount_percentage, 0)' : '0';
 
     $sqlCe = "SELECT id, {$nameExpr} AS name, {$skuExpr} AS sku, {$priceExpr} AS unit_price, {$netPriceExpr} AS net_price, {$discountExpr} AS discount_percentage, {$categoryExpr} AS category, {$descriptionExpr} AS description, {$conditionExpr} AS condition_label, {$stockExpr} AS stock_quantity, {$imageExpr} AS image_url, {$variantsExpr} AS variants_json FROM marketplace_ce_products" . $productsVisibilityWhere . " ORDER BY name LIMIT 300";
     $stmtCe = $pdo->prepare($sqlCe);
     $stmtCe->execute();
     $marketplaceItems = $stmtCe->fetchAll();
+
 
     // Intentar cargar categorías directamente de la base de datos para mostrar incluso las vacías
     $categoriesTotals = [];
@@ -528,21 +545,40 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
     data-client-code="<?php echo htmlspecialchars($clientTicketCode, ENT_QUOTES, 'UTF-8'); ?>"
     data-client-number="<?php echo htmlspecialchars($clientTicketNumber, ENT_QUOTES, 'UTF-8'); ?>">
 
+    <?php if ($isOnlineMode): ?>
+    <!-- Barra de regreso — igual que Tienda en Línea -->
+    <div style="background:linear-gradient(90deg,rgba(18,18,24,.98),rgba(10,10,14,.99));border-bottom:1px solid rgba(255,127,0,.2);padding:.5rem 1.4rem;display:flex;align-items:center;gap:1rem;">
+        <a href="tienda.php" style="display:inline-flex;align-items:center;gap:6px;color:#ff7f00;font-weight:700;font-size:.84rem;text-decoration:none;padding:5px 14px;border:1px solid rgba(255,127,0,.3);border-radius:8px;background:rgba(255,127,0,.07);transition:all .18s;"
+            onmouseenter="this.style.background='rgba(255,127,0,.18)';this.style.borderColor='#ff7f00';this.style.color='#fff'"
+            onmouseleave="this.style.background='rgba(255,127,0,.07)';this.style.borderColor='rgba(255,127,0,.3)';this.style.color='#ff7f00'">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Regresar a la Tienda en Línea
+        </a>
+        <span style="font-size:.73rem;font-weight:700;color:#ff7f00;text-transform:uppercase;letter-spacing:.05em;opacity:.7;">Marketplace CE en Línea</span>
+    </div>
+    <?php endif; ?>
+
     <header>
         <div class="header-content">
-            <a href="index.php" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 42px; width: auto; object-fit: contain;"></a>
-                        <button class="hamburger-btn" aria-label="Toggle menu">
+            <a href="<?php echo $isOnlineMode ? 'tienda.php' : 'index.php'; ?>" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 42px; width: auto; object-fit: contain;"></a>
+            <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
                 <span></span>
             </button>
             <nav class="nav-menu">
-                <a href="index.php">Productos</a>
-                <a href="marketplace_ce.php" class="active">Marketplace CE</a>
-                <?php if ($isAdmin): ?>
-                    <a href="guest_tickets.php">Tickets sin Registro</a>
+                <?php if ($isOnlineMode): ?>
+                    <a href="tienda.php">Tienda en Línea</a>
+                    <a href="marketplace_ce.php?mode=online" class="active">Marketplace CE</a>
+                    <a href="order_tracking.php?mode=online">Seguimiento de Pedido</a>
+                    <a href="cart.php?mode=online">Carrito</a>
+                <?php else: ?>
+                    <a href="index.php">Productos</a>
+                    <a href="marketplace_ce.php" class="active">Marketplace CE</a>
+                    <a href="cart.php">Carrito</a>
                 <?php endif; ?>
-                <?php if ($isLogged): ?>
+
+                <?php if ($isLogged && !$isOnlineMode): ?>
                     <div class="nav-dropdown">
                         <button class="nav-dropdown-btn">Mi Cuenta <span class="arrow">▼</span></button>
                         <div class="nav-dropdown-content">
@@ -554,29 +590,47 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
                         </div>
                     </div>
                 <?php endif; ?>
-                <?php if ($isAdmin): ?>
-                    <div class="nav-dropdown">
-                        <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>
-                        <div class="nav-dropdown-content">
-                            <a href="cashier.php">Caja</a>
-                            <a href="admin_supply.php?nocache=true">Abastecimiento</a>
-                            <a href="tickets.php">Tickets</a>
-                            <a href="tasks.php">Tareas</a>
-                            <a href="gastos.php">Gastos</a>
-                            <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
-                                <a href="analytics.php">Estadísticas</a>
-                            <?php endif; ?>
-                        </div>
+                <?php if ($isAdmin && !$isOnlineMode): ?>
+                    <!-- Dropdowns de Administración Separados -->
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Admin Tienda <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 200px;">
+                        <a href="orders.php">Ventas / Pedidos</a>
+                        <a href="order_tracking.php">Seguimiento / Logística</a>
+                        <a href="rma_manager.php">Devoluciones RMA</a>
                     </div>
+                </div>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Admin Local <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 200px;">
+                        <a href="cashier.php">Caja / Punto de Venta</a>
+                        <a href="b2b_approval.php">Aprobación B2B</a>
+                        <a href="tickets.php">Tickets y Cotizaciones</a>
+                        <a href="ticket_validation.php">Validación de Tickets</a>
+                        <a href="tasks.php">Tareas de Empleados</a>
+                    </div>
+                </div>
+                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Solo Admin <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 220px;">
+                        <a href="admin_supply.php?nocache=true">Abastecimiento / Precios</a>
+                        <a href="accounting_reports.php">Reportes Contables</a>
+                        <a href="gastos.php">Egresos / Gastos</a>
+                        <a href="analytics.php">Estadísticas</a>
+                    </div>
+                </div>
+                <?php endif; ?>
+                
                 <?php endif; ?>
             </nav>
             <div class="header-actions">
-                <?php if ($whatsappPhone): ?>
+                <?php if (!empty($whatsappPhone)): ?>
                 <a href="https://wa.me/<?php echo htmlspecialchars($whatsappPhone,ENT_QUOTES,'UTF-8'); ?>?text=Hola%2C+me+interesa+un+art%C3%ADculo+del+Marketplace+CE"
                    target="_blank" rel="noopener" class="btn btn-secondary btn-small">Dudas por WhatsApp</a>
-                <?php if (!$isLogged): ?>
-                    <a href="admin_login.php" class="btn btn-primary btn-small">Solo para administradores</a>
                 <?php endif; ?>
+                <?php if (!$isLogged && !$isOnlineMode): ?>
+                    <a href="admin_login.php" class="btn btn-primary btn-small">Solo para administradores</a>
                 <?php endif; ?>
             </div>
         </div>
@@ -585,12 +639,20 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
     <main>
         <!-- ── Back Button ── -->
         <div class="back-header">
-            <button onclick="history.back()" class="btn-back btn-back-dark btn-back-as-button">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M19 12H5M12 19l-7-7 7-7"/>
-                </svg>
-                Regresar
-            </button>
+            <?php if ($isOnlineMode): ?>
+                <a href="tienda.php" class="btn-back btn-back-dark" style="text-decoration:none; display:inline-flex; align-items:center;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg> Regresar a la Tienda
+                </a>
+            <?php else: ?>
+                <button onclick="history.back()" class="btn-back btn-back-dark btn-back-as-button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                    Regresar
+                </button>
+            <?php endif; ?>
         </div>
 
         <!-- HERO -->
@@ -628,7 +690,7 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
                 <div style="text-align:center;padding:3rem 1rem;color:var(--theme-text-muted,#888);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:56px;height:56px;opacity:0.3;margin-bottom:0.75rem;display:block;margin-left:auto;margin-right:auto;"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 3h-8v4h8V3z"/></svg>
                     <p>Todavía no hay artículos CE publicados.</p>
-                    <?php if ($isAdmin): ?>
+                    <?php if ($isAdmin && !$isOnlineMode): ?>
                     <p><a href="/admin_supply.php" class="btn btn-primary btn-small">Agregar desde Abastecimiento › Marketplace CE</a></p>
                     <?php endif; ?>
                 </div>
@@ -667,7 +729,7 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
                         data-category="<?php echo $itemCat; ?>"
                         data-condition="<?php echo $itemCond; ?>">
                         <div class="product-media" data-product-gallery>
-                            <a href="product_detail.php?id=<?php echo (int)$item['id']; ?>&source=ce" class="product-media-link" aria-label="Ver detalle de <?php echo $itemName; ?>"></a>
+                            <a href="product_detail.php?id=<?php echo (int)$item['id']; ?>&source=ce<?php echo $isOnlineMode ? '&mode=online' : ''; ?>" class="product-media-link" aria-label="Ver detalle de <?php echo $itemName; ?>"></a>
                             <?php foreach ($images as $idx => $imgSrc): ?>
                                 <img
                                     class="product-gallery-image <?php echo $idx === 0 ? 'active' : ''; ?>"
@@ -728,6 +790,7 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
         </section>
     </main>
 
+    <?php if (!$isOnlineMode): ?>
     <!-- CARRITO -->
     <button id="openCart" class="cart-fab">Carrito (<span id="cartCount">0</span>)</button>
     <aside id="cartDrawer" class="cart-drawer">
@@ -750,6 +813,7 @@ function marketplace_ce_gallery_images_by_sku(string $sku, array $itemRow = []):
             </div>
         </div>
     </aside>
+    <?php endif; ?>
 
     <footer>
         <div class="footer-bottom">&copy; 2026 Ferretería FOX — Marketplace CE</div>

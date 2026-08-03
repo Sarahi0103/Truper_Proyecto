@@ -134,8 +134,8 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
     <!-- HEADER -->
     <header>
         <div class="header-content">
-            <a href="dashboard.php" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 42px; width: auto; object-fit: contain;"></a>
-                                    <button class="hamburger-btn" aria-label="Toggle menu">
+            <a href="index.php" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 42px; width: auto; object-fit: contain;"></a>
+            <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
                 <span></span>
@@ -143,7 +143,6 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             <nav class="nav-menu">
                 <a href="index.php">Catálogo</a>
                 <a href="marketplace_ce.php">Marketplace CE</a>
-                <a href="guest_tickets.php">Tickets sin Registro</a>
                 <div class="nav-dropdown">
                     <button class="nav-dropdown-btn">Mi Cuenta <span class="arrow">▼</span></button>
                     <div class="nav-dropdown-content">
@@ -154,26 +153,42 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                         <a href="profile.php">Perfil</a>
                     </div>
                 </div>
+                <!-- Dropdowns de Administración Separados -->
                 <div class="nav-dropdown">
-                    <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>
-                    <div class="nav-dropdown-content">
-                        <a href="cashier.php">Caja</a>
-                        <a href="admin_supply.php?nocache=true">Abastecimiento</a>
-                        <a href="tickets.php" class="active">Tickets</a>
-                        <a href="ticket_validation.php">Validación</a>
-                        <a href="tasks.php">Tareas</a>
-                        <a href="gastos.php">Gastos</a>
-                        <?php if ($user_role === 'admin'): ?>
-                            <a href="analytics.php">Estadísticas</a>
-                        <?php endif; ?>
+                    <button class="nav-dropdown-btn">Admin Tienda <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 200px;">
+                        <a href="orders.php">Ventas / Pedidos</a>
+                        <a href="order_tracking.php">Seguimiento / Logística</a>
+                        <a href="rma_manager.php">Devoluciones RMA</a>
                     </div>
                 </div>
-            </nav>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Admin Local <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 200px;">
+                        <a href="cashier.php">Caja / Punto de Venta</a>
+                        <a href="b2b_approval.php">Aprobación B2B</a>
+                        <a href="tickets.php">Tickets y Cotizaciones</a>
+                        <a href="ticket_validation.php">Validación de Tickets</a>
+                        <a href="tasks.php">Tareas de Empleados</a>
+                    </div>
+                </div>
+                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Solo Admin <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 220px;">
+                        <a href="admin_supply.php?nocache=true">Abastecimiento / Precios</a>
+                        <a href="accounting_reports.php">Reportes Contables</a>
+                        <a href="gastos.php">Egresos / Gastos</a>
+                        <a href="analytics.php">Estadísticas</a>
+                    </div>
+                </div>
+                <?php endif; ?>
+                </nav>
         </div>
         <div class="user-menu">
             <div class="user-info">
-                <div class="user-name"><?php echo $user_name; ?></div>
-                <div class="user-role"><?php echo $user_role === 'employee' ? 'PERSONAL' : 'ADMIN'; ?></div>
+                <div class="user-name"><?php echo htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8'); ?></div>
+                <div class="user-role"><?php echo ($_SESSION['role'] ?? 'admin') === 'employee' ? 'PERSONAL' : 'ADMIN'; ?></div>
             </div>
             <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
         </div>
@@ -229,6 +244,14 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                                 <option value="client">Tickets de Clientes</option>
                                 <option value="supplier">Órdenes a Proveedores</option>
                                 <option value="both">Ambos (Libro Completo)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="fulfillmentFilter">Modalidad de Entrega</label>
+                            <select id="fulfillmentFilter" onchange="loadTicketHistory()">
+                                <option value="">Todas las Modalidades</option>
+                                <option value="delivery">🚚 Envío a Domicilio</option>
+                                <option value="pickup">🏬 Retiro en Tienda</option>
                             </select>
                         </div>
                         <div class="form-group" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
@@ -503,26 +526,36 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                     pickupBadge = '<span style="color:var(--theme-text-muted);">—</span>';
                 }
 
-                // Botón para validar o eliminar
-                let actionButton = '';
-                if (ticket.ticket_type === 'sale') {
-                    if (pStatus === 'picked_up') {
-                        actionButton = `<button onclick="deleteTicketFromHistory('${escapeHtml(ticket.folio)}')" class="btn" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; border-radius: 6px; background: #dc3545; border: none; color: white; display: inline-block; font-weight: 600; cursor: pointer;">🗑 Eliminar</button>`;
-                    } else if (pStatus === 'pending') {
-                        actionButton = `<a href="ticket_validation.php?folio=${escapeHtml(ticket.folio)}" class="btn" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; text-decoration: none; border-radius: 6px; background: var(--color-naranja); border: none; color: white; display: inline-block; font-weight: 600;">🚚 Validar</a>`;
-                    } else {
-                        actionButton = '<span style="color:var(--theme-text-muted);">—</span>';
-                    }
-                } else {
-                    actionButton = '<span style="color:var(--theme-text-muted);">—</span>';
+                // Modalidad display
+                const isDelivery = (ticket.notes || '').includes('DOMICILIO') || (ticket.payment_method || '').includes('Domicilio');
+                const fulfillmentBadge = isDelivery
+                    ? '<span style="display:inline-block; margin-top:4px; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; background: rgba(255,127,0,0.15); color: #ff7f00; border: 1px solid rgba(255,127,0,0.3);">🚚 Domicilio</span>'
+                    : '<span style="display:inline-block; margin-top:4px; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3);">🏬 En Tienda</span>';
+
+                // Botones para PDF, etiqueta ciega y administración
+                let actionButton = `<div style="display:flex; gap:4px; justify-center:center; flex-wrap:wrap;">`;
+                actionButton += `<a href="/api/b2b_quote_pdf.php?folio=${escapeHtml(ticket.folio)}" target="_blank" class="btn" style="padding: 0.35rem 0.6rem; font-size: 0.75rem; text-decoration: none; border-radius: 6px; background: #1e1e24; border: 1px solid #333; color: #60a5fa; font-weight: 600;" title="Descargar PDF">📄 PDF</a>`;
+
+                if (isDelivery) {
+                    actionButton += `<a href="/api/print_blind_label.php?folio=${escapeHtml(ticket.folio)}" target="_blank" class="btn" style="padding: 0.35rem 0.6rem; font-size: 0.75rem; text-decoration: none; border-radius: 6px; background: #1c1917; border: 1px solid #444; color: #ff7f00; font-weight: 600;" title="Etiqueta Ciega 4x6''">🏷️ 4x6"</a>`;
                 }
 
+                if (ticket.ticket_type === 'sale') {
+                    if (pStatus === 'picked_up') {
+                        actionButton += `<button onclick="deleteTicketFromHistory('${escapeHtml(ticket.folio)}')" class="btn" style="padding: 0.35rem 0.6rem; font-size: 0.75rem; border-radius: 6px; background: #dc3545; border: none; color: white; font-weight: 600; cursor: pointer;">🗑</button>`;
+                    } else if (pStatus === 'pending') {
+                        actionButton += `<a href="ticket_validation.php?folio=${escapeHtml(ticket.folio)}" class="btn" style="padding: 0.35rem 0.6rem; font-size: 0.75rem; text-decoration: none; border-radius: 6px; background: var(--color-naranja); border: none; color: white; font-weight: 600;">✓ Validar</a>`;
+                    }
+                }
+                actionButton += `</div>`;
+
                 html += `
-                    <tr style="border-bottom: 1px solid var(--theme-border); transition: opacity 0.3s, transform 0.3s;" data-folio="${escapeHtml(ticket.folio)}" data-search="${escapeHtml((ticket.folio + ' ' + (ticket.customer_name || '') + ' ' + (ticket.email || '')).toLowerCase())}">
+                    <tr style="border-bottom: 1px solid var(--theme-border); transition: opacity 0.3s, transform 0.3s;" data-folio="${escapeHtml(ticket.folio)}" data-fulfillment="${isDelivery ? 'delivery' : 'pickup'}" data-search="${escapeHtml((ticket.folio + ' ' + (ticket.customer_name || '') + ' ' + (ticket.email || '')).toLowerCase())}">
                         <td style="padding: 1rem; font-family: monospace; font-weight: 700; color: var(--color-naranja);">${escapeHtml(ticket.folio)}</td>
                         <td style="padding: 1rem;">
                             <div style="font-weight: 600;">${escapeHtml(ticket.customer_name || 'Mostrador')}</div>
                             <div style="font-size: 0.8rem; color: var(--theme-text-muted);">${escapeHtml(ticket.email || '')}</div>
+                            ${fulfillmentBadge}
                         </td>
                         <td style="padding: 1rem;">${typeLabel}</td>
                         <td style="padding: 1rem; font-weight: 700; color: var(--color-naranja);">${formatAdminMoney(ticket.total_amount || 0)}</td>
@@ -667,6 +700,15 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                     const pStatus = t.ticket_type === 'sale' ? (t.pickup_status || 'pending') : null;
                     const isPaymentDone = pStatus === 'picked_up' || (t.ticket_type !== 'sale' && t.payment_status === 'completed');
                     return !isPaymentDone;
+                });
+            }
+
+            // Fulfillment filter (Envío a Domicilio vs Retiro en Tienda)
+            const fulFilter = document.getElementById('fulfillmentFilter')?.value || '';
+            if (fulFilter !== '') {
+                filtered = filtered.filter(t => {
+                    const isDelivery = (t.notes || '').includes('DOMICILIO') || (t.payment_method || '').includes('Domicilio');
+                    return fulFilter === 'delivery' ? isDelivery : !isDelivery;
                 });
             }
             

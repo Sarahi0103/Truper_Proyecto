@@ -46,11 +46,15 @@ if (db_column_exists('users', 'loyalty_points')) {
     $selectParts[] = '0 AS loyalty_points';
 }
 
-if (db_column_exists('users', 'user_code')) {
-    $selectParts[] = 'user_code';
-} else {
-    $selectParts[] = "'' AS user_code";
-}
+require_once __DIR__ . '/../src/utils/SatCatalogs.php';
+
+if (db_column_exists('users', 'customer_segment')) { $selectParts[] = "COALESCE(customer_segment, 'menudeo') AS customer_segment"; } else { $selectParts[] = "'menudeo' AS customer_segment"; }
+if (db_column_exists('users', 'rfc')) { $selectParts[] = "COALESCE(rfc, '') AS rfc"; } else { $selectParts[] = "'' AS rfc"; }
+if (db_column_exists('users', 'tax_name')) { $selectParts[] = "COALESCE(tax_name, '') AS tax_name"; } else { $selectParts[] = "'' AS tax_name"; }
+if (db_column_exists('users', 'tax_regime')) { $selectParts[] = "COALESCE(tax_regime, '') AS tax_regime"; } else { $selectParts[] = "'' AS tax_regime"; }
+if (db_column_exists('users', 'zip_code_fiscal')) { $selectParts[] = "COALESCE(zip_code_fiscal, '') AS zip_code_fiscal"; } else { $selectParts[] = "'' AS zip_code_fiscal"; }
+if (db_column_exists('users', 'wallet_balance')) { $selectParts[] = "COALESCE(wallet_balance, 0.00) AS wallet_balance"; } else { $selectParts[] = "0.00 AS wallet_balance"; }
+if (db_column_exists('users', 'cfdi_use_default')) { $selectParts[] = "COALESCE(cfdi_use_default, 'G03') AS cfdi_use_default"; } else { $selectParts[] = "'G03' AS cfdi_use_default"; }
 
 $stmt = $pdo->prepare("SELECT " . implode(', ', $selectParts) . " FROM users WHERE id = ?");
 $stmt->execute([$_SESSION['user_id']]);
@@ -470,19 +474,37 @@ if (!empty($profile['birthdate'])) {
                     </div>
                 </div>
                 <?php if ($is_staff): ?>
-                    <div class="nav-dropdown">
-                        <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>
-                        <div class="nav-dropdown-content">
-                            <a href="cashier.php">Caja</a>
-                            <a href="admin_supply.php?nocache=true">Abastecimiento</a>
-                            <a href="tickets.php">Tickets</a>
-                            <a href="tasks.php">Tareas</a>
-                            <a href="gastos.php">Gastos</a>
-                            <?php if ($is_admin): ?>
-                                <a href="analytics.php">Estadísticas</a>
-                            <?php endif; ?>
-                        </div>
+                    <!-- Dropdowns de Administración Separados -->
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Admin Tienda <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 200px;">
+                        <a href="orders.php">Ventas / Pedidos</a>
+                        <a href="order_tracking.php">Seguimiento / Logística</a>
+                        <a href="rma_manager.php">Devoluciones RMA</a>
                     </div>
+                </div>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Admin Local <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 200px;">
+                        <a href="cashier.php">Caja / Punto de Venta</a>
+                        <a href="b2b_approval.php">Aprobación B2B</a>
+                        <a href="tickets.php">Tickets y Cotizaciones</a>
+                        <a href="ticket_validation.php">Validación de Tickets</a>
+                        <a href="tasks.php">Tareas de Empleados</a>
+                    </div>
+                </div>
+                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Solo Admin <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 220px;">
+                        <a href="admin_supply.php?nocache=true">Abastecimiento / Precios</a>
+                        <a href="accounting_reports.php">Reportes Contables</a>
+                        <a href="gastos.php">Egresos / Gastos</a>
+                        <a href="analytics.php">Estadísticas</a>
+                    </div>
+                </div>
+                <?php endif; ?>
+                
                 <?php endif; ?>
             </nav>
         </div>
@@ -554,19 +576,76 @@ if (!empty($profile['birthdate'])) {
                                     <input type="tel" name="phone" value="<?php echo htmlspecialchars($profile['phone'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                                 </div>
 
+                                <div class="form-group profile-grid-full" style="background: rgba(255,127,0,0.06); padding: 1.25rem; border-radius: 12px; border: 1px solid rgba(255,127,0,0.2); margin-bottom: 1rem;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+                                        <div>
+                                            <span style="font-size:0.78rem; text-transform:uppercase; letter-spacing:.05em; color:var(--accent);">Segmento de Cliente:</span>
+                                            <strong style="display:block; font-size:1.15rem; color:#fff; margin-top:2px;">
+                                                <?php 
+                                                    $segMap = ['menudeo' => '🛍️ Menudeo', 'contratista' => '👷 Contratista Preferencial', 'escuela' => '🏫 Establecimiento / Escuela', 'mayoreo' => '🏬 Mayoreo Ferretero'];
+                                                    echo $segMap[$profile['customer_segment'] ?? 'menudeo'] ?? '🛍️ Menudeo';
+                                                ?>
+                                            </strong>
+                                        </div>
+                                        <div>
+                                            <span style="font-size:0.78rem; text-transform:uppercase; letter-spacing:.05em; color:#4ade80;">Monedero Digital:</span>
+                                            <strong style="display:block; font-size:1.25rem; color:#4ade80; margin-top:2px;">$<?php echo number_format((float)($profile['wallet_balance'] ?? 0), 2); ?> MXN</strong>
+                                        </div>
+                                    </div>
+                                    <div style="margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px dashed rgba(255,255,255,0.1); font-size: 0.85rem; color: #bbb;">
+                                        <strong style="color: #fff;">💳 Estado de Cuenta B2B (Pago Completo por Pedido):</strong> Las compras a crédito o por cotización de proyecto se gestionan bajo la modalidad de <em>Pago Completo por Pedido</em> para agilizar tu entrega en obra sin parcialidades fragmentadas.
+                                    </div>
+                                </div>
+
+                                <div class="form-group profile-grid-full" style="margin-top: 1rem;">
+                                    <h3 style="font-size:1.05rem; margin-bottom:0.75rem; color:var(--accent); border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.3rem;">
+                                        📋 Datos Fiscales (CFDI 4.0 - SAT México)
+                                    </h3>
+                                </div>
+
                                 <div class="form-group">
-                                    <label>Fecha de Nacimiento</label>
-                                    <input type="date" name="birthdate" value="<?php echo htmlspecialchars($profile['birthdate'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                                    <label>RFC (Con Clave)</label>
+                                    <input type="text" name="rfc" value="<?php echo htmlspecialchars($profile['rfc'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" placeholder="Ej: VECJ880326XXX" maxlength="13" style="text-transform:uppercase;">
+                                    <small class="text-muted">Necesario para emisión de Facturas CFDI 4.0</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Razón Social / Nombre Fiscal</label>
+                                    <input type="text" name="tax_name" value="<?php echo htmlspecialchars($profile['tax_name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" placeholder="Nombre o Razón Social tal como aparece en tu CSF">
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Régimen Fiscal (SAT)</label>
+                                    <select name="tax_regime" style="background:#111; color:#fff; border:1px solid #333; padding:8px; border-radius:8px; width:100%;">
+                                        <option value="">Selecciona tu Régimen Fiscal...</option>
+                                        <?php 
+                                            $regimes = SatCatalogs::getTaxRegimes();
+                                            $userRegime = $profile['tax_regime'] ?? '';
+                                            foreach ($regimes as $code => $label):
+                                                $sel = ($code === $userRegime) ? 'selected' : '';
+                                        ?>
+                                        <option value="<?php echo $code; ?>" <?php echo $sel; ?>><?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Código Postal Fiscal (Domicilio Fiscal)</label>
+                                    <input type="text" name="zip_code_fiscal" value="<?php echo htmlspecialchars($profile['zip_code_fiscal'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" placeholder="Ej: 44100" maxlength="5" pattern="\d{5}">
                                 </div>
 
                                 <div class="form-group profile-grid-full">
-                                    <label>Empresa</label>
-                                    <input type="text" name="company_name" value="<?php echo htmlspecialchars($company_name, ENT_QUOTES, 'UTF-8'); ?>">
-                                </div>
-
-                                <div class="form-group profile-grid-full">
-                                    <label>Dirección</label>
-                                    <textarea name="address" rows="3"><?php echo htmlspecialchars($profile['address'] ?? '', ENT_QUOTES, 'UTF-8'); ?></textarea>
+                                    <label>Uso de CFDI por Defecto</label>
+                                    <select name="cfdi_use_default" style="background:#111; color:#fff; border:1px solid #333; padding:8px; border-radius:8px; width:100%;">
+                                        <?php 
+                                            $uses = SatCatalogs::getCfdiUses();
+                                            $userUse = $profile['cfdi_use_default'] ?? 'G03';
+                                            foreach ($uses as $code => $label):
+                                                $sel = ($code === $userUse) ? 'selected' : '';
+                                        ?>
+                                        <option value="<?php echo $code; ?>" <?php echo $sel; ?>><?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
                                 </div>
                             </div>
 

@@ -1,5 +1,6 @@
 (function () {
-  const STORAGE_CART = 'truper_cart';
+  const isOnlineMode = window.location.search.includes('mode=online') || window.location.pathname.includes('tienda.php');
+  const STORAGE_CART = isOnlineMode ? 'fox_cart' : 'truper_cart';
   let selectedQuickCategory = '';
   let selectedColorFilter = '';
 
@@ -136,8 +137,9 @@
   }
 
   function renderCart() {
+    if (window.location.pathname.endsWith('cart.php')) return;
     const cart = getCart();
-    const list = document.getElementById('cartList');
+    const list = document.getElementById('drawerCartList') || document.getElementById('cartList');
     const totalEl = document.getElementById('cartTotalAmount');
     if (!list || !totalEl) return;
 
@@ -488,7 +490,7 @@
         data-price="${p.price}"
         data-stock="${p.stock}">
         <div class="product-media" data-product-gallery>
-          <a href="product_detail.php?id=${p.id}" class="product-media-link" aria-label="Ver detalle de ${nameEscaped}"></a>
+          <a href="product_detail.php?id=${p.id}${isOnlineMode ? '&mode=online' : ''}" class="product-media-link" aria-label="Ver detalle de ${nameEscaped}"></a>
           ${imgsHtml}
           ${navHtml}
         </div>
@@ -575,10 +577,7 @@
   }
 
   function setupEventDelegation() {
-    if (!grid) return;
-
-    grid.addEventListener('click', (e) => {
-      // 1. Botón agregar al carrito
+    document.addEventListener('click', (e) => {
       const addBtn = e.target.closest('[data-add-product]');
       if (addBtn) {
         e.preventDefault();
@@ -591,9 +590,12 @@
           unit_price: toNumber(addBtn.dataset.price)
         };
         addToCart(product);
-        return;
       }
+    });
 
+    if (!grid) return;
+
+    grid.addEventListener('click', (e) => {
       // 2. Navegación de galería
       const prevBtn = e.target.closest('[data-gallery-prev]');
       const nextBtn = e.target.closest('[data-gallery-next]');

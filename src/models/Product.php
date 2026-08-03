@@ -15,6 +15,7 @@ class Product {
         $stmt = $this->pdo->prepare("
             SELECT * FROM {$this->table} 
             WHERE is_active = true 
+            AND (CASE WHEN show_in_pos IS NULL THEN 1 WHEN LOWER(CAST(show_in_pos AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1
             AND NOT EXISTS (
                 SELECT 1 FROM product_categories pc 
                 WHERE LOWER(pc.name) = LOWER({$this->table}.category) 
@@ -74,6 +75,7 @@ class Product {
         $stmt = $this->pdo->prepare("
             SELECT * FROM {$this->table} 
             WHERE is_active = true 
+            AND (CASE WHEN show_in_pos IS NULL THEN 1 WHEN LOWER(CAST(show_in_pos AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1
             AND NOT EXISTS (
                 SELECT 1 FROM product_categories pc 
                 WHERE LOWER(pc.name) = LOWER({$this->table}.category) 
@@ -125,6 +127,7 @@ class Product {
         $stmt = $this->pdo->prepare("
             SELECT * FROM {$this->table} 
             WHERE category = ? AND is_active = true 
+            AND (CASE WHEN show_in_pos IS NULL THEN 1 WHEN LOWER(CAST(show_in_pos AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1
             AND NOT EXISTS (
                 SELECT 1 FROM product_categories pc 
                 WHERE LOWER(pc.name) = LOWER({$this->table}.category) 

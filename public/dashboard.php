@@ -520,9 +520,7 @@ $first_name = explode(' ', $user_name)[0];
             <nav class="nav-menu">
                 <a href="index.php">Catálogo</a>
                 <a href="marketplace_ce.php">Marketplace CE</a>
-                <?php if ($is_staff): ?>
-                    <a href="guest_tickets.php">Tickets sin Registro</a>
-                <?php endif; ?>
+                <a href="order_tracking.php">Seguimiento de Pedidos</a>
                 <div class="nav-dropdown">
                     <button class="nav-dropdown-btn">Mi Cuenta <span class="arrow">▼</span></button>
                     <div class="nav-dropdown-content">
@@ -534,19 +532,37 @@ $first_name = explode(' ', $user_name)[0];
                     </div>
                 </div>
                 <?php if ($is_staff): ?>
-                    <div class="nav-dropdown">
-                        <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>
-                        <div class="nav-dropdown-content">
-                            <a href="cashier.php">Caja</a>
-                            <a href="admin_supply.php?nocache=true">Abastecimiento</a>
-                            <a href="tickets.php">Tickets</a>
-                            <a href="tasks.php">Tareas</a>
-                            <a href="gastos.php">Gastos</a>
-                            <?php if ($is_admin): ?>
-                            <a href="analytics.php">Estadísticas</a>
-                            <?php endif; ?>
-                        </div>
+                    <!-- Dropdowns de Administración Separados -->
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Admin Tienda <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 200px;">
+                        <a href="orders.php">Ventas / Pedidos</a>
+                        <a href="order_tracking.php">Seguimiento / Logística</a>
+                        <a href="rma_manager.php">Devoluciones RMA</a>
                     </div>
+                </div>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Admin Local <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 200px;">
+                        <a href="cashier.php">Caja / Punto de Venta</a>
+                        <a href="b2b_approval.php">Aprobación B2B</a>
+                        <a href="tickets.php">Tickets y Cotizaciones</a>
+                        <a href="ticket_validation.php">Validación de Tickets</a>
+                        <a href="tasks.php">Tareas de Empleados</a>
+                    </div>
+                </div>
+                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Solo Admin <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 220px;">
+                        <a href="admin_supply.php?nocache=true">Abastecimiento / Precios</a>
+                        <a href="accounting_reports.php">Reportes Contables</a>
+                        <a href="gastos.php">Egresos / Gastos</a>
+                        <a href="analytics.php">Estadísticas</a>
+                    </div>
+                </div>
+                <?php endif; ?>
+                
                 <?php endif; ?>
             </nav>
         </div>

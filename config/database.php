@@ -176,18 +176,96 @@ if ($pdo === null) {
     exit(0);
 }
 
-// Migraciones automáticas del sistema (Descuento y Precio Base)
+// Migraciones automáticas del sistema (Descuento, Precios Segmentados, CFDI 4.0, Tracking y RMA)
+try { $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS net_price DECIMAL(10,2)"); } catch (Exception $ignored) {}
+try { $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_percentage DECIMAL(5,2) DEFAULT 0"); } catch (Exception $ignored) {}
+try { $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS price_contractor DECIMAL(10,2)"); } catch (Exception $ignored) {}
+try { $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS price_b2b_school DECIMAL(10,2)"); } catch (Exception $ignored) {}
+try { $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS price_wholesale DECIMAL(10,2)"); } catch (Exception $ignored) {}
+try { $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS tier_min_qty INT DEFAULT 1"); } catch (Exception $ignored) {}
+try { $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS price_online DECIMAL(10,2)"); } catch (Exception $ignored) {}
+try { $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS price_pos DECIMAL(10,2)"); } catch (Exception $ignored) {}
+try { $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS show_in_online BOOLEAN DEFAULT true"); } catch (Exception $ignored) {}
+try { $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS show_in_pos BOOLEAN DEFAULT true"); } catch (Exception $ignored) {}
+
+try { $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS net_price DECIMAL(12,2)"); } catch (Exception $ignored) {}
+try { $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS discount_percentage DECIMAL(5,2) DEFAULT 0"); } catch (Exception $ignored) {}
+
+try { $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS customer_segment VARCHAR(50) DEFAULT 'menudeo'"); } catch (Exception $ignored) {}
+try { $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS rfc VARCHAR(20)"); } catch (Exception $ignored) {}
+try { $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS tax_name VARCHAR(255)"); } catch (Exception $ignored) {}
+try { $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS tax_regime VARCHAR(20)"); } catch (Exception $ignored) {}
+try { $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS zip_code_fiscal VARCHAR(10)"); } catch (Exception $ignored) {}
+try { $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS b2b_approved_at TIMESTAMP"); } catch (Exception $ignored) {}
+try { $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_purchase_at TIMESTAMP"); } catch (Exception $ignored) {}
+try { $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS birthday_discount_active BOOLEAN DEFAULT false"); } catch (Exception $ignored) {}
+
+try { $pdo->exec("ALTER TABLE sales_tickets ADD COLUMN IF NOT EXISTS uuid_fiscal VARCHAR(100)"); } catch (Exception $ignored) {}
+try { $pdo->exec("ALTER TABLE sales_tickets ADD COLUMN IF NOT EXISTS pasarela_commission DECIMAL(10,2) DEFAULT 0.00"); } catch (Exception $ignored) {}
+
 try {
-    $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS net_price DECIMAL(10,2)");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS b2b_applications (
+        id SERIAL PRIMARY KEY,
+        user_id INT NOT NULL,
+        rfc VARCHAR(20) NOT NULL,
+        tax_name VARCHAR(255) NOT NULL,
+        csf_document_path TEXT,
+        requested_segment VARCHAR(50) DEFAULT 'contratista',
+        status VARCHAR(20) DEFAULT 'pending',
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
 } catch (Exception $ignored) {}
+
 try {
-    $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_percentage DECIMAL(5,2) DEFAULT 0");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS order_tracking_history (
+        id SERIAL PRIMARY KEY,
+        order_folio VARCHAR(50) NOT NULL,
+        status VARCHAR(50) NOT NULL,
+        notes TEXT,
+        changed_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
 } catch (Exception $ignored) {}
+
 try {
-    $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS net_price DECIMAL(12,2)");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS returns_rma (
+        id SERIAL PRIMARY KEY,
+        order_folio VARCHAR(50) NOT NULL,
+        user_id INT,
+        reason TEXT NOT NULL,
+        photos_json TEXT,
+        status VARCHAR(20) DEFAULT 'pending',
+        refund_method VARCHAR(20) DEFAULT 'wallet',
+        refund_amount DECIMAL(10,2) DEFAULT 0.00,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
 } catch (Exception $ignored) {}
+
 try {
-    $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS discount_percentage DECIMAL(5,2) DEFAULT 0");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS admin_audit_logs (
+        id SERIAL PRIMARY KEY,
+        admin_id INT NOT NULL,
+        action VARCHAR(100) NOT NULL,
+        target_folio VARCHAR(50),
+        details TEXT,
+        ip_address VARCHAR(45),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
+} catch (Exception $ignored) {}
+
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS user_shipping_addresses (
+        id SERIAL PRIMARY KEY,
+        user_id INT NOT NULL,
+        alias VARCHAR(100) NOT NULL,
+        street_address TEXT NOT NULL,
+        city VARCHAR(100) NOT NULL,
+        postal_code VARCHAR(10) NOT NULL,
+        contact_person VARCHAR(150),
+        contact_phone VARCHAR(20),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
 } catch (Exception $ignored) {}
 
 return $pdo;

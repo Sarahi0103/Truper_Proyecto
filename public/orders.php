@@ -182,17 +182,37 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') 
                     </div>
                 </div>
                 <?php if ($is_admin): ?>
-                    <div class="nav-dropdown">
-                        <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>
-                        <div class="nav-dropdown-content">
-                            <a href="cashier.php">Caja</a>
-                            <a href="admin_supply.php?nocache=true">Abastecimiento</a>
-                            <a href="tickets.php">Tickets</a>
-                            <a href="tasks.php">Tareas</a>
-                            <a href="gastos.php">Gastos</a>
-                            <a href="analytics.php">Estadísticas</a>
-                        </div>
+                    <!-- Dropdowns de Administración Separados -->
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Admin Tienda <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 200px;">
+                        <a href="orders.php">Ventas / Pedidos</a>
+                        <a href="order_tracking.php">Seguimiento / Logística</a>
+                        <a href="rma_manager.php">Devoluciones RMA</a>
                     </div>
+                </div>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Admin Local <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 200px;">
+                        <a href="cashier.php">Caja / Punto de Venta</a>
+                        <a href="b2b_approval.php">Aprobación B2B</a>
+                        <a href="tickets.php">Tickets y Cotizaciones</a>
+                        <a href="ticket_validation.php">Validación de Tickets</a>
+                        <a href="tasks.php">Tareas de Empleados</a>
+                    </div>
+                </div>
+                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Solo Admin <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 220px;">
+                        <a href="admin_supply.php?nocache=true">Abastecimiento / Precios</a>
+                        <a href="accounting_reports.php">Reportes Contables</a>
+                        <a href="gastos.php">Egresos / Gastos</a>
+                        <a href="analytics.php">Estadísticas</a>
+                    </div>
+                </div>
+                <?php endif; ?>
+                
                 <?php endif; ?>
             </nav>
             <div class="header-actions">
@@ -237,17 +257,46 @@ $is_admin = (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') 
                 <div class="card">
                     <div class="card-header">Mi Historial de Solicitudes</div>
                     <div class="card-body">
-                        <div style="margin-bottom: 1rem;">
-                            <input type="text" id="orderSearch" placeholder="Buscar orden..." onkeyup="searchOrders()" style="padding: 0.5rem; width: 200px;">
-                            <select id="orderFilter" onchange="filterOrders()" style="padding: 0.5rem; margin-left: 1rem;">
-                                <option value="">Todos los estados</option>
-                                <option value="pending">Pendiente</option>
-                                <option value="confirmed">Confirmado</option>
-                                <option value="processing">En Proceso</option>
-                                <option value="shipped">Enviado</option>
-                                <option value="delivered">Completado</option>
-                                <option value="cancelled">Cancelado</option>
-                            </select>
+                        <div style="margin-bottom: 1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+                            <div>
+                                <input type="text" id="orderSearch" placeholder="Buscar orden..." onkeyup="searchOrders()" style="padding: 0.5rem; width: 200px;">
+                                <select id="orderFilter" onchange="filterOrders()" style="padding: 0.5rem; margin-left: 0.5rem;">
+                                    <option value="">Todos los estados</option>
+                                    <option value="pending">Pendiente</option>
+                                    <option value="confirmed">Confirmado</option>
+                                    <option value="processing">En Proceso</option>
+                                    <option value="shipped">Enviado</option>
+                                    <option value="delivered">Completado</option>
+                                    <option value="cancelled">Cancelado</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Card de Descarga Masiva ZIP para Contabilidad -->
+                        <div class="card" style="margin-bottom: 1.25rem; background: #121217; border: 1px solid #282836; border-radius: 10px;">
+                            <div class="card-body" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; padding: 1rem;">
+                                <div>
+                                    <h4 style="margin: 0 0 0.2rem; color: #fff; font-size: 0.98rem; font-weight:700;">📦 Paquete Contable Mensual (XML + PDF)</h4>
+                                    <p style="margin: 0; color: #888899; font-size: 0.82rem;">Descarga en un solo archivo ZIP todos tus comprobantes del mes para entregar a tu contador.</p>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <select id="zipYear" style="background: #171720; color: #fff; border: 1px solid #333; padding: 6px 10px; border-radius: 6px; font-size:0.85rem;">
+                                        <option value="<?php echo date('Y'); ?>"><?php echo date('Y'); ?></option>
+                                        <option value="<?php echo date('Y') - 1; ?>"><?php echo date('Y') - 1; ?></option>
+                                    </select>
+                                    <select id="zipMonth" style="background: #171720; color: #fff; border: 1px solid #333; padding: 6px 10px; border-radius: 6px; font-size:0.85rem;">
+                                        <?php
+                                        $mList = [1=>'Enero', 2=>'Febrero', 3=>'Marzo', 4=>'Abril', 5=>'Mayo', 6=>'Junio', 7=>'Julio', 8=>'Agosto', 9=>'Septiembre', 10=>'Octubre', 11=>'Noviembre', 12=>'Diciembre'];
+                                        foreach ($mList as $mn => $mName):
+                                        ?>
+                                            <option value="<?php echo $mn; ?>" <?php echo $mn == date('m') ? 'selected' : ''; ?>><?php echo $mName; ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <button class="btn btn-primary" onclick="window.location.href='/api/download_monthly_invoices.php?year=' + document.getElementById('zipYear').value + '&month=' + document.getElementById('zipMonth').value" style="padding: 6px 14px; font-weight: 700; font-size:0.85rem;">
+                                        Descargar ZIP
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="table-responsive">

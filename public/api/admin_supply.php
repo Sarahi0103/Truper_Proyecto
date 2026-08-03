@@ -4,7 +4,12 @@ ini_set('display_errors', '0');
 ob_start();
 
 if (PHP_SAPI !== 'cli') {
-    require_admin();
+    $actionReq = $_GET['action'] ?? 'stock';
+    if ($actionReq === 'order-tracking-list' || $actionReq === 'order-tracking-detail') {
+        // Permitir consulta de seguimiento por folio a visitantes sin forzar login
+    } else {
+        require_admin();
+    }
 }
 require_once __DIR__ . '/ensure-sync.php';
 header('Content-Type: application/json');
@@ -2530,6 +2535,23 @@ function create_product_compatible($pdo, array $payload): void {
         $values[] = $discount;
     }
 
+    if (db_column_exists('products', 'price_online') && array_key_exists('price_online', $payload)) {
+        $columns[] = 'price_online';
+        $values[] = (float)($payload['price_online'] ?? 0);
+    }
+    if (db_column_exists('products', 'price_pos') && array_key_exists('price_pos', $payload)) {
+        $columns[] = 'price_pos';
+        $values[] = (float)($payload['price_pos'] ?? 0);
+    }
+    if (db_column_exists('products', 'show_in_online') && array_key_exists('show_in_online', $payload)) {
+        $columns[] = 'show_in_online';
+        $values[] = normalize_bool_admin_supply($payload['show_in_online'] ?? null, true);
+    }
+    if (db_column_exists('products', 'show_in_pos') && array_key_exists('show_in_pos', $payload)) {
+        $columns[] = 'show_in_pos';
+        $values[] = normalize_bool_admin_supply($payload['show_in_pos'] ?? null, true);
+    }
+
     if (db_column_exists('products', 'is_active')) {
         $columns[] = 'is_active';
         $values[] = normalize_bool_admin_supply($payload['is_active'] ?? null, true);
@@ -2602,6 +2624,23 @@ function update_product_compatible($pdo, int $id, array $payload): void {
     elseif (db_column_exists('products', 'sell_price')) { $sets[] = 'sell_price = ?'; $values[] = (float)number_format($finalPrice, 2, '.', ''); }
     if (db_column_exists('products', 'net_price')) { $sets[] = 'net_price = ?'; $values[] = (float)number_format($basePrice, 2, '.', ''); }
     if (db_column_exists('products', 'discount_percentage')) { $sets[] = 'discount_percentage = ?'; $values[] = $discount; }
+
+    if (db_column_exists('products', 'price_online') && array_key_exists('price_online', $payload)) {
+        $sets[] = 'price_online = ?';
+        $values[] = (float)($payload['price_online'] ?? 0);
+    }
+    if (db_column_exists('products', 'price_pos') && array_key_exists('price_pos', $payload)) {
+        $sets[] = 'price_pos = ?';
+        $values[] = (float)($payload['price_pos'] ?? 0);
+    }
+    if (db_column_exists('products', 'show_in_online') && array_key_exists('show_in_online', $payload)) {
+        $sets[] = 'show_in_online = ?';
+        $values[] = normalize_bool_admin_supply($payload['show_in_online'] ?? null, true);
+    }
+    if (db_column_exists('products', 'show_in_pos') && array_key_exists('show_in_pos', $payload)) {
+        $sets[] = 'show_in_pos = ?';
+        $values[] = normalize_bool_admin_supply($payload['show_in_pos'] ?? null, true);
+    }
     if (db_column_exists('products', 'updated_at')) { $sets[] = 'updated_at = CURRENT_TIMESTAMP'; }
     
     if (empty($sets)) {
@@ -2977,6 +3016,11 @@ function list_stock_products_compatible($pdo, int $limit = 50, int $offset = 0, 
         }
     }
 
+    $pricePosSelect = db_column_exists('products', 'price_pos') ? "COALESCE(price_pos, 0) AS price_pos" : "0 AS price_pos";
+    $priceOnlineSelect = db_column_exists('products', 'price_online') ? "COALESCE(price_online, 0) AS price_online" : "0 AS price_online";
+    $showPosSelect = db_column_exists('products', 'show_in_pos') ? "(CASE WHEN show_in_pos IS NULL THEN 1 WHEN LOWER(CAST(show_in_pos AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) AS show_in_pos" : "1 AS show_in_pos";
+    $showOnlineSelect = db_column_exists('products', 'show_in_online') ? "(CASE WHEN show_in_online IS NULL THEN 1 WHEN LOWER(CAST(show_in_online AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) AS show_in_online" : "1 AS show_in_online";
+
     $colorSelect = db_column_exists('products', 'color')
         ? "COALESCE(color, '') AS color"
         : "'' AS color";
@@ -2984,7 +3028,7 @@ function list_stock_products_compatible($pdo, int $limit = 50, int $offset = 0, 
         ? "COALESCE(product_group, '') AS product_group"
         : "'' AS product_group";
 
-    $sql = "SELECT id, {$skuSelect}, {$nameSelect}, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect}, {$netPriceSelect}, {$discountSelect}, {$colorSelect}, {$groupSelect} 
+    $sql = "SELECT id, {$skuSelect}, {$nameSelect}, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect}, {$netPriceSelect}, {$discountSelect}, {$pricePosSelect}, {$priceOnlineSelect}, {$showPosSelect}, {$showOnlineSelect}, {$colorSelect}, {$groupSelect} 
             FROM products";
     
     if (!empty($whereClauses)) {
@@ -3209,10 +3253,15 @@ try {
             $description = sanitize($_POST['description'] ?? ($input['description'] ?? ''));
             $barcode = sanitize($_POST['barcode'] ?? ($input['barcode'] ?? ''));
             $price = (float)($_POST['price'] ?? ($input['price'] ?? 0));
+            $pricePos = (float)($_POST['price_pos'] ?? ($input['price_pos'] ?? 0));
+            $priceOnline = (float)($_POST['price_online'] ?? ($input['price_online'] ?? 0));
+            $showInPos = isset($_POST['show_in_pos']) ? !empty($_POST['show_in_pos']) : (isset($input['show_in_pos']) ? !empty($input['show_in_pos']) : true);
+            $showInOnline = isset($_POST['show_in_online']) ? !empty($_POST['show_in_online']) : (isset($input['show_in_online']) ? !empty($input['show_in_online']) : true);
             $stockQty = (int)($_POST['stock_quantity'] ?? ($input['stock_quantity'] ?? 50));
             $reorder = (int)($_POST['reorder_level'] ?? ($input['reorder_level'] ?? 10));
             $discount = (float)($_POST['discount_percentage'] ?? ($input['discount_percentage'] ?? 0));
             $allowSeedSku = in_array((string)($_POST['allow_seed_sku'] ?? ($input['allow_seed_sku'] ?? '0')), ['1', 'true', 'TRUE', 'yes', 'on'], true);
+            $isVisible = isset($_POST['is_visible']) ? !empty($_POST['is_visible']) : (isset($input['is_visible']) ? !empty($input['is_visible']) : true);
 
             if ($sku === '' || $name === '') {
                 $response = ['success' => false, 'message' => 'SKU y nombre son obligatorios'];
@@ -3273,10 +3322,16 @@ try {
                 'description' => $description,
                 'barcode' => $barcode,
                 'price' => $price,
+                'price_pos' => $pricePos,
+                'price_online' => $priceOnline,
+                'show_in_pos' => $showInPos ? 1 : 0,
+                'show_in_online' => $showInOnline ? 1 : 0,
                 'discount_percentage' => $discount,
                 'stock_quantity' => max(0, $stockQty),
                 'reorder_level' => max(0, $reorder),
-                'image_url' => $imageUrl
+                'image_url' => $imageUrl,
+                'is_active' => $isVisible ? 1 : 0,
+                'variants_json' => json_encode($finalGallery, JSON_UNESCAPED_UNICODE)
             ]);
 
                 // Ensure gallery directory exists for newly created products in legacy fallback flow.
@@ -3398,7 +3453,11 @@ try {
                 $countStmt->execute($params);
                 $totalItems = (int)$countStmt->fetchColumn();
 
-                $sql = "SELECT id, {$skuCol} as sku, {$nameCol} as name, category, {$priceCol} as price, CAST({$discountCol} AS NUMERIC) as discount, CAST({$finalPriceCol} AS NUMERIC) as final_price, (CASE WHEN {$activeCol} IS NULL THEN 1 WHEN LOWER(CAST({$activeCol} AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) as is_active FROM {$table} {$whereSql} ORDER BY {$orderSql} LIMIT {$per_page} OFFSET {$offset}";
+                $selectShowInPos = ($target === 'stock' && db_column_exists('products', 'show_in_pos'))
+                    ? ", (CASE WHEN show_in_pos IS NULL THEN 1 WHEN LOWER(CAST(show_in_pos AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) as show_in_pos"
+                    : ", 1 as show_in_pos";
+
+                $sql = "SELECT id, {$skuCol} as sku, {$nameCol} as name, category, {$priceCol} as price, CAST({$discountCol} AS NUMERIC) as discount, CAST({$finalPriceCol} AS NUMERIC) as final_price, (CASE WHEN {$activeCol} IS NULL THEN 1 WHEN LOWER(CAST({$activeCol} AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) as is_active{$selectShowInPos} FROM {$table} {$whereSql} ORDER BY {$orderSql} LIMIT {$per_page} OFFSET {$offset}";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute($params);
                 $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -3579,7 +3638,11 @@ try {
 
             try {
                 if ($target === 'stock' || $target === 'all') {
-                    if (db_column_exists('products', 'is_active')) {
+                    if (db_column_exists('products', 'show_in_pos')) {
+                        $stmt = $pdo->prepare("UPDATE products SET show_in_pos = ?");
+                        $stmt->execute([$val]);
+                        $updatedCount += $stmt->rowCount();
+                    } elseif (db_column_exists('products', 'is_active')) {
                         $stmt = $pdo->prepare("UPDATE products SET is_active = ?");
                         $stmt->execute([$val]);
                         $updatedCount += $stmt->rowCount();
@@ -3631,6 +3694,10 @@ try {
             $description = sanitize($input['description'] ?? '');
             $barcode = sanitize($input['barcode'] ?? '');
             $price = (float)($input['price'] ?? 0);
+            $pricePos = (float)($input['price_pos'] ?? 0);
+            $priceOnline = (float)($input['price_online'] ?? 0);
+            $showInPos = isset($input['show_in_pos']) ? !empty($input['show_in_pos']) : true;
+            $showInOnline = isset($input['show_in_online']) ? !empty($input['show_in_online']) : true;
             $stockQty = (int)($input['stock_quantity'] ?? 50);
             $reorder = (int)($input['reorder_level'] ?? 10);
             $discount = (float)($input['discount_percentage'] ?? 0);
@@ -3726,6 +3793,10 @@ try {
                     'description' => $description,
                     'barcode' => $barcode,
                     'price' => $price,
+                    'price_pos' => $pricePos,
+                    'price_online' => $priceOnline,
+                    'show_in_pos' => $showInPos ? 1 : 0,
+                    'show_in_online' => $showInOnline ? 1 : 0,
                     'discount_percentage' => $discount,
                     'variants_json' => $variantsJson,
                     'stock_quantity' => max(0, $stockQty),
@@ -3802,6 +3873,10 @@ try {
                     'description' => $description,
                     'barcode' => $barcode,
                     'price' => $price,
+                    'price_pos' => $pricePos,
+                    'price_online' => $priceOnline,
+                    'show_in_pos' => $showInPos ? 1 : 0,
+                    'show_in_online' => $showInOnline ? 1 : 0,
                     'discount_percentage' => $discount,
                     'stock_quantity' => max(0, $stockQty),
                     'reorder_level' => max(0, $reorder),
@@ -4134,7 +4209,12 @@ try {
                 break;
             }
 
-            set_product_visibility_compatible($pdo, $id, $isVisible);
+            if (db_column_exists('products', 'show_in_pos')) {
+                $stmt = $pdo->prepare('UPDATE products SET show_in_pos = ? WHERE id = ?');
+                $stmt->execute([$isVisible ? 1 : 0, $id]);
+            } else {
+                set_product_visibility_compatible($pdo, $id, $isVisible);
+            }
 
             $response = [
                 'success' => true,
@@ -5246,6 +5326,8 @@ try {
                 : '1 AS is_active';
             $selectCreatedAt = db_column_exists('marketplace_ce_products', 'created_at') ? 'created_at' : 'NULL AS created_at';
             $selectUpdatedAt = db_column_exists('marketplace_ce_products', 'updated_at') ? 'updated_at' : 'NULL AS updated_at';
+            $selectShowInOnline = db_column_exists('marketplace_ce_products', 'show_in_online') ? 'COALESCE(show_in_online, true) AS show_in_online' : '1 AS show_in_online';
+            $selectPriceOnline = db_column_exists('marketplace_ce_products', 'price_online') ? 'price_online' : 'NULL AS price_online';
             $orderExpr = db_column_exists('marketplace_ce_products', 'created_at') ? 'created_at DESC' : 'id DESC';
 
             $page = max(1, (int)($_GET['page'] ?? 1));
@@ -5309,7 +5391,7 @@ try {
             $countStmt->execute($params);
             $total = $countStmt ? (int)$countStmt->fetchColumn() : 0;
 
-            $sql = 'SELECT id, ' . $selectSku . ', ' . $selectName . ', ' . $selectCategory . ', ' . $selectDescription . ', ' . $selectCondition . ', ' . $selectPrice . ', ' . $selectNetPrice . ', ' . $selectDiscount . ', ' . $selectStock . ', ' . $selectImage . ', ' . $selectActive . ', ' . $selectCreatedAt . ', ' . $selectUpdatedAt .
+            $sql = 'SELECT id, ' . $selectSku . ', ' . $selectName . ', ' . $selectCategory . ', ' . $selectDescription . ', ' . $selectCondition . ', ' . $selectPrice . ', ' . $selectNetPrice . ', ' . $selectDiscount . ', ' . $selectStock . ', ' . $selectImage . ', ' . $selectActive . ', ' . $selectCreatedAt . ', ' . $selectUpdatedAt . ', ' . $selectShowInOnline . ', ' . $selectPriceOnline .
                 ' FROM marketplace_ce_products' . $whereSql . ' ORDER BY ' . $orderExpr . ' LIMIT ' . (int)$perPage . ' OFFSET ' . (int)$offset;
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
@@ -5369,10 +5451,12 @@ try {
                 : '1 AS is_active';
             $selectCreatedAt = db_column_exists('marketplace_ce_products', 'created_at') ? 'created_at' : 'NULL AS created_at';
             $selectUpdatedAt = db_column_exists('marketplace_ce_products', 'updated_at') ? 'updated_at' : 'NULL AS updated_at';
+            $selectShowInOnline = db_column_exists('marketplace_ce_products', 'show_in_online') ? 'COALESCE(show_in_online, true) AS show_in_online' : '1 AS show_in_online';
+            $selectPriceOnline = db_column_exists('marketplace_ce_products', 'price_online') ? 'price_online' : 'NULL AS price_online';
             $orderExpr = db_column_exists('marketplace_ce_products', 'created_at') ? 'created_at DESC' : 'id DESC';
 
             $stmt = $pdo->query(
-                'SELECT id, ' . $selectSku . ', ' . $selectName . ', ' . $selectCategory . ', ' . $selectDescription . ', ' . $selectCondition . ', ' . $selectPrice . ', ' . $selectNetPrice . ', ' . $selectDiscount . ', ' . $selectStock . ', ' . $selectImage . ', ' . $selectActive . ', ' . $selectCreatedAt . ', ' . $selectUpdatedAt .
+                'SELECT id, ' . $selectSku . ', ' . $selectName . ', ' . $selectCategory . ', ' . $selectDescription . ', ' . $selectCondition . ', ' . $selectPrice . ', ' . $selectNetPrice . ', ' . $selectDiscount . ', ' . $selectStock . ', ' . $selectImage . ', ' . $selectActive . ', ' . $selectCreatedAt . ', ' . $selectUpdatedAt . ', ' . $selectShowInOnline . ', ' . $selectPriceOnline .
                 ' FROM marketplace_ce_products ORDER BY ' . $orderExpr . ' LIMIT 50000'
             );
             $items = $stmt ? $stmt->fetchAll() : [];
@@ -5404,6 +5488,9 @@ try {
             $unitPrice = (float)number_format((float)($_POST['unit_price'] ?? ($input['unit_price'] ?? 0)), 2, '.', '');
             $stockQuantity = (int)($_POST['stock_quantity'] ?? ($input['stock_quantity'] ?? 1));
             $isActive = isset($_POST['is_active']) ? !empty($_POST['is_active']) : (isset($input['is_active']) ? !empty($input['is_active']) : true);
+            $showInOnline = isset($_POST['show_in_online']) ? !empty($_POST['show_in_online']) : (isset($input['show_in_online']) ? !empty($input['show_in_online']) : true);
+            $priceOnlineInput = isset($_POST['price_online']) ? trim((string)$_POST['price_online']) : (isset($input['price_online']) ? trim((string)$input['price_online']) : '');
+            $priceOnline = $priceOnlineInput !== '' ? (float)$priceOnlineInput : null;
             $discount = (float)($_POST['discount_percentage'] ?? ($input['discount_percentage'] ?? 0));
             $basePrice = $unitPrice;
             $finalPrice = $basePrice * (1 - $discount / 100);
@@ -5487,6 +5574,9 @@ try {
                     $values[] = json_encode($finalGallery, JSON_UNESCAPED_UNICODE);
                 }
                 
+                if (db_column_exists('marketplace_ce_products', 'show_in_online')) { $sets[] = 'show_in_online = ?'; $values[] = $showInOnline ? 1 : 0; }
+                if (db_column_exists('marketplace_ce_products', 'price_online')) { $sets[] = 'price_online = ?'; $values[] = $priceOnline; }
+                
                 if ($mkUpdatedByCol !== null) { $sets[] = $mkUpdatedByCol . ' = ?'; $values[] = (int)($_SESSION['user_id'] ?? 0); }
                 if ($mkUpdatedAtCol !== null) { $sets[] = $mkUpdatedAtCol . ' = CURRENT_TIMESTAMP'; }
                 if ($mkCategoryCol !== null) { $sets[] = $mkCategoryCol . ' = ?'; $values[] = $category; }
@@ -5527,6 +5617,9 @@ try {
                     $values[] = json_encode($finalGallery, JSON_UNESCAPED_UNICODE);
                 }
                 
+                if (db_column_exists('marketplace_ce_products', 'show_in_online')) { $columns[] = 'show_in_online'; $placeholders[] = '?'; $values[] = $showInOnline ? 1 : 0; }
+                if (db_column_exists('marketplace_ce_products', 'price_online')) { $columns[] = 'price_online'; $placeholders[] = '?'; $values[] = $priceOnline; }
+
                 if ($mkImageCol !== null) { $columns[] = $mkImageCol; $placeholders[] = '?'; $values[] = $imageUrl; }
                 if ($mkCreatedByCol !== null) { $columns[] = $mkCreatedByCol; $placeholders[] = '?'; $values[] = (int)($_SESSION['user_id'] ?? 0); }
                 if ($mkUpdatedByCol !== null) { $columns[] = $mkUpdatedByCol; $placeholders[] = '?'; $values[] = (int)($_SESSION['user_id'] ?? 0); }
@@ -6578,6 +6671,150 @@ try {
                 'message' => "Operación completada: {$successful_targets} exitosas, {$failed_targets} fallidas",
                 'batch_id' => $batch_id
             ];
+            break;
+
+        case 'order-tracking-list':
+            $search = trim(sanitize($_GET['search'] ?? ''));
+            $status = trim(sanitize($_GET['status'] ?? ''));
+            $page = max(1, (int)($_GET['page'] ?? 1));
+            $perPage = 50;
+            $offset = ($page - 1) * $perPage;
+
+            $whereClauses[] = "st.deleted_at IS NULL";
+
+            $isLogged = isset($_SESSION['user_id']);
+            $isUserAdmin = $isLogged && (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee');
+
+            if (!$isUserAdmin) {
+                if ($isLogged) {
+                    $whereClauses[] = "(st.user_id = ? OR u.id = ?)";
+                    $params[] = $_SESSION['user_id'];
+                    $params[] = $_SESSION['user_id'];
+                } elseif ($search === '') {
+                    $whereClauses[] = "1 = 0";
+                }
+            }
+
+            if ($search !== '') {
+                $whereClauses[] = "(st.folio ILIKE ? OR st.customer_name ILIKE ? OR u.user_code ILIKE ?)";
+                $params[] = "%{$search}%";
+                $params[] = "%{$search}%";
+                $params[] = "%{$search}%";
+            }
+
+            if ($status !== '') {
+                $whereClauses[] = "COALESCE(st.order_status, 'in_preparation') = ?";
+                $params[] = $status;
+            }
+
+            $whereSql = !empty($whereClauses) ? ' WHERE ' . implode(' AND ', $whereClauses) : '';
+
+            $countSql = "SELECT COUNT(*) FROM sales_tickets st LEFT JOIN users u ON st.user_id = u.id {$whereSql}";
+            $countStmt = $pdo->prepare($countSql);
+            $countStmt->execute($params);
+            $total = (int)$countStmt->fetchColumn();
+
+            $sql = "SELECT st.id, st.folio, st.customer_name, st.total_amount, st.issued_date,
+                           COALESCE(st.order_status, 'in_preparation') AS order_status,
+                           COALESCE(st.invoice_required, false) AS invoice_required,
+                           st.tracking_folio, st.shipping_address_json, st.notes,
+                           COALESCE(u.user_code, 'PUBLICO') AS user_code,
+                           COALESCE(u.customer_segment, 'menudeo') AS customer_segment,
+                           COALESCE(u.phone, '') AS customer_phone
+                    FROM sales_tickets st
+                    LEFT JOIN users u ON st.user_id = u.id
+                    {$whereSql}
+                    ORDER BY st.id DESC
+                    LIMIT {$perPage} OFFSET {$offset}";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Enrich each order with items and history
+            foreach ($orders as &$ord) {
+                // Ticket items
+                try {
+                    $itemStmt = $pdo->prepare(
+                        "SELECT product_name, quantity, unit_price, total, discount
+                         FROM ticket_items WHERE ticket_id = ? ORDER BY id ASC"
+                    );
+                    $itemStmt->execute([$ord['id']]);
+                    $ord['items'] = $itemStmt->fetchAll(PDO::FETCH_ASSOC);
+                } catch (Exception $ignored) { $ord['items'] = []; }
+
+                // Order tracking history
+                try {
+                    $histStmt = $pdo->prepare(
+                        "SELECT status, notes, changed_by, created_at
+                         FROM order_tracking_history WHERE order_folio = ? ORDER BY created_at ASC"
+                    );
+                    $histStmt->execute([$ord['folio']]);
+                    $ord['history'] = $histStmt->fetchAll(PDO::FETCH_ASSOC);
+                } catch (Exception $ignored) { $ord['history'] = []; }
+
+                // Parse shipping address
+                $addr = [];
+                if (!empty($ord['shipping_address_json'])) {
+                    $decoded = json_decode($ord['shipping_address_json'], true);
+                    if (is_array($decoded)) $addr = $decoded;
+                }
+                $ord['shipping_address'] = $addr;
+                unset($ord['shipping_address_json']);
+            }
+            unset($ord);
+
+            // Compute dynamic real-time KPI metrics for response
+            $kpiWhere = "WHERE deleted_at IS NULL";
+            if (!$isUserAdmin && $isLogged) {
+                $kpiWhere .= " AND user_id = " . (int)$_SESSION['user_id'];
+            } elseif (!$isUserAdmin && !$isLogged) {
+                $kpiWhere .= " AND 1=0";
+            }
+
+            $kpis = [
+                'total'          => (int)$pdo->query("SELECT COUNT(*) FROM sales_tickets {$kpiWhere}")->fetchColumn(),
+                'in_preparation' => (int)$pdo->query("SELECT COUNT(*) FROM sales_tickets {$kpiWhere} AND COALESCE(order_status, 'in_preparation') = 'in_preparation'")->fetchColumn(),
+                'in_transit'     => (int)$pdo->query("SELECT COUNT(*) FROM sales_tickets {$kpiWhere} AND order_status IN ('packed', 'in_transit')")->fetchColumn(),
+                'delivered'      => (int)$pdo->query("SELECT COUNT(*) FROM sales_tickets {$kpiWhere} AND order_status = 'delivered'")->fetchColumn()
+            ];
+
+            $response = [
+                'success'    => true,
+                'orders'     => $orders,
+                'kpis'       => $kpis,
+                'pagination' => [
+                    'current_page' => $page,
+                    'total_items'  => $total,
+                    'total_pages'  => max(1, (int)ceil($total / $perPage))
+                ]
+            ];
+            break;
+
+
+        case 'update-order-status':
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            $orderFolio = sanitize($input['folio'] ?? '');
+            $nextStatus = sanitize($input['status'] ?? 'in_preparation');
+            $notes = sanitize($input['notes'] ?? '');
+
+            if ($orderFolio === '') {
+                $response = ['success' => false, 'message' => 'Folio de pedido requerido'];
+                break;
+            }
+
+            $updateStmt = $pdo->prepare("UPDATE sales_tickets SET order_status = ? WHERE folio = ?");
+            $updateStmt->execute([$nextStatus, $orderFolio]);
+
+            try {
+                $hist = $pdo->prepare("INSERT INTO order_tracking_history (order_folio, status, notes, changed_by) VALUES (?, ?, ?, ?)");
+                $hist->execute([$orderFolio, $nextStatus, $notes, $_SESSION['name'] ?? 'Admin']);
+            } catch (Exception $ignored) {}
+
+            $response = ['success' => true, 'message' => 'Estatus de pedido actualizado correctamente'];
             break;
 
         default:

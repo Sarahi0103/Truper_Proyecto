@@ -585,49 +585,66 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
 </head>
 <body>
 <header>
-    <div class="header-content">
-        <a href="dashboard.php" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 42px; width: auto; object-fit: contain;"></a>
-        <button class="hamburger-btn" aria-label="Toggle menu">
-            <span></span>
-            <span></span>
-            <span></span>
-        </button>
-                <nav class="nav-menu">
-            <a href="index.php">Catálogo</a>
-            <a href="marketplace_ce.php">Marketplace CE</a>
-            <a href="guest_tickets.php">Tickets sin Registro</a>
-            <div class="nav-dropdown">
-                <button class="nav-dropdown-btn">Mi Cuenta <span class="arrow">▼</span></button>
-                <div class="nav-dropdown-content">
-                    <a href="dashboard.php">Dashboard</a>
-                    <a href="orders.php">Pedidos</a>
-                    <a href="wholesale.php">Mayoreo</a>
-                    <a href="profile.php">Perfil</a>
+        <div class="header-content">
+            <a href="index.php" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 42px; width: auto; object-fit: contain;"></a>
+            <button class="hamburger-btn" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <nav class="nav-menu">
+                <a href="index.php">Catálogo</a>
+                <a href="marketplace_ce.php">Marketplace CE</a>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Mi Cuenta <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content">
+                        <a href="dashboard.php">Dashboard</a>
+                        <a href="orders.php">Pedidos</a>
+                        <a href="wholesale.php">Mayoreo</a>
+                        <a href="account.php#historyTab">Historial</a>
+                        <a href="profile.php">Perfil</a>
+                    </div>
                 </div>
-            </div>
-            <?php 
-            $nav_role = $_SESSION['role'] ?? 'client';
-            ?>
-            <div class="nav-dropdown">
-                <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>
-                <div class="nav-dropdown-content">
-                    <a href="cashier.php">Caja</a>
-                    <a href="admin_supply.php?nocache=true" class="active">Abastecimiento</a>
-                    <a href="tickets.php">Tickets</a>
-                    <a href="tasks.php">Tareas</a>
-                    <a href="gastos.php">Gastos</a>
-                    <?php if ($nav_role === 'admin'): ?>
+                <!-- Dropdowns de Administración Separados -->
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Admin Tienda <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 200px;">
+                        <a href="orders.php">Ventas / Pedidos</a>
+                        <a href="order_tracking.php">Seguimiento / Logística</a>
+                        <a href="rma_manager.php">Devoluciones RMA</a>
+                    </div>
+                </div>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Admin Local <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 200px;">
+                        <a href="cashier.php">Caja / Punto de Venta</a>
+                        <a href="b2b_approval.php">Aprobación B2B</a>
+                        <a href="tickets.php">Tickets y Cotizaciones</a>
+                        <a href="ticket_validation.php">Validación de Tickets</a>
+                        <a href="tasks.php">Tareas de Empleados</a>
+                    </div>
+                </div>
+                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Solo Admin <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 220px;">
+                        <a href="admin_supply.php?nocache=true">Abastecimiento / Precios</a>
+                        <a href="accounting_reports.php">Reportes Contables</a>
+                        <a href="gastos.php">Egresos / Gastos</a>
                         <a href="analytics.php">Estadísticas</a>
-                    <?php endif; ?>
+                    </div>
                 </div>
+                <?php endif; ?>
+                </nav>
+        </div>
+        <div class="user-menu">
+            <div class="user-info">
+                <div class="user-name"><?php echo htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8'); ?></div>
+                <div class="user-role"><?php echo ($_SESSION['role'] ?? 'admin') === 'employee' ? 'PERSONAL' : 'ADMIN'; ?></div>
             </div>
-        </nav>
-    </div>
-    <div class="user-menu">
-        <div class="user-info"><div class="user-name"><?php echo $user_name; ?></div><div class="user-role"><?php echo $nav_role === 'employee' ? 'PERSONAL' : 'ADMIN'; ?></div></div>
-        <button class="btn-logout" onclick="confirmLogout('api/auth.php?action=logout')">Cerrar Sesion</button>
-    </div>
-</header>
+            <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
+        </div>
+    </header>
 
 <main>
     <div class="container-fluid admin-supply-shell">
@@ -645,6 +662,16 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
             <div class="module-badge module-admin"><span class="module-glyph">AD</span> Módulo administrativo</div>
             <h1>Panel de Abastecimiento</h1>
             <p class="text-muted">Control de existencias, calendario de proveedores, ordenes de compra y historico.</p>
+        </div>
+
+        <!-- ── Top Bar Module Switcher (Ferretería Local vs Tienda en Línea) ── -->
+        <div class="admin-module-switcher" style="margin-top: 1rem; margin-bottom: 1.5rem; display: flex; gap: 12px; background: #18181b; padding: 10px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+            <button type="button" class="btn" id="btnModePos" onclick="switchAdminChannelMode('pos')" style="flex: 1; padding: 12px 18px; font-weight: 700; font-size: 1rem; border-radius: 8px; background: linear-gradient(135deg, #ff7f00 0%, #e06900 100%); color: #ffffff; border: none; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 15px rgba(255, 127, 0, 0.3);">
+                <span>🏪</span> Ferretería Local (POS & Mostrador)
+            </button>
+            <button type="button" class="btn" id="btnModeOnline" onclick="switchAdminChannelMode('online')" style="flex: 1; padding: 12px 18px; font-weight: 700; font-size: 1rem; border-radius: 8px; background: #27272a; color: #a1a1aa; border: 1px solid #3f3f46; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                <span>🌐</span> Tienda en Línea (Catálogo Público Web)
+            </button>
         </div>
 
         <div class="grid grid-2 mt-3 admin-overview-grid">
@@ -760,12 +787,40 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                 </div>
 
                 <div class="grid grid-3">
-                    <div class="form-group"><label>Precio</label><input id="newProductPrice" type="number" min="0" step="any" value="0"></div>
+                    <div class="form-group"><label>Precio Base / Lista ($)</label><input id="newProductPrice" type="number" min="0" step="any" value="0"></div>
                     <div class="form-group"><label>Stock inicial</label><input id="newProductStock" type="number" min="0" step="1" value="50"></div>
-                    <div class="form-group"><label>Visibilidad en tienda</label><select id="newProductVisible"><option value="1">✅ Visible en tienda</option><option value="0">🔒 Oculto</option></select></div>
+                    <div class="form-group"><label>Visibilidad General</label><select id="newProductVisible"><option value="1">✅ Activo</option><option value="0">🔒 Oculto</option></select></div>
                 </div>
 
-                <div class="grid grid-3">
+                <!-- ── Precios y Canales Diferenciados ── -->
+                <div class="form-group mt-2" style="background: rgba(255,127,0,0.06); padding: 14px 16px; border-radius: 10px; border: 1px solid rgba(255,127,0,0.25);">
+                    <label style="font-weight:700; color:var(--theme-accent, #ff7f00); font-size: 1rem;">⚙️ Configuración por Canal de Venta (Local vs En Línea)</label>
+                    <div class="grid grid-3 mt-2">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label style="color:#ff8800; font-weight:700;">🏪 Precio Ferretería Local ($)</label>
+                            <input id="newProductPricePos" type="number" min="0" step="any" value="0" placeholder="Ej. 100.00">
+                            <small class="text-muted">Si es 0, usa el Precio Base.</small>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label style="color:#00d2ff; font-weight:700;">🌐 Precio Tienda en Línea ($)</label>
+                            <input id="newProductPriceOnline" type="number" min="0" step="any" value="0" placeholder="Ej. 110.00">
+                            <small class="text-muted">Si es 0, usa el Precio Base.</small>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label style="color:#ffffff; font-weight:700;">Publicar en Canales:</label>
+                            <div style="display:flex; flex-direction:column; gap:6px; margin-top:4px;">
+                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.9rem; color:#eee;">
+                                    <input type="checkbox" id="newProductShowPos" checked> 🏪 Ferretería Local (Caja/POS)
+                                </label>
+                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.9rem; color:#eee;">
+                                    <input type="checkbox" id="newProductShowOnline" checked> 🌐 Tienda en Línea (Web)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-3 mt-2">
                     <div class="form-group"><label>Nivel reorden</label><input id="newProductReorder" type="number" min="0" step="1" value="10"></div>
                     <div class="form-group"><label>Descuento (%)</label><input id="newProductDiscount" type="number" min="0" max="100" step="any" value="0"></div>
                 </div>
@@ -1336,7 +1391,9 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                     <div class="form-group"><label>Stock</label><input id="marketplaceStock" type="number" min="0" step="1" value="1"></div>
                 </div>
                 <div class="grid grid-3">
-                    <div class="form-group"><label>Visibilidad CE</label><select id="marketplaceActive"><option value="1">✅ Visible en Marketplace</option><option value="0">🔒 Oculto (revisar antes de publicar)</option></select></div>
+                    <div class="form-group"><label>Visibilidad Local</label><select id="marketplaceActive"><option value="1">✅ Visible en Local</option><option value="0">🔒 Oculto</option></select></div>
+                    <div class="form-group"><label>Visibilidad en Línea</label><select id="marketplaceShowInOnline"><option value="1">🌐 Visible en Tienda en Línea</option><option value="0">🔒 Oculto</option></select></div>
+                    <div class="form-group"><label>Precio Online (Vacío para usar precio base)</label><input id="marketplacePriceOnline" type="number" min="0" step="any" placeholder="Precio en línea"></div>
                 </div>
 
                 <div class="form-group"><label>Descripción</label><textarea id="marketplaceDescription" rows="4" maxlength="1800"></textarea></div>
@@ -4005,6 +4062,41 @@ async function saveTopProductGroup() {
     await loadProductGroups();
 }
 
+function switchAdminChannelMode(mode) {
+    const btnPos = document.getElementById('btnModePos');
+    const btnOnline = document.getElementById('btnModeOnline');
+    
+    if (mode === 'pos') {
+        if (btnPos) {
+            btnPos.style.background = 'linear-gradient(135deg, #ff7f00 0%, #e06900 100%)';
+            btnPos.style.color = '#ffffff';
+            btnPos.style.boxShadow = '0 4px 15px rgba(255, 127, 0, 0.3)';
+            btnPos.style.border = 'none';
+        }
+        if (btnOnline) {
+            btnOnline.style.background = '#27272a';
+            btnOnline.style.color = '#a1a1aa';
+            btnOnline.style.border = '1px solid #3f3f46';
+            btnOnline.style.boxShadow = 'none';
+        }
+        showAlert('Modo Ferretería Local (POS & Mostrador) seleccionado', 'info');
+    } else if (mode === 'online') {
+        if (btnOnline) {
+            btnOnline.style.background = 'linear-gradient(135deg, #00d2ff 0%, #0088cc 100%)';
+            btnOnline.style.color = '#ffffff';
+            btnOnline.style.boxShadow = '0 4px 15px rgba(0, 210, 255, 0.3)';
+            btnOnline.style.border = 'none';
+        }
+        if (btnPos) {
+            btnPos.style.background = '#27272a';
+            btnPos.style.color = '#a1a1aa';
+            btnPos.style.border = '1px solid #3f3f46';
+            btnPos.style.boxShadow = 'none';
+        }
+        showAlert('Modo Tienda en Línea (Catálogo Público Web) seleccionado', 'info');
+    }
+}
+
 function resetProductForm() {
     setGalleryState('stock', '', [], '');
     
@@ -4017,12 +4109,16 @@ function resetProductForm() {
     document.getElementById('newProductSku').value = '';
     document.getElementById('newProductName').value = '';
     document.getElementById('newProductPrice').value = '0';
+    if (document.getElementById('newProductPricePos')) document.getElementById('newProductPricePos').value = '0';
+    if (document.getElementById('newProductPriceOnline')) document.getElementById('newProductPriceOnline').value = '0';
+    if (document.getElementById('newProductShowPos')) document.getElementById('newProductShowPos').checked = true;
+    if (document.getElementById('newProductShowOnline')) document.getElementById('newProductShowOnline').checked = true;
     document.getElementById('newProductStock').value = '50';
     document.getElementById('newProductReorder').value = '10';
     document.getElementById('newProductDiscount').value = '0';
     document.getElementById('newProductDescription').value = '';
     document.getElementById('newProductImageRef').value = 'images/products/default-product.svg';
-    document.getElementById('newProductVisible').value = '0';
+    document.getElementById('newProductVisible').value = '1';
     if (document.getElementById('newProductGroupSelect')) document.getElementById('newProductGroupSelect').value = '';
 
     Array.from(document.getElementById('newProductCategory').options || []).forEach((opt) => {
@@ -4055,6 +4151,10 @@ async function fillProductFormById(id) {
     document.getElementById('newProductSku').value = displayProductCode(item.sku || '');
     document.getElementById('newProductName').value = item.name || '';
     document.getElementById('newProductPrice').value = String(item.net_price || item.unit_price || 0);
+    if (document.getElementById('newProductPricePos')) document.getElementById('newProductPricePos').value = String(item.price_pos || 0);
+    if (document.getElementById('newProductPriceOnline')) document.getElementById('newProductPriceOnline').value = String(item.price_online || 0);
+    if (document.getElementById('newProductShowPos')) document.getElementById('newProductShowPos').checked = item.show_in_pos !== undefined ? Boolean(Number(item.show_in_pos)) : true;
+    if (document.getElementById('newProductShowOnline')) document.getElementById('newProductShowOnline').checked = item.show_in_online !== undefined ? Boolean(Number(item.show_in_online)) : true;
     document.getElementById('newProductStock').value = String(item.stock_quantity || 0);
     document.getElementById('newProductReorder').value = String(item.reorder_level || 10);
     document.getElementById('newProductDiscount').value = String(item.discount_percentage || 0);
@@ -6972,6 +7072,10 @@ async function createProductByAdmin() {
             category: selectedCategories.join(', '),
             description: document.getElementById('newProductDescription')?.value?.trim() || '',
             price: price,
+            price_pos: Number(document.getElementById('newProductPricePos')?.value || 0),
+            price_online: Number(document.getElementById('newProductPriceOnline')?.value || 0),
+            show_in_pos: document.getElementById('newProductShowPos')?.checked ? 1 : 0,
+            show_in_online: document.getElementById('newProductShowOnline')?.checked ? 1 : 0,
             discount_percentage: parseFloat(document.getElementById('newProductDiscount')?.value || 0),
             stock_quantity: stock,
             reorder_level: reorder,
@@ -7044,6 +7148,8 @@ function resetMarketplaceForm() {
     document.getElementById('marketplaceDiscount').value = '0';
     document.getElementById('marketplaceStock').value = '1';
     document.getElementById('marketplaceActive').value = '0';
+    if (document.getElementById('marketplaceShowInOnline')) document.getElementById('marketplaceShowInOnline').value = '1';
+    if (document.getElementById('marketplacePriceOnline')) document.getElementById('marketplacePriceOnline').value = '';
     document.getElementById('marketplaceDescription').value = '';
     Array.from(document.getElementById('marketplaceCategory')?.options || []).forEach((opt) => {
         opt.selected = false;
@@ -7076,6 +7182,12 @@ async function fillMarketplaceForm(item) {
     document.getElementById('marketplaceDiscount').value = String(item.discount_percentage || 0);
     document.getElementById('marketplaceStock').value = String(item.stock_quantity || 0);
     document.getElementById('marketplaceActive').value = Number(item.is_active) ? '1' : '0';
+    if (document.getElementById('marketplaceShowInOnline')) {
+        document.getElementById('marketplaceShowInOnline').value = (item.show_in_online === undefined || item.show_in_online === null || Number(item.show_in_online)) ? '1' : '0';
+    }
+    if (document.getElementById('marketplacePriceOnline')) {
+        document.getElementById('marketplacePriceOnline').value = (item.price_online !== null && item.price_online !== undefined) ? parseFloat(item.price_online) : '';
+    }
     document.getElementById('marketplaceDescription').value = item.description || '';
     const marketplaceImages = document.getElementById('marketplaceImages');
     if (marketplaceImages) {
@@ -7419,6 +7531,8 @@ async function saveMarketplaceCeByAdmin() {
         discount_percentage: parseFloat(document.getElementById('marketplaceDiscount')?.value || 0),
         stock_quantity: stock,
         is_active: document.getElementById('marketplaceActive')?.value === '1' ? 1 : 0,
+        show_in_online: document.getElementById('marketplaceShowInOnline')?.value === '1' ? 1 : 0,
+        price_online: document.getElementById('marketplacePriceOnline')?.value?.trim() !== '' ? parseFloat(document.getElementById('marketplacePriceOnline').value) : null,
         description: document.getElementById('marketplaceDescription')?.value?.trim() || '',
         image_url: document.getElementById('marketplaceImageRef')?.value || 'images/products/default-product.svg'
     };
@@ -8047,7 +8161,7 @@ async function loadQuickEditProducts(page = 1, customPerPage = null) {
         tdVis.style.padding = '0.75rem 1rem';
         tdVis.style.textAlign = 'center';
 
-        const isVisible = item.is_active != 0;
+        const isVisible = target === 'stock' ? (item.show_in_pos !== undefined ? (item.show_in_pos != 0) : (item.is_active != 0)) : (item.is_active != 0);
         const visBtn = document.createElement('button');
         visBtn.type = 'button';
         visBtn.className = 'btn btn-small';
@@ -8267,6 +8381,135 @@ async function saveQuickEditRow(id, target, selectEl, priceInputEl, buttonEl) {
         }
     } else {
         showAlert((res && res.message) ? res.message : 'No fue posible guardar los cambios', 'error');
+    }
+}
+
+// ============================================================
+// ORDER TRACKING & BLIND LABEL MANAGEMENT
+// ============================================================
+let trackingCurrentPage = 1;
+
+async function loadOrderTracking(page = 1) {
+    trackingCurrentPage = page;
+    const tableBody = document.getElementById('trackingTableBody');
+    if (!tableBody) return;
+
+    tableBody.innerHTML = '<tr><td colspan="7" style="padding:2rem; text-align:center;" class="text-muted">Cargando pedidos para seguimiento...</td></tr>';
+
+    const search = document.getElementById('trackingSearchInput')?.value?.trim() || '';
+    const status = document.getElementById('trackingFilterStatus')?.value || '';
+
+    const url = `/admin_supply.php?action=order-tracking-list&search=${encodeURIComponent(search)}&status=${encodeURIComponent(status)}&page=${page}&_=${Date.now()}`;
+    const res = await apiCall(url, 'GET', null, { silent: true });
+
+    if (!res || !res.success || !Array.isArray(res.orders)) {
+        tableBody.innerHTML = '<tr><td colspan="7" style="padding:2rem; text-align:center; color:var(--theme-accent,#ff7f00);">No fue posible obtener el seguimiento de pedidos.</td></tr>';
+        return;
+    }
+
+    if (res.orders.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="7" style="padding:2rem; text-align:center;" class="text-muted">No se encontraron pedidos con los filtros aplicados.</td></tr>';
+        return;
+    }
+
+    tableBody.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+
+    const segBadges = {
+        'menudeo': '<span style="background:rgba(255,255,255,0.06); color:#aaa; padding:2px 6px; border-radius:4px; font-size:0.75rem;">Menudeo</span>',
+        'contratista': '<span style="background:rgba(255,127,0,0.15); color:var(--theme-accent,#ff7f00); padding:2px 6px; border-radius:4px; font-size:0.75rem; font-weight:700;">Contratista</span>',
+        'escuela_establecimiento': '<span style="background:rgba(59,130,246,0.15); color:#60a5fa; padding:2px 6px; border-radius:4px; font-size:0.75rem; font-weight:700;">Escuela / Inst.</span>',
+        'mayoreo_ferretero': '<span style="background:rgba(34,197,94,0.15); color:#4ade80; padding:2px 6px; border-radius:4px; font-size:0.75rem; font-weight:700;">Mayoreo</span>'
+    };
+
+    const statusOptions = [
+        { val: 'in_preparation', label: '⏳ En Preparación / Almacén' },
+        { val: 'packed', label: '📦 Empacado (Etiqueta Ciega)' },
+        { val: 'in_transit', label: '🚚 En Ruta / Paquetera' },
+        { val: 'delivered', label: '✅ Entregado / Confirmado' },
+        { val: 'canceled', label: '❌ Cancelado' }
+    ];
+
+    res.orders.forEach(ord => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid var(--theme-border)';
+
+        const tdFolio = document.createElement('td');
+        tdFolio.style.padding = '0.75rem 1rem';
+        tdFolio.innerHTML = `<strong style="color:var(--theme-accent,#ff7f00); font-family:monospace; font-size:0.95rem;">${escapeHtml(ord.folio)}</strong>`;
+        tr.appendChild(tdFolio);
+
+        const tdClient = document.createElement('td');
+        tdClient.style.padding = '0.75rem 1rem';
+        tdClient.innerHTML = `<div style="font-weight:600; color:#fff;">${escapeHtml(ord.customer_name || 'Cliente')}</div><div style="font-size:0.8rem; color:#888;">Cód: ${escapeHtml(ord.user_code)} | ${segBadges[ord.customer_segment] || segBadges['menudeo']}</div>`;
+        tr.appendChild(tdClient);
+
+        const tdDate = document.createElement('td');
+        tdDate.style.padding = '0.75rem 1rem';
+        tdDate.style.fontSize = '0.85rem';
+        tdDate.className = 'text-muted';
+        tdDate.textContent = ord.issued_date ? ord.issued_date.substring(0, 16) : 'N/A';
+        tr.appendChild(tdDate);
+
+        const tdAmount = document.createElement('td');
+        tdAmount.style.padding = '0.75rem 1rem';
+        tdAmount.innerHTML = `<strong>$${Number(ord.total_amount || 0).toFixed(2)}</strong>`;
+        tr.appendChild(tdAmount);
+
+        const tdInvoice = document.createElement('td');
+        tdInvoice.style.padding = '0.75rem 1rem';
+        tdInvoice.style.textAlign = 'center';
+        if (ord.invoice_required) {
+            tdInvoice.innerHTML = '<span style="background:rgba(34,197,94,0.15); color:#22c55e; border:1px solid #15803d; padding:3px 8px; border-radius:6px; font-size:0.75rem; font-weight:700;">Factura CFDI</span>';
+        } else {
+            tdInvoice.innerHTML = '<span style="background:rgba(255,255,255,0.05); color:#aaa; border:1px solid #333; padding:3px 8px; border-radius:6px; font-size:0.75rem;">Nota de Venta</span>';
+        }
+        tr.appendChild(tdInvoice);
+
+        const tdStatus = document.createElement('td');
+        tdStatus.style.padding = '0.75rem 1rem';
+        tdStatus.style.textAlign = 'center';
+        const select = document.createElement('select');
+        select.style.width = '100%';
+        select.style.background = '#111';
+        select.style.border = '1px solid #333';
+        select.style.color = '#fff';
+        select.style.padding = '4px 8px';
+        select.style.borderRadius = '6px';
+        select.style.fontSize = '0.85rem';
+
+        let optsHtml = '';
+        statusOptions.forEach(opt => {
+            const sel = (opt.val === ord.order_status) ? 'selected' : '';
+            optsHtml += `<option value="${opt.val}" ${sel}>${opt.label}</option>`;
+        });
+        select.innerHTML = optsHtml;
+        select.onchange = () => updateOrderStatus(ord.folio, select.value);
+        tdStatus.appendChild(select);
+        tr.appendChild(tdStatus);
+
+        const tdActions = document.createElement('td');
+        tdActions.style.padding = '0.75rem 1rem';
+        tdActions.style.textAlign = 'center';
+        tdActions.innerHTML = `
+            <a href="/api/print_blind_label.php?folio=${encodeURIComponent(ord.folio)}" target="_blank" class="btn btn-small" style="background:#27272a; border:1px solid #3f3f46; color:#fff; padding:4px 8px; font-size:0.8rem; border-radius:6px; text-decoration:none; display:inline-flex; align-items:center; gap:4px;" title="Imprimir Etiqueta Ciega 4x6'' sin datos sensibles">
+                🏷️ Etiqueta Ciega
+            </a>
+        `;
+        tr.appendChild(tdActions);
+
+        fragment.appendChild(tr);
+    });
+
+    tableBody.appendChild(fragment);
+}
+
+async function updateOrderStatus(folio, nextStatus) {
+    const res = await apiCall('/admin_supply.php?action=update-order-status', 'POST', { folio: folio, status: nextStatus });
+    if (res && res.success) {
+        showAlert(res.message || 'Estatus de pedido actualizado', 'success');
+    } else {
+        showAlert(res?.message || 'Error al actualizar estatus', 'error');
     }
 }
 
@@ -8527,6 +8770,16 @@ document.addEventListener('DOMContentLoaded', function () {
     loadProductImageReferences();
     refreshCategoriesUi();
 
+    // Auto-abrir pestaña solicitada por URL (?tab=orderTrackingTab, etc.)
+    const urlParams = new URLSearchParams(window.location.search);
+    const requestedTab = urlParams.get('tab');
+    if (requestedTab) {
+        const targetBtn = document.querySelector(`[data-tab="${requestedTab}"]`);
+        if (targetBtn) {
+            setTimeout(() => targetBtn.click(), 100);
+        }
+    }
+
     // Carga bajo demanda al abrir cada pestaña para acelerar la carga inicial
     var updatesBtn = document.querySelector('[data-tab="updatesTab"]');
     if (updatesBtn) {
@@ -8590,6 +8843,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 initQuickEditTab();
             } else {
                 loadQuickEditProducts();
+            }
+        });
+    }
+
+    var orderTrackingBtn = document.querySelector('[data-tab="orderTrackingTab"]');
+    if (orderTrackingBtn) {
+        var _otLoaded = false;
+        orderTrackingBtn.addEventListener('click', function () {
+            if (!_otLoaded) {
+                _otLoaded = true;
+                loadOrderTracking();
+            } else {
+                loadOrderTracking();
             }
         });
     }

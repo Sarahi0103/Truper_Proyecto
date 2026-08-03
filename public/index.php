@@ -579,6 +579,25 @@ function homepage_update_label($type) {
             background: rgba(0, 0, 0, 0.5);
             border-color: rgba(255, 255, 255, 0.4);
         }
+        
+        /* Pulsing Glow Button for Online Store */
+        @keyframes pulse-glow-btn {
+            0% {
+                box-shadow: 0 0 0 0 rgba(255, 127, 0, 0.6), 0 8px 24px rgba(255, 127, 0, 0.3);
+            }
+            70% {
+                box-shadow: 0 0 0 15px rgba(255, 127, 0, 0), 0 8px 24px rgba(255, 127, 0, 0.3);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 127, 0, 0), 0 8px 24px rgba(255, 127, 0, 0.3);
+            }
+        }
+        .btn-glow-pulse:hover {
+            transform: scale(1.06) translateY(-2px) !important;
+            box-shadow: 0 12px 30px rgba(255, 127, 0, 0.6) !important;
+            background: linear-gradient(135deg, #ffb01f 0%, #ff7f00 100%) !important;
+            filter: brightness(1.1);
+        }
     </style>
     <link rel="stylesheet" href="<?php echo asset_url('css/catalog-min.css'); ?>">
 </head>
@@ -646,8 +665,18 @@ function homepage_update_label($type) {
             <div class="module-badge module-main"><span class="module-glyph">CT</span> Catálogo principal</div>
             <h1>Catálogo Ferretería FOX</h1>
             <p style="color: #ffffff !important; font-weight: 600 !important; font-size: 1.15rem !important; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9) !important; opacity: 1 !important;">Visualización ágil, sencilla y eficaz con precio, stock, variantes e información técnica.</p>
-            <div style="margin-top: 12px;">
-                <a href="/marketplace_ce.php" class="btn btn-secondary btn-small">Ir a Marketplace CE (segunda mano)</a>
+            <div style="margin-top: 16px; display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap;">
+                <a href="/tienda.php" class="btn btn-primary btn-small btn-glow-pulse" style="background: linear-gradient(135deg, #ff9f00 0%, #ff6600 100%) !important; border: 1px solid #ff9f00 !important; color: #fff !important; font-weight: 800 !important; font-size: 1.02rem !important; display: inline-flex; align-items: center; gap: 8px; padding: 10px 24px; border-radius: 50px; text-shadow: 0 1px 2px rgba(0,0,0,0.3); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 8px 24px rgba(255, 127, 0, 0.4); animation: pulse-glow-btn 2s infinite;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3));">
+                        <circle cx="9" cy="21" r="1"></circle>
+                        <circle cx="20" cy="21" r="1"></circle>
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                    </svg>
+                    Comprar en línea
+                </a>
+                <a href="/marketplace_ce.php" class="btn btn-secondary btn-small" style="padding: 10px 24px; border-radius: 50px; font-weight: 700; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 8px;">
+                    Ir a Marketplace CE (segunda mano)
+                </a>
             </div>
         </section>
 

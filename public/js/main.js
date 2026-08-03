@@ -1086,3 +1086,17 @@ if (document.readyState === 'loading') {
     window.keyboardShortcuts = new KeyboardShortcuts();
     initFormPersistence();
 }
+
+/**
+ * Función global de cierre de sesión
+ */
+function logout() {
+    const logoutPath = 'api/auth.php?action=logout';
+    if (typeof confirmLogout === 'function') {
+        confirmLogout(logoutPath);
+    } else {
+        if (confirm('¿Estás seguro de que deseas cerrar tu sesión?')) {
+            window.location.href = logoutPath;
+        }
+    }
+}

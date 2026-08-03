@@ -1,13 +1,15 @@
 <?php
 require_once '../config/config.php';
+require_once '../src/utils/SatCatalogs.php';
 
 $isLogged = isset($_SESSION['user_id']);
 $isAdmin = $isLogged && (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee');
 $is_admin = $isAdmin;
+$isOnlineMode = ($_GET['mode'] ?? '') === 'online';
 $user = null;
 
 if ($isLogged) {
-    $stmt = $pdo->prepare("SELECT id, email, phone, first_name, last_name, address FROM users WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT id, email, phone, first_name, last_name, address, rfc, tax_name, tax_regime, zip_code_fiscal, cfdi_use_default, customer_segment, wallet_balance, COALESCE(birthdate, birthday) as birthdate FROM users WHERE id = ?");
     $stmt->execute([$_SESSION['user_id']]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 }
@@ -204,21 +206,40 @@ if ($isLogged) {
     </style>
 </head>
 <body data-theme="light">
+    <?php if ($isOnlineMode): ?>
+    <!-- Barra de regreso — igual que Tienda en Línea -->
+    <div style="background:linear-gradient(90deg,rgba(18,18,24,.98),rgba(10,10,14,.99));border-bottom:1px solid rgba(255,127,0,.2);padding:.5rem 1.4rem;display:flex;align-items:center;gap:1rem;">
+        <a href="/cart.php?mode=online" style="display:inline-flex;align-items:center;gap:6px;color:#ff7f00;font-weight:700;font-size:.84rem;text-decoration:none;padding:5px 14px;border:1px solid rgba(255,127,0,.3);border-radius:8px;background:rgba(255,127,0,.07);transition:all .18s;"
+            onmouseenter="this.style.background='rgba(255,127,0,.18)';this.style.borderColor='#ff7f00';this.style.color='#fff'"
+            onmouseleave="this.style.background='rgba(255,127,0,.07)';this.style.borderColor='rgba(255,127,0,.3)';this.style.color='#ff7f00'">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Regresar al Carrito de Compra
+        </a>
+        <span style="font-size:.73rem;font-weight:700;color:#ff7f00;text-transform:uppercase;letter-spacing:.05em;opacity:.7;">Pago y Envío</span>
+    </div>
+    <?php endif; ?>
+
     <header>
         <div class="header-content">
-            <a href="index.php" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 42px; width: auto; object-fit: contain;"></a>
-                                    <button class="hamburger-btn" aria-label="Toggle menu">
+            <a href="<?php echo $isOnlineMode ? 'tienda.php' : 'index.php'; ?>" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 42px; width: auto; object-fit: contain;"></a>
+            <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
                 <span></span>
             </button>
             <nav class="nav-menu">
-                <a href="index.php">Catálogo</a>
-                <a href="marketplace_ce.php">Marketplace CE</a>
-                <?php if ($isAdmin): ?>
-                    <a href="guest_tickets.php">Tickets sin Registro</a>
+                <?php if ($isOnlineMode): ?>
+                    <a href="tienda.php">Tienda en Línea</a>
+                    <a href="marketplace_ce.php?mode=online">Marketplace CE</a>
+                    <a href="order_tracking.php">Seguimiento de Pedido</a>
+                    <a href="cart.php?mode=online" class="active">Carrito</a>
+                <?php else: ?>
+                    <a href="index.php">Productos</a>
+                    <a href="marketplace_ce.php">Marketplace CE</a>
+                    <a href="cart.php" class="active">Carrito</a>
                 <?php endif; ?>
-                <?php if ($isLogged): ?>
+
+                <?php if ($isLogged && !$isOnlineMode): ?>
                     <div class="nav-dropdown">
                         <button class="nav-dropdown-btn">Mi Cuenta <span class="arrow">▼</span></button>
                         <div class="nav-dropdown-content">
@@ -230,20 +251,38 @@ if ($isLogged) {
                         </div>
                     </div>
                 <?php endif; ?>
-                <?php if ($is_admin): ?>
-                    <div class="nav-dropdown">
-                        <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>
-                        <div class="nav-dropdown-content">
-                            <a href="cashier.php">Caja</a>
-                            <a href="admin_supply.php?nocache=true">Abastecimiento</a>
-                            <a href="tickets.php">Tickets</a>
-                            <a href="tasks.php">Tareas</a>
-                            <a href="gastos.php">Gastos</a>
-                            <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
-                                <a href="analytics.php">Estadísticas</a>
-                            <?php endif; ?>
-                        </div>
+                <?php if ($is_admin && !$isOnlineMode): ?>
+                    <!-- Dropdowns de Administración Separados -->
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Admin Tienda <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 200px;">
+                        <a href="orders.php">Ventas / Pedidos</a>
+                        <a href="order_tracking.php">Seguimiento / Logística</a>
+                        <a href="rma_manager.php">Devoluciones RMA</a>
                     </div>
+                </div>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Admin Local <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 200px;">
+                        <a href="cashier.php">Caja / Punto de Venta</a>
+                        <a href="b2b_approval.php">Aprobación B2B</a>
+                        <a href="tickets.php">Tickets y Cotizaciones</a>
+                        <a href="ticket_validation.php">Validación de Tickets</a>
+                        <a href="tasks.php">Tareas de Empleados</a>
+                    </div>
+                </div>
+                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Solo Admin <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 220px;">
+                        <a href="admin_supply.php?nocache=true">Abastecimiento / Precios</a>
+                        <a href="accounting_reports.php">Reportes Contables</a>
+                        <a href="gastos.php">Egresos / Gastos</a>
+                        <a href="analytics.php">Estadísticas</a>
+                    </div>
+                </div>
+                <?php endif; ?>
+                
                 <?php endif; ?>
             </nav>
             <div class="header-actions">
@@ -261,16 +300,24 @@ if ($isLogged) {
     <main class="checkout-page">
         <!-- ── Back Button ── -->
         <div class="back-header">
-            <button onclick="history.back()" class="btn-back btn-back-dark btn-back-as-button">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M19 12H5M12 19l-7-7 7-7"/>
-                </svg>
-                Regresar
-            </button>
+            <?php if ($isOnlineMode): ?>
+                <a href="/cart.php?mode=online" class="btn-back btn-back-dark" style="text-decoration:none; display:inline-flex; align-items:center;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg> Regresar al Carrito
+                </a>
+            <?php else: ?>
+                <button onclick="history.back()" class="btn-back btn-back-dark btn-back-as-button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                    Regresar
+                </button>
+            <?php endif; ?>
         </div>
 
         <div class="checkout-header">
-            <h1 class="checkout-title">💳 Checkout</h1>
+            <h1 class="checkout-title">Checkout y Confirmación de Pedido</h1>
         </div>
 
         <?php if (!$isLogged): ?>
@@ -383,26 +430,110 @@ if ($isLogged) {
                         </div>
                     </div>
 
+                    <!-- Invoicing / CFDI 4.0 Section -->
+                    <div class="form-section" style="background: rgba(255,127,0,0.04); padding: 1.25rem; border-radius: 8px; border: 1px solid rgba(255,127,0,0.2);">
+                        <div class="form-section-title" style="display:flex; justify-content:space-between; align-items:center;">
+                            <span>🧾 Comprobante de Venta y Facturación</span>
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label style="cursor:pointer; display:flex; align-items:center; gap:0.5rem; font-weight:700; color:var(--theme-accent);">
+                                <input type="checkbox" id="requireInvoice" name="requireInvoice" onchange="document.getElementById('fiscalFieldsWrap').style.display = this.checked ? 'block' : 'none';" <?php echo !empty($user['rfc']) ? 'checked' : ''; ?>>
+                                Requiero Factura Fiscal (CFDI 4.0 - SAT México)
+                            </label>
+                            <small class="text-muted">Si no seleccionas esta opción, se emitirá una Nota de Venta (Público en General / Control Interno).</small>
+                        </div>
+
+                        <div id="fiscalFieldsWrap" style="display: <?php echo !empty($user['rfc']) ? 'block' : 'none'; ?>; padding-top:0.75rem; border-top:1px dashed var(--theme-border);">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="rfc">RFC *</label>
+                                    <input type="text" id="rfc" name="rfc" value="<?php echo htmlspecialchars($user['rfc'] ?? ''); ?>" placeholder="Ej: VECJ880326XXX" maxlength="13" style="text-transform:uppercase;">
+                                </div>
+                                <div class="form-group">
+                                    <label for="taxName">Razón Social / Nombre Fiscal *</label>
+                                    <input type="text" id="taxName" name="taxName" value="<?php echo htmlspecialchars($user['tax_name'] ?? ''); ?>" placeholder="Nombre o Razón Social exacta">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="taxRegime">Régimen Fiscal (SAT) *</label>
+                                    <select id="taxRegime" name="taxRegime">
+                                        <option value="">Selecciona Régimen Fiscal...</option>
+                                        <?php 
+                                            $regimes = SatCatalogs::getTaxRegimes();
+                                            $userRegime = $user['tax_regime'] ?? '';
+                                            foreach ($regimes as $code => $label):
+                                                $sel = ($code === $userRegime) ? 'selected' : '';
+                                        ?>
+                                        <option value="<?php echo $code; ?>" <?php echo $sel; ?>><?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="zipCodeFiscal">C.P. Domicilio Fiscal *</label>
+                                    <input type="text" id="zipCodeFiscal" name="zipCodeFiscal" value="<?php echo htmlspecialchars($user['zip_code_fiscal'] ?? ''); ?>" placeholder="Ej: 44100" maxlength="5">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="cfdiUse">Uso de CFDI *</label>
+                                <select id="cfdiUse" name="cfdiUse">
+                                    <?php 
+                                        $uses = SatCatalogs::getCfdiUses();
+                                        $userUse = $user['cfdi_use_default'] ?? 'G03';
+                                        foreach ($uses as $code => $label):
+                                            $sel = ($code === $userUse) ? 'selected' : '';
+                                    ?>
+                                    <option value="<?php echo $code; ?>" <?php echo $sel; ?>><?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- B2B & Volume Special Assistance Banner -->
+                    <div class="form-section" style="background: rgba(34, 197, 94, 0.05); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 8px; padding: 1rem;">
+                        <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+                            <div style="font-size:1.6rem;">📞</div>
+                            <div style="flex:1; min-width:200px;">
+                                <strong style="color:#22c55e; display:block;">¿Compras para Empresa, Escuela o Nueva Ferretería?</strong>
+                                <span style="font-size:0.85rem; color:var(--theme-text-muted);">Para cotizaciones especiales de súper gran volumen o términos B2B, comunícate directo con nuestro equipo.</span>
+                            </div>
+                            <a href="https://wa.me/523312482297?text=Hola,%20requiero%20atenci%C3%B3n%20personalizada%20para%20cotizaci%C3%B3n%20de%20gran%20volumen" target="_blank" class="btn btn-small" style="background:#22c55e; color:#fff; font-weight:700; text-decoration:none; border-radius:6px; padding:6px 12px;">
+                                💬 WhatsApp Preferencial
+                            </a>
+                        </div>
+                    </div>
+
                     <!-- Payment Method -->
                     <div class="form-section">
                         <div class="form-section-title">💳 Método de Pago</div>
                         
+                        <?php if ($isLogged && (float)($user['wallet_balance'] ?? 0) > 0): ?>
+                        <div class="form-group" style="background: rgba(34,197,94,0.1); padding: 0.75rem; border-radius: 6px; border: 1px solid #22c55e; margin-bottom: 0.75rem;">
+                            <label style="cursor:pointer; font-weight:700; color:#22c55e;">
+                                <input type="radio" name="paymentMethod" value="wallet"> 
+                                🟩 Monedero Digital / Crédito en Tienda (Saldo disponible: $<?php echo number_format((float)$user['wallet_balance'], 2); ?> MXN)
+                            </label>
+                        </div>
+                        <?php endif; ?>
+
                         <div class="form-group">
                             <label>
                                 <input type="radio" name="paymentMethod" value="credit_card" checked> 
-                                <strong>Tarjeta de Crédito/Débito</strong>
+                                <strong>Tarjeta de Crédito / Débito</strong>
                             </label>
                         </div>
                         <div class="form-group">
                             <label>
                                 <input type="radio" name="paymentMethod" value="bank_transfer"> 
-                                <strong>Transferencia Bancaria</strong>
+                                <strong>Transferencia Bancaria (SPEI)</strong>
                             </label>
                         </div>
                         <div class="form-group">
                             <label>
                                 <input type="radio" name="paymentMethod" value="on_delivery"> 
-                                <strong>Contra Entrega</strong>
+                                <strong>Pago Contra Entrega / Recojo en Tienda</strong>
                             </label>
                         </div>
                     </div>
@@ -421,7 +552,7 @@ if ($isLogged) {
 
                     <div class="summary-actions">
                         <button type="submit" id="submitBtn" class="btn btn-primary btn-full">✅ Confirmar Pedido</button>
-                        <a href="cart.php" class="btn btn-ghost btn-full" style="text-align: center;"><svg class="arrow-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>Volver al Carrito</a>
+                        <a href="<?php echo $isOnlineMode ? 'cart.php?mode=online' : 'cart.php'; ?>" class="btn btn-ghost btn-full" style="text-align: center;"><svg class="arrow-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>Volver al Carrito</a>
                     </div>
                 </form>
             </div>
@@ -473,13 +604,14 @@ if ($isLogged) {
     <script src="js/modals.js"></script>
     <script>
         window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8"); ?>';
+        const CART_KEY = <?php echo $isOnlineMode ? "'fox_cart'" : "'truper_cart'"; ?>;
 
         // Load cart and populate summary
         function loadCartSummary() {
             try {
-                const cart = JSON.parse(localStorage.getItem('truper_cart') || '[]');
+                const cart = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
                 if (cart.length === 0) {
-                    window.location.href = 'cart.php';
+                    window.location.href = CART_KEY === 'fox_cart' ? 'cart.php?mode=online' : 'cart.php';
                     return;
                 }
 
@@ -487,11 +619,13 @@ if ($isLogged) {
                 let html = '';
 
                 cart.forEach(item => {
-                    const itemTotal = (item.price || 0) * (item.quantity || 1);
+                    const price = Number(item.unit_price || item.price || 0);
+                    const qty = Number(item.quantity || 1);
+                    const itemTotal = price * qty;
                     subtotal += itemTotal;
                     html += `
                         <div class="summary-item">
-                            <div class="summary-item-name">${item.name || 'Producto'} <strong>x${item.quantity || 1}</strong></div>
+                            <div class="summary-item-name">${item.name || 'Producto'} <strong>x${qty}</strong></div>
                             <div class="summary-item-price">$${itemTotal.toFixed(2)}</div>
                         </div>
                     `;
@@ -554,7 +688,13 @@ if ($isLogged) {
                 promoCode: formData.get('promoCode'),
                 orderNotes: formData.get('orderNotes'),
                 paymentMethod: formData.get('paymentMethod'),
-                cartItems: JSON.parse(localStorage.getItem('truper_cart') || '[]')
+                requireInvoice: document.getElementById('requireInvoice')?.checked || false,
+                rfc: formData.get('rfc') || '',
+                taxName: formData.get('taxName') || '',
+                taxRegime: formData.get('taxRegime') || '',
+                zipCodeFiscal: formData.get('zipCodeFiscal') || '',
+                cfdiUse: formData.get('cfdiUse') || 'G03',
+                cartItems: JSON.parse(localStorage.getItem(CART_KEY) || '[]')
             };
 
             // Submit
@@ -573,8 +713,9 @@ if ($isLogged) {
 
                 if (result.success) {
                     // Clear cart and redirect
-                    localStorage.removeItem('truper_cart');
-                    window.location.href = '/order_confirmation.php?order_id=' + result.order_id;
+                    localStorage.removeItem(CART_KEY);
+                    const folioStr = result.folio || result.order_number || result.order_id;
+                    window.location.href = 'order_confirmation.php?folio=' + encodeURIComponent(folioStr);
                 } else {
                     formMessage.innerHTML = '<div class="error-message">❌ ' + (result.message || 'Error al procesar el pedido') + '</div>';
                     submitBtn.disabled = false;

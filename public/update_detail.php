@@ -581,40 +581,56 @@ $whatsappHelpUrl = whatsapp_url('Hola, tengo una duda sobre la publicación: ' .
                 <span></span>
             </button>
             <nav class="nav-menu">
-                <a href="index.php">Productos</a>
+                <a href="index.php">Catálogo</a>
                 <a href="marketplace_ce.php">Marketplace CE</a>
-                <a href="cart.php">Carrito</a>
-                <?php if ($isLogged): ?>
-                    <div class="nav-dropdown">
-                        <button class="nav-dropdown-btn">Mi Cuenta <span class="arrow">▼</span></button>
-                        <div class="nav-dropdown-content">
-                            <a href="dashboard.php">Dashboard</a>
-                            <a href="orders.php">Pedidos</a>
-                            <a href="wholesale.php">Mayoreo</a>
-                            <a href="account.php#historyTab">Historial</a>
-                            <a href="profile.php">Perfil</a>
-                        </div>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Mi Cuenta <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content">
+                        <a href="dashboard.php">Dashboard</a>
+                        <a href="orders.php">Pedidos</a>
+                        <a href="wholesale.php">Mayoreo</a>
+                        <a href="account.php#historyTab">Historial</a>
+                        <a href="profile.php">Perfil</a>
                     </div>
-                <?php endif; ?>
-                <?php if ($isAdmin): ?>
-                    <div class="nav-dropdown">
-                        <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>
-                        <div class="nav-dropdown-content">
-                            <a href="cashier.php">Caja</a>
-                            <a href="admin_supply.php?nocache=true">Abastecimiento</a>
-                            <a href="tickets.php">Tickets</a>
-                            <a href="tasks.php">Tareas</a>
-                            <a href="gastos.php">Gastos</a>
-                            <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
-                                <a href="analytics.php">Estadísticas</a>
-                            <?php endif; ?>
-                        </div>
+                </div>
+                <!-- Dropdowns de Administración Separados -->
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Admin Tienda <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 200px;">
+                        <a href="orders.php">Ventas / Pedidos</a>
+                        <a href="order_tracking.php">Seguimiento / Logística</a>
+                        <a href="rma_manager.php">Devoluciones RMA</a>
                     </div>
+                </div>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Admin Local <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 200px;">
+                        <a href="cashier.php">Caja / Punto de Venta</a>
+                        <a href="b2b_approval.php">Aprobación B2B</a>
+                        <a href="tickets.php">Tickets y Cotizaciones</a>
+                        <a href="ticket_validation.php">Validación de Tickets</a>
+                        <a href="tasks.php">Tareas de Empleados</a>
+                    </div>
+                </div>
+                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Solo Admin <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 220px;">
+                        <a href="admin_supply.php?nocache=true">Abastecimiento / Precios</a>
+                        <a href="accounting_reports.php">Reportes Contables</a>
+                        <a href="gastos.php">Egresos / Gastos</a>
+                        <a href="analytics.php">Estadísticas</a>
+                    </div>
+                </div>
                 <?php endif; ?>
-            </nav>
-            <div class="header-actions">
-                <a href="<?php echo htmlspecialchars($whatsappHelpUrl, ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener" class="btn btn-secondary btn-small">Dudas por WhatsApp</a>
+                </nav>
+        </div>
+        <div class="user-menu">
+            <div class="user-info">
+                <div class="user-name"><?php echo htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8'); ?></div>
+                <div class="user-role"><?php echo ($_SESSION['role'] ?? 'admin') === 'employee' ? 'PERSONAL' : 'ADMIN'; ?></div>
             </div>
+            <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
         </div>
     </header>
 

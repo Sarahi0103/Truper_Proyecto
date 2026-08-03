@@ -718,18 +718,39 @@ $stock = (int)($product['stock_quantity'] ?? 0);
     </style>
 </head>
 <body class="product-detail-page">
+    <?php if ($isOnlineMode): ?>
+    <!-- Barra de regreso — igual que Tienda en Línea -->
+    <div style="background:linear-gradient(90deg,rgba(18,18,24,.98),rgba(10,10,14,.99));border-bottom:1px solid rgba(255,127,0,.2);padding:.5rem 1.4rem;display:flex;align-items:center;gap:1rem;">
+        <a href="/tienda.php" style="display:inline-flex;align-items:center;gap:6px;color:#ff7f00;font-weight:700;font-size:.84rem;text-decoration:none;padding:5px 14px;border:1px solid rgba(255,127,0,.3);border-radius:8px;background:rgba(255,127,0,.07);transition:all .18s;"
+            onmouseenter="this.style.background='rgba(255,127,0,.18)';this.style.borderColor='#ff7f00';this.style.color='#fff'"
+            onmouseleave="this.style.background='rgba(255,127,0,.07)';this.style.borderColor='rgba(255,127,0,.3)';this.style.color='#ff7f00'">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Regresar a la Tienda en Línea
+        </a>
+        <span style="font-size:.73rem;font-weight:700;color:#ff7f00;text-transform:uppercase;letter-spacing:.05em;opacity:.7;">Detalle de Producto</span>
+    </div>
+    <?php endif; ?>
+
 <header>
     <div class="header-content">
-        <a href="index.php" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 42px; width: auto; object-fit: contain;"></a>
-                    <button class="hamburger-btn" aria-label="Toggle menu">
+        <a href="<?php echo $isOnlineMode ? 'tienda.php' : 'index.php'; ?>" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 42px; width: auto; object-fit: contain;"></a>
+            <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
                 <span></span>
             </button>
             <nav class="nav-menu">
-            <a href="index.php">Catálogo</a>
-            <a href="marketplace_ce.php">Marketplace CE</a>
-            <?php if ($isLogged): ?>
+                <?php if ($isOnlineMode): ?>
+                    <a href="tienda.php">Tienda en Línea</a>
+                    <a href="marketplace_ce.php?mode=online">Marketplace CE</a>
+                    <a href="order_tracking.php?mode=online">Seguimiento de Pedido</a>
+                    <a href="cart.php?mode=online">Carrito</a>
+                <?php else: ?>
+                    <a href="index.php">Productos</a>
+                    <a href="marketplace_ce.php">Marketplace CE</a>
+                    <a href="cart.php">Carrito</a>
+                <?php endif; ?>
+            <?php if ($isLogged && !$isOnlineMode): ?>
                 <div class="nav-dropdown">
                     <button class="nav-dropdown-btn">Mi Cuenta <span class="arrow">▼</span></button>
                     <div class="nav-dropdown-content">
@@ -741,20 +762,38 @@ $stock = (int)($product['stock_quantity'] ?? 0);
                     </div>
                 </div>
             <?php endif; ?>
-            <?php if ($isAdmin): ?>
+            <?php if ($isAdmin && !$isOnlineMode): ?>
+                <!-- Dropdowns de Administración Separados -->
                 <div class="nav-dropdown">
-                    <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>
-                    <div class="nav-dropdown-content">
-                        <a href="cashier.php">Caja</a>
-                        <a href="admin_supply.php?nocache=true">Abastecimiento</a>
-                        <a href="tickets.php">Tickets</a>
-                        <a href="tasks.php">Tareas</a>
-                        <a href="gastos.php">Gastos</a>
-                        <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
-                            <a href="analytics.php">Estadísticas</a>
-                        <?php endif; ?>
+                    <button class="nav-dropdown-btn">Admin Tienda <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 200px;">
+                        <a href="orders.php">Ventas / Pedidos</a>
+                        <a href="order_tracking.php">Seguimiento / Logística</a>
+                        <a href="rma_manager.php">Devoluciones RMA</a>
                     </div>
                 </div>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Admin Local <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 200px;">
+                        <a href="cashier.php">Caja / Punto de Venta</a>
+                        <a href="b2b_approval.php">Aprobación B2B</a>
+                        <a href="tickets.php">Tickets y Cotizaciones</a>
+                        <a href="ticket_validation.php">Validación de Tickets</a>
+                        <a href="tasks.php">Tareas de Empleados</a>
+                    </div>
+                </div>
+                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Solo Admin <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 220px;">
+                        <a href="admin_supply.php?nocache=true">Abastecimiento / Precios</a>
+                        <a href="accounting_reports.php">Reportes Contables</a>
+                        <a href="gastos.php">Egresos / Gastos</a>
+                        <a href="analytics.php">Estadísticas</a>
+                    </div>
+                </div>
+                <?php endif; ?>
+                
             <?php endif; ?>
         </nav>
     </div>
@@ -766,16 +805,27 @@ $stock = (int)($product['stock_quantity'] ?? 0);
     <div class="container-fluid">
         <!-- ── Back Button ── -->
         <div class="back-header">
-            <button onclick="history.back()" class="btn-back btn-back-dark btn-back-as-button">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M19 12H5M12 19l-7-7 7-7"/>
-                </svg>
-                Regresar
-            </button>
+            <?php if ($isOnlineMode): ?>
+                <a href="/tienda.php" style="display:inline-flex; align-items:center; gap:6px; color:#ff7f00; font-weight:700; font-size:.85rem; text-decoration:none; padding:8px 20px; border:1px solid rgba(255,127,0,.25); border-radius:30px; background:rgba(255,127,0,.08); transition:all .18s; cursor:pointer;"
+                    onmouseenter="this.style.background='rgba(255,127,0,.18)';this.style.borderColor='#ff7f00';this.style.color='#fff'"
+                    onmouseleave="this.style.background='rgba(255,127,0,.08)';this.style.borderColor='rgba(255,127,0,.25)';this.style.color='#ff7f00'">
+                    ← Regresar a la Tienda
+                </a>
+            <?php else: ?>
+                <button onclick="history.back()" style="display:inline-flex; align-items:center; gap:6px; color:#ff7f00; font-weight:700; font-size:.85rem; text-decoration:none; padding:8px 20px; border:1px solid rgba(255,127,0,.25); border-radius:30px; background:rgba(255,127,0,.08); transition:all .18s; cursor:pointer;"
+                    onmouseenter="this.style.background='rgba(255,127,0,.18)';this.style.borderColor='#ff7f00';this.style.color='#fff'"
+                    onmouseleave="this.style.background='rgba(255,127,0,.08)';this.style.borderColor='rgba(255,127,0,.25)';this.style.color='#ff7f00'">
+                    ← Regresar
+                </button>
+            <?php endif; ?>
         </div>
 
         <div class="breadcrumb">
-            <a href="index.php">Catálogo</a>
+            <?php if ($isOnlineMode): ?>
+                <a href="tienda.php">Tienda en Línea</a>
+            <?php else: ?>
+                <a href="index.php">Catálogo</a>
+            <?php endif; ?>
             <span>/</span>
             <span><?php echo htmlspecialchars($productCategory !== '' ? $productCategory : 'General', ENT_QUOTES, 'UTF-8'); ?></span>
             <span>/</span>
@@ -879,7 +929,7 @@ $stock = (int)($product['stock_quantity'] ?? 0);
                         <?php echo $stock <= 0 ? 'disabled' : ''; ?>>
                         <?php echo $stock <= 0 ? 'Producto Agotado' : 'Agregar al Carrito'; ?>
                     </button>
-                    <a href="cart.php" class="btn btn-secondary">Ver carrito</a>
+                    <a href="<?php echo $isOnlineMode ? 'cart.php?mode=online' : 'cart.php'; ?>" class="btn btn-secondary">Ver carrito</a>
                 </div>
             </div>
         </div>

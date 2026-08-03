@@ -4,6 +4,7 @@ require_once '../config/config.php';
 $isLogged = isset($_SESSION['user_id']);
 $isAdmin = $isLogged && (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee');
 $is_admin = $isAdmin;
+$isOnlineMode = ($_GET['mode'] ?? '') === 'online';
 
 $clientTicketCode = 'PUBLICO';
 if ($isLogged && db_column_exists('users', 'user_code')) {
@@ -402,20 +403,41 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
             .cart-item-image { width: 70px !important; height: 70px !important; }
         }
     </style>
-</head>
-<body class="catalog-minimal">
+</head><body class="catalog-minimal">
+    <?php if ($isOnlineMode): ?>
+    <!-- Barra de regreso — igual que Tienda en Línea -->
+    <div style="background:linear-gradient(90deg,rgba(18,18,24,.98),rgba(10,10,14,.99));border-bottom:1px solid rgba(255,127,0,.2);padding:.5rem 1.4rem;display:flex;align-items:center;gap:1rem;">
+        <a href="tienda.php" style="display:inline-flex;align-items:center;gap:6px;color:#ff7f00;font-weight:700;font-size:.84rem;text-decoration:none;padding:5px 14px;border:1px solid rgba(255,127,0,.3);border-radius:8px;background:rgba(255,127,0,.07);transition:all .18s;"
+            onmouseenter="this.style.background='rgba(255,127,0,.18)';this.style.borderColor='#ff7f00';this.style.color='#fff'"
+            onmouseleave="this.style.background='rgba(255,127,0,.07)';this.style.borderColor='rgba(255,127,0,.3)';this.style.color='#ff7f00'">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Regresar a la Tienda en Línea
+        </a>
+        <span style="font-size:.73rem;font-weight:700;color:#ff7f00;text-transform:uppercase;letter-spacing:.05em;opacity:.7;">Carrito de Tienda en Línea</span>
+    </div>
+    <?php endif; ?>
+
     <header>
         <div class="header-content">
-            <a href="index.php" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 42px; width: auto; object-fit: contain;"></a>
-                        <button class="hamburger-btn" aria-label="Toggle menu">
+            <a href="<?php echo $isOnlineMode ? 'tienda.php' : 'index.php'; ?>" class="logo"><img src="img/logo_fox.png" alt="Ferretería FOX" style="height: 42px; width: auto; object-fit: contain;"></a>
+            <button class="hamburger-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
                 <span></span>
             </button>
             <nav class="nav-menu">
-                <a href="index.php">Catálogo</a>
-                <a href="marketplace_ce.php">Marketplace CE</a>
-                <?php if ($isLogged): ?>
+                <?php if ($isOnlineMode): ?>
+                    <a href="tienda.php">Tienda en Línea</a>
+                    <a href="marketplace_ce.php?mode=online">Marketplace CE</a>
+                    <a href="order_tracking.php?mode=online">Seguimiento de Pedido</a>
+                    <a href="cart.php?mode=online" class="active">Carrito</a>
+                <?php else: ?>
+                    <a href="index.php">Productos</a>
+                    <a href="marketplace_ce.php">Marketplace CE</a>
+                    <a href="cart.php" class="active">Carrito</a>
+                <?php endif; ?>
+
+                <?php if ($isLogged && !$isOnlineMode): ?>
                     <div class="nav-dropdown">
                         <button class="nav-dropdown-btn">Mi Cuenta <span class="arrow">▼</span></button>
                         <div class="nav-dropdown-content">
@@ -427,26 +449,45 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                         </div>
                     </div>
                 <?php endif; ?>
-                <?php if ($is_admin): ?>
-                    <div class="nav-dropdown">
-                        <button class="nav-dropdown-btn">Administración <span class="arrow">▼</span></button>
-                        <div class="nav-dropdown-content">
-                            <a href="cashier.php">Caja</a>
-                            <a href="admin_supply.php?nocache=true">Abastecimiento</a>
-                            <a href="tickets.php">Tickets</a>
-                            <a href="tasks.php">Tareas</a>
-                            <a href="gastos.php">Gastos</a>
-                            <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
-                                <a href="analytics.php">Estadísticas</a>
-                            <?php endif; ?>
-                        </div>
+                <?php if ($is_admin && !$isOnlineMode): ?>
+                    <!-- Dropdowns de Administración Separados -->
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Admin Tienda <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 200px;">
+                        <a href="orders.php">Ventas / Pedidos</a>
+                        <a href="order_tracking.php">Seguimiento / Logística</a>
+                        <a href="rma_manager.php">Devoluciones RMA</a>
                     </div>
+                </div>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Admin Local <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 200px;">
+                        <a href="cashier.php">Caja / Punto de Venta</a>
+                        <a href="b2b_approval.php">Aprobación B2B</a>
+                        <a href="tickets.php">Tickets y Cotizaciones</a>
+                        <a href="ticket_validation.php">Validación de Tickets</a>
+                        <a href="tasks.php">Tareas de Empleados</a>
+                    </div>
+                </div>
+                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn">Solo Admin <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 220px;">
+                        <a href="admin_supply.php?nocache=true">Abastecimiento / Precios</a>
+                        <a href="accounting_reports.php">Reportes Contables</a>
+                        <a href="gastos.php">Egresos / Gastos</a>
+                        <a href="analytics.php">Estadísticas</a>
+                    </div>
+                </div>
+                <?php endif; ?>
+                
                 <?php endif; ?>
             </nav>
             <div class="header-actions">
-
-                <a href="https://wa.me/<?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?>?text=Hola%2C+tengo+una+duda+sobre+mi+carrito+y+cotizaciones." target="_blank" rel="noopener" class="btn btn-secondary btn-small">Dudas por WhatsApp</a>
-                <?php if (!$isLogged): ?>
+                <?php if (!empty(whatsapp_phone_digits())): ?>
+                <a href="https://wa.me/<?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?>?text=Hola%2C+tengo+una+duda+sobre+mi+carrito." target="_blank" rel="noopener" class="btn btn-secondary btn-small">Dudas por WhatsApp</a>
+                <?php endif; ?>
+                <?php if (!$isLogged && !$isOnlineMode): ?>
                     <a href="admin_login.php" class="btn btn-primary btn-small">Solo para administradores</a>
                 <?php endif; ?>
             </div>
@@ -456,17 +497,55 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
     <main class="cart-page">
         <!-- ── Back Button ── -->
         <div class="back-header">
-            <button onclick="history.back()" class="btn-back btn-back-dark btn-back-as-button">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M19 12H5M12 19l-7-7 7-7"/>
-                </svg>
-                Regresar
-            </button>
+            <?php if ($isOnlineMode): ?>
+                <a href="/tienda.php" class="btn-back btn-back-dark" style="text-decoration:none; display:inline-flex; align-items:center;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg> Regresar a la Tienda
+                </a>
+            <?php else: ?>
+                <button onclick="history.back()" style="display:inline-flex; align-items:center; gap:6px; color:#ff7f00; font-weight:700; font-size:.85rem; text-decoration:none; padding:8px 20px; border:1px solid rgba(255,127,0,.25); border-radius:30px; background:rgba(255,127,0,.08); transition:all .18s; cursor:pointer;"
+                    onmouseenter="this.style.background='rgba(255,127,0,.18)';this.style.borderColor='#ff7f00';this.style.color='#fff'"
+                    onmouseleave="this.style.background='rgba(255,127,0,.08)';this.style.borderColor='rgba(255,127,0,.25)';this.style.color='#ff7f00'">
+                    ← Regresar
+                </button>
+            <?php endif; ?>
         </div>
 
-        <div class="cart-page-header">
+        <div class="cart-page-header" style="margin-bottom: 1.5rem;">
             <h1 class="cart-page-title">🛒 Mi Carrito</h1>
+            
+            <?php if ($isOnlineMode): ?>
+            <!-- Pasos de Compra -->
+            <div class="checkout-steps" style="display:flex; justify-content:center; align-items:center; gap:1.2rem; padding:0.4rem 1rem; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:30px;">
+                <div class="step active" style="display:flex; align-items:center; gap:6px;">
+                    <span style="width:20px; height:20px; border-radius:50%; background:#ff7f00; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">1</span>
+                    <span style="font-weight:700; color:#fff; font-size:0.8rem;">Carrito</span>
+                </div>
+                <div style="width:20px; height:1px; background:rgba(255,255,255,0.15);"></div>
+                <div class="step" style="display:flex; align-items:center; gap:6px; opacity:0.45;">
+                    <span style="width:20px; height:20px; border-radius:50%; background:#1a1a24; border:1px solid rgba(255,255,255,0.2); color:#aaa; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">2</span>
+                    <span style="font-weight:600; color:#aaa; font-size:0.8rem;">Envío</span>
+                </div>
+                <div style="width:20px; height:1px; background:rgba(255,255,255,0.15);"></div>
+                <div class="step" style="display:flex; align-items:center; gap:6px; opacity:0.45;">
+                    <span style="width:20px; height:20px; border-radius:50%; background:#1a1a24; border:1px solid rgba(255,255,255,0.2); color:#aaa; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">3</span>
+                    <span style="font-weight:600; color:#aaa; font-size:0.8rem;">Pago</span>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
+
+        <!-- Banner de Reserva Temporal de Stock (15 Minutos) -->
+        <?php if ($isOnlineMode): ?>
+        <div style="background: rgba(255,127,0,0.08); border: 1px solid rgba(255,127,0,0.25); border-radius: 12px; padding: 0.85rem 1.25rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display:flex; align-items:center; gap:0.6rem; color:#fff; font-size:0.9rem; font-weight:600;">
+                <span>⏳ Reserva de Stock en Almacén:</span>
+                <span id="reservationTimer" style="color:var(--theme-accent, #ff7f00); font-family:monospace; font-size:1.15rem; font-weight:800;">14:59</span>
+            </div>
+            <div style="font-size:0.82rem; color:#aaa;">Tus productos están apartados temporalmente por 15 minutos.</div>
+        </div>
+        <?php endif; ?>
 
         <div class="cart-container">
             <div class="cart-items-section">
@@ -477,22 +556,46 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                 <div class="summary-title">Resumen de Carrito</div>
                 <div class="summary-row">
                     <span>Subtotal:</span>
-                    <span id="cartSubtotal">$0</span>
+                    <span id="cartSubtotal">$0.00</span>
                 </div>
                 <div class="summary-row">
                     <span>Artículos:</span>
-                    <span id="cartItems">0</span>
+                    <span id="cartItemsCount">0</span>
                 </div>
                 <div class="summary-total">
                     <span>Total:</span>
-                    <span id="cartTotalAmount">$0</span>
+                    <span id="cartTotalAmount">$0.00</span>
                 </div>
                 <div class="summary-actions">
-                    <button id="printTicket" class="btn btn-primary btn-full">⬇️ Enviar cotización</button>
-                    <button id="shareWhatsApp" class="btn btn-secondary btn-full"
-                            data-company-whatsapp="<?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?>"
-                            data-client-code="<?php echo htmlspecialchars($clientTicketCode ?? 'PUBLICO', ENT_QUOTES, 'UTF-8'); ?>">📱 Enviar cotización por WhatsApp</button>
-                    <button id="clearCart" class="btn btn-ghost btn-full">🗑️ Vaciar Carrito</button>
+                    <?php if ($isOnlineMode): ?>
+                        <a href="checkout.php?mode=online" class="btn btn-primary btn-full" style="background:linear-gradient(135deg, #ff7f00, #ff5500); color:#fff; font-weight:800; text-align:center; text-decoration:none; padding:14px; border-radius:8px; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:0.75rem; font-size:1.05rem; box-shadow:0 4px 15px rgba(255,102,0,0.3); border:none; text-transform:uppercase; letter-spacing:0.04em;">
+                            🔒 Proceder al Pago
+                        </a>
+                        <!-- Sellos de Confianza -->
+                        <div style="margin-top:1.2rem; border-top:1px solid rgba(255,255,255,0.06); padding-top:1.2rem; display:flex; flex-direction:column; gap:0.75rem; text-align:left;">
+                            <div style="display:flex; align-items:flex-start; gap:8px; font-size:0.78rem; color:#aaa; line-height:1.4;">
+                                <span style="font-size:1rem; line-height:1;">🛡️</span>
+                                <span><strong>Pago 100% Seguro:</strong> Cifrado de datos y protección SSL en tu transacción.</span>
+                            </div>
+                            <div style="display:flex; align-items:flex-start; gap:8px; font-size:0.78rem; color:#aaa; line-height:1.4;">
+                                <span style="font-size:1rem; line-height:1;">🚚</span>
+                                <span><strong>Envíos a Domicilio:</strong> Entrega garantizada en la dirección proporcionada.</span>
+                            </div>
+                            <div style="display:flex; align-items:flex-start; gap:8px; font-size:0.78rem; color:#aaa; line-height:1.4;">
+                                <span style="font-size:1rem; line-height:1;">✨</span>
+                                <span><strong>Garantía Ferretería FOX:</strong> Satisfacción asegurada o cambio de producto.</span>
+                            </div>
+                        </div>
+                    <?php else: ?>
+                        <!-- Carrito del Catálogo Principal Local -->
+                        <button id="printTicket" class="btn btn-primary btn-full" style="background:var(--theme-accent, #ff6600); color:#fff; font-weight:700; text-align:center; padding:12px; border-radius:8px; border:none; width:100%; display:block; margin-bottom:0.75rem; cursor:pointer; font-size:1rem; display:inline-flex; align-items:center; justify-content:center; gap:0.4rem;">⬇️ Enviar cotización</button>
+                        
+                        <button id="shareWhatsApp" class="btn btn-secondary btn-full"
+                                style="background:#1e1e24; color:#fff; font-weight:600; text-align:center; padding:11px; border-radius:8px; border:1px solid #333; display:block; width:100%; margin-bottom:0.75rem; cursor:pointer; font-size:0.92rem; display:inline-flex; align-items:center; justify-content:center; gap:0.4rem;"
+                                data-company-whatsapp="<?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?>"
+                                data-client-code="<?php echo htmlspecialchars($clientTicketCode ?? 'PUBLICO', ENT_QUOTES, 'UTF-8'); ?>">📱 Enviar cotización por WhatsApp</button>
+                    <?php endif; ?>
+                    <button id="clearCart" class="btn btn-ghost btn-full" style="background:transparent; border:none; color:#888; text-align:center; padding:10px; cursor:pointer; display:block; width:100%; font-size:0.9rem; margin-top:0.5rem; display:inline-flex; align-items:center; justify-content:center; gap:0.3rem;">🗑️ Vaciar Carrito</button>
                 </div>
             </div>
         </div>
@@ -510,6 +613,8 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
     </script>
     <script src="js/catalog.js"></script>
     <script>
+        const CART_KEY = <?php echo $isOnlineMode ? "'fox_cart'" : "'truper_cart'"; ?>;
+
         function decodeCartText(value) {
             let result = String(value || '');
             if (!result) return '';
@@ -527,7 +632,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
 
         function getStoredCart() {
             try {
-                return JSON.parse(localStorage.getItem('truper_cart') || '[]');
+                return JSON.parse(localStorage.getItem(CART_KEY) || '[]');
             } catch (_) {
                 return [];
             }
@@ -583,7 +688,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                 });
 
                 if (changed) {
-                    localStorage.setItem('truper_cart', JSON.stringify(nextCart));
+                    localStorage.setItem(CART_KEY, JSON.stringify(nextCart));
                     return nextCart;
                 }
             } catch (_) {
@@ -595,20 +700,25 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
 
         function renderCartPage(cart = getStoredCart()) {
             const cartList = document.getElementById('cartList');
+            if (!cartList) return;
 
             if (cart.length === 0) {
                 cartList.innerHTML = `
                     <div class="cart-empty">
                         <div class="cart-empty-icon">🛒</div>
                         <p class="cart-empty-text">Tu carrito está vacío</p>
-                        <a href="index.php" class="btn btn-primary cart-empty-btn">Ir al Catálogo</a>
+                        <a href="<?php echo $isOnlineMode ? 'tienda.php' : 'index.php'; ?>" class="btn btn-primary cart-empty-btn"><?php echo $isOnlineMode ? 'Explorar Tienda en Línea' : 'Ir al Catálogo'; ?></a>
                     </div>
                 `;
                 updateSummary(cart);
                 return;
             }
 
-            cartList.innerHTML = cart.map((item, idx) => `
+            cartList.innerHTML = cart.map((item, idx) => {
+                const price = Number(item.unit_price || item.price || 0);
+                const qty = Number(item.quantity || 1);
+                const lineTotal = price * qty;
+                return `
                 <div class="cart-item">
                     <div class="cart-item-image">
                         <img src="${item.image_url || 'images/products/default-product.svg'}" alt="${decodeCartText(item.name)}" onerror="this.src='images/products/default-product.svg'">
@@ -616,29 +726,29 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                     <div class="cart-item-details">
                         <p class="cart-item-name">${decodeCartText(item.name)}</p>
                         <span class="cart-item-sku">SKU: ${String(item.sku || '').replace(/^XLS-/i, '')}</span>
-                        <span class="cart-item-price">$${Number(item.unit_price).toFixed(2)}</span>
+                        <span class="cart-item-price">$${price.toFixed(2)} x ${qty} = <strong style="color:#fff;">$${lineTotal.toFixed(2)}</strong></span>
                     </div>
                     <div class="cart-item-actions">
                         <div class="qty-control">
                             <button class="qty-btn" onclick="changeCartQty('${item.sku}', -1)">−</button>
-                            <input type="number" class="qty-input" value="${item.quantity}" onchange="setCartQty('${item.sku}', this.value)" min="1">
+                            <input type="number" class="qty-input" value="${qty}" onchange="setCartQty('${item.sku}', this.value)" min="1">
                             <button class="qty-btn" onclick="changeCartQty('${item.sku}', 1)">+</button>
                         </div>
                         <button class="remove-btn" onclick="removeFromCart('${item.sku}')">✕</button>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
 
             updateSummary(cart);
         }
 
         function updateSummary(cart = getStoredCart()) {
             const items = cart.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-            const total = cart.reduce((sum, item) => sum + (Number(item.unit_price || 0) * Number(item.quantity || 0)), 0);
+            const total = cart.reduce((sum, item) => sum + (Number(item.unit_price || item.price || 0) * Number(item.quantity || 0)), 0);
 
-            document.getElementById('cartItems').textContent = items;
-            document.getElementById('cartSubtotal').textContent = '$' + total.toFixed(2);
-            document.getElementById('cartTotalAmount').textContent = '$' + total.toFixed(2);
+            if (document.getElementById('cartItemsCount')) document.getElementById('cartItemsCount').textContent = items;
+            if (document.getElementById('cartSubtotal')) document.getElementById('cartSubtotal').textContent = '$' + total.toFixed(2);
+            if (document.getElementById('cartTotalAmount')) document.getElementById('cartTotalAmount').textContent = '$' + total.toFixed(2);
         }
 
         function changeCartQty(sku, delta) {
@@ -646,7 +756,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
             const item = cart.find(p => p.sku === sku);
             if (item) {
                 item.quantity = Math.max(1, Number(item.quantity || 1) + delta);
-                localStorage.setItem('truper_cart', JSON.stringify(cart));
+                localStorage.setItem(CART_KEY, JSON.stringify(cart));
                 renderCartPage();
             }
         }
@@ -656,7 +766,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
             const item = cart.find(p => p.sku === sku);
             if (item) {
                 item.quantity = Math.max(1, Number(qty) || 1);
-                localStorage.setItem('truper_cart', JSON.stringify(cart));
+                localStorage.setItem(CART_KEY, JSON.stringify(cart));
                 renderCartPage();
             }
         }
@@ -668,7 +778,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
             confirmDelete(itemName, function() {
                 const nextCart = getStoredCart(); // refresh in case it changed
                 const filtered = nextCart.filter(p => p.sku !== sku);
-                localStorage.setItem('truper_cart', JSON.stringify(filtered));
+                localStorage.setItem(CART_KEY, JSON.stringify(filtered));
                 renderCartPage();
             });
         }
@@ -679,12 +789,75 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                 '¿Estás seguro de que deseas vaciar todo el carrito? Esta acción no se puede deshacer.',
                 '🗑️',
                 function() {
-                    localStorage.removeItem('truper_cart');
+                    localStorage.removeItem(CART_KEY);
                     renderCartPage();
                 }
             );
         });
         });
+
+        // 15-Minute Cart Reservation Countdown
+        (function startReservationCountdown() {
+            let totalSeconds = 15 * 60;
+            const timerEl = document.getElementById('reservationTimer');
+            if (!timerEl) return;
+
+            setInterval(() => {
+                if (totalSeconds <= 0) {
+                    timerEl.textContent = '00:00 (Expirado)';
+                    timerEl.style.color = '#ef4444';
+                    return;
+                }
+                totalSeconds--;
+                const mins = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+                const secs = String(totalSeconds % 60).padStart(2, '0');
+                timerEl.textContent = `${mins}:${secs}`;
+            }, 1000);
+        })();
+
+        // Project List Importer
+        function promptProjectListImport() {
+            const raw = prompt("Pega aquí tu lista de materiales o SKU de proyecto (Ejemplo: FOX-101 x2, FOX-205 x5):");
+            if (!raw || !raw.trim()) return;
+
+            let cart = getStoredCart();
+            const lines = raw.split(/\r?\n|,|;/);
+            let addedCount = 0;
+
+            lines.forEach((line, idx) => {
+                const cleaned = line.trim();
+                if (!cleaned) return;
+
+                const match = cleaned.match(/([A-Za-z0-9\-]+)\s*(?:x|\*|:)?\s*(\d+)?/i);
+                if (match) {
+                    const sku = match[1].toUpperCase();
+                    const qty = parseInt(match[2] || '1', 10);
+
+                    const existing = cart.find(item => item.sku === sku || item.name.toUpperCase().includes(sku));
+                    if (existing) {
+                        existing.quantity += qty;
+                    } else {
+                        cart.push({
+                            id: Date.now() + idx,
+                            name: `Material SKU ${sku}`,
+                            sku: sku,
+                            quantity: qty,
+                            unit_price: 120.00,
+                            image_url: 'img/no-image.png'
+                        });
+                    }
+                    addedCount++;
+                }
+            });
+
+            if (addedCount > 0) {
+                localStorage.setItem(CART_KEY, JSON.stringify(cart));
+                renderCartPage();
+                alert(`✅ Se procesaron e importaron ${addedCount} elemento(s) a tu carrito.`);
+            } else {
+                alert("No se identificaron códigos SKU válidos en el texto ingresado.");
+            }
+        }
 
         document.addEventListener('DOMContentLoaded', async function() {
             const cart = await hydrateCartImages();

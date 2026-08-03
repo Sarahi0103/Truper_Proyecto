@@ -10,7 +10,7 @@
         "ext-json": "*"
     },
     "scripts": {
-        "start": "php -S localhost:8000",
+        "start": "php -S localhost:8000 -t public",
         "install-db": "psql -U truper_admin -d truper_platform -f database.sql"
     },
     "keywords": [

@@ -254,24 +254,41 @@ try {
 
     // Post-commit actions (non-critical, outside transaction)
 
-    // Trigger automatic ticket generation
+    // Fetch generated ticket folio
+    $ticketFolio = $orderNumber;
     try {
-        require_once __DIR__ . '/../../backend/hooks/ticket_hooks.php';
-        onOrderCompleted($orderId);
-    } catch (Exception $e) {
-        error_log("Error al crear ticket automático desde checkout: " . $e->getMessage());
-    }
+        $tStmt = $pdo->prepare("SELECT folio FROM sales_tickets WHERE order_id = ? LIMIT 1");
+        $tStmt->execute([$orderId]);
+        $foundFolio = $tStmt->fetchColumn();
+        if ($foundFolio) {
+            $ticketFolio = $foundFolio;
+        }
 
-    // Log action
-    try {
-        log_action(
-            $userId,
-            'order_created',
-            $isGuest ? ('Pedido creado desde checkout (Invitado): ' . $orderNumber) : ('Pedido creado desde checkout: ' . $orderNumber),
-            $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'
-        );
+        // Save fiscal and shipping info in sales_tickets
+        $addressJson = json_encode([
+            'address' => $input['address'] ?? '',
+            'city' => $input['city'] ?? '',
+            'postalCode' => $input['postalCode'] ?? ''
+        ]);
+        $invReq = !empty($input['requireInvoice']);
+
+        $stUpdate = $pdo->prepare("UPDATE sales_tickets SET invoice_required = ?, cfdi_use = ?, tax_regime_selected = ?, shipping_address_json = ?, order_status = 'in_preparation' WHERE folio = ? OR order_id = ?");
+        $stUpdate->execute([
+            $invReq ? 1 : 0,
+            $input['cfdiUse'] ?? 'G03',
+            $input['taxRegime'] ?? '',
+            $addressJson,
+            $ticketFolio,
+            $orderId
+        ]);
+
+        // Create log entry in order_tracking_history
+        try {
+            $logIns = $pdo->prepare("INSERT INTO order_tracking_history (order_folio, status, notes, changed_by) VALUES (?, 'in_preparation', 'Pedido registrado y pago validado en checkout', ?)");
+            $logIns->execute([$ticketFolio, $_SESSION['name'] ?? 'Cliente']);
+        } catch (Exception $ignored) {}
     } catch (Exception $e) {
-        error_log("Error al registrar log de checkout: " . $e->getMessage());
+        error_log("Error updating sales_ticket fiscal info: " . $e->getMessage());
     }
 
     // Prepare response
@@ -280,7 +297,8 @@ try {
         'message' => 'Pedido creado exitosamente',
         'order_id' => $orderId,
         'order_number' => $orderNumber,
-        'redirect' => '/order_confirmation.php?order_id=' . $orderId
+        'folio' => $ticketFolio,
+        'redirect' => '/order_confirmation.php?folio=' . urlencode($ticketFolio)
     ]);
 
 } catch (Exception $e) {
