@@ -191,32 +191,42 @@ try {
         <!-- ══════════════════════════════════════════════════════ -->
         <!-- VISTA PÚBLICA: sólo busqueda por número de seguimiento -->
         <!-- ══════════════════════════════════════════════════════ -->
-        <div style="max-width:620px;margin:2.5rem auto;padding:0 1.2rem;">
-            <div style="text-align:center;margin-bottom:2rem;">
-                <div style="font-size:3rem;margin-bottom:.6rem;">📦</div>
-                <h1 style="font-size:1.7rem;font-weight:800;color:#fff;margin:0 0 .4rem;">Seguimiento de Pedido</h1>
-                <p style="color:#888899;font-size:.96rem;">Ingresa tu folio de pedido para consultar el estado de tu envío en tiempo real.</p>
+        <div style="max-width:550px;margin:4rem auto;padding:0 1.2rem;">
+            <div style="text-align:center;margin-bottom:2.2rem;">
+                <div style="display: inline-flex; align-items: center; justify-content: center; width: 72px; height: 72px; border-radius: 50%; background: rgba(255, 127, 0, 0.08); border: 1px solid rgba(255, 127, 0, 0.25); color: #ff7f00; margin-bottom: 1.25rem; box-shadow: 0 8px 30px rgba(255, 127, 0, 0.12); transition: all 0.3s ease;">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(255,127,0,0.25));">
+                        <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/>
+                        <circle cx="12" cy="10" r="3"/>
+                    </svg>
+                </div>
+                <h1 style="font-size:1.9rem;font-weight:900;color:#fff;margin:0 0 .5rem;letter-spacing:-0.02em;">Seguimiento de Pedido</h1>
+                <p style="color:#a0a0b0;font-size:.96rem;line-height:1.4;">Ingresa tu folio de pedido para consultar el estado de tu envío en tiempo real.</p>
             </div>
 
-            <div style="background:#111116;border:1px solid #22222a;border-radius:16px;padding:2rem;box-shadow:0 10px 40px rgba(0,0,0,.35);">
-                <label style="display:block;font-size:.82rem;font-weight:700;color:#aaaab8;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.5rem;">Número de Folio / Ticket</label>
-                <div style="display:flex;gap:.6rem;">
+            <div style="background: rgba(255,255,255,0.02); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 20px; padding: 2.25rem 2rem; box-shadow: 0 20px 50px rgba(0,0,0,.5);">
+                <label style="display:block;font-size:.78rem;font-weight:800;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.6rem;">Número de Folio / Ticket</label>
+                <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
                     <input type="text" id="guestFolioInput"
-                        placeholder="Ej: FOX-2026-884912 o TKT-12345"
-                        style="flex:1;background:#181820;border:1px solid #2e2e3a;color:#fff;padding:.8rem 1rem;border-radius:10px;font-size:1rem;outline:none;transition:border-color .2s;"
-                        onfocus="this.style.borderColor='#ff7f00'" onblur="this.style.borderColor='#2e2e3a'"
-                        onkeydown="if(event.key==='Enter') searchGuestOrder()">
+                           placeholder="Ej: FOX-2026-884912 o TKT-12345"
+                           style="flex:1;min-width:200px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);color:#fff;padding:.85rem 1.1rem;border-radius:12px;font-size:0.98rem;outline:none;transition:all .3s cubic-bezier(0.4, 0, 0.2, 1);box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);"
+                           onfocus="this.style.borderColor='#ff7f00'; this.style.boxShadow='0 0 10px rgba(255,127,0,0.25), inset 0 2px 4px rgba(0,0,0,0.1)'" 
+                           onblur="this.style.borderColor='rgba(255,255,255,0.1)'; this.style.boxShadow='inset 0 2px 4px rgba(0,0,0,0.2)'"
+                           onkeydown="if(event.key==='Enter') searchGuestOrder()">
                     <button onclick="searchGuestOrder()"
-                        style="background:linear-gradient(135deg,#ff7f00,#e06900);color:#fff;border:none;padding:.8rem 1.4rem;border-radius:10px;font-size:.95rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:opacity .2s;"
-                        onmouseenter="this.style.opacity='.85'" onmouseleave="this.style.opacity='1'">
+                            style="background:linear-gradient(135deg,#ff8f00,#e05c00);color:#fff;border:none;padding:.85rem 1.8rem;border-radius:12px;font-size:.95rem;font-weight:800;cursor:pointer;white-space:nowrap;transition:all .3s cubic-bezier(0.175, 0.885, 0.32, 1.275);box-shadow: 0 4px 15px rgba(255,127,0,0.3);"
+                            onmouseenter="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 20px rgba(255,127,0,0.45)'" 
+                            onmouseleave="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(255,127,0,0.3)'">
                         Consultar
                     </button>
                 </div>
-                <div id="guestFolioResult" style="margin-top:1.25rem;"></div>
+                <div id="guestFolioResult" style="margin-top:1.5rem;"></div>
             </div>
 
-            <p style="text-align:center;color:#555;font-size:.82rem;margin-top:1.5rem;">
-                <a href="/index.php" style="color:#ff7f00;text-decoration:none;">← Volver al catálogo principal</a>
+            <p style="text-align:center;margin-top:2rem;">
+                <a href="/tienda.php" style="color:rgba(255,127,0,0.85);text-decoration:none;font-weight:700;font-size:0.88rem;display:inline-flex;align-items:center;gap:6px;transition:color .2s;"
+                   onmouseenter="this.style.color='#ff7f00'" onmouseleave="this.style.color='rgba(255,127,0,0.85)'">
+                    ← Volver al catálogo principal
+                </a>
             </p>
         </div>
 
