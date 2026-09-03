@@ -147,6 +147,7 @@ try {
                         <a href="orders.php">Ventas / Pedidos</a>
                         <a href="order_tracking.php">Seguimiento / Logística</a>
                         <a href="rma_manager.php">Devoluciones RMA</a>
+                        <a href="admin_online_billing.php">Facturación & Pagos SAT</a>
                     </div>
                 </div>
                 <div class="nav-dropdown">
@@ -187,9 +188,9 @@ try {
 
        <main class="tracking-container">
 
-        <?php if (!$isLogged || $isOnlineMode): ?>
+        <?php if (!$isAdmin && (!$isLogged || $isOnlineMode)): ?>
         <!-- ══════════════════════════════════════════════════════ -->
-        <!-- VISTA PÚBLICA: sólo busqueda por número de seguimiento -->
+        <!-- VISTA PÚBLICA / INVITADO: sólo búsqueda por folio     -->
         <!-- ══════════════════════════════════════════════════════ -->
         <div style="max-width:550px;margin:4rem auto;padding:0 1.2rem;">
             <div style="text-align:center;margin-bottom:2.2rem;">
@@ -256,15 +257,23 @@ try {
         </div>
 
         <div class="filters-card">
-            <div class="grid-filters">
+            <div class="grid-filters" style="grid-template-columns: 2fr 1.2fr 1.2fr 1fr;">
                 <div class="form-group">
                     <label>Búsqueda</label>
                     <input type="text" id="searchInput" placeholder="Folio (FOX-2026-...), cliente o código..." oninput="loadTrackingOrders()">
                 </div>
                 <div class="form-group">
+                    <label>Canal de Venta</label>
+                    <select id="channelFilter" onchange="loadTrackingOrders()">
+                        <option value="all">🌐🏬 Todos los Canales</option>
+                        <option value="pos">🏬 Tienda Local (Mostrador)</option>
+                        <option value="online">🌐 Tienda en Línea (Web)</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label>Estatus</label>
                     <select id="statusFilter" onchange="loadTrackingOrders()">
-                        <option value="">Todos</option>
+                        <option value="">Todos los Estatus</option>
                         <option value="in_preparation">En Preparación</option>
                         <option value="packed">Empacado</option>
                         <option value="in_transit">En Ruta</option>
@@ -285,12 +294,12 @@ try {
             <div style="overflow-x:auto;">
                 <table>
                     <thead><tr>
-                        <th>Folio Único</th><th>Cliente</th><th>Fecha</th>
+                        <th>Folio Único</th><th>Canal</th><th>Cliente</th><th>Fecha</th>
                         <th>Monto</th><th>Comprobante</th><th>Estatus</th>
                         <th style="text-align:center;">Acciones</th>
                     </tr></thead>
                     <tbody id="ordersTableBody">
-                        <tr><td colspan="7" style="text-align:center;padding:3rem;" class="text-muted">Cargando pedidos...</td></tr>
+                        <tr><td colspan="8" style="text-align:center;padding:3rem;" class="text-muted">Cargando pedidos...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -333,6 +342,17 @@ try {
         </div>
     </div>
 
+    <!-- MODAL TRACKING DE ENVÍO -->
+    <div id="shippingTrackingModal" class="log-modal">
+        <div class="log-modal-content" style="max-width:600px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #282834; padding-bottom:1rem; margin-bottom:1rem;">
+                <h3 style="margin:0; color:#3b82f6; font-weight:800; font-size:1.15rem;">📦 Tracking de Envío</h3>
+                <button onclick="closeShippingTrackingModal()" style="background:none; border:none; color:#aaa; font-size:1.5rem; cursor:pointer;">&times;</button>
+            </div>
+            <div id="shippingTrackingBody">Cargando información de tracking...</div>
+        </div>
+    </div>
+
     <script src="js/main.js?v=2.6"></script>
     <script src="js/modals.js"></script>
     <script>
@@ -355,8 +375,9 @@ try {
             try {
                 const search = document.getElementById('searchInput')?.value?.trim() || '';
                 const status = document.getElementById('statusFilter')?.value || '';
+                const channel = document.getElementById('channelFilter')?.value || 'all';
 
-                const url = `/admin_supply.php?action=order-tracking-list&search=${encodeURIComponent(search)}&status=${encodeURIComponent(status)}&_=${Date.now()}`;
+                const url = `/admin_supply.php?action=order-tracking-list&search=${encodeURIComponent(search)}&status=${encodeURIComponent(status)}&channel=${encodeURIComponent(channel)}&_=${Date.now()}`;
                 const res = await apiCall(url, 'GET', null, { silent: true });
 
                 if (res.kpis) {
@@ -371,7 +392,7 @@ try {
                     const msg = (isGuest && !search)
                         ? '🔍 Ingresa el Folio de Pedido o Número de Ticket en la caja de búsqueda superior para consultar tu pedido en tiempo real (sin necesidad de iniciar sesión).'
                         : 'Sin registros bajo los parámetros seleccionados.';
-                    tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:2.5rem; color:#aaaab8;">${msg}</td></tr>`;
+                    tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:2.5rem; color:#aaaab8;">${msg}</td></tr>`;
                     return;
                 }
 
@@ -380,12 +401,17 @@ try {
                     'packed': '📦 Empacado',
                     'in_transit': '🚚 En Ruta de Entrega',
                     'delivered': '✅ Entregado / Confirmado',
-                    'canceled': '❌ Cancelado'
+                    'canceled': '❌ Cancelado',
+                    'cancelled': '❌ Cancelado'
                 };
 
                 let html = '';
                 res.orders.forEach(ord => {
                     const currentSt = ord.order_status || 'in_preparation';
+                    const isPos = ord.channel === 'pos';
+                    const channelBadge = isPos 
+                        ? `<span style="background:rgba(59,130,246,0.12); color:#60a5fa; border:1px solid rgba(59,130,246,0.3); padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center; gap:4px;">🏬 Tienda Local</span>`
+                        : `<span style="background:rgba(255,127,0,0.12); color:#ff7f00; border:1px solid rgba(255,127,0,0.3); padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center; gap:4px;">🌐 Tienda en Línea</span>`;
 
                     let statusSelectorOrBadge = `<span style="font-weight:700; color:#fff;">${statusLabels[currentSt] || currentSt}</span>`;
 
@@ -396,7 +422,7 @@ try {
                                 <option value="packed" ${currentSt==='packed'?'selected':''}>📦 Empacado (Etiqueta Ciega)</option>
                                 <option value="in_transit" ${currentSt==='in_transit'?'selected':''}>🚚 En Ruta / Paquetera</option>
                                 <option value="delivered" ${currentSt==='delivered'?'selected':''}>✅ Entregado / Confirmado</option>
-                                <option value="canceled" ${currentSt==='canceled'?'selected':''}>❌ Cancelado</option>
+                                <option value="canceled" ${(currentSt==='canceled'||currentSt==='cancelled')?'selected':''}>❌ Cancelado</option>
                             </select>
                         `;
                     }
@@ -406,6 +432,7 @@ try {
                             <td>
                                 <strong style="color:var(--theme-accent, #ff7f00); font-family:monospace; font-size:0.95rem; letter-spacing:0.04em;">${escapeHtml(ord.folio)}</strong>
                             </td>
+                            <td>${channelBadge}</td>
                             <td>
                                 <div style="font-weight:700; color:#fff;">${escapeHtml(ord.customer_name || 'Cliente')}</div>
                                 <div style="font-size:0.8rem; color:#888899; margin-top:2px;">Cód: ${escapeHtml(ord.user_code)} | ${escapeHtml(ord.customer_segment || 'menudeo')}</div>
@@ -426,6 +453,10 @@ try {
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
                                         Historial
                                     </button>
+                                    <button class="btn-svg btn-dark" onclick="viewShippingTracking('${ord.folio}')" style="font-size:0.78rem;" title="Ver tracking de envío">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11"></polygon><path d="M23 11v8a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-8"></path></svg>
+                                        Tracking
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -435,7 +466,7 @@ try {
                 tableBody.innerHTML = html;
             } catch (err) {
                 console.error("loadTrackingOrders error:", err);
-                tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:2.5rem; color:#aaaab8;">Sin registros de pedidos.</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2.5rem; color:#aaaab8;">Sin registros de pedidos.</td></tr>';
             }
         }
 
@@ -479,22 +510,112 @@ try {
         function closeLogModal() { document.getElementById('logModal').style.display = 'none'; }
         function openConfirmArrivalModal() { document.getElementById('confirmArrivalModal').style.display = 'flex'; }
         function closeConfirmArrivalModal() { document.getElementById('confirmArrivalModal').style.display = 'none'; }
+        function closeShippingTrackingModal() { document.getElementById('shippingTrackingModal').style.display = 'none'; }
+
+        async function viewShippingTracking(folio) {
+            document.getElementById('shippingTrackingBody').innerHTML = 'Cargando información de tracking...';
+            document.getElementById('shippingTrackingModal').style.display = 'flex';
+
+            try {
+                const res = await apiCall(`/api/shipping_tracking.php?action=get&folio=${encodeURIComponent(folio)}`, 'GET', null, { silent: true });
+                
+                if (!res || !res.success) {
+                    document.getElementById('shippingTrackingBody').innerHTML = `
+                        <div style="text-align:center; padding:2rem; color:#888;">
+                            <div style="font-size:2rem; margin-bottom:1rem;">📦</div>
+                            <div>No hay información de tracking disponible para este pedido.</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const tracking = res.tracking;
+                const carrierNames = {
+                    'fedex': 'FedEx',
+                    'dhl': 'DHL',
+                    'estafeta': 'Estafeta',
+                    'redpack': 'Redpack'
+                };
+
+                let eventsHTML = '';
+                if (tracking.tracking_events && tracking.tracking_events.length > 0) {
+                    // Timeline visual vertical
+                    eventsHTML = `
+                        <div style="position:relative; padding-left:2rem;">
+                            <div style="position:absolute; left:0.5rem; top:0; bottom:0; width:2px; background:#333;"></div>
+                            ${tracking.tracking_events.map((event, idx) => {
+                                const statusColors = {
+                                    'created': '#3b82f6',
+                                    'confirmed': '#22c55e',
+                                    'processing': '#f59e0b',
+                                    'shipped': '#8b5cf6',
+                                    'in_transit': '#06b6d4',
+                                    'delivered': '#10b981',
+                                    'cancelled': '#ef4444'
+                                };
+                                const statusColor = statusColors[event.status] || '#888';
+                                const isLast = idx === tracking.tracking_events.length - 1;
+                                
+                                return `
+                                    <div style="position:relative; padding-bottom:1.5rem; ${isLast ? 'padding-bottom:0;' : ''}">
+                                        <div style="position:absolute; left:-1.6rem; top:0; width:1rem; height:1rem; background:${statusColor}; border-radius:50%; border:3px solid #14141a; z-index:1;"></div>
+                                        <div style="background:#181820; border:1px solid #2a2a38; padding:1rem; border-radius:8px;">
+                                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                                                <span style="font-size:0.85rem; font-weight:700; color:${statusColor}; text-transform:uppercase;">${escapeHtml(event.status)}</span>
+                                                <span style="font-size:0.75rem; color:#888899;">${escapeHtml(event.timestamp || '')}</span>
+                                            </div>
+                                            <div style="font-size:0.9rem; color:#fff; margin-bottom:0.3rem;">${escapeHtml(event.description || '')}</div>
+                                            ${event.location ? `<div style="font-size:0.82rem; color:#aaaab8;">📍 ${escapeHtml(event.location)}</div>` : ''}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                } else {
+                    eventsHTML = '<div style="text-align:center; padding:1.5rem; color:#888; background:#181820; border-radius:8px;">No hay eventos de tracking disponibles.</div>';
+                }
+
+                document.getElementById('shippingTrackingBody').innerHTML = `
+                    <div style="background:#121217; border:1px solid #22222a; border-radius:12px; padding:1.25rem; margin-bottom:1rem;">
+                        <div style="font-size:0.85rem; color:#888899; margin-bottom:0.5rem;">Paquetería</div>
+                        <div style="font-size:1.1rem; font-weight:700; color:#fff;">${carrierNames[tracking.carrier] || tracking.carrier || 'N/A'}</div>
+                    </div>
+                    <div style="background:#121217; border:1px solid #22222a; border-radius:12px; padding:1.25rem; margin-bottom:1rem;">
+                        <div style="font-size:0.85rem; color:#888899; margin-bottom:0.5rem;">Número de Tracking</div>
+                        <div style="font-size:1.1rem; font-weight:700; color:#ff7f00; font-family:monospace;">${escapeHtml(tracking.tracking_number)}</div>
+                    </div>
+                    <div style="background:#121217; border:1px solid #22222a; border-radius:12px; padding:1.25rem; margin-bottom:1rem;">
+                        <div style="font-size:0.85rem; color:#888899; margin-bottom:0.5rem;">Estado Actual</div>
+                        <div style="font-size:1.1rem; font-weight:700; color:#fff;">${escapeHtml(tracking.tracking_status)}</div>
+                    </div>
+                    <div style="margin-top:1.5rem;">
+                        <h4 style="margin:0 0 1rem 0; color:#fff; font-size:0.95rem;">Historial de Eventos</h4>
+                        ${eventsHTML}
+                    </div>
+                `;
+            } catch (err) {
+                console.error("viewShippingTracking error:", err);
+                document.getElementById('shippingTrackingBody').innerHTML = '<div style="text-align:center; padding:2rem; color:#f87171;">Error al cargar información de tracking.</div>';
+            }
+        }
 
         async function submitArrivalConfirmation() {
             const folio = document.getElementById('confirmFolioInput').value.trim();
             const notes = document.getElementById('confirmNotesInput').value.trim();
 
             if (!folio) {
-                alert('Ingresa el folio del pedido');
+                showAlert('Ingresa el folio del pedido', 'warning');
                 return;
             }
 
             const res = await apiCall('/admin_supply.php?action=update-order-status', 'POST', { folio: folio, status: 'delivered', notes: notes });
             if (res && res.success) {
                 closeConfirmArrivalModal();
+                showAlert('¡Entrega confirmada y validada exitosamente!', 'success');
                 loadTrackingOrders();
             } else {
-                alert(res?.message || 'Error al confirmar llegada');
+                showAlert(res?.message || 'Error al confirmar llegada', 'error');
             }
         }
 
@@ -737,5 +858,6 @@ try {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeInUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
     </style>
+    <script src="js/modals.js"></script>
 </body>
 </html>

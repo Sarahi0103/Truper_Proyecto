@@ -15,6 +15,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 if (($_SESSION['role'] ?? '') === 'employee') {
     $allowed_employee_actions = [
         'purchase-stats',
+        'channel-stats',
         'export',
         'ticket-history',
         'save-monthly-pdf',
@@ -35,9 +36,39 @@ if (($_SESSION['role'] ?? '') === 'employee') {
 // Inicializar servicio de caché para validaciones de seguridad
 $cacheService = new AnalyticsCacheService($pdo);
 
-// get-monthly-pdf streams binary — don't set JSON header yet
-if ($action !== 'get-monthly-pdf') {
-    header('Content-Type: application/json');
+if ($action === 'channel-stats') {
+    $currentYear = (int)($_GET['year'] ?? date('Y'));
+    $currentMonth = (int)($_GET['month'] ?? date('m'));
+
+    $posRevenue = (float)$pdo->query("SELECT COALESCE(SUM(total_amount), 0) FROM sales_tickets WHERE deleted_at IS NULL AND (folio LIKE 'TKT-%' OR folio LIKE 'POS-%' OR shipping_address_json IS NULL OR shipping_address_json = '' OR shipping_address_json = '{}') AND EXTRACT(YEAR FROM issued_date) = {$currentYear} AND EXTRACT(MONTH FROM issued_date) = {$currentMonth}")->fetchColumn();
+
+    $posCount = (int)$pdo->query("SELECT COUNT(*) FROM sales_tickets WHERE deleted_at IS NULL AND (folio LIKE 'TKT-%' OR folio LIKE 'POS-%' OR shipping_address_json IS NULL OR shipping_address_json = '' OR shipping_address_json = '{}') AND EXTRACT(YEAR FROM issued_date) = {$currentYear} AND EXTRACT(MONTH FROM issued_date) = {$currentMonth}")->fetchColumn();
+
+    $onlineRevenue = (float)$pdo->query("SELECT COALESCE(SUM(total_amount), 0) FROM sales_tickets WHERE deleted_at IS NULL AND (folio LIKE 'FOX-%' OR folio LIKE 'ORD-%' OR (shipping_address_json IS NOT NULL AND shipping_address_json != '' AND shipping_address_json != '{}')) AND EXTRACT(YEAR FROM issued_date) = {$currentYear} AND EXTRACT(MONTH FROM issued_date) = {$currentMonth}")->fetchColumn();
+
+    $onlineCount = (int)$pdo->query("SELECT COUNT(*) FROM sales_tickets WHERE deleted_at IS NULL AND (folio LIKE 'FOX-%' OR folio LIKE 'ORD-%' OR (shipping_address_json IS NOT NULL AND shipping_address_json != '' AND shipping_address_json != '{}')) AND EXTRACT(YEAR FROM issued_date) = {$currentYear} AND EXTRACT(MONTH FROM issued_date) = {$currentMonth}")->fetchColumn();
+
+    $totalRevenue = $posRevenue + $onlineRevenue;
+    $posRatio = $totalRevenue > 0 ? round(($posRevenue / $totalRevenue) * 100, 1) : 50;
+    $onlineRatio = $totalRevenue > 0 ? round(($onlineRevenue / $totalRevenue) * 100, 1) : 50;
+
+    echo json_encode([
+        'success' => true,
+        'pos' => [
+            'revenue' => $posRevenue, 
+            'count' => $posCount,
+            'avg_ticket' => $posCount > 0 ? round($posRevenue / $posCount, 2) : 0,
+            'ratio' => $posRatio
+        ],
+        'online' => [
+            'revenue' => $onlineRevenue, 
+            'count' => $onlineCount,
+            'avg_ticket' => $onlineCount > 0 ? round($onlineRevenue / $onlineCount, 2) : 0,
+            'ratio' => $onlineRatio
+        ],
+        'total_revenue' => $totalRevenue
+    ]);
+    exit;
 }
 
 $analyticsController = new AnalyticsController($pdo);

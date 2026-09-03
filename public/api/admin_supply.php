@@ -553,59 +553,21 @@ function set_product_visibility_compatible($pdo, int $id, bool $isVisible): void
         throw new Exception('ID de producto inválido');
     }
 
+    $valInt = $isVisible ? 1 : 0;
+
     try {
         $stmt = $pdo->prepare('UPDATE products SET is_active = ? WHERE id = ?');
-        $stmt->execute([$isVisible, $id]);
+        $stmt->execute([$valInt, $id]);
         return;
     } catch (Exception $e) {
-        try {
-            $stmt = $pdo->prepare('UPDATE products SET is_active = ? WHERE id = ?');
-            $stmt->execute([$isVisible ? 1 : 0, $id]);
-            return;
-        } catch (Exception $e2) {
-        }
     }
 
     try {
         $stmt = $pdo->prepare('UPDATE products SET active = ? WHERE id = ?');
-        $stmt->execute([$isVisible, $id]);
+        $stmt->execute([$valInt, $id]);
         return;
-    } catch (Exception $e) {
-        try {
-            $stmt = $pdo->prepare('UPDATE products SET active = ? WHERE id = ?');
-            $stmt->execute([$isVisible ? 1 : 0, $id]);
-            return;
-        } catch (Exception $e2) {
-        }
+    } catch (Exception $e2) {
     }
-
-    try {
-        $stmt = $pdo->prepare('UPDATE products SET is_visible = ? WHERE id = ?');
-        $stmt->execute([$isVisible, $id]);
-        return;
-    } catch (Exception $e) {
-        try {
-            $stmt = $pdo->prepare('UPDATE products SET is_visible = ? WHERE id = ?');
-            $stmt->execute([$isVisible ? 1 : 0, $id]);
-            return;
-        } catch (Exception $e2) {
-        }
-    }
-
-    try {
-        $stmt = $pdo->prepare('UPDATE products SET visible = ? WHERE id = ?');
-        $stmt->execute([$isVisible, $id]);
-        return;
-    } catch (Exception $e) {
-        try {
-            $stmt = $pdo->prepare('UPDATE products SET visible = ? WHERE id = ?');
-            $stmt->execute([$isVisible ? 1 : 0, $id]);
-            return;
-        } catch (Exception $e2) {
-        }
-    }
-
-    throw new Exception('No existe columna de visibilidad compatible en products');
 }
 
 function normalized_sku_exists_in_table_admin_supply($pdo, string $table, string $sku, int $excludeId = 0): bool {
@@ -3383,7 +3345,7 @@ try {
                 break;
             }
 
-            $target = sanitize($_GET['target'] ?? 'stock'); // 'stock' or 'marketplace'
+            $target = sanitize($_GET['target'] ?? 'pos'); // 'pos', 'online', 'stock' or 'marketplace'
             $search = sanitize($_GET['search'] ?? '');
             $categoryFilter = sanitize($_GET['category'] ?? '');
             $sort = sanitize($_GET['sort'] ?? 'sku_asc');
@@ -3401,10 +3363,17 @@ try {
             $whereClauses = [];
             $params = [];
 
+            if ($target === 'pos' && db_column_exists($table, 'show_in_pos')) {
+                $whereClauses[] = '(show_in_pos = true OR show_in_pos = 1 OR show_in_pos IS NULL)';
+            } elseif ($target === 'online' && db_column_exists($table, 'show_in_online')) {
+                $whereClauses[] = '(show_in_online = true OR show_in_online = 1)';
+            }
+
             if ($search !== '') {
-                $whereClauses[] = '(' . $skuCol . ' ILIKE ? OR ' . $nameCol . ' ILIKE ?)';
-                $params[] = '%' . $search . '%';
-                $params[] = '%' . $search . '%';
+                $whereClauses[] = '(LOWER(' . $skuCol . ') LIKE ? OR LOWER(' . $nameCol . ') LIKE ?)';
+                $sParam = '%' . strtolower($search) . '%';
+                $params[] = $sParam;
+                $params[] = $sParam;
             }
 
             if ($categoryFilter !== '') {
@@ -3630,37 +3599,53 @@ try {
                 break;
             }
 
-            $target = sanitize($input['target'] ?? 'all');
+            $target = sanitize($input['target'] ?? 'pos');
             $isVisible = normalize_bool_admin_supply($input['is_visible'] ?? null, true);
 
             $updatedCount = 0;
             $val = $isVisible ? 1 : 0;
+            $valBool = $isVisible ? true : false;
 
             try {
-                if ($target === 'stock' || $target === 'all') {
+                if ($target === 'pos') {
                     if (db_column_exists('products', 'show_in_pos')) {
                         $stmt = $pdo->prepare("UPDATE products SET show_in_pos = ?");
-                        $stmt->execute([$val]);
+                        $stmt->execute([$valBool]);
                         $updatedCount += $stmt->rowCount();
-                    } elseif (db_column_exists('products', 'is_active')) {
+                    }
+                } elseif ($target === 'online') {
+                    if (db_column_exists('products', 'show_in_online')) {
+                        $stmt = $pdo->prepare("UPDATE products SET show_in_online = ?");
+                        $stmt->execute([$valBool]);
+                        $updatedCount += $stmt->rowCount();
+                    }
+                    if (db_column_exists('products', 'is_active')) {
                         $stmt = $pdo->prepare("UPDATE products SET is_active = ?");
-                        $stmt->execute([$val]);
+                        $stmt->execute([$valBool]);
                         $updatedCount += $stmt->rowCount();
-                    } elseif (db_column_exists('products', 'active')) {
-                        $stmt = $pdo->prepare("UPDATE products SET active = ?");
-                        $stmt->execute([$val]);
+                    }
+                } elseif ($target === 'stock' || $target === 'all') {
+                    if (db_column_exists('products', 'show_in_pos')) {
+                        $stmt = $pdo->prepare("UPDATE products SET show_in_pos = ?");
+                        $stmt->execute([$valBool]);
+                        $updatedCount += $stmt->rowCount();
+                    }
+                    if (db_column_exists('products', 'show_in_online')) {
+                        $stmt = $pdo->prepare("UPDATE products SET show_in_online = ?");
+                        $stmt->execute([$valBool]);
                         $updatedCount += $stmt->rowCount();
                     }
                 }
 
                 if ($target === 'marketplace' || $target === 'all') {
+                    if (db_column_exists('marketplace_ce_products', 'show_in_online')) {
+                        $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET show_in_online = ?");
+                        $stmt->execute([$valBool]);
+                        $updatedCount += $stmt->rowCount();
+                    }
                     if (db_column_exists('marketplace_ce_products', 'is_active')) {
                         $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET is_active = ?");
-                        $stmt->execute([$val]);
-                        $updatedCount += $stmt->rowCount();
-                    } elseif (db_column_exists('marketplace_ce_products', 'active')) {
-                        $stmt = $pdo->prepare("UPDATE marketplace_ce_products SET active = ?");
-                        $stmt->execute([$val]);
+                        $stmt->execute([$valBool]);
                         $updatedCount += $stmt->rowCount();
                     }
                 }
@@ -4203,22 +4188,54 @@ try {
             }
 
             $id = (int)($input['id'] ?? 0);
+            $target = sanitize($input['target'] ?? 'pos');
             $isVisible = normalize_bool_admin_supply($input['is_visible'] ?? null, true);
+            $valInt = $isVisible ? 1 : 0;
+
             if ($id <= 0) {
                 $response = ['success' => false, 'message' => 'Producto inválido'];
                 break;
             }
 
-            if (db_column_exists('products', 'show_in_pos')) {
-                $stmt = $pdo->prepare('UPDATE products SET show_in_pos = ? WHERE id = ?');
-                $stmt->execute([$isVisible ? 1 : 0, $id]);
+            if ($target === 'online') {
+                if (db_column_exists('products', 'show_in_online')) {
+                    $stmt = $pdo->prepare('UPDATE products SET show_in_online = ? WHERE id = ?');
+                    $stmt->execute([$valInt, $id]);
+                }
+                // Mantener is_active en true si aún es visible en POS o si se activó en online
+                if (db_column_exists('products', 'is_active')) {
+                    $stmt = $pdo->prepare('UPDATE products SET is_active = (COALESCE(show_in_pos, true) OR COALESCE(show_in_online, true)) WHERE id = ?');
+                    $stmt->execute([$id]);
+                }
+            } elseif ($target === 'pos') {
+                if (db_column_exists('products', 'show_in_pos')) {
+                    $stmt = $pdo->prepare('UPDATE products SET show_in_pos = ? WHERE id = ?');
+                    $stmt->execute([$valInt, $id]);
+                }
+                if (db_column_exists('products', 'is_active')) {
+                    $stmt = $pdo->prepare('UPDATE products SET is_active = (COALESCE(show_in_pos, true) OR COALESCE(show_in_online, true)) WHERE id = ?');
+                    $stmt->execute([$id]);
+                }
             } else {
-                set_product_visibility_compatible($pdo, $id, $isVisible);
+                // target === 'all', 'stock', or default: update POS, Online and active
+                if (db_column_exists('products', 'show_in_online')) {
+                    $stmt = $pdo->prepare('UPDATE products SET show_in_online = ? WHERE id = ?');
+                    $stmt->execute([$valInt, $id]);
+                }
+                if (db_column_exists('products', 'show_in_pos')) {
+                    $stmt = $pdo->prepare('UPDATE products SET show_in_pos = ? WHERE id = ?');
+                    $stmt->execute([$valInt, $id]);
+                }
+                if (db_column_exists('products', 'is_active')) {
+                    $stmt = $pdo->prepare('UPDATE products SET is_active = ? WHERE id = ?');
+                    $stmt->execute([$valInt, $id]);
+                }
             }
 
+            $targetLabel = $target === 'pos' ? 'Ferretería Local (POS & Mostrador)' : ($target === 'online' ? 'Tienda en Línea (Catálogo Web)' : 'todos los canales');
             $response = [
                 'success' => true,
-                'message' => $isVisible ? 'Producto visible en tienda' : 'Producto oculto en tienda'
+                'message' => $isVisible ? "Producto marcado como visible en {$targetLabel}" : "Producto marcado como oculto en {$targetLabel}"
             ];
             break;
 
@@ -6260,20 +6277,44 @@ try {
                 $response = ['success' => false, 'message' => 'Método no permitido'];
                 break;
             }
-            $id = (int)($input['id'] ?? 0);
-            if ($id <= 0) {
-                $response = ['success' => false, 'message' => 'ID de orden inválido'];
+            $fetchStmt = $pdo->prepare("SELECT id, folio, items_json, status FROM supplier_orders WHERE id = ?");
+            $fetchStmt->execute([$id]);
+            $suppOrder = $fetchStmt->fetch();
+
+            if (!$suppOrder) {
+                $response = ['success' => false, 'message' => 'Orden de proveedor no encontrada'];
                 break;
             }
+
+            if (($suppOrder['status'] ?? '') === 'completed') {
+                $response = ['success' => false, 'message' => 'La orden ya fue completada anteriormente'];
+                break;
+            }
+
+            // Incrementar stock de productos automáticamente al recibir mercancía
+            $items = json_decode($suppOrder['items_json'] ?? '[]', true);
+            $updatedCount = 0;
+            if (is_array($items)) {
+                $updStock = $pdo->prepare("UPDATE products SET stock_quantity = COALESCE(stock_quantity, 0) + ?, updated_at = NOW() WHERE sku = ?");
+                foreach ($items as $itm) {
+                    $sku = trim((string)($itm['sku'] ?? ''));
+                    $qty = (int)($itm['quantity'] ?? 0);
+                    if ($sku !== '' && $qty > 0) {
+                        $updStock->execute([$qty, $sku]);
+                        $updatedCount++;
+                    }
+                }
+            }
+
             $stmt = $pdo->prepare("UPDATE supplier_orders SET status = 'completed' WHERE id = ?");
             $stmt->execute([$id]);
 
             // Log action in transaction history
             $h = $pdo->prepare("INSERT INTO transaction_history (transaction_type, reference_folio, data_json, created_by) 
                                 SELECT 'supplier_order_receive', folio, ?, ? FROM supplier_orders WHERE id = ?");
-            $h->execute([json_encode(['status' => 'completed']), $_SESSION['user_id'], $id]);
+            $h->execute([json_encode(['status' => 'completed', 'items_updated' => $updatedCount], JSON_UNESCAPED_UNICODE), $_SESSION['user_id'], $id]);
 
-            $response = ['success' => true, 'message' => 'Mercancía recibida y orden completada'];
+            $response = ['success' => true, 'message' => "Mercancía recibida y stock de {$updatedCount} producto(s) actualizado exitosamente."];
             break;
 
         case 'supplier-order-cancel':
@@ -6676,6 +6717,7 @@ try {
         case 'order-tracking-list':
             $search = trim(sanitize($_GET['search'] ?? ''));
             $status = trim(sanitize($_GET['status'] ?? ''));
+            $channelFilter = trim(sanitize($_GET['channel'] ?? 'all')); // all, pos, online
             $page = max(1, (int)($_GET['page'] ?? 1));
             $perPage = 50;
             $offset = ($page - 1) * $perPage;
@@ -6703,8 +6745,19 @@ try {
             }
 
             if ($status !== '') {
-                $whereClauses[] = "COALESCE(st.order_status, 'in_preparation') = ?";
-                $params[] = $status;
+                if ($status === 'canceled' || $status === 'cancelled') {
+                    $whereClauses[] = "COALESCE(st.order_status, '') IN ('canceled', 'cancelled')";
+                } else {
+                    $whereClauses[] = "COALESCE(st.order_status, 'in_preparation') = ?";
+                    $params[] = $status;
+                }
+            }
+
+            // Filtrado por canal (Tienda Local vs Tienda en Línea)
+            if ($channelFilter === 'pos') {
+                $whereClauses[] = "(st.folio LIKE 'TKT-%' OR st.folio LIKE 'POS-%' OR st.shipping_address_json IS NULL OR st.shipping_address_json = '' OR st.shipping_address_json = '{}')";
+            } elseif ($channelFilter === 'online') {
+                $whereClauses[] = "(st.folio LIKE 'FOX-%' OR st.folio LIKE 'ORD-%' OR (st.shipping_address_json IS NOT NULL AND st.shipping_address_json != '' AND st.shipping_address_json != '{}'))";
             }
 
             $whereSql = !empty($whereClauses) ? ' WHERE ' . implode(' AND ', $whereClauses) : '';
@@ -6730,8 +6783,14 @@ try {
             $stmt->execute($params);
             $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Enrich each order with items and history
+            // Enrich each order with items, history, and channel taxonomy
             foreach ($orders as &$ord) {
+                // Determinar canal de venta (Tienda Local vs Tienda en Línea)
+                $hasShipping = !empty($ord['shipping_address_json']) && $ord['shipping_address_json'] !== '{}';
+                $isPosFolio = (strpos($ord['folio'], 'TKT-') === 0 || strpos($ord['folio'], 'POS-') === 0);
+                $ord['channel'] = ($isPosFolio || !$hasShipping) ? 'pos' : 'online';
+                $ord['channel_label'] = $ord['channel'] === 'pos' ? '🏬 Tienda Local (Mostrador)' : '🌐 Tienda en Línea (Web)';
+
                 // Ticket items
                 try {
                     $itemStmt = $pdo->prepare(
@@ -6763,7 +6822,7 @@ try {
             }
             unset($ord);
 
-            // Compute dynamic real-time KPI metrics for response
+            // Compute dynamic real-time KPI metrics per channel
             $kpiWhere = "WHERE deleted_at IS NULL";
             if (!$isUserAdmin && $isLogged) {
                 $kpiWhere .= " AND user_id = " . (int)$_SESSION['user_id'];
@@ -6775,7 +6834,9 @@ try {
                 'total'          => (int)$pdo->query("SELECT COUNT(*) FROM sales_tickets {$kpiWhere}")->fetchColumn(),
                 'in_preparation' => (int)$pdo->query("SELECT COUNT(*) FROM sales_tickets {$kpiWhere} AND COALESCE(order_status, 'in_preparation') = 'in_preparation'")->fetchColumn(),
                 'in_transit'     => (int)$pdo->query("SELECT COUNT(*) FROM sales_tickets {$kpiWhere} AND order_status IN ('packed', 'in_transit')")->fetchColumn(),
-                'delivered'      => (int)$pdo->query("SELECT COUNT(*) FROM sales_tickets {$kpiWhere} AND order_status = 'delivered'")->fetchColumn()
+                'delivered'      => (int)$pdo->query("SELECT COUNT(*) FROM sales_tickets {$kpiWhere} AND order_status = 'delivered'")->fetchColumn(),
+                'pos_count'      => (int)$pdo->query("SELECT COUNT(*) FROM sales_tickets {$kpiWhere} AND (folio LIKE 'TKT-%' OR folio LIKE 'POS-%' OR shipping_address_json IS NULL OR shipping_address_json = '' OR shipping_address_json = '{}')")->fetchColumn(),
+                'online_count'   => (int)$pdo->query("SELECT COUNT(*) FROM sales_tickets {$kpiWhere} AND (folio LIKE 'FOX-%' OR folio LIKE 'ORD-%' OR (shipping_address_json IS NOT NULL AND shipping_address_json != '' AND shipping_address_json != '{}'))")->fetchColumn()
             ];
 
             $response = [

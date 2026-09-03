@@ -220,6 +220,7 @@ $stock = (int)($product['stock_quantity'] ?? 0);
     <link rel="stylesheet" href="css/styles.css?v=4.1">
     <link rel="stylesheet" href="css/theme.css?v=4.1">
     <link rel="stylesheet" href="css/responsive-complete.css?v=5.0">
+    <link rel="stylesheet" href="css/toast-notifications.css">
     <style>
         /* ===== Product Detail Page — Premium Redesign ===== */
         body {
@@ -744,11 +745,17 @@ $stock = (int)($product['stock_quantity'] ?? 0);
                     <a href="tienda.php">Tienda en Línea</a>
                     <a href="marketplace_ce.php?mode=online">Marketplace CE</a>
                     <a href="order_tracking.php?mode=online">Seguimiento de Pedido</a>
-                    <a href="cart.php?mode=online">Carrito</a>
+                    <a href="cart.php?mode=online" style="display:inline-flex; align-items:center; gap:6px;">
+                        <span>Carrito</span>
+                        <span id="cartCount" class="cart-count-badge badge-cart" style="background:#ff7f00; color:#ffffff; font-size:0.75rem; font-weight:800; padding:2px 7px; border-radius:99px; min-width:18px; text-align:center; display:none;">0</span>
+                    </a>
                 <?php else: ?>
                     <a href="index.php">Productos</a>
                     <a href="marketplace_ce.php">Marketplace CE</a>
-                    <a href="cart.php">Carrito</a>
+                    <a href="cart.php" style="display:inline-flex; align-items:center; gap:6px;">
+                        <span>Carrito</span>
+                        <span id="cartCount" class="cart-count-badge badge-cart" style="background:#ff7f00; color:#ffffff; font-size:0.75rem; font-weight:800; padding:2px 7px; border-radius:99px; min-width:18px; text-align:center; display:none;">0</span>
+                    </a>
                 <?php endif; ?>
             <?php if ($isLogged && !$isOnlineMode): ?>
                 <div class="nav-dropdown">
@@ -949,6 +956,7 @@ $stock = (int)($product['stock_quantity'] ?? 0);
 </div>
 <script src="js/main.js?v=2.6"></script>
 <script src="js/modals.js"></script>
+<script src="js/toast-notifications.js"></script>
 <script src="js/catalog.js?v=3.1"></script>
 <script>
     (function () {

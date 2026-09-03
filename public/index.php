@@ -31,7 +31,9 @@ require_once __DIR__ . '/../config/image_cache.php';
 $products = [];
 try {
     $visibilityWhere = '';
-    if (db_column_exists('products', 'is_active')) {
+    if (db_column_exists('products', 'show_in_pos')) {
+        $visibilityWhere = " WHERE (CASE WHEN show_in_pos IS NULL THEN (CASE WHEN is_active IS NULL THEN 1 WHEN LOWER(CAST(is_active AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) WHEN LOWER(CAST(show_in_pos AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
+    } elseif (db_column_exists('products', 'is_active')) {
         $visibilityWhere = " WHERE (CASE WHEN is_active IS NULL THEN 1 WHEN LOWER(CAST(is_active AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
     } elseif (db_column_exists('products', 'active')) {
         $visibilityWhere = " WHERE active = 1";
@@ -530,6 +532,7 @@ function homepage_update_label($type) {
     <link rel="stylesheet" href="<?php echo asset_url('css/responsive-complete.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_url('css/dark-mode-auto.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_url('css/onboarding.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_url('css/toast-notifications.css'); ?>">
     <style>
         .color-chip-filter {
             border-radius: 20px !important;
@@ -942,7 +945,8 @@ function homepage_update_label($type) {
                 <span class="cart-total"><strong id="cartTotalAmount">$0</strong></span>
             </div>
             <div class="btn-group" style="flex-direction: column; gap: 8px;">
-                <button id="printTicket" class="btn btn-primary">⬇️ Enviar cotización</button>
+                <a href="cart.php" class="btn btn-primary" style="text-align:center; text-decoration:none; font-weight:800; display:block; width:100%; padding:10px; background:linear-gradient(135deg,#ff7f00,#ff5500); color:#fff; border-radius:8px;">Ver Carrito / Realizar Pedido</a>
+                <button id="printTicket" class="btn btn-secondary">⬇️ Enviar cotización</button>
                 <button id="shareWhatsApp" class="btn btn-secondary"
                         data-company-whatsapp="<?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?>"
                         data-client-code="<?php echo htmlspecialchars($clientCode ?? 'PUBLICO', ENT_QUOTES, 'UTF-8'); ?>">📱 Enviar cotización por WhatsApp</button>
@@ -957,6 +961,7 @@ function homepage_update_label($type) {
     <script src="<?php echo asset_url('js/jspdf.umd.min.js'); ?>"></script>
     <script src="<?php echo asset_url('js/main.js'); ?>"></script>
     <script src="<?php echo asset_url('js/modals.js'); ?>"></script>
+    <script src="<?php echo asset_url('js/toast-notifications.js'); ?>"></script>
     <script id="product-groups-data" type="application/json"><?php echo json_encode($availableProductGroups); ?></script>
     <script id="products-data" type="application/json"><?php echo json_encode($jsonProducts); ?></script>
     <script>

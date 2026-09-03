@@ -481,6 +481,7 @@ if (!empty($profile['birthdate'])) {
                         <a href="orders.php">Ventas / Pedidos</a>
                         <a href="order_tracking.php">Seguimiento / Logística</a>
                         <a href="rma_manager.php">Devoluciones RMA</a>
+                        <a href="admin_online_billing.php">Facturación & Pagos SAT</a>
                     </div>
                 </div>
                 <div class="nav-dropdown">
@@ -527,23 +528,17 @@ if (!empty($profile['birthdate'])) {
                     </svg>
                     Regresar
                 </button>
-            </div>
-
-            <h1>Mi Perfil</h1>
-
-            <div class="tabs">
-                <button class="tab-button active" data-tab="profileInfo">Información Personal</button>
-                <?php if (!$is_admin): ?>
-                <button class="tab-button" data-tab="loyaltyInfo">Puntos de Lealtad</button>
-                <?php endif; ?>
-                <?php if (!$is_client): ?>
-                <button class="tab-button" data-tab="passwordChange">Cambiar Contraseña</button>
-                <?php endif; ?>
-            </div>
-
-            <!-- INFORMACIÓN PERSONAL -->
-            <div id="profileInfo" class="tab-content active">
-                <div class="card">
+                <nav class="nav-menu">
+                    <a href="index.php">Catálogo</a>
+                    <a href="marketplace_ce.php">Marketplace CE</a>
+                    <div class="nav-dropdown">
+                        <button class="nav-dropdown-btn">Mi Cuenta <span class="arrow">▼</span></button>
+                        <div class="nav-dropdown-content">
+                            <a href="dashboard.php">Dashboard</a>
+                            <a href="orders.php">Pedidos</a>
+                            <a href="wholesale.php">Mayoreo</a>
+                            <a href="account.php#historyTab">Historial</a>
+                            <a href="profile.php" class="active">Perfil</a>
                     <div class="card-header">Información de Perfil</div>
                     <div class="card-body">
                         <form id="profileForm" action="api/profile.php?action=update" method="POST" data-success-scroll="#profileInfo" data-success-message="Perfil actualizado correctamente" data-success-reload="true">
@@ -698,6 +693,120 @@ if (!empty($profile['birthdate'])) {
             </div>
             <?php endif; ?>
 
+            <!-- MIS DIRECCIONES -->
+            <?php if (!$is_admin): ?>
+            <div id="addresses" class="tab-content">
+                <div class="card">
+                    <div class="card-header">Mis Direcciones de Entrega</div>
+                    <div class="card-body">
+                        <div id="addressList">
+                            <div style="text-align: center; padding: 2rem; color: #888;">Cargando direcciones...</div>
+                        </div>
+                        
+                        <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                            <h4 style="margin-bottom: 0.75rem;">Agregar Nueva Dirección</h4>
+                            <form id="addressForm" action="api/addresses.php?action=create" method="POST">
+                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
+                                
+                                <div class="form-group">
+                                    <label>Etiqueta (Ej: Casa, Oficina)</label>
+                                    <input type="text" name="address_label" placeholder="Casa">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Calle y Número *</label>
+                                    <input type="text" name="address_line1" required placeholder="Ej: Calle Principal 123">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Colonia/Interior (opcional)</label>
+                                    <input type="text" name="address_line2" placeholder="Ej: Colonia Centro, Depto 201">
+                                </div>
+                                
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Ciudad *</label>
+                                        <input type="text" name="city" required placeholder="Ej: Guadalajara">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Estado *</label>
+                                        <input type="text" name="state" required placeholder="Ej: Jalisco">
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Código Postal *</label>
+                                    <input type="text" name="postal_code" required placeholder="Ej: 44100" maxlength="5" pattern="\d{5}">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" name="is_default" value="1">
+                                        Establecer como dirección predeterminada
+                                    </label>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary btn-block">Agregar Dirección</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- DEVOLUCIONES RMA -->
+            <?php if (!$is_admin): ?>
+            <div id="rmaRequests" class="tab-content">
+                <div class="card">
+                    <div class="card-header">Solicitudes de Devolución (RMA)</div>
+                    <div class="card-body">
+                        <div id="rmaList">
+                            <div style="text-align: center; padding: 2rem; color: #888;">Cargando solicitudes...</div>
+                        </div>
+                        
+                        <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                            <h4 style="margin-bottom: 0.75rem;">Nueva Solicitud de Devolución</h4>
+                            <form id="rmaForm" action="api/rma.php?action=create" method="POST">
+                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
+                                
+                                <div class="form-group">
+                                    <label>Pedido (Folio)</label>
+                                    <select id="rmaOrderSelect" name="order_id" required>
+                                        <option value="">Selecciona un pedido...</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Motivo de Devolución</label>
+                                    <select name="reason" required>
+                                        <option value="">Selecciona el motivo...</option>
+                                        <option value="defecto">Producto defectuoso</option>
+                                        <option value="incorrecto">Producto incorrecto</option>
+                                        <option value="no_cumple">Producto no cumple con especificaciones</option>
+                                        <option value="dañado">Producto llegó dañado</option>
+                                        <option value="cambio">Cambio de opinión</option>
+                                        <option value="otro">Otro motivo</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Descripción Detallada</label>
+                                    <textarea name="description" rows="3" required placeholder="Describe el problema con el producto..."></textarea>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Cantidad a Devolver</label>
+                                    <input type="number" name="quantity" min="1" value="1" required>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary btn-block">Enviar Solicitud de Devolución</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <!-- CAMBIAR CONTRASEÑA -->
             <div id="passwordChange" class="tab-content">
                 <div class="card">
@@ -747,6 +856,159 @@ if (!empty($profile['birthdate'])) {
     <script>
         function goToOrdersWithDiscount() {
             window.location.href = 'orders.php?tab=newOrder';
+        }
+
+        // Cargar solicitudes RMA del cliente
+        async function loadRMARequests() {
+            try {
+                const response = await fetch('api/rma.php?action=list_client');
+                const data = await response.json();
+                
+                const rmaList = document.getElementById('rmaList');
+                if (!rmaList) return;
+                
+                if (data.success && data.requests && data.requests.length > 0) {
+                    rmaList.innerHTML = data.requests.map(rma => `
+                        <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <strong style="color: var(--theme-accent);">RMA #${rma.id}</strong>
+                                <span style="font-size: 0.85rem; padding: 2px 8px; border-radius: 4px; background: ${getStatusColor(rma.status)}; color: #fff;">${rma.status}</span>
+                            </div>
+                            <div style="font-size: 0.9rem; color: #bbb;">
+                                <div><strong>Pedido:</strong> ${rma.order_folio || 'N/A'}</div>
+                                <div><strong>Motivo:</strong> ${rma.reason}</div>
+                                <div><strong>Fecha:</strong> ${new Date(rma.created_at).toLocaleDateString('es-MX')}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    rmaList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #888;">No tienes solicitudes de devolución</div>';
+                }
+            } catch (error) {
+                console.error('Error loading RMA requests:', error);
+            }
+        }
+
+        function getStatusColor(status) {
+            const colors = {
+                'pending': '#ff9f43',
+                'approved': '#22c55e',
+                'rejected': '#ef4444',
+                'completed': '#3b82f6'
+            };
+            return colors[status] || '#888';
+        }
+
+        // Cargar pedidos disponibles para RMA
+        async function loadOrdersForRMA() {
+            try {
+                const response = await fetch('api/orders.php?action=list_client');
+                const data = await response.json();
+                
+                const select = document.getElementById('rmaOrderSelect');
+                if (!select) return;
+                
+                if (data.success && data.orders) {
+                    select.innerHTML = '<option value="">Selecciona un pedido...</option>' + 
+                        data.orders.map(order => `
+                            <option value="${order.id}">${order.folio || order.order_number} - ${new Date(order.created_at).toLocaleDateString('es-MX')}</option>
+                        `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading orders for RMA:', error);
+            }
+        }
+
+        // Cargar datos cuando se activa el tab de RMA
+        document.addEventListener('DOMContentLoaded', function() {
+            const rmaTab = document.querySelector('[data-tab="rmaRequests"]');
+            if (rmaTab) {
+                rmaTab.addEventListener('click', function() {
+                    loadRMARequests();
+                    loadOrdersForRMA();
+                });
+            }
+            
+            // Cargar direcciones cuando se activa el tab
+            const addressesTab = document.querySelector('[data-tab="addresses"]');
+            if (addressesTab) {
+                addressesTab.addEventListener('click', loadAddresses);
+            }
+        });
+
+        // Cargar direcciones del cliente
+        async function loadAddresses() {
+            try {
+                const response = await fetch('api/addresses.php?action=list');
+                const data = await response.json();
+                
+                const addressList = document.getElementById('addressList');
+                if (!addressList) return;
+                
+                if (data.success && data.addresses && data.addresses.length > 0) {
+                    addressList.innerHTML = data.addresses.map(addr => `
+                        <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <strong style="color: var(--theme-accent);">${addr.address_label || 'Dirección'}</strong>
+                                ${addr.is_default ? '<span style="font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; background: #22c55e; color: #fff;">Predeterminada</span>' : ''}
+                            </div>
+                            <div style="font-size: 0.9rem; color: #bbb;">
+                                <div>${addr.address_line1}</div>
+                                ${addr.address_line2 ? `<div>${addr.address_line2}</div>` : ''}
+                                <div>${addr.city}, ${addr.state} CP ${addr.postal_code}</div>
+                            </div>
+                            <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem;">
+                                ${!addr.is_default ? `<button onclick="setDefaultAddress(${addr.id})" style="padding: 4px 8px; font-size: 0.75rem; background: rgba(255,127,0,0.1); border: 1px solid rgba(255,127,0,0.3); border-radius: 4px; cursor: pointer; color: #ff7f00;">Hacer Predeterminada</button>` : ''}
+                                <button onclick="deleteAddress(${addr.id})" style="padding: 4px 8px; font-size: 0.75rem; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 4px; cursor: pointer; color: #ef4444;">Eliminar</button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    addressList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #888;">No tienes direcciones guardadas</div>';
+                }
+            } catch (error) {
+                console.error('Error loading addresses:', error);
+            }
+        }
+
+        async function setDefaultAddress(addressId) {
+            try {
+                const response = await fetch('api/addresses.php?action=set_default', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address_id: addressId })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    loadAddresses();
+                } else {
+                    alert('Error al establecer dirección predeterminada');
+                }
+            } catch (error) {
+                console.error('Error setting default address:', error);
+            }
+        }
+
+        async function deleteAddress(addressId) {
+            if (!confirm('¿Estás seguro de eliminar esta dirección?')) return;
+            
+            try {
+                const response = await fetch('api/addresses.php?action=delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address_id: addressId })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    loadAddresses();
+                } else {
+                    alert('Error al eliminar dirección');
+                }
+            } catch (error) {
+                console.error('Error deleting address:', error);
+            }
         }
 
         function logout() {

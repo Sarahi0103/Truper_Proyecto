@@ -170,8 +170,12 @@ try {
             $include_inactive_categories = isset($_GET['include_inactive_categories']) || isset($_GET['all']);
             if ($include_inactive_categories) {
                 $search = "%$term%";
+                // La búsqueda en modo POS/caja usa filtro show_in_pos y precio de POS si existe
+                $searchPriceExpr = db_column_exists('products', 'price_pos')
+                    ? "COALESCE(NULLIF(price_pos,0), unit_price, sell_price, 0)"
+                    : "COALESCE(unit_price, sell_price, 0)";
                 $queries = [
-                    ["SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE is_active = true AND (CASE WHEN show_in_pos IS NULL THEN 1 WHEN LOWER(CAST(show_in_pos AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1 AND (name ILIKE ? OR sku ILIKE ? OR barcode ILIKE ?) ORDER BY name LIMIT 200", [$search, $search, $search]],
+                    ["SELECT id, name, sku, {$searchPriceExpr} AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE is_active = true AND (CASE WHEN show_in_pos IS NULL THEN 1 WHEN LOWER(CAST(show_in_pos AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1 AND (name ILIKE ? OR sku ILIKE ? OR barcode ILIKE ?) ORDER BY name LIMIT 200", [$search, $search, $search]],
                     ["SELECT id, name, sku, COALESCE(sell_price, unit_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE CAST(active AS text) IN ('1', 'true', 't') AND (CASE WHEN show_in_pos IS NULL THEN 1 WHEN LOWER(CAST(show_in_pos AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1 AND (name ILIKE ? OR sku ILIKE ? OR barcode ILIKE ?) ORDER BY name LIMIT 200", [$search, $search, $search]]
                 ];
                 $products = [];
@@ -201,8 +205,27 @@ try {
                 break;
             }
 
-            $category = sanitize($_GET['category'] ?? '');
-            $include_inactive_categories = isset($_GET['include_inactive_categories']) || isset($_GET['all']);
+            $channel = sanitize($_GET['channel'] ?? ($_GET['mode'] ?? 'all'));
+            if ($channel === 'online') {
+                $onlineCond = db_column_exists('products', 'show_in_online')
+                    ? "(CASE WHEN show_in_online IS NULL THEN (CASE WHEN is_active IS NULL THEN true WHEN LOWER(CAST(is_active AS TEXT)) IN ('1','t','true') THEN true ELSE false END) WHEN LOWER(CAST(show_in_online AS TEXT)) IN ('1','t','true') THEN true ELSE false END) = true"
+                    : "is_active = true";
+            } elseif ($channel === 'pos') {
+                $onlineCond = db_column_exists('products', 'show_in_pos')
+                    ? "(CASE WHEN show_in_pos IS NULL THEN (CASE WHEN is_active IS NULL THEN true WHEN LOWER(CAST(is_active AS TEXT)) IN ('1','t','true') THEN true ELSE false END) WHEN LOWER(CAST(show_in_pos AS TEXT)) IN ('1','t','true') THEN true ELSE false END) = true"
+                    : "is_active = true";
+            } else {
+                $onlineCond = "(CASE WHEN is_active IS NULL THEN true WHEN LOWER(CAST(is_active AS TEXT)) IN ('1','t','true') THEN true ELSE false END) = true";
+            }
+
+            // Precio según canal: usar price_online / price_pos si aplica y existe
+            if ($channel === 'online' && db_column_exists('products', 'price_online')) {
+                $channelPriceExpr = "COALESCE(NULLIF(price_online,0), unit_price, sell_price, 0)";
+            } elseif ($channel === 'pos' && db_column_exists('products', 'price_pos')) {
+                $channelPriceExpr = "COALESCE(NULLIF(price_pos,0), unit_price, sell_price, 0)";
+            } else {
+                $channelPriceExpr = "COALESCE(unit_price, sell_price, 0)";
+            }
 
             $products = [];
             $queries = [];
@@ -212,7 +235,7 @@ try {
                     $categoryCond = "AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(products.category) AND pc.is_active = false)";
                 }
                 $queries[] = [
-                    "SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE is_active = true AND category = ? {$categoryCond} ORDER BY name LIMIT 200",
+                    "SELECT id, name, sku, {$channelPriceExpr} AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE {$onlineCond} AND category = ? {$categoryCond} ORDER BY name LIMIT 200",
                     [$category]
                 ];
                 $queries[] = [
@@ -225,7 +248,7 @@ try {
                     $categoryCond = "AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(products.category) AND pc.is_active = false)";
                 }
                 $queries[] = [
-                    "SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE is_active = true {$categoryCond} ORDER BY name LIMIT 200",
+                    "SELECT id, name, sku, {$channelPriceExpr} AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE {$onlineCond} {$categoryCond} ORDER BY name LIMIT 200",
                     []
                 ];
                 $queries[] = [
@@ -298,9 +321,15 @@ try {
         case 'list-all':
             // For admin visibility control
             require_admin();
+            $showOnlineCol = db_column_exists('products', 'show_in_online')
+                ? "(CASE WHEN show_in_online IS NULL THEN 1 WHEN LOWER(CAST(show_in_online AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) AS show_in_online"
+                : "1 AS show_in_online";
+            $showPosCol = db_column_exists('products', 'show_in_pos')
+                ? "(CASE WHEN show_in_pos IS NULL THEN 1 WHEN LOWER(CAST(show_in_pos AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) AS show_in_pos"
+                : "1 AS show_in_pos";
             $queries = [
-                ["SELECT id, name, sku, unit_price, (CASE WHEN is_active IS NULL THEN 1 WHEN LOWER(CAST(is_active AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) AS is_active FROM products ORDER BY name LIMIT 500", []],
-                ["SELECT id, name, sku, sell_price AS unit_price, (CASE WHEN active = 1 THEN 1 ELSE 0 END) AS is_active FROM products ORDER BY name LIMIT 500", []]
+                ["SELECT id, name, sku, unit_price, (CASE WHEN is_active IS NULL THEN 1 WHEN LOWER(CAST(is_active AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) AS is_active, {$showOnlineCol}, {$showPosCol} FROM products ORDER BY name LIMIT 500", []],
+                ["SELECT id, name, sku, sell_price AS unit_price, (CASE WHEN active = 1 THEN 1 ELSE 0 END) AS is_active, {$showOnlineCol}, {$showPosCol} FROM products ORDER BY name LIMIT 500", []]
             ];
             $products = [];
             foreach ($queries as $q) {
@@ -322,29 +351,55 @@ try {
             }
             $id = (int)($input['id'] ?? 0);
             $is_active = normalize_bool_products_api($input['is_active'] ?? null, true);
-            
+            // Canal opcional: 'online' | 'pos' | 'all' (default). Permite ocultar por canal.
+            $channel = strtolower(trim((string)($input['channel'] ?? 'all')));
+            if (!in_array($channel, ['online', 'pos', 'all'], true)) {
+                $channel = 'all';
+            }
+
             if ($id <= 0) {
                 $response = ['success' => false, 'message' => 'ID inválido'];
                 break;
             }
 
-            // Try multiple column names (compatibility)
             $updated = false;
+            $valBool = $is_active ? true : false;
+            $valInt = $is_active ? 1 : 0;
+            $hasOnline = db_column_exists('products', 'show_in_online');
+            $hasPos = db_column_exists('products', 'show_in_pos');
+
             try {
-                $stmt = $pdo->prepare("UPDATE products SET is_active = ? WHERE id = ?");
-                $stmt->execute([$is_active ? 1 : 0, $id]);
-                $updated = $stmt->rowCount() > 0;
+                if (($channel === 'online' || $channel === 'all') && $hasOnline) {
+                    $stmt = $pdo->prepare("UPDATE products SET show_in_online = ? WHERE id = ?");
+                    $stmt->execute([$valBool, $id]);
+                }
+                if (($channel === 'pos' || $channel === 'all') && $hasPos) {
+                    $stmt = $pdo->prepare("UPDATE products SET show_in_pos = ? WHERE id = ?");
+                    $stmt->execute([$valBool, $id]);
+                }
+                // is_active refleja si el producto está visible en al menos un canal
+                if ($channel === 'all') {
+                    $stmt = $pdo->prepare("UPDATE products SET is_active = ? WHERE id = ?");
+                    $stmt->execute([$valBool, $id]);
+                } elseif ($hasOnline || $hasPos) {
+                    $stmt = $pdo->prepare("UPDATE products SET is_active = (COALESCE(show_in_online, true) OR COALESCE(show_in_pos, true)) WHERE id = ?");
+                    $stmt->execute([$id]);
+                }
+                $updated = true;
             } catch (Exception $e1) {
                 try {
                     $stmt = $pdo->prepare("UPDATE products SET active = ? WHERE id = ?");
-                    $stmt->execute([$is_active ? 1 : 0, $id]);
-                    $updated = $stmt->rowCount() > 0;
+                    $stmt->execute([$valInt, $id]);
+                    $updated = true;
                 } catch (Exception $e2) {}
             }
 
+            $channelLabel = $channel === 'online' ? 'Tienda en Línea' : ($channel === 'pos' ? 'Tienda Local (POS)' : 'todos los canales');
             $response = [
                 'success' => $updated,
-                'message' => $updated ? ($is_active ? 'Producto visible' : 'Producto oculto') : 'No se pudo actualizar'
+                'message' => $updated
+                    ? ($is_active ? "Producto visible en {$channelLabel}" : "Producto oculto en {$channelLabel}")
+                    : 'No se pudo actualizar'
             ];
             break;
 

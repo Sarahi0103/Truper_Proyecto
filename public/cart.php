@@ -29,6 +29,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
     <title>Mi Carrito - Ferretería FOX</title>
     <link rel="stylesheet" href="css/styles.css?v=4.1">
     <link rel="stylesheet" href="css/theme.css?v=4.1">
+    <link rel="stylesheet" href="css/toast-notifications.css">
     <link rel="stylesheet" href="css/responsive-complete.css?v=5.0">
     <style>
         /* ===== Cart Page — Premium Redesign ===== */
@@ -457,6 +458,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                         <a href="orders.php">Ventas / Pedidos</a>
                         <a href="order_tracking.php">Seguimiento / Logística</a>
                         <a href="rma_manager.php">Devoluciones RMA</a>
+                        <a href="admin_online_billing.php">Facturación & Pagos SAT</a>
                     </div>
                 </div>
                 <div class="nav-dropdown">
@@ -480,6 +482,12 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                     </div>
                 </div>
                 <?php endif; ?>
+                
+                <?php endif; ?>
+            </nav>
+            <div class="header-actions">
+                <?php if (!empty(whatsapp_phone_digits())): ?>
+                <a href="https://wa.me/<?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?>?text=Hola%2C+tengo+una+duda+sobre+mi+carrito." target="_blank" rel="noopener" class="btn btn-secondary btn-small">Dudas por WhatsApp</a>
                 
                 <?php endif; ?>
             </nav>
@@ -513,7 +521,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
         </div>
 
         <div class="cart-page-header" style="margin-bottom: 1.5rem;">
-            <h1 class="cart-page-title">🛒 Mi Carrito</h1>
+            <h1 class="cart-page-title">Mi Carrito</h1>
             
             <?php if ($isOnlineMode): ?>
             <!-- Pasos de Compra -->
@@ -533,19 +541,16 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                     <span style="font-weight:600; color:#aaa; font-size:0.8rem;">Pago</span>
                 </div>
             </div>
+            <!-- Banner de Reserva Temporal de Stock (15 Minutos) -->
+            <div id="reservationBanner" style="display:none; background: rgba(255,127,0,0.08); border: 1px solid rgba(255,127,0,0.25); border-radius: 12px; padding: 0.85rem 1.25rem; margin-bottom: 1.5rem; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                <div style="display:flex; align-items:center; gap:0.6rem; color:#fff; font-size:0.9rem; font-weight:600;">
+                    <span>⏳ Reserva de Stock en Almacén:</span>
+                    <span id="reservationTimer" style="color:var(--theme-accent, #ff7f00); font-family:monospace; font-size:1.15rem; font-weight:800;">14:59</span>
+                </div>
+                <div style="font-size:0.82rem; color:#aaa;">Tus productos están apartados temporalmente por 15 minutos.</div>
+            </div>
             <?php endif; ?>
         </div>
-
-        <!-- Banner de Reserva Temporal de Stock (15 Minutos) -->
-        <?php if ($isOnlineMode): ?>
-        <div style="background: rgba(255,127,0,0.08); border: 1px solid rgba(255,127,0,0.25); border-radius: 12px; padding: 0.85rem 1.25rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-            <div style="display:flex; align-items:center; gap:0.6rem; color:#fff; font-size:0.9rem; font-weight:600;">
-                <span>⏳ Reserva de Stock en Almacén:</span>
-                <span id="reservationTimer" style="color:var(--theme-accent, #ff7f00); font-family:monospace; font-size:1.15rem; font-weight:800;">14:59</span>
-            </div>
-            <div style="font-size:0.82rem; color:#aaa;">Tus productos están apartados temporalmente por 15 minutos.</div>
-        </div>
-        <?php endif; ?>
 
         <div class="cart-container">
             <div class="cart-items-section">
@@ -588,7 +593,10 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                         </div>
                     <?php else: ?>
                         <!-- Carrito del Catálogo Principal Local -->
-                        <button id="printTicket" class="btn btn-primary btn-full" style="background:var(--theme-accent, #ff6600); color:#fff; font-weight:700; text-align:center; padding:12px; border-radius:8px; border:none; width:100%; display:block; margin-bottom:0.75rem; cursor:pointer; font-size:1rem; display:inline-flex; align-items:center; justify-content:center; gap:0.4rem;">⬇️ Enviar cotización</button>
+                        <a href="checkout.php" class="btn btn-primary btn-full" style="background:linear-gradient(135deg, #ff7f00, #ff5500); color:#fff; font-weight:800; text-align:center; text-decoration:none; padding:14px; border-radius:8px; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:0.75rem; font-size:1.05rem; box-shadow:0 4px 15px rgba(255,102,0,0.3); border:none; text-transform:uppercase; letter-spacing:0.04em;">
+                            Realizar Pedido / Comprar
+                        </a>
+                        <button id="printTicket" class="btn btn-secondary btn-full" style="background:#1e1e24; color:#fff; font-weight:700; text-align:center; padding:12px; border-radius:8px; border:1px solid #333; width:100%; display:block; margin-bottom:0.75rem; cursor:pointer; font-size:0.95rem; display:inline-flex; align-items:center; justify-content:center; gap:0.4rem;">⬇️ Enviar cotización</button>
                         
                         <button id="shareWhatsApp" class="btn btn-secondary btn-full"
                                 style="background:#1e1e24; color:#fff; font-weight:600; text-align:center; padding:11px; border-radius:8px; border:1px solid #333; display:block; width:100%; margin-bottom:0.75rem; cursor:pointer; font-size:0.92rem; display:inline-flex; align-items:center; justify-content:center; gap:0.4rem;"
@@ -632,7 +640,8 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
 
         function getStoredCart() {
             try {
-                return JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+                let items = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+                return Array.isArray(items) ? items : [];
             } catch (_) {
                 return [];
             }
@@ -640,72 +649,94 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
 
         async function hydrateCartImages() {
             const cart = getStoredCart();
-            const needsHydration = cart.some((item) => !item.image_url || item.image_url === 'images/products/default-product.svg');
-            if (!needsHydration || cart.length === 0) {
-                return cart;
-            }
+            const needsHydration = cart.some(item => !item.image_url || item.image_url === 'images/products/default-product.svg');
+            
+            if (!needsHydration || cart.length === 0) return cart;
 
             try {
-                const response = await fetch('/api/products.php?action=list', {
-                    credentials: 'same-origin'
-                });
-                const payload = await response.json();
-                const catalog = Array.isArray(payload?.products) ? payload.products : [];
-                if (catalog.length === 0) {
-                    return cart;
-                }
+                const response = await fetch('/api/products.php?action=list');
+                const { products = [] } = await response.json();
+                if (!products.length) return cart;
 
-                const bySku = new Map();
-                const byId = new Map();
-                catalog.forEach((product) => {
-                    const sku = String(product?.sku || '').replace(/^XLS-/i, '').trim();
-                    const id = String(product?.id || '').trim();
-                    if (sku) bySku.set(sku, product);
-                    if (id) byId.set(id, product);
+                const catalogMap = new Map();
+                products.forEach(p => {
+                    if (p.sku) catalogMap.set(String(p.sku).replace(/^XLS-/i, '').trim(), p);
+                    if (p.id) catalogMap.set(String(p.id).trim(), p);
                 });
 
                 let changed = false;
-                const nextCart = cart.map((item) => {
-                    const normalizedSku = String(item?.sku || '').replace(/^XLS-/i, '').trim();
-                    const candidate = bySku.get(normalizedSku) || byId.get(String(item?.id || '').trim());
-                    if (!candidate) {
-                        return item;
-                    }
+                const nextCart = cart.map(item => {
+                    const sku = String(item.sku || '').replace(/^XLS-/i, '').trim();
+                    const id = String(item.id || '').trim();
+                    const match = catalogMap.get(sku) || catalogMap.get(id);
 
-                    const nextItem = { ...item };
-                    if (!nextItem.image_url || nextItem.image_url === 'images/products/default-product.svg') {
-                        nextItem.image_url = candidate.image_url || nextItem.image_url || 'images/products/default-product.svg';
-                    }
-                    if (!nextItem.name || nextItem.name !== decodeCartText(nextItem.name)) {
-                        nextItem.name = candidate.name || decodeCartText(nextItem.name);
-                    }
+                    if (!match) return item;
 
-                    if (nextItem.image_url !== item.image_url || nextItem.name !== item.name) {
+                    const newItem = { ...item };
+                    if (newItem.image_url === 'images/products/default-product.svg') {
+                        newItem.image_url = match.image_url || newItem.image_url;
                         changed = true;
                     }
-
-                    return nextItem;
+                    return newItem;
                 });
 
                 if (changed) {
                     localStorage.setItem(CART_KEY, JSON.stringify(nextCart));
                     return nextCart;
                 }
-            } catch (_) {
-                return cart;
+            } catch (e) {
+                console.error("Hydration failed", e);
+            }
+            return cart;
+        }
+
+        let reservationInterval = null;
+        let reservationSeconds = 15 * 60;
+
+        function updateReservationTimer(cartLength) {
+            const banner = document.getElementById('reservationBanner');
+            const timerEl = document.getElementById('reservationTimer');
+            if (!banner || !timerEl) return;
+
+            if (cartLength <= 0) {
+                banner.style.display = 'none';
+                if (reservationInterval) {
+                    clearInterval(reservationInterval);
+                    reservationInterval = null;
+                }
+                reservationSeconds = 15 * 60;
+                return;
             }
 
-            return cart;
+            banner.style.display = 'flex';
+
+            if (!reservationInterval) {
+                reservationInterval = setInterval(() => {
+                    if (reservationSeconds <= 0) {
+                        timerEl.textContent = '00:00 (Expirado)';
+                        timerEl.style.color = '#ef4444';
+                        clearInterval(reservationInterval);
+                        reservationInterval = null;
+                        return;
+                    }
+                    reservationSeconds--;
+                    const mins = String(Math.floor(reservationSeconds / 60)).padStart(2, '0');
+                    const secs = String(reservationSeconds % 60).padStart(2, '0');
+                    timerEl.textContent = `${mins}:${secs}`;
+                }, 1000);
+            }
         }
 
         function renderCartPage(cart = getStoredCart()) {
             const cartList = document.getElementById('cartList');
             if (!cartList) return;
 
+            updateReservationTimer(cart.length);
+
             if (cart.length === 0) {
                 cartList.innerHTML = `
                     <div class="cart-empty">
-                        <div class="cart-empty-icon">🛒</div>
+                        <div class="cart-empty-icon" style="font-size: 2.5rem; opacity: 0.6;">📦</div>
                         <p class="cart-empty-text">Tu carrito está vacío</p>
                         <a href="<?php echo $isOnlineMode ? 'tienda.php' : 'index.php'; ?>" class="btn btn-primary cart-empty-btn"><?php echo $isOnlineMode ? 'Explorar Tienda en Línea' : 'Ir al Catálogo'; ?></a>
                     </div>
@@ -716,8 +747,30 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
 
             cartList.innerHTML = cart.map((item, idx) => {
                 const price = Number(item.unit_price || item.price || 0);
+                const originalPrice = Number(item.original_price || 0);
+                const discountPercentage = Number(item.discount_percentage || 0);
                 const qty = Number(item.quantity || 1);
                 const lineTotal = price * qty;
+                
+                // Mostrar precio original si hay descuento
+                let priceDisplay = `$${price.toFixed(2)}`;
+                if (originalPrice > 0 && originalPrice > price) {
+                    priceDisplay = `
+                        <span style="text-decoration: line-through; color: #666; font-size: 0.9em; margin-right: 8px;">$${originalPrice.toFixed(2)}</span>
+                        <span style="color: var(--theme-accent, #ff7f00); font-weight: 800;">$${price.toFixed(2)}</span>
+                        ${discountPercentage > 0 ? `<span style="background: #22c55e; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75em; margin-left: 8px;">-${discountPercentage}%</span>` : ''}
+                    `;
+                } else {
+                    priceDisplay = `<span style="color: var(--theme-accent, #ff7f00); font-weight: 800;">$${price.toFixed(2)}</span>`;
+                }
+                
+                // Alerta de stock bajo
+                const availableStock = Number(item.available_stock || 0);
+                const lowStockThreshold = Number(item.low_stock_threshold || 5);
+                const stockWarning = availableStock > 0 && availableStock <= lowStockThreshold 
+                    ? `<span style="color: #f59e0b; font-size: 0.85em; display: block; margin-top: 4px;">⚠️ Solo ${availableStock} unidades disponibles</span>` 
+                    : '';
+                
                 return `
                 <div class="cart-item">
                     <div class="cart-item-image">
@@ -726,7 +779,8 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                     <div class="cart-item-details">
                         <p class="cart-item-name">${decodeCartText(item.name)}</p>
                         <span class="cart-item-sku">SKU: ${String(item.sku || '').replace(/^XLS-/i, '')}</span>
-                        <span class="cart-item-price">$${price.toFixed(2)} x ${qty} = <strong style="color:#fff;">$${lineTotal.toFixed(2)}</strong></span>
+                        <span class="cart-item-price">${priceDisplay} x ${qty} = <strong style="color:#fff;">$${lineTotal.toFixed(2)}</strong></span>
+                        ${stockWarning}
                     </div>
                     <div class="cart-item-actions">
                         <div class="qty-control">
@@ -776,7 +830,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
             const item = cart.find(p => p.sku === sku);
             const itemName = item ? decodeCartText(item.name) : 'este producto';
             confirmDelete(itemName, function() {
-                const nextCart = getStoredCart(); // refresh in case it changed
+                const nextCart = getStoredCart();
                 const filtered = nextCart.filter(p => p.sku !== sku);
                 localStorage.setItem(CART_KEY, JSON.stringify(filtered));
                 renderCartPage();
@@ -794,69 +848,50 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                 }
             );
         });
-        });
-
-        // 15-Minute Cart Reservation Countdown
-        (function startReservationCountdown() {
-            let totalSeconds = 15 * 60;
-            const timerEl = document.getElementById('reservationTimer');
-            if (!timerEl) return;
-
-            setInterval(() => {
-                if (totalSeconds <= 0) {
-                    timerEl.textContent = '00:00 (Expirado)';
-                    timerEl.style.color = '#ef4444';
-                    return;
-                }
-                totalSeconds--;
-                const mins = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
-                const secs = String(totalSeconds % 60).padStart(2, '0');
-                timerEl.textContent = `${mins}:${secs}`;
-            }, 1000);
-        })();
 
         // Project List Importer
         function promptProjectListImport() {
-            const raw = prompt("Pega aquí tu lista de materiales o SKU de proyecto (Ejemplo: FOX-101 x2, FOX-205 x5):");
-            if (!raw || !raw.trim()) return;
+            showPrompt("Importar Lista de Materiales", "Pega aquí tu lista de materiales o SKU de proyecto (Ejemplo: FOX-101 x2, FOX-205 x5):", "", function(raw) {
+                if (!raw || !raw.trim()) return;
 
-            let cart = getStoredCart();
-            const lines = raw.split(/\r?\n|,|;/);
-            let addedCount = 0;
+                let cart = getStoredCart();
+                const lines = raw.split(/\r?\n|,|;/);
+                let addedCount = 0;
 
-            lines.forEach((line, idx) => {
-                const cleaned = line.trim();
-                if (!cleaned) return;
+                lines.forEach((line, idx) => {
+                    const cleaned = line.trim();
+                    if (!cleaned) return;
 
-                const match = cleaned.match(/([A-Za-z0-9\-]+)\s*(?:x|\*|:)?\s*(\d+)?/i);
-                if (match) {
-                    const sku = match[1].toUpperCase();
-                    const qty = parseInt(match[2] || '1', 10);
+                    const match = cleaned.match(/([A-Za-z0-9\-]+)\s*(?:x|\*|:)?\s*(\d+)?/i);
+                    if (match) {
+                        const sku = match[1].toUpperCase();
+                        const qty = parseInt(match[2] || '1', 10);
 
-                    const existing = cart.find(item => item.sku === sku || item.name.toUpperCase().includes(sku));
-                    if (existing) {
-                        existing.quantity += qty;
-                    } else {
-                        cart.push({
-                            id: Date.now() + idx,
-                            name: `Material SKU ${sku}`,
-                            sku: sku,
-                            quantity: qty,
-                            unit_price: 120.00,
-                            image_url: 'img/no-image.png'
-                        });
+                        const existing = cart.find(item => item.sku === sku || item.name.toUpperCase().includes(sku));
+                        if (existing) {
+                            existing.quantity += qty;
+                        } else {
+                            cart.push({
+                                id: Date.now() + idx,
+                                name: `Material SKU ${sku}`,
+                                sku: sku,
+                                quantity: qty,
+                                unit_price: 120.00,
+                                image_url: 'img/no-image.png'
+                            });
+                        }
+                        addedCount++;
                     }
-                    addedCount++;
+                });
+
+                if (addedCount > 0) {
+                    localStorage.setItem(CART_KEY, JSON.stringify(cart));
+                    renderCartPage();
+                    showAlert(`✅ Se procesaron e importaron ${addedCount} elemento(s) a tu carrito.`, 'success');
+                } else {
+                    showAlert("No se identificaron códigos SKU válidos en el texto ingresado.", 'warning');
                 }
             });
-
-            if (addedCount > 0) {
-                localStorage.setItem(CART_KEY, JSON.stringify(cart));
-                renderCartPage();
-                alert(`✅ Se procesaron e importaron ${addedCount} elemento(s) a tu carrito.`);
-            } else {
-                alert("No se identificaron códigos SKU válidos en el texto ingresado.");
-            }
         }
 
         document.addEventListener('DOMContentLoaded', async function() {
@@ -864,6 +899,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
             renderCartPage(cart);
         });
     </script>
+    <script src="js/toast-notifications.js"></script>
     <script src="js/mobile-optimize.js"></script>
 </body>
 </html>

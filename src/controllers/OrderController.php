@@ -41,6 +41,11 @@ class OrderController {
                     throw new Exception('Producto no encontrado: ' . $productId);
                 }
 
+                $availableStock = (int)($product['stock_quantity'] ?? 0);
+                if ($availableStock < $quantity) {
+                    throw new Exception("Stock insuficiente para '{$product['name']}'. Disponible: {$availableStock}, solicitado: {$quantity}.");
+                }
+
                 $isAdmin = (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee');
                 $customPrice = ($isAdmin && isset($item['price'])) ? (float)$item['price'] : null;
 
@@ -138,6 +143,10 @@ class OrderController {
 
                 $stmt = $this->pdo->prepare("INSERT INTO order_items (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $values) . ")");
                 $stmt->execute($params);
+
+                // Descontar inventario de existencias del producto
+                $updStock = $this->pdo->prepare("UPDATE products SET stock_quantity = GREATEST(0, stock_quantity - ?), updated_at = NOW() WHERE id = ?");
+                $updStock->execute([$item['quantity'], $item['product_id']]);
                 
                 // Actualizar estadísticas de compra
                 $this->updatePurchaseStatistics(

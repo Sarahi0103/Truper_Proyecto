@@ -23,7 +23,9 @@ if ($isLogged) {
     <title>Checkout - Ferretería FOX</title>
     <link rel="stylesheet" href="css/styles.css?v=4.1">
     <link rel="stylesheet" href="css/theme.css?v=4.1">
+    <link rel="stylesheet" href="css/toast-notifications.css">
     <link rel="stylesheet" href="css/responsive-complete.css?v=5.0">
+    <link rel="manifest" href="manifest.json">
     <style>
         .checkout-page { padding: 2rem 1rem; }
         .checkout-header {
@@ -259,6 +261,8 @@ if ($isLogged) {
                         <a href="orders.php">Ventas / Pedidos</a>
                         <a href="order_tracking.php">Seguimiento / Logística</a>
                         <a href="rma_manager.php">Devoluciones RMA</a>
+                        <a href="admin_online_billing.php">Facturación & Pagos SAT</a>
+                        <a href="admin_payment_config.php">Configuración de Pagos</a>
                     </div>
                 </div>
                 <div class="nav-dropdown">
@@ -366,19 +370,31 @@ if ($isLogged) {
                         <div class="form-section-title">📦 Dirección de Entrega</div>
                         
                         <div class="form-group">
-                            <label for="address">Calle y Número *</label>
-                            <input type="text" id="address" name="address" required placeholder="Ej: Calle Principal 123" value="<?php echo htmlspecialchars($user['address'] ?? ''); ?>">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <label for="address" style="margin-bottom: 0;">Calle y Número *</label>
+                                <button type="button" id="btnGetCurrentLocation" onclick="getCurrentLocation()" style="background: rgba(255,102,0,0.15); border: 1px solid rgba(255,102,0,0.4); color: #ff7f00; padding: 4px 12px; border-radius: 6px; font-weight: 700; font-size: 0.82rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;">
+                                    <span id="geoIcon">📍</span> <span id="geoText">Usar mi ubicación actual</span>
+                                </button>
+                            </div>
+                            <input type="text" id="address" name="address" required placeholder="Ej: Av. Juárez 450, Col. Centro" value="<?php echo htmlspecialchars($user['address'] ?? ''); ?>" autocomplete="street-address">
+                            <div id="addressSuggestions" style="position: relative; z-index: 1000;"></div>
                         </div>
 
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="city">Ciudad *</label>
-                                <input type="text" id="city" name="city" required placeholder="Ej: México, CDMX">
+                                <input type="text" id="city" name="city" required placeholder="Ej: Guadalajara, Jalisco" value="<?php echo htmlspecialchars($user['city'] ?? ''); ?>" autocomplete="address-level2">
                             </div>
                             <div class="form-group">
                                 <label for="postalCode">Código Postal *</label>
-                                <input type="text" id="postalCode" name="postalCode" required placeholder="Ej: 28001">
+                                <input type="text" id="postalCode" name="postalCode" required placeholder="Ej: 44100" maxlength="5" pattern="\d{5}" value="<?php echo htmlspecialchars($user['postal_code'] ?? ''); ?>" autocomplete="postal-code">
+                                <small class="text-muted" id="cpInfo">Ingresa tu código postal para autocompletar ciudad</small>
                             </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="state">Estado *</label>
+                            <input type="text" id="state" name="state" required placeholder="Ej: Jalisco" value="<?php echo htmlspecialchars($user['state'] ?? ''); ?>" autocomplete="address-level1">
                         </div>
 
                         <div class="form-group">
@@ -442,23 +458,42 @@ if ($isLogged) {
                                 Requiero Factura Fiscal (CFDI 4.0 - SAT México)
                             </label>
                             <small class="text-muted">Si no seleccionas esta opción, se emitirá una Nota de Venta (Público en General / Control Interno).</small>
+                            <?php if (!empty($user['rfc'])): ?>
+                            <div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(34,197,94,0.1); border-radius: 4px; font-size: 0.8rem; color: #22c55e;">
+                                ✅ Tus datos fiscales están precargados de tu perfil
+                            </div>
+                            <?php endif; ?>
                         </div>
 
                         <div id="fiscalFieldsWrap" style="display: <?php echo !empty($user['rfc']) ? 'block' : 'none'; ?>; padding-top:0.75rem; border-top:1px dashed var(--theme-border);">
+                            <?php $hasFiscalData = !empty($user['rfc']) && !empty($user['tax_name']) && !empty($user['tax_regime']) && !empty($user['zip_code_fiscal']); ?>
+                            
+                            <?php if ($hasFiscalData): ?>
+                            <div style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); border-radius: 6px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
+                                    <strong style="color:#22c55e; font-size:0.9rem;">📋 Datos Fiscales del Perfil</strong>
+                                    <button type="button" onclick="toggleFiscalEdit()" style="background:transparent; border:1px solid #22c55e; color:#22c55e; padding:4px 8px; border-radius:4px; font-size:0.75rem; cursor:pointer;">
+                                        ✏️ Editar
+                                    </button>
+                                </div>
+                                <small style="color:var(--theme-text-muted);">Estos datos están precargados de tu perfil. Haz clic en "Editar" si necesitas modificarlos.</small>
+                            </div>
+                            <?php endif; ?>
+
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="rfc">RFC *</label>
-                                    <input type="text" id="rfc" name="rfc" value="<?php echo htmlspecialchars($user['rfc'] ?? ''); ?>" placeholder="Ej: VECJ880326XXX" maxlength="13" style="text-transform:uppercase;">
+                                    <input type="text" id="rfc" name="rfc" value="<?php echo htmlspecialchars($user['rfc'] ?? ''); ?>" placeholder="Ej: VECJ880326XXX" maxlength="13" style="text-transform:uppercase;" <?php echo $hasFiscalData ? 'readonly style="background:var(--theme-surface-strong); opacity:0.7;"' : ''; ?>>
                                 </div>
                                 <div class="form-group">
                                     <label for="taxName">Razón Social / Nombre Fiscal *</label>
-                                    <input type="text" id="taxName" name="taxName" value="<?php echo htmlspecialchars($user['tax_name'] ?? ''); ?>" placeholder="Nombre o Razón Social exacta">
+                                    <input type="text" id="taxName" name="taxName" value="<?php echo htmlspecialchars($user['tax_name'] ?? ''); ?>" placeholder="Nombre o Razón Social exacta" <?php echo $hasFiscalData ? 'readonly style="background:var(--theme-surface-strong); opacity:0.7;"' : ''; ?>>
                                 </div>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="taxRegime">Régimen Fiscal (SAT) *</label>
-                                    <select id="taxRegime" name="taxRegime">
+                                    <select id="taxRegime" name="taxRegime" <?php echo $hasFiscalData ? 'disabled style="background:var(--theme-surface-strong); opacity:0.7;"' : ''; ?>>
                                         <option value="">Selecciona Régimen Fiscal...</option>
                                         <?php 
                                             $regimes = SatCatalogs::getTaxRegimes();
@@ -472,12 +507,12 @@ if ($isLogged) {
                                 </div>
                                 <div class="form-group">
                                     <label for="zipCodeFiscal">C.P. Domicilio Fiscal *</label>
-                                    <input type="text" id="zipCodeFiscal" name="zipCodeFiscal" value="<?php echo htmlspecialchars($user['zip_code_fiscal'] ?? ''); ?>" placeholder="Ej: 44100" maxlength="5">
+                                    <input type="text" id="zipCodeFiscal" name="zipCodeFiscal" value="<?php echo htmlspecialchars($user['zip_code_fiscal'] ?? ''); ?>" placeholder="Ej: 44100" maxlength="5" <?php echo $hasFiscalData ? 'readonly style="background:var(--theme-surface-strong); opacity:0.7;"' : ''; ?>>
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label for="cfdiUse">Uso de CFDI *</label>
-                                <select id="cfdiUse" name="cfdiUse">
+                                <select id="cfdiUse" name="cfdiUse" <?php echo $hasFiscalData ? 'disabled style="background:var(--theme-surface-strong); opacity:0.7;"' : ''; ?>>
                                     <?php 
                                         $uses = SatCatalogs::getCfdiUses();
                                         $userUse = $user['cfdi_use_default'] ?? 'G03';
@@ -490,6 +525,27 @@ if ($isLogged) {
                             </div>
                         </div>
                     </div>
+
+                    <script>
+                    function toggleFiscalEdit() {
+                        const fields = ['rfc', 'taxName', 'taxRegime', 'zipCodeFiscal', 'cfdiUse'];
+                        fields.forEach(fieldId => {
+                            const field = document.getElementById(fieldId);
+                            if (field.tagName === 'SELECT') {
+                                field.disabled = !field.disabled;
+                            } else {
+                                field.readOnly = !field.readOnly;
+                            }
+                            if (field.disabled || field.readOnly) {
+                                field.style.background = 'var(--theme-surface-strong)';
+                                field.style.opacity = '0.7';
+                            } else {
+                                field.style.background = '';
+                                field.style.opacity = '1';
+                            }
+                        });
+                    }
+                    </script>
 
                     <!-- B2B & Volume Special Assistance Banner -->
                     <div class="form-section" style="background: rgba(34, 197, 94, 0.05); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 8px; padding: 1rem;">
@@ -520,21 +576,70 @@ if ($isLogged) {
 
                         <div class="form-group">
                             <label>
-                                <input type="radio" name="paymentMethod" value="credit_card" checked> 
+                                <input type="radio" name="paymentMethod" value="card" checked onchange="handlePaymentMethodChange()"> 
                                 <strong>Tarjeta de Crédito / Débito</strong>
                             </label>
+                            <small style="color: var(--theme-text-muted);">Stripe / Mercado Pago - Pago seguro en línea</small>
                         </div>
+                        
                         <div class="form-group">
                             <label>
-                                <input type="radio" name="paymentMethod" value="bank_transfer"> 
-                                <strong>Transferencia Bancaria (SPEI)</strong>
+                                <input type="radio" name="paymentMethod" value="spei" onchange="handlePaymentMethodChange()"> 
+                                <strong>Transferencia SPEI</strong>
                             </label>
+                            <small style="color: var(--theme-text-muted);">Transferencia bancaria instantánea</small>
                         </div>
+                        
+                        <!-- Selección de banco para SPEI -->
+                        <div id="bankSelectionSection" style="display: none; margin-left: 24px; padding: 16px; background: rgba(255,127,0,0.05); border-radius: 8px; border: 1px solid rgba(255,127,0,0.2); margin-top: 12px;">
+                            <div class="form-group">
+                                <label for="selectedBank" style="font-weight: 600; color: var(--theme-accent);">Selecciona tu banco:</label>
+                                <select id="selectedBank" name="selectedBank" class="form-input" onchange="handleBankSelection()">
+                                    <option value="">Cargando bancos...</option>
+                                </select>
+                            </div>
+                            <div id="bankDetails" style="display: none; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 6px; margin-top: 12px;">
+                                <div style="font-weight: 700; color: #fff; margin-bottom: 8px;" id="bankNameDisplay"></div>
+                                <div style="font-size: 0.9rem; color: #aaa; line-height: 1.6;">
+                                    <div><strong>CLABE:</strong> <span id="bankClabeDisplay" style="font-family: monospace; font-size: 1rem; color: var(--theme-accent);"></span></div>
+                                    <div><strong>Titular:</strong> <span id="bankHolderDisplay"></span></div>
+                                    <div><strong>RFC:</strong> <span id="bankRfcDisplay"></span></div>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div class="form-group">
                             <label>
-                                <input type="radio" name="paymentMethod" value="on_delivery"> 
+                                <input type="radio" name="paymentMethod" value="transfer" onchange="handlePaymentMethodChange()"> 
+                                <strong>Transferencia Bancaria Tradicional</strong>
+                            </label>
+                            <small style="color: var(--theme-text-muted);">Transferencia interbancaria (1-2 días hábiles)</small>
+                        </div>
+                        
+                        <!-- Selección de banco para Transferencia -->
+                        <div id="transferBankSection" style="display: none; margin-left: 24px; padding: 16px; background: rgba(255,127,0,0.05); border-radius: 8px; border: 1px solid rgba(255,127,0,0.2); margin-top: 12px;">
+                            <div class="form-group">
+                                <label for="selectedTransferBank" style="font-weight: 600; color: var(--theme-accent);">Selecciona tu banco:</label>
+                                <select id="selectedTransferBank" name="selectedTransferBank" class="form-input" onchange="handleTransferBankSelection()">
+                                    <option value="">Cargando bancos...</option>
+                                </select>
+                            </div>
+                            <div id="transferBankDetails" style="display: none; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 6px; margin-top: 12px;">
+                                <div style="font-weight: 700; color: #fff; margin-bottom: 8px;" id="transferBankNameDisplay"></div>
+                                <div style="font-size: 0.9rem; color: #aaa; line-height: 1.6;">
+                                    <div><strong>CLABE:</strong> <span id="transferBankClabeDisplay" style="font-family: monospace; font-size: 1rem; color: var(--theme-accent);"></span></div>
+                                    <div><strong>Titular:</strong> <span id="transferBankHolderDisplay"></span></div>
+                                    <div><strong>RFC:</strong> <span id="transferBankRfcDisplay"></span></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                <input type="radio" name="paymentMethod" value="cash" onchange="handlePaymentMethodChange()"> 
                                 <strong>Pago Contra Entrega / Recojo en Tienda</strong>
                             </label>
+                            <small style="color: var(--theme-text-muted);">Efectivo o tarjeta al recibir</small>
                         </div>
                     </div>
 
@@ -609,8 +714,8 @@ if ($isLogged) {
         // Load cart and populate summary
         function loadCartSummary() {
             try {
-                const cart = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
-                if (cart.length === 0) {
+                let cart = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+                if (!Array.isArray(cart) || cart.length === 0) {
                     window.location.href = CART_KEY === 'fox_cart' ? 'cart.php?mode=online' : 'cart.php';
                     return;
                 }
@@ -731,7 +836,268 @@ if ($isLogged) {
 
         // Load cart on page load
         document.addEventListener('DOMContentLoaded', loadCartSummary);
+        
+        // ===== FUNCIONES PARA SELECCIÓN DE BANCOS =====
+        let mexicanBanks = [];
+        
+        // Cargar bancos mexicanos al iniciar
+        function loadMexicanBanks() {
+            fetch('/api/admin_payment_config.php?action=get_banks')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        mexicanBanks = data.banks;
+                        populateBankSelects();
+                    }
+                })
+                .catch(err => console.error('Error cargando bancos:', err));
+        }
+        
+        // Poblar selects de bancos
+        function populateBankSelects() {
+            const speiSelect = document.getElementById('selectedBank');
+            const transferSelect = document.getElementById('selectedTransferBank');
+            
+            if (speiSelect && mexicanBanks.length > 0) {
+                const speiBanks = mexicanBanks.filter(b => b.supports_spei);
+                speiSelect.innerHTML = '<option value="">Selecciona un banco...</option>' + 
+                    speiBanks.map(b => `<option value="${b.id}">${b.bank_name}</option>`).join('');
+            }
+            
+            if (transferSelect && mexicanBanks.length > 0) {
+                const transferBanks = mexicanBanks.filter(b => b.supports_transfer);
+                transferSelect.innerHTML = '<option value="">Selecciona un banco...</option>' + 
+                    transferBanks.map(b => `<option value="${b.id}">${b.bank_name}</option>`).join('');
+            }
+        }
+        
+        // Manejar cambio de método de pago
+        function handlePaymentMethodChange() {
+            const method = document.querySelector('input[name="paymentMethod"]:checked')?.value;
+            
+            // Ocultar todas las secciones de bancos
+            document.getElementById('bankSelectionSection').style.display = 'none';
+            document.getElementById('transferBankSection').style.display = 'none';
+            
+            // Mostrar sección correspondiente
+            if (method === 'spei') {
+                document.getElementById('bankSelectionSection').style.display = 'block';
+            } else if (method === 'transfer') {
+                document.getElementById('transferBankSection').style.display = 'block';
+            }
+        }
+        
+        // Manejar selección de banco SPEI
+        function handleBankSelection() {
+            const bankId = document.getElementById('selectedBank').value;
+            const bankDetails = document.getElementById('bankDetails');
+            
+            if (!bankId) {
+                bankDetails.style.display = 'none';
+                return;
+            }
+            
+            const bank = mexicanBanks.find(b => b.id == bankId);
+            if (bank) {
+                document.getElementById('bankNameDisplay').textContent = bank.bank_name;
+                document.getElementById('bankClabeDisplay').textContent = bank.clabe;
+                document.getElementById('bankHolderDisplay').textContent = bank.account_holder;
+                document.getElementById('bankRfcDisplay').textContent = bank.rfc || 'N/A';
+                bankDetails.style.display = 'block';
+            }
+        }
+        
+        // Manejar selección de banco para transferencia
+        function handleTransferBankSelection() {
+            const bankId = document.getElementById('selectedTransferBank').value;
+            const bankDetails = document.getElementById('transferBankDetails');
+            
+            if (!bankId) {
+                bankDetails.style.display = 'none';
+                return;
+            }
+            
+            const bank = mexicanBanks.find(b => b.id == bankId);
+            if (bank) {
+                document.getElementById('transferBankNameDisplay').textContent = bank.bank_name;
+                document.getElementById('transferBankClabeDisplay').textContent = bank.clabe;
+                document.getElementById('transferBankHolderDisplay').textContent = bank.account_holder;
+                document.getElementById('transferBankRfcDisplay').textContent = bank.rfc || 'N/A';
+                bankDetails.style.display = 'block';
+            }
+        }
+        
+        // Cargar bancos al iniciar
+        loadMexicanBanks();
+        
+        // Geolocalización y autocompletado de código postal
+        const postalCodeInput = document.getElementById('postalCode');
+        const cityInput = document.getElementById('city');
+        const stateInput = document.getElementById('state');
+        const cpInfo = document.getElementById('cpInfo');
+        
+        // Autocompletar ciudad y estado al ingresar código postal
+        postalCodeInput.addEventListener('blur', async function() {
+            const cp = this.value.trim();
+            if (cp.length === 5) {
+                cpInfo.textContent = 'Buscando información del código postal...';
+                try {
+                    const response = await fetch(`https://api.copomex.com/query/info_cp_cp?cp=${cp}&token=pruebas`);
+                    const data = await response.json();
+                    
+                    if (data && data.response) {
+                        const info = data.response;
+                        if (info.municipio) {
+                            cityInput.value = info.municipio;
+                        }
+                        if (info.estado) {
+                            stateInput.value = info.estado;
+                        }
+                        cpInfo.textContent = `✅ ${info.municipio}, ${info.estado}`;
+                        cpInfo.style.color = '#22c55e';
+                    } else {
+                        cpInfo.textContent = '⚠️ Código postal no encontrado';
+                        cpInfo.style.color = '#ff9f43';
+                    }
+                } catch (error) {
+                    // Fallback: usar datos locales si la API falla
+                    cpInfo.textContent = 'Código postal válido (verifica ciudad y estado)';
+                    cpInfo.style.color = '#888';
+                }
+            }
+        });
+        
+        // Geolocalización GPS precisa y autocompletado de dirección
+        async function getCurrentLocation() {
+            const btn = document.getElementById('btnGetCurrentLocation');
+            const geoIcon = document.getElementById('geoIcon');
+            const geoText = document.getElementById('geoText');
+
+            if (!navigator.geolocation) {
+                if (window.showToast) window.showToast('error', 'Geolocalización no soportada', 'Tu navegador no soporta detección de ubicación.');
+                else alert('Tu navegador no soporta detección de ubicación.');
+                return;
+            }
+
+            // Estado de carga
+            if (geoIcon) geoIcon.textContent = '⏳';
+            if (geoText) geoText.textContent = 'Detectando GPS...';
+            if (btn) btn.disabled = true;
+
+            if (window.showToast) window.showToast('info', 'Obteniendo GPS', 'Detectando coordenadas precisas de tu dispositivo...', 2500);
+
+            navigator.geolocation.getCurrentPosition(
+                async function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+
+                    try {
+                        let addressObj = null;
+
+                        // Intento 1: BigDataCloud Reverse Geocoding (Rápido, libre de CORS y sin límites restrictivos)
+                        try {
+                            const bdcRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=es`);
+                            if (bdcRes.ok) {
+                                const bdcData = await bdcRes.json();
+                                if (bdcData) {
+                                    const road = bdcData.locality || bdcData.city || '';
+                                    const city = bdcData.city || bdcData.locality || bdcData.principalSubdivision || '';
+                                    const state = bdcData.principalSubdivision || '';
+                                    const postcode = bdcData.postcode || '';
+
+                                    addressObj = {
+                                        road: bdcData.localityInfo?.administrative?.[3]?.name || road,
+                                        city: city,
+                                        state: state,
+                                        postcode: postcode
+                                    };
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('BigDataCloud fallback to Nominatim:', e);
+                        }
+
+                        // Intento 2: Nominatim OpenStreetMap (si Intento 1 no trajo calle completa)
+                        if (!addressObj || !addressObj.road) {
+                            const osmRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+                            if (osmRes.ok) {
+                                const osmData = await osmRes.json();
+                                if (osmData && osmData.address) {
+                                    const a = osmData.address;
+                                    const road = [a.road || a.pedestrian || a.suburb, a.house_number].filter(Boolean).join(' ');
+                                    addressObj = {
+                                        road: road || a.neighbourhood || a.suburb || addressObj?.road || '',
+                                        city: a.city || a.town || a.municipality || a.county || addressObj?.city || '',
+                                        state: a.state || addressObj?.state || '',
+                                        postcode: a.postcode || addressObj?.postcode || ''
+                                    };
+                                }
+                            }
+                        }
+
+                        if (addressObj) {
+                            const addressInput = document.getElementById('address');
+                            if (addressObj.road && addressInput) {
+                                addressInput.value = addressObj.road;
+                            }
+                            if (addressObj.city && cityInput) {
+                                cityInput.value = addressObj.city;
+                            }
+                            if (addressObj.state && stateInput) {
+                                stateInput.value = addressObj.state;
+                            }
+                            if (addressObj.postcode && postalCodeInput) {
+                                postalCodeInput.value = addressObj.postcode.substring(0, 5);
+                                postalCodeInput.dispatchEvent(new Event('input', { bubbles: true }));
+                            }
+
+                            if (window.showToast) {
+                                window.showToast('success', '📍 Ubicación Detectada', `Dirección completada: ${addressObj.city || 'Ubicación actual'}, C.P. ${addressObj.postcode || ''}`);
+                            }
+                        } else {
+                            throw new Error('No se pudo interpretar la dirección');
+                        }
+                    } catch (err) {
+                        console.error('Geocoding error:', err);
+                        if (window.showToast) {
+                            window.showToast('warning', 'Ubicación Parcial', `Coordenadas: Lat ${lat.toFixed(4)}, Lon ${lng.toFixed(4)}. Por favor confirma tu calle y número.`);
+                        }
+                    } finally {
+                        if (geoIcon) geoIcon.textContent = '📍';
+                        if (geoText) geoText.textContent = 'Usar mi ubicación actual';
+                        if (btn) btn.disabled = false;
+                    }
+                },
+                function(error) {
+                    console.error('Geolocation error:', error);
+                    let msg = 'No se pudo obtener tu ubicación.';
+                    if (error.code === error.PERMISSION_DENIED) {
+                        msg = 'Permiso de ubicación denegado. Permite el acceso en tu navegador.';
+                    } else if (error.code === error.POSITION_UNAVAILABLE) {
+                        msg = 'Señal GPS no disponible.';
+                    } else if (error.code === error.TIMEOUT) {
+                        msg = 'Tiempo de espera agotado al buscar GPS.';
+                    }
+
+                    if (window.showToast) window.showToast('error', 'Error de Ubicación', msg);
+                    else alert(msg);
+
+                    if (geoIcon) geoIcon.textContent = '📍';
+                    if (geoText) geoText.textContent = 'Usar mi ubicación actual';
+                    if (btn) btn.disabled = false;
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+            );
+        }
     </script>
+    <script src="js/toast-notifications.js"></script>
     <script src="js/mobile-optimize.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW reg error:', err));
+            });
+        }
+    </script>
 </body>
 </html>

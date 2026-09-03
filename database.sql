@@ -462,3 +462,119 @@ CREATE TABLE IF NOT EXISTS rate_limit_entries (
     attempts INTEGER NOT NULL DEFAULT 0,
     window_start TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+-- ============================================================
+-- Esquemas Avanzados: Multi-Almacén, Kardex, Precios y Backorders
+-- ============================================================
+
+-- Multi-Almacén
+CREATE TABLE IF NOT EXISTS warehouses (
+    id SERIAL PRIMARY KEY,
+    code VARCHAR(50) UNIQUE NOT NULL,
+    name VARCHAR(150) NOT NULL,
+    address TEXT,
+    city VARCHAR(100),
+    state VARCHAR(100),
+    postal_code VARCHAR(20),
+    phone VARCHAR(30),
+    is_main BOOLEAN DEFAULT false,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO warehouses (code, name, address, is_main, is_active)
+VALUES ('ALM-CENTRAL', 'Almacén Central / Tienda Principal', 'Matriz Truper', true, true)
+ON CONFLICT (code) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS warehouse_stock (
+    id SERIAL PRIMARY KEY,
+    warehouse_id INTEGER NOT NULL REFERENCES warehouses(id) ON DELETE CASCADE,
+    product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    stock_quantity INTEGER NOT NULL DEFAULT 0,
+    min_stock INTEGER DEFAULT 5,
+    max_stock INTEGER DEFAULT 1000,
+    aisle VARCHAR(50),
+    shelf VARCHAR(50),
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(warehouse_id, product_id)
+);
+
+CREATE TABLE IF NOT EXISTS stock_transfers (
+    id SERIAL PRIMARY KEY,
+    transfer_number VARCHAR(50) UNIQUE NOT NULL,
+    from_warehouse_id INTEGER NOT NULL REFERENCES warehouses(id),
+    to_warehouse_id INTEGER NOT NULL REFERENCES warehouses(id),
+    status VARCHAR(30) DEFAULT 'pending',
+    requested_by INTEGER REFERENCES users(id),
+    received_by INTEGER REFERENCES users(id),
+    notes TEXT,
+    transfer_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    received_date TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS stock_transfer_items (
+    id SERIAL PRIMARY KEY,
+    transfer_id INTEGER NOT NULL REFERENCES stock_transfers(id) ON DELETE CASCADE,
+    product_id INTEGER NOT NULL REFERENCES products(id),
+    quantity INTEGER NOT NULL,
+    received_quantity INTEGER DEFAULT 0,
+    notes TEXT
+);
+
+-- Kardex de Inventario
+CREATE TABLE IF NOT EXISTS inventory_kardex (
+    id SERIAL PRIMARY KEY,
+    product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    warehouse_id INTEGER REFERENCES warehouses(id),
+    movement_type VARCHAR(40) NOT NULL,
+    quantity INTEGER NOT NULL,
+    unit_cost DECIMAL(12, 2) DEFAULT 0,
+    unit_price DECIMAL(12, 2) DEFAULT 0,
+    balance_quantity INTEGER NOT NULL,
+    reference_folio VARCHAR(80),
+    notes TEXT,
+    created_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Historial de Precios
+CREATE TABLE IF NOT EXISTS product_price_history (
+    id SERIAL PRIMARY KEY,
+    product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    old_unit_price DECIMAL(12, 2),
+    new_unit_price DECIMAL(12, 2) NOT NULL,
+    old_net_price DECIMAL(12, 2),
+    new_net_price DECIMAL(12, 2),
+    old_supplier_cost DECIMAL(12, 2),
+    new_supplier_cost DECIMAL(12, 2),
+    reason TEXT,
+    changed_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Backorders y Pre-órdenes
+CREATE TABLE IF NOT EXISTS order_backorders (
+    id SERIAL PRIMARY KEY,
+    order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    product_id INTEGER NOT NULL REFERENCES products(id),
+    requested_qty INTEGER NOT NULL,
+    fulfilled_qty INTEGER NOT NULL DEFAULT 0,
+    status VARCHAR(30) DEFAULT 'waiting_stock',
+    estimated_arrival DATE,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Índices de rendimiento
+CREATE INDEX IF NOT EXISTS idx_warehouse_stock_lookup ON warehouse_stock(warehouse_id, product_id);
+CREATE INDEX IF NOT EXISTS idx_kardex_product ON inventory_kardex(product_id);
+CREATE INDEX IF NOT EXISTS idx_kardex_created ON inventory_kardex(created_at);
+CREATE INDEX IF NOT EXISTS idx_kardex_movement ON inventory_kardex(movement_type);
+CREATE INDEX IF NOT EXISTS idx_backorders_order ON order_backorders(order_id);
+CREATE INDEX IF NOT EXISTS idx_backorders_product ON order_backorders(product_id);
+CREATE INDEX IF NOT EXISTS idx_price_history_product ON product_price_history(product_id);
+

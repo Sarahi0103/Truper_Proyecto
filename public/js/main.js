@@ -86,8 +86,7 @@ function showAlert(message, type = 'info') {
     let accentColor = '#94a3b8';
     
     if (type === 'success') {
-        const isCartMsg = String(message).toLowerCase().includes('carrito') || String(message).toLowerCase().includes('carro');
-        icon = isCartMsg ? '🛒' : '✅';
+        icon = '✅';
         borderColor = 'rgba(34, 197, 94, 0.4)';
         accentColor = '#22c55e';
         toast.style.background = '#0d1612'; // Verde oscuro sutil
@@ -627,8 +626,12 @@ function printElement(elementId) {
 /**
  * Confirmación de eliminación
  */
-function confirmDelete(message = '¿Estás seguro de que deseas eliminar esto?') {
-    return confirm(message);
+function confirmDelete(message = '¿Estás seguro de que deseas eliminar esto?', onConfirm) {
+    if (typeof onConfirm === 'function') {
+        confirmAction('Confirmar eliminación', message, '🗑️', onConfirm);
+    } else {
+        confirmAction('Confirmar eliminación', message, '🗑️', () => {});
+    }
 }
 
 /**
@@ -1094,9 +1097,11 @@ function logout() {
     const logoutPath = 'api/auth.php?action=logout';
     if (typeof confirmLogout === 'function') {
         confirmLogout(logoutPath);
-    } else {
-        if (confirm('¿Estás seguro de que deseas cerrar tu sesión?')) {
+    } else if (typeof confirmAction === 'function') {
+        confirmAction('Cerrar Sesión', '¿Estás seguro de que deseas cerrar tu sesión?', '🚪', () => {
             window.location.href = logoutPath;
-        }
+        });
+    } else {
+        window.location.href = logoutPath;
     }
 }

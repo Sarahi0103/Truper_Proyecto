@@ -5,6 +5,7 @@
  */
 require_once '../config/config.php';
 require_once '../src/utils/SatCatalogs.php';
+require_once '../src/Services/ShippingTrackingService.php';
 
 $folio = sanitize($_GET['folio'] ?? '');
 if (empty($folio)) {
@@ -24,6 +25,19 @@ $addressData = json_decode($order['shipping_address_json'] ?? '[]', true) ?: [];
 $addressStr = $addressData['address'] ?? 'Dirección de Entrega Registrada';
 $cityStr = $addressData['city'] ?? 'México';
 $cpStr = $addressData['postalCode'] ?? '';
+
+// Obtener tracking si existe
+$tracking = null;
+$trackingService = new ShippingTrackingService($pdo);
+$trackingData = $trackingService->getOrderTracking($order['id']);
+if ($trackingData) {
+    $tracking = [
+        'carrier' => $trackingData['carrier'],
+        'tracking_number' => $trackingData['tracking_number'],
+        'estimated_delivery' => $trackingData['estimated_delivery'],
+        'tracking_status' => $trackingData['tracking_status']
+    ];
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -119,10 +133,38 @@ $cpStr = $addressData['postalCode'] ?? '';
                     <strong>Monto Total:</strong> $<?php echo number_format((float)$order['total_amount'], 2); ?> MXN<br>
                     <strong>Tipo de Emisión:</strong> <?php echo $order['invoice_required'] ? '<span style="color:#4ade80; font-weight:700;">Factura Fiscal CFDI 4.0</span>' : 'Nota de Venta General'; ?><br>
                     <strong>Fecha de Emisión:</strong> <?php echo substr((string)$order['issued_date'], 0, 16); ?><br>
-                    <small style="color:#aaaab8; display:block; margin-top:0.6rem;">Te enviamos una copia de tu comprobante digital al correo electrónico registrado.</small>
+                    
+                    <div style="margin-top:1rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+                        <a href="/api/invoice.php?action=download_pdf&folio=<?php echo urlencode($order['folio']); ?>" target="_blank" style="padding:6px 12px; background:#ff7f00; color:#fff; border-radius:6px; font-weight:700; font-size:0.8rem; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">📕 Factura PDF</a>
+                        <a href="/api/invoice.php?action=download_xml&folio=<?php echo urlencode($order['folio']); ?>" target="_blank" style="padding:6px 12px; background:#222; border:1px solid #444; color:#fff; border-radius:6px; font-weight:600; font-size:0.8rem; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">📄 XML SAT</a>
+                        <button onclick="promptSendInvoiceEmail('<?php echo htmlspecialchars($order['folio']); ?>')" style="padding:6px 12px; background:#2563eb; color:#fff; border:none; border-radius:6px; font-weight:600; font-size:0.8rem; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">✉️ Enviar a Correo</button>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- Tracking Info (si existe) -->
+        <?php if ($tracking): ?>
+        <div class="timeline-section" style="background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(18,18,24,0.95)); border-color: rgba(59,130,246,0.3);">
+            <div class="timeline-title" style="color:#3b82f6;">📦 Información de Envío</div>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem;">
+                <div>
+                    <div style="font-size:0.8rem; color:#888899; margin-bottom:0.3rem;">Paquetería</div>
+                    <div style="font-size:1rem; font-weight:700; color:#fff;"><?php echo htmlspecialchars($tracking['carrier']); ?></div>
+                </div>
+                <div>
+                    <div style="font-size:0.8rem; color:#888899; margin-bottom:0.3rem;">Número de Guía</div>
+                    <div style="font-size:1rem; font-weight:700; color:#ff7f00; font-family:monospace;"><?php echo htmlspecialchars($tracking['tracking_number']); ?></div>
+                </div>
+                <?php if ($tracking['estimated_delivery']): ?>
+                <div>
+                    <div style="font-size:0.8rem; color:#888899; margin-bottom:0.3rem;">Entrega Estimada</div>
+                    <div style="font-size:1rem; font-weight:700; color:#fff;"><?php echo date('d/m/Y', strtotime($tracking['estimated_delivery'])); ?></div>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <!-- Actions -->
         <div style="display:flex; gap:1rem; justify-content:center; flex-wrap:wrap;">
@@ -136,5 +178,27 @@ $cpStr = $addressData['postalCode'] ?? '';
             </a>
         </div>
     </div>
+
+    <script src="js/modals.js"></script>
+    <script>
+    function promptSendInvoiceEmail(folio) {
+        showPrompt("Enviar Factura Fiscal", "Ingresa el correo electrónico para recibir los archivos PDF y XML de tu factura:", "", (email) => {
+            if (!email || !email.trim()) return;
+
+            fetch('/api/invoice.php?action=send_email&folio=' + encodeURIComponent(folio), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'email=' + encodeURIComponent(email.trim())
+            })
+            .then(r => r.json())
+            .then(data => {
+                showAlert(data.message || 'Factura enviada exitosamente', 'success');
+            })
+            .catch(err => {
+                showAlert('Error al enviar la factura: ' + err.message, 'error');
+            });
+        });
+    }
+    </script>
 </body>
 </html>

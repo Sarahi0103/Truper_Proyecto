@@ -389,6 +389,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                         <a href="orders.php">Ventas / Pedidos</a>
                         <a href="order_tracking.php">Seguimiento / Logística</a>
                         <a href="rma_manager.php">Devoluciones RMA</a>
+                        <a href="admin_online_billing.php">Facturación & Pagos SAT</a>
                     </div>
                 </div>
                 <div class="nav-dropdown">
@@ -744,7 +745,7 @@ function renderRecentMovements(movements) {
             typeLabel = '📤 Salida';
             typeColor = '#ef4444';
           } else if (m.movement_type === 'sale') {
-            typeLabel = '🛒 Venta Manual';
+            typeLabel = 'Venta Manual';
             typeColor = '#10b981';
           } else {
             typeLabel = m.movement_type;

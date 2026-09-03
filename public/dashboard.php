@@ -539,6 +539,7 @@ $first_name = explode(' ', $user_name)[0];
                         <a href="orders.php">Ventas / Pedidos</a>
                         <a href="order_tracking.php">Seguimiento / Logística</a>
                         <a href="rma_manager.php">Devoluciones RMA</a>
+                        <a href="admin_online_billing.php">Facturación & Pagos SAT</a>
                     </div>
                 </div>
                 <div class="nav-dropdown">
@@ -562,7 +563,6 @@ $first_name = explode(' ', $user_name)[0];
                     </div>
                 </div>
                 <?php endif; ?>
-                
                 <?php endif; ?>
             </nav>
         </div>
@@ -599,29 +599,6 @@ $first_name = explode(' ', $user_name)[0];
                     <p class="db-hero-sub">Bienvenido de vuelta a Ferretería FOX. Aquí está el resumen de hoy.</p>
                 </div>
                 <div class="db-hero-right">
-                    <div class="db-hero-visual">
-                        <div class="db-hero-stat">
-                            <div class="db-hero-stat-val" id="dbLiveClock" style="font-size:1rem; color:#666;">—</div>
-                            <div class="db-hero-stat-label">Hora local</div>
-                        </div>
-                        <div class="db-hero-icon-wrap">
-                            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <!-- Chart bars -->
-                                <rect x="6" y="28" width="7" height="14" rx="2" fill="rgba(255,127,0,0.4)"/>
-                                <rect x="16" y="18" width="7" height="24" rx="2" fill="rgba(255,127,0,0.65)"/>
-                                <rect x="26" y="22" width="7" height="20" rx="2" fill="rgba(255,127,0,0.5)"/>
-                                <rect x="36" y="10" width="7" height="32" rx="2" fill="#ff7f00"/>
-                                <!-- Trend line -->
-                                <polyline points="9,28 19,18 29,22 39,10" stroke="#ff9a33" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="50" stroke-dashoffset="50" style="animation:draw-line 1.2s ease forwards .3s">
-                                </polyline>
-                                <!-- Dots -->
-                                <circle cx="9" cy="28" r="2.5" fill="#ff9a33"/>
-                                <circle cx="19" cy="18" r="2.5" fill="#ff9a33"/>
-                                <circle cx="29" cy="22" r="2.5" fill="#ff9a33"/>
-                                <circle cx="39" cy="10" r="2.5" fill="#ff9a33"/>
-                            </svg>
-                        </div>
-                    </div>
                     <div class="db-role-chip">
                         <?php echo $is_admin ? 'Administrador' : (($user_role === 'employee') ? 'Personal' : ucfirst($user_role)); ?>
                     </div>
@@ -635,7 +612,8 @@ $first_name = explode(' ', $user_name)[0];
                     <span class="db-admin-bar-label">Acceso Rápido</span>
                     <div class="db-admin-links">
                         <a href="admin_supply.php?nocache=true" class="db-admin-link">Abastecimiento</a>
-                        <a href="cashier.php" class="db-admin-link">Caja</a>
+                        <a href="cashier.php" class="db-admin-link">Caja Mostrador</a>
+                        <a href="order_tracking.php" class="db-admin-link">Seguimiento Pedidos</a>
                         <a href="gastos.php" class="db-admin-link">Gastos</a>
                         <?php if ($is_admin): ?>
                         <a href="analytics.php" class="db-admin-link">Estadísticas</a>
@@ -648,7 +626,7 @@ $first_name = explode(' ', $user_name)[0];
             </div>
             <?php endif; ?>
 
-            <!-- ── KPI Cards ── -->
+            <!-- ── KPI Cards (Desglose Tienda Local vs Tienda en Línea) ── -->
             <div class="db-kpi-grid">
                 <div class="db-kpi accent" id="kpiOrders">
                     <span class="db-kpi-icon">📦</span>
@@ -658,11 +636,23 @@ $first_name = explode(' ', $user_name)[0];
                 </div>
                 <div class="db-kpi" id="kpiRevenue">
                     <span class="db-kpi-icon">💰</span>
-                    <div class="db-kpi-label">Ingresos</div>
+                    <div class="db-kpi-label">Ingresos Totales</div>
                     <div class="db-kpi-value db-skeleton" id="monthlyRevenue">—</div>
                     <div class="db-kpi-helper">Mes actual</div>
                 </div>
                 <?php if ($is_staff): ?>
+                <div class="db-kpi" id="kpiPosRevenue" style="--kpi-accent: linear-gradient(90deg, #3b82f6, transparent); cursor: pointer;" onclick="location.href='order_tracking.php?channel=pos'">
+                    <span class="db-kpi-icon">🏬</span>
+                    <div class="db-kpi-label">Tienda Local (Caja)</div>
+                    <div class="db-kpi-value db-skeleton" id="posRevenue">—</div>
+                    <div class="db-kpi-helper">Ventas Mostrador</div>
+                </div>
+                <div class="db-kpi" id="kpiOnlineRevenue" style="--kpi-accent: linear-gradient(90deg, #ff7f00, transparent); cursor: pointer;" onclick="location.href='order_tracking.php?channel=online'">
+                    <span class="db-kpi-icon">🌐</span>
+                    <div class="db-kpi-label">Tienda en Línea</div>
+                    <div class="db-kpi-value db-skeleton" id="onlineRevenue">—</div>
+                    <div class="db-kpi-helper">E-Commerce Web</div>
+                </div>
                 <div class="db-kpi" id="kpiExpenses" style="--kpi-accent: linear-gradient(90deg, #e74c3c, transparent); cursor: pointer;" onclick="location.href='gastos.php'">
                     <span class="db-kpi-icon">💸</span>
                     <div class="db-kpi-label">Gastos este mes</div>
@@ -687,31 +677,6 @@ $first_name = explode(' ', $user_name)[0];
                     <div class="db-kpi-label">Tareas pendientes</div>
                     <div class="db-kpi-value db-skeleton" id="pendingTasks">—</div>
                     <div class="db-kpi-helper">En progreso</div>
-                </div>
-            </div>
-
-            <!-- ── Dashboard Filters & Export ── -->
-            <div class="db-card" style="margin-bottom: 1.25rem;">
-                <div class="db-card-header">
-                    <div class="db-card-title">📅 Filtros de Fecha</div>
-                    <button onclick="exportDashboardData()" class="db-action-btn" style="background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600; cursor: pointer;">
-                        📥 Exportar Datos
-                    </button>
-                </div>
-                <div class="db-card-body">
-                    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
-                        <div style="display: flex; flex-direction: column; gap: 0.3rem;">
-                            <label style="font-size: 0.75rem; color: #888; font-weight: 600;">Fecha Inicio</label>
-                            <input type="date" id="dashStartDate" style="background: #111; border: 1px solid #1f1f1f; color: white; padding: 0.5rem; border-radius: 8px; font-size: 0.85rem;" onchange="applyDateFilters()">
-                        </div>
-                        <div style="display: flex; flex-direction: column; gap: 0.3rem;">
-                            <label style="font-size: 0.75rem; color: #888; font-weight: 600;">Fecha Fin</label>
-                            <input type="date" id="dashEndDate" style="background: #111; border: 1px solid #1f1f1f; color: white; padding: 0.5rem; border-radius: 8px; font-size: 0.85rem;" onchange="applyDateFilters()">
-                        </div>
-                        <button onclick="applyDateFilters()" style="background: linear-gradient(135deg, #ff7f00, #e06b00); color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: auto;">
-                            🔍 Aplicar Filtros
-                        </button>
-                    </div>
                 </div>
             </div>
 
@@ -1018,6 +983,24 @@ $first_name = explode(' ', $user_name)[0];
             // Load expenses stats asynchronously, bypassing metrics cache
             loadExpensesMetricsDirectly(expEl, netEl, revEl);
 
+            // Cargar desglose de ventas por canal (Tienda Local vs Tienda en Línea)
+            const posEl = document.getElementById('posRevenue');
+            const onlineEl = document.getElementById('onlineRevenue');
+            if (posEl || onlineEl) {
+                apiCall('/analytics.php?action=channel-stats').then(chData => {
+                    if (chData && chData.success) {
+                        if (posEl) {
+                            posEl.classList.remove('db-skeleton');
+                            posEl.textContent = '$' + Number(chData.pos?.revenue || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+                        }
+                        if (onlineEl) {
+                            onlineEl.classList.remove('db-skeleton');
+                            onlineEl.textContent = '$' + Number(chData.online?.revenue || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+                        }
+                    }
+                }).catch(() => {});
+            }
+
             // Cargar métricas directamente en tiempo real
             const cacheKey = 'dash_metrics_' + (<?php echo $_SESSION['user_id'] ?? 0; ?>);
             localStorage.removeItem(cacheKey);
@@ -1115,10 +1098,10 @@ $first_name = explode(' ', $user_name)[0];
                 if (response && response.success && response.file_url) {
                     window.open(response.file_url, '_blank');
                 } else {
-                    alert('Error al exportar datos: ' + (response?.message || 'Error desconocido'));
+                    showAlert('Error al exportar datos: ' + (response?.message || 'Error desconocido'), 'error');
                 }
             } catch (e) {
-                alert('Error al exportar datos: ' + e.message);
+                showAlert('Error al exportar datos: ' + e.message, 'error');
             }
         }
 

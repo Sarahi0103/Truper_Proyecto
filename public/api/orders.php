@@ -143,6 +143,108 @@ try {
             }
             break;
 
+        case 'list_client':
+            // Listar pedidos en línea del cliente actual (sales_tickets)
+            if ($method !== 'GET') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            $userId = $_SESSION['user_id'] ?? null;
+            if (!$userId) {
+                $response = ['success' => false, 'message' => 'No autenticado'];
+                break;
+            }
+
+            try {
+                $stmt = $pdo->prepare("
+                    SELECT id, folio, customer_name, total_amount, issued_date, order_status, payment_status
+                    FROM sales_tickets
+                    WHERE client_id = ?
+                    ORDER BY issued_date DESC
+                    LIMIT 50
+                ");
+                $stmt->execute([$userId]);
+                $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                $response = ['success' => true, 'orders' => $orders];
+            } catch (Exception $e) {
+                $response = ['success' => false, 'message' => 'Error al cargar pedidos', 'orders' => []];
+            }
+            break;
+
+        case 'reorder':
+            // Reordenar: agregar items de un pedido anterior al carrito
+            if ($method !== 'POST') {
+                $response = ['success' => false, 'message' => 'Método no permitido'];
+                break;
+            }
+
+            $orderId = $_GET['order_id'] ?? 0;
+            $userId = $_SESSION['user_id'] ?? null;
+
+            if (!$orderId || !$userId) {
+                $response = ['success' => false, 'message' => 'Parámetros inválidos'];
+                break;
+            }
+
+            try {
+                // Verificar que el pedido pertenece al usuario
+                $stmt = $pdo->prepare("SELECT id FROM sales_tickets WHERE id = ? AND client_id = ?");
+                $stmt->execute([$orderId, $userId]);
+                if (!$stmt->fetch()) {
+                    $response = ['success' => false, 'message' => 'Pedido no encontrado'];
+                    break;
+                }
+
+                // Obtener items del pedido
+                $stmt = $pdo->prepare("
+                    SELECT product_id, quantity, unit_price
+                    FROM sales_ticket_items
+                    WHERE sales_ticket_id = ?
+                ");
+                $stmt->execute([$orderId]);
+                $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                if (empty($items)) {
+                    $response = ['success' => false, 'message' => 'No hay items en el pedido'];
+                    break;
+                }
+
+                // Verificar disponibilidad de stock
+                $availableItems = [];
+                foreach ($items as $item) {
+                    $stmt = $pdo->prepare("SELECT stock_quantity, name FROM products WHERE id = ?");
+                    $stmt->execute([$item['product_id']]);
+                    $product = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    if ($product && $product['stock_quantity'] >= $item['quantity']) {
+                        $availableItems[] = [
+                            'id' => $item['product_id'],
+                            'quantity' => $item['quantity'],
+                            'name' => $product['name']
+                        ];
+                    }
+                }
+
+                if (empty($availableItems)) {
+                    $response = ['success' => false, 'message' => 'No hay stock disponible para reordenar'];
+                    break;
+                }
+
+                // Aquí se agregarían al carrito del cliente (implementación depende del sistema de carrito)
+                // Por ahora retornamos los items disponibles
+                $response = [
+                    'success' => true,
+                    'message' => 'Items disponibles para reordenar',
+                    'items' => $availableItems,
+                    'note' => 'Implementar lógica de carrito para agregar estos items'
+                ];
+            } catch (Exception $e) {
+                $response = ['success' => false, 'message' => 'Error al procesar reordenamiento'];
+            }
+            break;
+
         case 'update-status':
             if ($method !== 'PUT') {
                 $response = ['success' => false, 'message' => 'Método no permitido'];

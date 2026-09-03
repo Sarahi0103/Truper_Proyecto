@@ -11,6 +11,12 @@ header('Content-Type: application/json');
 
 $action = $_GET['action'] ?? null;
 $method = $_SERVER['REQUEST_METHOD'];
+
+// CSRF para operaciones de escritura de tareas
+if (in_array($method, ['POST', 'PUT', 'DELETE'], true)) {
+    require_csrf_token();
+}
+
 $rawInput = file_get_contents('php://input');
 $decodedInput = json_decode($rawInput, true);
 $input = is_array($decodedInput) ? $decodedInput : (is_array($_POST) ? $_POST : []);

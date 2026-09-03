@@ -217,6 +217,7 @@ $totalOnline = count($products);
 <link rel="stylesheet" href="<?php echo asset_url('css/responsive-complete.css'); ?>">
 <link rel="stylesheet" href="<?php echo asset_url('css/dark-mode-auto.css'); ?>">
 <link rel="stylesheet" href="<?php echo asset_url('css/catalog-min.css'); ?>">
+<link rel="stylesheet" href="<?php echo asset_url('css/toast-notifications.css'); ?>">
 <style>
     .tienda-topbar{background:linear-gradient(90deg,rgba(18,18,24,.98),rgba(10,10,14,.99));border-bottom:1px solid rgba(255,127,0,.2);padding:.5rem 1.4rem;display:flex;align-items:center;gap:1rem;}
     .tienda-back{display:inline-flex;align-items:center;gap:6px;color:#ff7f00;font-weight:700;font-size:.84rem;text-decoration:none;padding:5px 14px;border:1px solid rgba(255,127,0,.3);border-radius:8px;background:rgba(255,127,0,.07);transition:all .18s;}
@@ -271,6 +272,44 @@ $totalOnline = count($products);
         background: rgba(0, 0, 0, 0.5);
         border-color: rgba(255, 255, 255, 0.4);
     }
+    
+    .search-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: rgba(20, 20, 24, 0.98);
+        border: 1px solid rgba(255, 127, 0, 0.3);
+        border-radius: 12px;
+        margin-top: 8px;
+        max-height: 400px;
+        overflow-y: auto;
+        z-index: 1000;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+    
+    .suggestion-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        cursor: pointer;
+        transition: background 0.2s;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .suggestion-item:hover {
+        background: rgba(255, 127, 0, 0.1);
+    }
+    
+    .suggestion-item:last-child {
+        border-bottom: none;
+    }
+    
+    .wishlist-btn:hover, .compare-btn:hover {
+        transform: scale(1.1);
+        background: rgba(255, 127, 0, 0.4) !important;
+    }
 </style>
 </head>
 <body class="catalog-minimal">
@@ -291,9 +330,22 @@ $totalOnline = count($products);
             <a href="tienda.php" class="active">Tienda en Línea</a>
             <a href="marketplace_ce.php?mode=online">Marketplace CE</a>
             <a href="order_tracking.php?mode=online">Seguimiento de Pedido</a>
-            <a href="cart.php?mode=online">Carrito</a>
+            <?php if ($isLogged): ?>
+            <a href="customer_dashboard.php">Mi Dashboard</a>
+            <a href="wishlist.php">Favoritos</a>
+            <?php endif; ?>
+            <a href="cart.php?mode=online" style="display:inline-flex; align-items:center; gap:6px;">
+                <span>Carrito</span>
+                <span id="cartCount" class="cart-count-badge badge-cart" style="background:#ff7f00; color:#ffffff; font-size:0.75rem; font-weight:800; padding:2px 7px; border-radius:99px; min-width:18px; text-align:center; display:none;">0</span>
+            </a>
         </nav>
         <div class="header-actions">
+            <?php if (ENABLE_MULTI_LANGUAGE === 'true'): ?>
+            <select id="languageSelector" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:5px 10px; border-radius:6px; font-size:0.85rem;">
+                <option value="es" <?php echo ($_SESSION['language'] ?? DEFAULT_LANGUAGE) === 'es' ? 'selected' : ''; ?>>🇲🇽 Español</option>
+                <option value="en" <?php echo ($_SESSION['language'] ?? DEFAULT_LANGUAGE) === 'en' ? 'selected' : ''; ?>>🇺🇸 English</option>
+            </select>
+            <?php endif; ?>
         </div>
     </div>
 </header>
@@ -359,7 +411,8 @@ $totalOnline = count($products);
         </div>
 
         <div class="catalog-toolbar">
-            <input id="catalogSearch" class="catalog-search" type="text" placeholder="Buscar por nombre, código o categoría...">
+            <input id="catalogSearch" class="catalog-search" type="text" placeholder="Buscar por nombre, código o categoría..." autocomplete="off">
+            <div id="searchSuggestions" class="search-suggestions" style="display:none;"></div>
         </div>
 
         <div class="catalog-filters">
@@ -502,6 +555,7 @@ $totalOnline = count($products);
 </script>
 <script src="js/main.js?v=2.6"></script>
 <script src="js/modals.js"></script>
+<script src="js/toast-notifications.js"></script>
 <script src="js/catalog.js?v=3.1"></script>
 <script src="js/mobile-optimize.js"></script>
 </body>

@@ -12,6 +12,11 @@ header('Content-Type: application/json');
 $action = $_GET['action'] ?? 'check';
 $method = $_SERVER['REQUEST_METHOD'];
 
+// Proteger operaciones destructivas de sincronización
+if (in_array($method, ['POST', 'PUT', 'DELETE'], true)) {
+    require_csrf_token();
+}
+
 try {
     switch ($action) {
         case 'check':

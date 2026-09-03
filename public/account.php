@@ -258,6 +258,7 @@ $company_whatsapp = htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8
                         <a href="orders.php">Ventas / Pedidos</a>
                         <a href="order_tracking.php">Seguimiento / Logística</a>
                         <a href="rma_manager.php">Devoluciones RMA</a>
+                        <a href="admin_online_billing.php">Facturación & Pagos SAT</a>
                     </div>
                 </div>
                 <div class="nav-dropdown">
@@ -850,7 +851,7 @@ function changeHistoryPage(page) {
 
 function exportHistoryToCSV() {
     if (_allHistoryItems.length === 0) {
-        alert('No hay datos para exportar');
+        showAlert('No hay datos para exportar', 'warning');
         return;
     }
 

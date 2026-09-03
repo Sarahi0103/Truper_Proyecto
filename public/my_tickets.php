@@ -179,7 +179,7 @@ async function loadTickets() {
     const response = await apiCall(`${apiBase}?action=list&page=1&per_page=100`, 'GET');
     
     if (!response.success) {
-        alert('Error: ' + response.message);
+        showAlert('Error: ' + response.message, 'error');
         return;
     }
     
@@ -193,7 +193,7 @@ function renderTickets(tickets) {
     if (tickets.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
-                <div class="empty-icon">🛒</div>
+                <div class="empty-icon">📋</div>
                 <p>No se encontraron comprobantes</p>
             </div>
         `;
@@ -245,7 +245,7 @@ async function viewTicketDetails(ticketId) {
     const response = await apiCall(`${apiBase}?action=get&ticket_id=${ticketId}`, 'GET');
     
     if (!response.success) {
-        alert('Error: ' + response.message);
+        showAlert('Error: ' + response.message, 'error');
         return;
     }
     
@@ -394,6 +394,7 @@ function applyFilters() {
     renderTickets(filtered);
 }
 </script>
+    <script src="js/modals.js"></script>
     <script src="js/mobile-optimize.js"></script>
 </body>
 </html>

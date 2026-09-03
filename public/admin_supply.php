@@ -1803,22 +1803,45 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
     const condition = mode === 'marketplace' ? String(item.condition_label || 'Seminuevo') : 'Modelo Estandar';
     const stockText = stock <= (mode === 'marketplace' ? 2 : reorder) ? 'Stock bajo: ' : 'Stock: ';
     const stockClass = stock <= (mode === 'marketplace' ? 2 : reorder) ? 'stock-low' : 'stock-ok';
-    const inactive = Number(item.is_active) === 0 || item.is_active === false || item.is_active === 'f' || item.is_active === 'false' || item.is_active === 'False' || item.is_active === 'FALSE';
+    const activeChannel = window.currentAdminChannelMode || 'pos';
+    let isChannelActive = true;
+    let channelLabel = 'Ferretería Local';
+
+    if (mode === 'marketplace') {
+        channelLabel = 'Marketplace CE';
+        isChannelActive = !(Number(item.is_active) === 0 || item.is_active === false || item.is_active === 'f' || item.is_active === 'false');
+    } else if (activeChannel === 'online') {
+        channelLabel = 'Tienda en Línea';
+        if (item.show_in_online !== undefined && item.show_in_online !== null) {
+            isChannelActive = Number(item.show_in_online) === 1 || item.show_in_online === true || item.show_in_online === 't' || item.show_in_online === 'true';
+        } else {
+            isChannelActive = !(Number(item.is_active) === 0 || item.is_active === false || item.is_active === 'f' || item.is_active === 'false');
+        }
+    } else {
+        channelLabel = 'Ferretería Local';
+        if (item.show_in_pos !== undefined && item.show_in_pos !== null) {
+            isChannelActive = Number(item.show_in_pos) === 1 || item.show_in_pos === true || item.show_in_pos === 't' || item.show_in_pos === 'true';
+        } else {
+            isChannelActive = !(Number(item.is_active) === 0 || item.is_active === false || item.is_active === 'f' || item.is_active === 'false');
+        }
+    }
+
+    const inactive = !isChannelActive;
     const seedOnly = Boolean(item.seed_only || item.__seed_only);
-    const stateLabel = inactive ? 'Oculto' : 'Visible';
+    const stateLabel = inactive ? `Oculto en ${channelLabel}` : `Visible en ${channelLabel}`;
     const stateBadgeClass = inactive ? 'badge-danger' : 'badge-success';
-        const actions = mode === 'marketplace' ? `
-            <button class="btn btn-small btn-secondary" type="button" onclick="fillMarketplaceFormById(${id})">Editar</button>
-            <button class="btn btn-small btn-ghost" type="button" onclick="toggleMarketplaceVisibility(${id}, ${inactive ? 1 : 0})">${inactive ? 'Mostrar' : 'Ocultar'}</button>
-            <button class="btn btn-small btn-danger" type="button" onclick="deleteMarketplaceCeByAdmin(${id})">Eliminar</button>
-        ` : (seedOnly ? `
-            <button class="btn btn-small btn-secondary" type="button" onclick="prepareSeedProductForEditing(${id})">Editar</button>
-            <span class="text-muted" style="font-size:12px;">Guárdalo para convertirlo en editable</span>
-        ` : `
-            <button class="btn btn-small btn-secondary" type="button" onclick="fillProductFormById(${id})">Editar</button>
-            <button class="btn btn-small btn-ghost" type="button" onclick="toggleStockVisibility(${id}, ${inactive ? 1 : 0})">${inactive ? 'Mostrar' : 'Ocultar'}</button>
-            <button class="btn btn-small btn-danger" type="button" onclick="deleteProductByAdmin(${id})">Eliminar</button>
-        `);
+    const actions = mode === 'marketplace' ? `
+        <button class="btn btn-small btn-secondary" type="button" onclick="fillMarketplaceFormById(${id})">Editar</button>
+        <button class="btn btn-small btn-ghost" type="button" onclick="toggleMarketplaceVisibility(${id}, ${inactive ? 1 : 0})">${inactive ? 'Mostrar' : 'Ocultar'}</button>
+        <button class="btn btn-small btn-danger" type="button" onclick="deleteMarketplaceCeByAdmin(${id})">Eliminar</button>
+    ` : (seedOnly ? `
+        <button class="btn btn-small btn-secondary" type="button" onclick="prepareSeedProductForEditing(${id})">Editar</button>
+        <span class="text-muted" style="font-size:12px;">Guárdalo para convertirlo en editable</span>
+    ` : `
+        <button class="btn btn-small btn-secondary" type="button" onclick="fillProductFormById(${id})">Editar</button>
+        <button class="btn btn-small btn-ghost" type="button" onclick="toggleStockVisibility(${id}, ${inactive ? 1 : 0})">${inactive ? 'Mostrar' : 'Ocultar'}</button>
+        <button class="btn btn-small btn-danger" type="button" onclick="deleteProductByAdmin(${id})">Eliminar</button>
+    `);
 
     return `
         <article class="product-card-min ${inactive ? 'product-card-inactive' : ''}">
@@ -2243,12 +2266,13 @@ function filterVisibilityProducts() {
     renderVisibilityList(filtered);
 }
 
-async function toggleProductVisibility(productId, newState) {
+async function toggleProductVisibility(productId, newState, channel) {
     try {
+        const activeChannel = channel || window.currentAdminChannelMode || 'all';
         const res = await fetch('/api/products.php?action=toggle-visibility', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: productId, is_active: newState })
+            body: JSON.stringify({ id: productId, is_active: newState, channel: activeChannel })
         });
         const data = await res.json();
         if (data.success) {
@@ -4063,8 +4087,13 @@ async function saveTopProductGroup() {
 }
 
 function switchAdminChannelMode(mode) {
+    window.currentAdminChannelMode = mode;
     const btnPos = document.getElementById('btnModePos');
     const btnOnline = document.getElementById('btnModeOnline');
+    const bannerTitle = document.getElementById('channelActiveTitle');
+    const bannerDesc = document.getElementById('channelActiveDesc');
+    const bannerDot = document.getElementById('channelActiveDot');
+    const bannerBox = document.getElementById('channelActiveBanner');
     
     if (mode === 'pos') {
         if (btnPos) {
@@ -4079,6 +4108,24 @@ function switchAdminChannelMode(mode) {
             btnOnline.style.border = '1px solid #3f3f46';
             btnOnline.style.boxShadow = 'none';
         }
+        if (bannerTitle) bannerTitle.textContent = 'CANAL ACTIVO: FERRETERÍA LOCAL (POS & MOSTRADOR)';
+        if (bannerDesc) bannerDesc.textContent = 'Stock, Precios, Marketplace CE, Categorías y Edición Rápida están sincronizados para operaciones locales de caja y mostrador.';
+        if (bannerDot) bannerDot.style.background = '#ff7f00';
+        if (bannerBox) {
+            bannerBox.style.borderColor = '#ff7f00';
+            bannerBox.style.background = 'rgba(255, 127, 0, 0.1)';
+        }
+
+        // Sincronizar selectores de canal en pestañas
+        const qTarget = document.getElementById('quickEditTarget');
+        if (qTarget) { qTarget.value = 'pos'; if (typeof onQuickEditParamsChange === 'function') onQuickEditParamsChange(); }
+
+        const pTarget = document.getElementById('priceAdjustTarget');
+        if (pTarget) pTarget.value = 'pos';
+
+        const cFilter = document.getElementById('categoryFilterContext');
+        if (cFilter) { cFilter.value = 'stock'; if (typeof loadCategoryListByAdmin === 'function') loadCategoryListByAdmin(); }
+
         showAlert('Modo Ferretería Local (POS & Mostrador) seleccionado', 'info');
     } else if (mode === 'online') {
         if (btnOnline) {
@@ -4093,7 +4140,30 @@ function switchAdminChannelMode(mode) {
             btnPos.style.border = '1px solid #3f3f46';
             btnPos.style.boxShadow = 'none';
         }
+        if (bannerTitle) bannerTitle.textContent = 'CANAL ACTIVO: TIENDA EN LÍNEA (CATÁLOGO PÚBLICO WEB)';
+        if (bannerDesc) bannerDesc.textContent = 'Stock, Precios, Marketplace CE, Categorías y Edición Rápida están sincronizados para catálogo e-commerce y venta web en línea.';
+        if (bannerDot) bannerDot.style.background = '#00d2ff';
+        if (bannerBox) {
+            bannerBox.style.borderColor = '#00d2ff';
+            bannerBox.style.background = 'rgba(0, 210, 255, 0.12)';
+        }
+
+        // Sincronizar selectores de canal en pestañas
+        const qTarget = document.getElementById('quickEditTarget');
+        if (qTarget) { qTarget.value = 'online'; if (typeof onQuickEditParamsChange === 'function') onQuickEditParamsChange(); }
+
+        const pTarget = document.getElementById('priceAdjustTarget');
+        if (pTarget) pTarget.value = 'online';
+
+        const cFilter = document.getElementById('categoryFilterContext');
+        if (cFilter) { cFilter.value = 'online'; if (typeof loadCategoryListByAdmin === 'function') loadCategoryListByAdmin(); }
+
         showAlert('Modo Tienda en Línea (Catálogo Público Web) seleccionado', 'info');
+    }
+
+    // Re-renderizar lista de tarjetas de stock con estado específico del canal activo
+    if (typeof renderStockList === 'function') {
+        renderStockList();
     }
 }
 
@@ -4282,54 +4352,89 @@ async function deleteProductByAdmin(id) {
     });
 }
 
-function syncStockVisibilityState(id, nextVisible) {
+function syncStockVisibilityState(id, nextVisible, channel) {
     const normalized = Number(nextVisible) ? 1 : 0;
+    const ch = channel || window.currentAdminChannelMode || 'all';
     const target = stockItemsCache.find((row) => Number(row.id) === Number(id));
     if (target) {
-        target.is_active = normalized;
+        if (ch === 'pos' || ch === 'all') {
+            target.show_in_pos = normalized;
+        }
+        if (ch === 'online' || ch === 'all') {
+            target.show_in_online = normalized;
+        }
+        if (normalized === 1) {
+            target.is_active = 1;
+        } else if ((target.show_in_pos === 0 || target.show_in_pos === 'f' || target.show_in_pos === false) &&
+                   (target.show_in_online === 0 || target.show_in_online === 'f' || target.show_in_online === false)) {
+            target.is_active = 0;
+        }
     }
 
     const currentEditId = Number(document.getElementById('newProductEditId')?.value || 0);
     if (currentEditId === Number(id)) {
-        const visibleField = document.getElementById('newProductVisible');
-        if (visibleField) {
-            visibleField.value = String(normalized);
+        if (ch === 'pos' && document.getElementById('newProductShowPos')) {
+            document.getElementById('newProductShowPos').checked = Boolean(normalized);
+        }
+        if (ch === 'online' && document.getElementById('newProductShowOnline')) {
+            document.getElementById('newProductShowOnline').checked = Boolean(normalized);
         }
         updateStockPreview();
     }
 
     const visibilityIdx = allProductsVisibility.findIndex((p) => Number(p.id) === Number(id));
     if (visibilityIdx >= 0) {
-        allProductsVisibility[visibilityIdx].is_active = normalized;
+        if (ch === 'pos' || ch === 'all') allProductsVisibility[visibilityIdx].show_in_pos = normalized;
+        if (ch === 'online' || ch === 'all') allProductsVisibility[visibilityIdx].show_in_online = normalized;
+        if (normalized === 1) {
+            allProductsVisibility[visibilityIdx].is_active = 1;
+        }
     }
 }
 
 async function toggleStockVisibility(id, nextVisible) {
     if (!id) return;
 
-    const box = document.getElementById('productCreateResult');
-    const res = await apiCall('/admin_supply.php?action=product-visibility', 'POST', {
-        id: Number(id),
-        is_visible: Number(nextVisible) ? 1 : 0
-    });
+    const channel = window.currentAdminChannelMode || 'all';
+    const channelName = channel === 'online' ? 'Tienda en Línea (Catálogo Web)' : (channel === 'pos' ? 'Ferretería Local (POS & Mostrador)' : 'todos los canales');
+    const actionLabel = Number(nextVisible) ? 'mostrar' : 'ocultar';
 
-    if (!res || !res.success) {
-        if (box) {
-            box.innerHTML = `<div class="alert alert-error">${escapeHtml((res && res.message) ? res.message : 'No fue posible actualizar visibilidad')}</div>`;
+    const executeToggle = async () => {
+        const box = document.getElementById('productCreateResult');
+        const res = await apiCall('/admin_supply.php?action=product-visibility', 'POST', {
+            id: Number(id),
+            target: channel,
+            is_visible: Number(nextVisible) ? 1 : 0
+        });
+
+        if (!res || !res.success) {
+            const errMsg = (res && res.message) ? res.message : 'No fue posible actualizar la visibilidad del producto.';
+            if (box) box.innerHTML = `<div class="alert alert-error">${escapeHtml(errMsg)}</div>`;
+            showAlert(errMsg, 'error');
+            return;
         }
-        return;
+
+        if (box) {
+            box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Visibilidad actualizada')}</div>`;
+        }
+
+        syncStockVisibilityState(id, nextVisible, channel);
+        renderStockList();
+        showAlert(res.message || 'Visibilidad actualizada correctamente', 'success');
+        // Sincronización silenciosa en segundo plano
+        void loadStock(stockCurrentPage, null, true);
+    };
+
+    if (typeof confirmAction === 'function') {
+        confirmAction(
+            `Confirmar Visibilidad`,
+            `¿Estás seguro de que deseas ${actionLabel} este producto en ${channelName}?`,
+            Number(nextVisible) ? 'info' : 'warning',
+            executeToggle
+        );
+    } else if (confirm(`¿Estás seguro de que deseas ${actionLabel} este producto en ${channelName}?`)) {
+        void executeToggle();
     }
-
-    if (box) {
-        box.innerHTML = `<div class="alert alert-success">${escapeHtml(res.message || 'Visibilidad actualizada')}</div>`;
-    }
-
-    syncStockVisibilityState(id, nextVisible);
-    renderStockList();
-
-    showAlert(res.message || 'Visibilidad actualizada', 'success');
-    // Background sync to refresh current page
-    void loadStock(stockCurrentPage);
 }
 
 async function toggleMarketplaceVisibility(id, nextVisible) {

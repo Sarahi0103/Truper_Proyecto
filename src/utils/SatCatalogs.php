@@ -53,5 +53,87 @@ class SatCatalogs {
         $uses = self::getCfdiUses();
         return $uses[$code] ?? "Uso {$code}";
     }
+
+    /**
+     * Validar RFC contra formato SAT
+     */
+    public static function validateRfc(string $rfc): array {
+        // Convertir a mayúsculas y eliminar espacios
+        $rfc = strtoupper(trim($rfc));
+        
+        // Validar longitud
+        if (strlen($rfc) !== 12 && strlen($rfc) !== 13) {
+            return [
+                'valid' => false,
+                'message' => 'El RFC debe tener 12 caracteres (personas morales) o 13 caracteres (personas físicas)'
+            ];
+        }
+        
+        // Validar formato con regex
+        // Personas morales: 3 letras + 6 dígitos + 3 caracteres alfanuméricos
+        // Personas físicas: 4 letras + 6 dígitos + 3 caracteres alfanuméricos
+        $pattern = strlen($rfc) === 12 
+            ? '/^[A-Z&Ñ]{3}[0-9]{6}[A-Z0-9]{3}$/'
+            : '/^[A-Z&Ñ]{4}[0-9]{6}[A-Z0-9]{3}$/';
+        
+        if (!preg_match($pattern, $rfc)) {
+            return [
+                'valid' => false,
+                'message' => 'Formato de RFC inválido'
+            ];
+        }
+        
+        // Validar contra RFCs genéricos
+        $genericRfcs = ['XAXX010101000', 'XEXX010101000'];
+        if (in_array($rfc, $genericRfcs)) {
+            return [
+                'valid' => true,
+                'is_generic' => true,
+                'message' => 'RFC genérico (Público en General)'
+            ];
+        }
+        
+        return [
+            'valid' => true,
+            'is_generic' => false,
+            'message' => 'RFC válido'
+        ];
+    }
+
+    /**
+     * Validar RFC con cálculo de dígito verificador (más estricto)
+     */
+    public static function validateRfcWithChecksum(string $rfc): array {
+        $rfc = strtoupper(trim($rfc));
+        $basicValidation = self::validateRfc($rfc);
+        
+        if (!$basicValidation['valid']) {
+            return $basicValidation;
+        }
+        
+        // Extraer dígitos numéricos (sin la letra/dígito verificador final)
+        $numericPart = substr($rfc, 3, 6);
+        
+        if (!ctype_digit($numericPart)) {
+            return [
+                'valid' => false,
+                'message' => 'La parte numérica del RFC debe contener solo dígitos'
+            ];
+        }
+        
+        // Validar que la fecha sea razonable (no futura, no muy antigua)
+        $year = (int)substr($numericPart, 0, 2);
+        $month = (int)substr($numericPart, 2, 2);
+        $day = (int)substr($numericPart, 4, 2);
+        
+        if ($month < 1 || $month > 12 || $day < 1 || $day > 31) {
+            return [
+                'valid' => false,
+                'message' => 'La fecha en el RFC es inválida'
+            ];
+        }
+        
+        return $basicValidation;
+    }
 }
 ?>

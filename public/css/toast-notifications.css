@@ -1,0 +1,88 @@
+/* Toast Notifications System - Truper Platform */
+.toast-container {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+    max-width: 400px;
+    width: calc(100% - 48px);
+}
+
+.truper-toast {
+    background: rgba(26, 26, 26, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 10px;
+    padding: 16px 20px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.1);
+    color: #fff;
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    pointer-events: auto;
+    transform: translateX(120%);
+    opacity: 0;
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    border-left: 4px solid #ff6600;
+}
+
+.truper-toast.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.truper-toast-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.truper-toast-content {
+    flex-grow: 1;
+}
+
+.truper-toast-title {
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 2px;
+    color: #fff;
+}
+
+.truper-toast-msg {
+    font-size: 13px;
+    color: #bbb;
+    line-height: 1.4;
+}
+
+.truper-toast-close {
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px;
+    margin-left: 4px;
+    transition: color 0.2s;
+}
+
+.truper-toast-close:hover {
+    color: #fff;
+}
+
+/* Modificadores por tipo */
+.truper-toast.success { border-left-color: #00c853; }
+.truper-toast.success .truper-toast-title { color: #00e676; }
+
+.truper-toast.error { border-left-color: #ff3d00; }
+.truper-toast.error .truper-toast-title { color: #ff5252; }
+
+.truper-toast.warning { border-left-color: #ffab00; }
+.truper-toast.warning .truper-toast-title { color: #ffd600; }
+
+.truper-toast.info { border-left-color: #ff6600; }
+.truper-toast.info .truper-toast-title { color: #ff6600; }

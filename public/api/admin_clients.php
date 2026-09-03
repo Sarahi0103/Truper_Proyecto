@@ -13,6 +13,11 @@ $method = $_SERVER['REQUEST_METHOD'];
 $input = json_decode(file_get_contents('php://input'), true) ?: [];
 $response = [];
 
+// CSRF para acciones que modifican estado
+if (in_array($method, ['POST', 'PUT', 'DELETE'], true)) {
+    require_csrf_token();
+}
+
 set_error_handler(function ($severity, $message, $file, $line) {
     if (!(error_reporting() & $severity)) {
         return false;

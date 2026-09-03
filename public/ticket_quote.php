@@ -210,11 +210,14 @@ if (file_exists($logoPath)) {
     <script src="/js/jspdf.umd.min.js"></script>
 </head>
 <body>
-<div class="ticket">
     <div class="format-switch">
-        <a href="#" onclick="window.print(); return false;">Imprimir</a>
+        <a href="#" onclick="window.print(); return false;">🖨️ Imprimir</a>
         |
-        <a href="#" onclick="downloadTicketPdf(); return false;">Descargar PDF</a>
+        <a href="#" onclick="downloadTicketPdf(); return false;">📥 Descargar PDF</a>
+        |
+        <a href="/api/quotes_pdf.php?folio=<?php echo urlencode($folio); ?>" target="_blank" style="color: #ff6600; font-weight: 700;">📄 Cotización Formal</a>
+        |
+        <a href="https://wa.me/523312482297?text=<?php echo urlencode('Hola Ferretería FOX, adjunto mi cotización/ticket folio: ' . $folio); ?>" target="_blank" style="color: #25D366; font-weight: 700;">📱 WhatsApp</a>
     </div>
     <h1>FERRETERÍA FOX - TICKET</h1>
     <div class="row"><strong>Folio:</strong> <?php echo htmlspecialchars($folio, ENT_QUOTES, 'UTF-8'); ?></div>

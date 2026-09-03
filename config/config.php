@@ -203,6 +203,17 @@ require_once __DIR__ . '/catalog_images.php';
 // Contacto principal para cotizaciones y dudas por WhatsApp.
 define('COMPANY_WHATSAPP_PHONE', getenv('COMPANY_WHATSAPP_PHONE') ?: '3312482297');
 
+// Configuración para nuevas funcionalidades
+define('ENABLE_PUSH_NOTIFICATIONS', getenv('ENABLE_PUSH_NOTIFICATIONS') ?: 'true');
+define('ENABLE_LOYALTY_POINTS', getenv('ENABLE_LOYALTY_POINTS') ?: 'true');
+define('ENABLE_PRODUCT_REVIEWS', getenv('ENABLE_PRODUCT_REVIEWS') ?: 'true');
+define('ENABLE_WISHLIST', getenv('ENABLE_WISHLIST') ?: 'true');
+define('ENABLE_ADVANCED_SEARCH', getenv('ENABLE_ADVANCED_SEARCH') ?: 'true');
+define('ENABLE_MULTI_LANGUAGE', getenv('ENABLE_MULTI_LANGUAGE') ?: 'true');
+define('DEFAULT_LANGUAGE', getenv('DEFAULT_LANGUAGE') ?: 'es');
+define('LOYALTY_POINTS_PER_DOLLAR', getenv('LOYALTY_POINTS_PER_DOLLAR') ?: 1);
+define('LOYALTY_REDEMPTION_RATE', getenv('LOYALTY_REDEMPTION_RATE') ?: 100); // 100 puntos = $1 descuento
+
 /**
  * Auto-versioning asset helper (FE-08)
  * Returns the path with a dynamic modification timestamp query string parameter.
@@ -881,6 +892,82 @@ function ensure_postgresql_form_schema() {
             "ALTER TABLE wholesalers ADD COLUMN IF NOT EXISTS approved_by INTEGER"
         ];
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS system_settings (
+            setting_key VARCHAR(100) PRIMARY KEY,
+            setting_value TEXT,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS categories (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(120) NOT NULL UNIQUE,
+            color VARCHAR(20) DEFAULT '#ff7f00',
+            display_order INTEGER DEFAULT 0,
+            is_active BOOLEAN DEFAULT true,
+            context VARCHAR(20) DEFAULT 'all',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS rma_requests (
+            id SERIAL PRIMARY KEY,
+            rma_number VARCHAR(80) NOT NULL UNIQUE,
+            order_number VARCHAR(80) NOT NULL,
+            client_id INTEGER,
+            reason TEXT NOT NULL,
+            amount DECIMAL(12,2) DEFAULT 0,
+            status VARCHAR(30) DEFAULT 'pending',
+            resolution_type VARCHAR(50) DEFAULT 'wallet_credit',
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS tickets (
+            id SERIAL PRIMARY KEY,
+            ticket_number VARCHAR(80) NOT NULL UNIQUE,
+            client_id INTEGER,
+            title VARCHAR(255) NOT NULL,
+            category VARCHAR(100) DEFAULT 'general',
+            status VARCHAR(30) DEFAULT 'open',
+            priority VARCHAR(20) DEFAULT 'normal',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS ticket_messages (
+            id SERIAL PRIMARY KEY,
+            ticket_id INTEGER NOT NULL,
+            user_id INTEGER,
+            message TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
+        )");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS employee_tasks (
+            id SERIAL PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            description TEXT,
+            assigned_to INTEGER,
+            created_by INTEGER,
+            priority VARCHAR(20) DEFAULT 'normal',
+            status VARCHAR(30) DEFAULT 'pending',
+            due_date TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS expenses (
+            id SERIAL PRIMARY KEY,
+            concept VARCHAR(255) NOT NULL,
+            category VARCHAR(100) DEFAULT 'general',
+            amount DECIMAL(12,2) NOT NULL,
+            payment_method VARCHAR(50) DEFAULT 'cash',
+            notes TEXT,
+            created_by INTEGER,
+            expense_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )");
+
         $orderAlters = [
             "ALTER TABLE orders ADD COLUMN IF NOT EXISTS client_id INTEGER",
             "ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_number VARCHAR(80)",
@@ -891,6 +978,19 @@ function ensure_postgresql_form_schema() {
             "ALTER TABLE orders ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'pending'",
             "ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status VARCHAR(30) DEFAULT 'pending'",
             "ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes TEXT",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS requires_invoice BOOLEAN DEFAULT false",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS tax_rfc VARCHAR(20)",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS tax_name VARCHAR(255)",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS tax_regime VARCHAR(20)",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS tax_zip VARCHAR(10)",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS cfdi_use VARCHAR(10)",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS sat_uuid VARCHAR(100)",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS sat_xml_url TEXT",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS sat_pdf_url TEXT",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS sat_cancellation_reason VARCHAR(10)",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS sat_cancellation_status VARCHAR(30)",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_gateway VARCHAR(50)",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_transaction_id VARCHAR(100)",
             "ALTER TABLE orders ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
             "ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
         ];
