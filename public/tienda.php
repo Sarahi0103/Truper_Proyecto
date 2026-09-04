@@ -339,14 +339,7 @@ $totalOnline = count($products);
                 <span id="cartCount" class="cart-count-badge badge-cart" style="background:#ff7f00; color:#ffffff; font-size:0.75rem; font-weight:800; padding:2px 7px; border-radius:99px; min-width:18px; text-align:center; display:none;">0</span>
             </a>
         </nav>
-        <div class="header-actions">
-            <?php if (ENABLE_MULTI_LANGUAGE === 'true'): ?>
-            <select id="languageSelector" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:5px 10px; border-radius:6px; font-size:0.85rem;">
-                <option value="es" <?php echo ($_SESSION['language'] ?? DEFAULT_LANGUAGE) === 'es' ? 'selected' : ''; ?>>🇲🇽 Español</option>
-                <option value="en" <?php echo ($_SESSION['language'] ?? DEFAULT_LANGUAGE) === 'en' ? 'selected' : ''; ?>>🇺🇸 English</option>
-            </select>
-            <?php endif; ?>
-        </div>
+        <div class="header-actions"></div>
     </div>
 </header>
 

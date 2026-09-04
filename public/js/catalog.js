@@ -1296,7 +1296,6 @@
     updateCartBadge();
     renderCart();
     setupAdvancedSearch(); // Búsqueda avanzada
-    setupLanguageSelector(); // Selector de idioma
     setupWishlist(); // Wishlist
     setupProductComparison(); // Comparador de productos
   }
