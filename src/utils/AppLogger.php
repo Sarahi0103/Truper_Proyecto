@@ -51,6 +51,11 @@ class AppLogger {
         // Format as JSON and write to file
         $json = json_encode($logEntry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
         file_put_contents($logPath, $json, FILE_APPEND | LOCK_EX);
+
+        // En entornos Render/serverless, tambien escribir a error_log para que aparezca en el dashboard
+        if (getenv('RENDER') === 'true' || getenv('LOG_TO_ERROR_LOG') === 'true') {
+            error_log($json, 0);
+        }
     }
 
     public static function debug(string $message, array $context = []): void {

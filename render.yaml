@@ -21,6 +21,10 @@ services:
       # Sustituir por la URL real asignada por Render tras el primer despliegue
       - key: APP_URL
         value: https://truper-web-eg3h.onrender.com
+      - key: LOG_TO_ERROR_LOG
+        value: "true"
+      - key: AUTO_DB_INIT
+        value: "true"
       - key: DB_HOST
         fromDatabase:
           name: truper-db

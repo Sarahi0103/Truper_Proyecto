@@ -135,7 +135,8 @@ if (!function_exists('truper_db_bootstrap_schema')) {
 // Try to connect with retries to avoid transient startup order issues
 $pdo = null;
 $connectError = null;
-$maxAttempts = 5;
+$maxAttempts = (int)(getenv('DB_CONNECT_ATTEMPTS') ?: '20');
+$backoffSeconds = (int)(getenv('DB_CONNECT_BACKOFF') ?: '3');
 for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
     try {
         $pdo = new PDO(
@@ -145,7 +146,7 @@ for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
             [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_TIMEOUT => 5,
+                PDO::ATTR_TIMEOUT => 15,
                 PDO::ATTR_PERSISTENT => strtolower((string)(getenv('DB_PERSISTENT') ?: 'false')) === 'true'
             ]
         );
@@ -159,10 +160,12 @@ for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
         break;
     } catch (PDOException $e) {
         $connectError = $e->getMessage();
-        AppLogger::warning("Intento {$attempt} - Error de conexión a DB: " . $connectError, ['attempt' => $attempt]);
+        $msg = "Intento {$attempt}/{$maxAttempts} - Error de conexión a DB: " . $connectError;
+        AppLogger::warning($msg, ['attempt' => $attempt]);
+        error_log($msg);
         // small backoff
         if ($attempt < $maxAttempts) {
-            sleep(1);
+            sleep($backoffSeconds);
             continue;
         }
     }
@@ -170,7 +173,9 @@ for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
 
 if ($pdo === null) {
     // Do not die with a bare message; render a friendly HTML fragment so browsers show a full page
-    AppLogger::error('Error fatal de conexión a la base de datos tras reintentos: ' . ($connectError ?? 'unknown'), ['error' => $connectError]);
+    $fatal = 'Error fatal de conexión a la base de datos tras reintentos: ' . ($connectError ?? 'unknown');
+    AppLogger::error($fatal, ['error' => $connectError]);
+    error_log($fatal);
     http_response_code(503);
     echo "<!doctype html><html><head><meta charset=\"utf-8\"><title>Truper - Error</title><style>body{font-family:Arial,Helvetica,sans-serif;background:#fafafa;color:#333;margin:0;padding:40px} .card{max-width:760px;margin:40px auto;padding:28px;background:#fff;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,0.06)} h1{margin:0 0 8px;font-size:20px} p{margin:8px 0 0}</style></head><body><div class=\"card\"><h1>Error al conectar a la base de datos</h1><p>Estamos teniendo problemas para acceder a la base de datos. Por favor inténtelo de nuevo en unos minutos.</p><p>Si necesita asistencia inmediata, revise los logs del servidor.</p></div></body></html>";
     exit(0);
