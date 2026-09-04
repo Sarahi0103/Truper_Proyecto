@@ -80,6 +80,74 @@ if (!defined('DB_PASS')) define('DB_PASS', $dbPass);
 // Inicializacion automatica de esquema (primer arranque)
 if (!defined('AUTO_DB_INIT')) define('AUTO_DB_INIT', strtolower((string)(getenv('AUTO_DB_INIT') ?: 'true')) !== 'false');
 if (!defined('AUTO_DB_INIT_SCHEMA_FILE')) define('AUTO_DB_INIT_SCHEMA_FILE', __DIR__ . '/../database.sql');
+if (!defined('MIGRATIONS_DIR')) define('MIGRATIONS_DIR', __DIR__ . '/../database_migrations/');
+if (!defined('MIGRATIONS_MARKER')) define('MIGRATIONS_MARKER', __DIR__ . '/../images/.migrations_done');
+
+if (!function_exists('truper_run_migrations')) {
+    function truper_run_migrations(PDO $pdo): void {
+        $migrations = [
+            'add_tax_fields_to_products.sql',
+            'add_stock_reservations.sql',
+            'add_payment_complements_table.sql',
+            'add_coupons_system.sql',
+            'add_user_addresses.sql',
+            'add_shipping_tracking.sql',
+            'add_online_inventory.sql',
+            'add_product_reviews.sql',
+            'consolidated_v2_and_advanced_features.sql',
+            'add_stock_alerts.sql',
+            'add_notifications.sql',
+            'add_refunds.sql',
+            'add_wishlist.sql',
+            'add_advanced_coupons.sql',
+            'add_translations.sql',
+            'add_loyalty_points.sql',
+            'add_supply_chain.sql',
+            'add_mexican_banks.sql',
+            'add_admin_payment_accounts.sql'
+        ];
+
+        $hashes = [];
+        foreach ($migrations as $migration) {
+            $filePath = MIGRATIONS_DIR . $migration;
+            if (file_exists($filePath)) {
+                $hashes[] = md5_file($filePath);
+            }
+        }
+        $expectedHash = md5(implode('', $hashes));
+
+        if (file_exists(MIGRATIONS_MARKER)) {
+            $storedHash = trim((string)file_get_contents(MIGRATIONS_MARKER));
+            if ($storedHash === $expectedHash) {
+                return;
+            }
+        }
+
+        AppLogger::info('Ejecutando migraciones de database_migrations');
+        foreach ($migrations as $migration) {
+            $filePath = MIGRATIONS_DIR . $migration;
+            if (!file_exists($filePath)) {
+                AppLogger::warning('Migración no encontrada: ' . $migration);
+                continue;
+            }
+            $sql = file_get_contents($filePath);
+            if (empty(trim($sql))) {
+                AppLogger::warning('Migración vacía: ' . $migration);
+                continue;
+            }
+            try {
+                $pdo->exec($sql);
+                AppLogger::info('Migración OK: ' . $migration);
+            } catch (Exception $e) {
+                AppLogger::error('Migración ERROR: ' . $migration . ' - ' . $e->getMessage());
+            }
+        }
+
+        @mkdir(dirname(MIGRATIONS_MARKER), 0755, true);
+        file_put_contents(MIGRATIONS_MARKER, $expectedHash);
+        AppLogger::info('Migraciones finalizadas, marker actualizado');
+    }
+}
 
 // Configuración de seguridad
 if (!defined('SESSION_TIMEOUT')) define('SESSION_TIMEOUT', 0); // Sin límite: sesión válida hasta que el usuario cierre sesión
@@ -153,6 +221,8 @@ for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
 
         // Primer arranque: crea tablas e inserts base automaticamente.
         truper_db_bootstrap_schema($pdo);
+        // Ejecutar migraciones adicionales de database_migrations/
+        truper_run_migrations($pdo);
         // Establecer zona horaria local de México para reportes y fechas
         $pdo->exec("SET TIME ZONE 'America/Mexico_City'");
         $connectError = null;
