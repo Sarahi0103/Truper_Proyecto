@@ -1118,7 +1118,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
         function openPaymentAccountModal(accountId = null) {
             const modalHtml = `
                 <div id="paymentAccountModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center;">
-                    <div style="background: #121217; border: 1px solid #2a2a36; border-radius: 12px; padding: 2rem; max-width: 500px; width: 90%;">
+                    <div style="background: #121217; border: 1px solid #2a2a36; border-radius: 12px; padding: 2rem; max-width: 500px; width: 90%; max-height: 85vh; overflow-y: auto; box-sizing: border-box;">
                         <h3 style="color: #fff; margin-bottom: 1.5rem;">${accountId ? 'Editar Cuenta de Pago' : 'Agregar Nueva Cuenta de Pago'}</h3>
                         <form id="paymentAccountForm">
                             <input type="hidden" id="paymentAccountId" value="${accountId || ''}">
