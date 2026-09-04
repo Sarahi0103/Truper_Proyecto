@@ -488,12 +488,6 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
             <div class="header-actions">
                 <?php if (!empty(whatsapp_phone_digits())): ?>
                 <a href="https://wa.me/<?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?>?text=Hola%2C+tengo+una+duda+sobre+mi+carrito." target="_blank" rel="noopener" class="btn btn-secondary btn-small">Dudas por WhatsApp</a>
-                
-                <?php endif; ?>
-            </nav>
-            <div class="header-actions">
-                <?php if (!empty(whatsapp_phone_digits())): ?>
-                <a href="https://wa.me/<?php echo htmlspecialchars(whatsapp_phone_digits(), ENT_QUOTES, 'UTF-8'); ?>?text=Hola%2C+tengo+una+duda+sobre+mi+carrito." target="_blank" rel="noopener" class="btn btn-secondary btn-small">Dudas por WhatsApp</a>
                 <?php endif; ?>
                 <?php if (!$isLogged && !$isOnlineMode): ?>
                     <a href="admin_login.php" class="btn btn-primary btn-small">Solo para administradores</a>
@@ -533,12 +527,12 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                 <div style="width:20px; height:1px; background:rgba(255,255,255,0.15);"></div>
                 <div class="step" style="display:flex; align-items:center; gap:6px; opacity:0.45;">
                     <span style="width:20px; height:20px; border-radius:50%; background:#1a1a24; border:1px solid rgba(255,255,255,0.2); color:#aaa; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">2</span>
-                    <span style="font-weight:600; color:#aaa; font-size:0.8rem;">Envío</span>
+                    <span style="font-weight:600; color:#aaa; font-size:0.8rem;">Pago</span>
                 </div>
                 <div style="width:20px; height:1px; background:rgba(255,255,255,0.15);"></div>
                 <div class="step" style="display:flex; align-items:center; gap:6px; opacity:0.45;">
                     <span style="width:20px; height:20px; border-radius:50%; background:#1a1a24; border:1px solid rgba(255,255,255,0.2); color:#aaa; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">3</span>
-                    <span style="font-weight:600; color:#aaa; font-size:0.8rem;">Pago</span>
+                    <span style="font-weight:600; color:#aaa; font-size:0.8rem;">Envío</span>
                 </div>
             </div>
             <!-- Banner de Reserva Temporal de Stock (15 Minutos) -->
