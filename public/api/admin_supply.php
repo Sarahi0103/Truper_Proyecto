@@ -2507,16 +2507,16 @@ function create_product_compatible($pdo, array $payload): void {
     }
     if (db_column_exists('products', 'show_in_online') && array_key_exists('show_in_online', $payload)) {
         $columns[] = 'show_in_online';
-        $values[] = normalize_bool_admin_supply($payload['show_in_online'] ?? null, true);
+        $values[] = normalize_bool_admin_supply($payload['show_in_online'] ?? null, true) ? 1 : 0;
     }
     if (db_column_exists('products', 'show_in_pos') && array_key_exists('show_in_pos', $payload)) {
         $columns[] = 'show_in_pos';
-        $values[] = normalize_bool_admin_supply($payload['show_in_pos'] ?? null, true);
+        $values[] = normalize_bool_admin_supply($payload['show_in_pos'] ?? null, true) ? 1 : 0;
     }
 
     if (db_column_exists('products', 'is_active')) {
         $columns[] = 'is_active';
-        $values[] = normalize_bool_admin_supply($payload['is_active'] ?? null, true);
+        $values[] = normalize_bool_admin_supply($payload['is_active'] ?? null, true) ? 1 : 0;
     } elseif (db_column_exists('products', 'active')) {
         $columns[] = 'active';
         $values[] = normalize_bool_admin_supply($payload['is_active'] ?? null, true) ? 1 : 0;
@@ -2597,11 +2597,11 @@ function update_product_compatible($pdo, int $id, array $payload): void {
     }
     if (db_column_exists('products', 'show_in_online') && array_key_exists('show_in_online', $payload)) {
         $sets[] = 'show_in_online = ?';
-        $values[] = normalize_bool_admin_supply($payload['show_in_online'] ?? null, true);
+        $values[] = normalize_bool_admin_supply($payload['show_in_online'] ?? null, true) ? 1 : 0;
     }
     if (db_column_exists('products', 'show_in_pos') && array_key_exists('show_in_pos', $payload)) {
         $sets[] = 'show_in_pos = ?';
-        $values[] = normalize_bool_admin_supply($payload['show_in_pos'] ?? null, true);
+        $values[] = normalize_bool_admin_supply($payload['show_in_pos'] ?? null, true) ? 1 : 0;
     }
     if (db_column_exists('products', 'updated_at')) { $sets[] = 'updated_at = CURRENT_TIMESTAMP'; }
     
