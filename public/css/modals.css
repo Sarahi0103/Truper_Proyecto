@@ -1,0 +1,205 @@
+/* ==========================================================================
+   Modals Stylesheet - Ferretería FOX / Truper Platform
+   Glassmorphism, animations and responsive dialog styles
+   ========================================================================== */
+
+:root {
+    --modal-bg: rgba(20, 20, 26, 0.95);
+    --modal-border: rgba(255, 127, 0, 0.35);
+    --modal-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 35px rgba(255, 127, 0, 0.15);
+    --modal-text: #ffffff;
+    --modal-muted: #94a3b8;
+    --modal-accent: #ff7f00;
+    --modal-accent-hover: #ff9900;
+}
+
+/* Base Modal Overlay */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    padding: 1rem;
+    box-sizing: border-box;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Modal Window Shell */
+.modal-premium,
+.modal-dialog {
+    background: var(--modal-bg);
+    border: 1px solid var(--modal-border);
+    border-radius: 16px;
+    max-width: 520px;
+    width: 100%;
+    padding: 1.75rem;
+    box-shadow: var(--modal-shadow);
+    color: var(--modal-text);
+    position: relative;
+    box-sizing: border-box;
+    transform: scale(0.95);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-overlay.active .modal-premium,
+.modal-overlay.active .modal-dialog {
+    transform: scale(1);
+    animation: modalScaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Large & Form Modals */
+.modal-lg {
+    max-width: 760px;
+}
+
+.modal-xl {
+    max-width: 980px;
+}
+
+/* Header */
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.modal-title {
+    font-size: 1.3rem;
+    font-weight: 800;
+    margin: 0;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Close button */
+.modal-close,
+.modal-close-x {
+    background: transparent;
+    border: none;
+    color: var(--modal-muted);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.modal-close:hover,
+.modal-close-x:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Body */
+.modal-body {
+    font-size: 0.95rem;
+    color: #e2e8f0;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+}
+
+/* Footer & Buttons */
+.modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.modal-btn {
+    padding: 0.65rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.modal-btn-confirm {
+    background: linear-gradient(135deg, #ff7f00, #e66a00);
+    color: #ffffff;
+    box-shadow: 0 4px 15px rgba(255, 127, 0, 0.3);
+}
+
+.modal-btn-confirm:hover {
+    background: linear-gradient(135deg, #ff9900, #ff7f00);
+    transform: translateY(-1px);
+}
+
+.modal-btn-cancel {
+    background: #1e1e24;
+    color: #cbd5e1;
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.modal-btn-cancel:hover {
+    background: #2a2a32;
+    color: #ffffff;
+}
+
+/* Keyframe Animations */
+@keyframes modalScaleIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.92) translateY(8px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@keyframes modalFadeOut {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .modal-premium,
+    .modal-dialog {
+        padding: 1.25rem;
+        border-radius: 12px;
+    }
+    
+    .modal-footer {
+        flex-direction: column-reverse;
+        width: 100%;
+    }
+    
+    .modal-btn {
+        width: 100%;
+        text-align: center;
+    }
+}

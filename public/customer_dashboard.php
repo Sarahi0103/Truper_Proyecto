@@ -4,7 +4,7 @@
  * Historial de pedidos, direcciones, métodos de pago, puntos de lealtad
  */
 
-require_once '../config/config.php';
+require_once __DIR__ . '/../config/config.php';
 require_login();
 
 $user_id = (int)$_SESSION['user_id'];
@@ -12,37 +12,65 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
 
 // Obtener datos del cliente
 $stmt = $pdo->prepare("
-    SELECT u.*, c.company_name, c.rfc, c.email, c.phone
+    SELECT u.*, c.company_name, COALESCE(u.rfc, c.rfc, '') AS rfc, COALESCE(u.email, '') AS email, COALESCE(u.phone, '') AS phone, c.id AS client_id
     FROM users u
-    LEFT JOIN clients c ON u.client_id = c.id
+    LEFT JOIN clients c ON c.user_id = u.id
     WHERE u.id = ?
 ");
 $stmt->execute([$user_id]);
-$user = $stmt->fetch(PDO::FETCH_ASSOC);
+$user = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+$clientId = (int)($user['client_id'] ?? 0);
 
 // Obtener estadísticas del cliente
 $stmt = $pdo->prepare("
     SELECT 
-        COUNT(DISTINCT o.id) as total_orders,
-        COALESCE(SUM(o.total_amount), 0) as total_spent,
-        COALESCE(AVG(o.total_amount), 0) as avg_order_value
-    FROM orders o
-    WHERE o.user_id = ?
+        COUNT(DISTINCT st.id) as total_orders,
+        COALESCE(SUM(st.total_amount), 0) as total_spent,
+        COALESCE(AVG(st.total_amount), 0) as avg_order_value
+    FROM sales_tickets st
+    WHERE st.user_id = ? AND st.deleted_at IS NULL
 ");
 $stmt->execute([$user_id]);
-$stats = $stmt->fetch(PDO::FETCH_ASSOC);
+$stats = $stmt->fetch(PDO::FETCH_ASSOC) ?: ['total_orders' => 0, 'total_spent' => 0, 'avg_order_value' => 0];
+
+if (($stats['total_orders'] ?? 0) == 0 && $clientId > 0) {
+    $stmt = $pdo->prepare("
+        SELECT 
+            COUNT(DISTINCT o.id) as total_orders,
+            COALESCE(SUM(o.total_amount), 0) as total_spent,
+            COALESCE(AVG(o.total_amount), 0) as avg_order_value
+        FROM orders o
+        WHERE o.client_id = ? AND o.deleted_at IS NULL
+    ");
+    $stmt->execute([$clientId]);
+    $orderStats = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!empty($orderStats) && ($orderStats['total_orders'] ?? 0) > 0) {
+        $stats = $orderStats;
+    }
+}
 
 // Obtener pedidos recientes
 $stmt = $pdo->prepare("
-    SELECT o.*, st.folio, st.order_status
-    FROM orders o
-    LEFT JOIN sales_tickets st ON o.id = st.order_id
-    WHERE o.user_id = ?
-    ORDER BY o.order_date DESC
+    SELECT st.id, st.folio, COALESCE(st.order_status, st.status, 'pending') AS order_status, st.total_amount, st.issued_date AS order_date, st.payment_status
+    FROM sales_tickets st
+    WHERE st.user_id = ? AND st.deleted_at IS NULL
+    ORDER BY st.issued_date DESC
     LIMIT 10
 ");
 $stmt->execute([$user_id]);
 $recentOrders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+if (empty($recentOrders) && $clientId > 0) {
+    $stmt = $pdo->prepare("
+        SELECT o.id, o.order_number AS folio, COALESCE(o.status, 'pending') AS order_status, o.total_amount, o.order_date, o.payment_status
+        FROM orders o
+        WHERE o.client_id = ? AND o.deleted_at IS NULL
+        ORDER BY o.order_date DESC
+        LIMIT 10
+    ");
+    $stmt->execute([$clientId]);
+    $recentOrders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">

@@ -4,6 +4,9 @@
  * Sistema de reembolsos automáticos y notas de crédito
  */
 
+require_once __DIR__ . '/PaymentGatewayService.php';
+require_once __DIR__ . '/../utils/AppLogger.php';
+
 class RefundService {
     private $pdo;
     private $logger;

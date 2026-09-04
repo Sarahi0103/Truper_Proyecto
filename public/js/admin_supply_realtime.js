@@ -65,7 +65,7 @@ class AdminSupplyRealtime {
      */
     async refresh() {
         try {
-            const url = '/api/admin_supply?action=stock-list';
+            const url = '/api/admin_supply.php?action=stock-list';
             
             // Usar caché si está disponible
             if (this.cache.has(url)) {
@@ -191,7 +191,7 @@ class AdminSupplyRealtime {
         try {
             console.log('📤 Sincronizando producto ' + productId + ' con marketplace...');
             
-            const response = await fetch('/api/admin_supply?action=marketplace-sync', {
+            const response = await fetch('/api/admin_supply.php?action=marketplace-sync', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

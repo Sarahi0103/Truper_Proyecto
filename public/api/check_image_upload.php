@@ -2,7 +2,7 @@
 /**
  * Endpoint para verificar si el sistema está listo para subir imágenes
  */
-require_once '../config/config.php';
+require_once __DIR__ . '/../../config/config.php';
 require_admin();
 
 header('Content-Type: application/json');

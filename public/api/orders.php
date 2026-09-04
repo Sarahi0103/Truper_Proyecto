@@ -160,7 +160,7 @@ try {
                 $stmt = $pdo->prepare("
                     SELECT id, folio, customer_name, total_amount, issued_date, order_status, payment_status
                     FROM sales_tickets
-                    WHERE client_id = ?
+                    WHERE user_id = ? AND deleted_at IS NULL
                     ORDER BY issued_date DESC
                     LIMIT 50
                 ");
@@ -169,7 +169,7 @@ try {
                 
                 $response = ['success' => true, 'orders' => $orders];
             } catch (Exception $e) {
-                $response = ['success' => false, 'message' => 'Error al cargar pedidos', 'orders' => []];
+                $response = ['success' => false, 'message' => 'Error al cargar pedidos: ' . $e->getMessage(), 'orders' => []];
             }
             break;
 
@@ -190,7 +190,7 @@ try {
 
             try {
                 // Verificar que el pedido pertenece al usuario
-                $stmt = $pdo->prepare("SELECT id FROM sales_tickets WHERE id = ? AND client_id = ?");
+                $stmt = $pdo->prepare("SELECT id FROM sales_tickets WHERE id = ? AND user_id = ?");
                 $stmt->execute([$orderId, $userId]);
                 if (!$stmt->fetch()) {
                     $response = ['success' => false, 'message' => 'Pedido no encontrado'];

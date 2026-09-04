@@ -4,23 +4,36 @@
  * Permite comparar características de múltiples productos
  */
 
-require_once '../config/config.php';
+require_once __DIR__ . '/../config/config.php';
 
-$productIds = $_GET['products'] ?? [];
-if (!is_array($productIds) || count($productIds) < 2 || count($productIds) > 4) {
+$rawProducts = $_GET['products'] ?? ($_GET['ids'] ?? []);
+if (is_string($rawProducts)) {
+    $productIds = array_filter(array_map('trim', explode(',', $rawProducts)));
+} elseif (is_array($rawProducts)) {
+    $productIds = $rawProducts;
+} else {
+    $productIds = [];
+}
+
+$cleanIds = array_values(array_filter(array_map('intval', $productIds), fn($id) => $id > 0));
+
+if (count($cleanIds) < 2 || count($cleanIds) > 4) {
     header('Location: tienda.php');
     exit;
 }
 
 // Obtener productos a comparar
-$placeholders = implode(',', array_fill(0, count($productIds), '?'));
+$placeholders = implode(',', array_fill(0, count($cleanIds), '?'));
 $stmt = $pdo->prepare("
-    SELECT p.*, c.name as category_name
+    SELECT p.*,
+           COALESCE(p.category, '') AS category_name,
+           COALESCE(p.price_online, p.unit_price, p.sell_price, 0) AS price,
+           COALESCE(p.stock_online, p.stock_quantity, 0) AS stock_online
     FROM products p
-    LEFT JOIN categories c ON p.category_id = c.id
-    WHERE p.id IN ({$placeholders}) AND p.is_online_visible = true
+    WHERE p.id IN ({$placeholders})
+      AND p.deleted_at IS NULL
 ");
-$stmt->execute($productIds);
+$stmt->execute($cleanIds);
 $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 if (count($products) < 2) {

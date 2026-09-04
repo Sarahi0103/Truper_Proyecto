@@ -7,7 +7,7 @@
  * Authentication: Requires admin role (optional, can be disabled)
  */
 
-require_once '../config/config.php';
+require_once __DIR__ . '/../config/config.php';
 
 // Optional: Require admin for access (uncomment to enable)
 // require_admin();
@@ -40,9 +40,9 @@ try {
             'session_handler' => ini_get('session.save_handler'),
         ],
         'application' => [
-            'version' => APP_VERSION ?? '1.0.0',
-            'environment' => APP_ENV ?? 'production',
-            'debug_mode' => APP_DEBUG ?? false,
+            'version' => defined('APP_VERSION') ? APP_VERSION : '1.0.0',
+            'environment' => defined('APP_ENV') ? APP_ENV : (getenv('APP_ENV') ?: 'production'),
+            'debug_mode' => defined('APP_DEBUG') ? APP_DEBUG : (getenv('APP_DEBUG') === 'true'),
         ],
     ];
 

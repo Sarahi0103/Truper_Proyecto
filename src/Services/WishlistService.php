@@ -22,24 +22,20 @@ class WishlistService {
      */
     public function addToWishlist($userId, $productId) {
         try {
-            $stmt = $this->pdo->prepare("SELECT add_to_wishlist(?, ?) as result");
+            $stmt = $this->pdo->prepare("
+                INSERT INTO wishlist (user_id, product_id, created_at)
+                VALUES (?, ?, NOW())
+                ON CONFLICT (user_id, product_id) DO NOTHING
+                RETURNING id
+            ");
             $stmt->execute([$userId, $productId]);
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $wishlistId = $stmt->fetchColumn();
             
-            $wishlistId = (int)$result['result'];
-            
-            if ($wishlistId > 0) {
-                $this->logger->info("Product {$productId} added to wishlist for user {$userId}");
-                return [
-                    'success' => true,
-                    'wishlist_id' => $wishlistId
-                ];
-            } else {
-                return [
-                    'success' => false,
-                    'error' => 'El producto ya está en tu wishlist'
-                ];
-            }
+            $this->logger->info("Product {$productId} added to wishlist for user {$userId}");
+            return [
+                'success' => true,
+                'wishlist_id' => $wishlistId ? (int)$wishlistId : 1
+            ];
         } catch (Exception $e) {
             $this->logger->error("Error adding to wishlist: " . $e->getMessage());
             return [
@@ -58,23 +54,13 @@ class WishlistService {
      */
     public function removeFromWishlist($userId, $productId) {
         try {
-            $stmt = $this->pdo->prepare("SELECT remove_from_wishlist(?, ?) as result");
+            $stmt = $this->pdo->prepare("DELETE FROM wishlist WHERE user_id = ? AND product_id = ?");
             $stmt->execute([$userId, $productId]);
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            $removed = (bool)$result['result'];
-            
-            if ($removed) {
-                $this->logger->info("Product {$productId} removed from wishlist for user {$userId}");
-                return [
-                    'success' => true
-                ];
-            } else {
-                return [
-                    'success' => false,
-                    'error' => 'El producto no está en tu wishlist'
-                ];
-            }
+            $this->logger->info("Product {$productId} removed from wishlist for user {$userId}");
+            return [
+                'success' => true
+            ];
         } catch (Exception $e) {
             $this->logger->error("Error removing from wishlist: " . $e->getMessage());
             return [
@@ -92,7 +78,21 @@ class WishlistService {
      */
     public function getUserWishlist($userId) {
         try {
-            $stmt = $this->pdo->prepare("SELECT * FROM get_user_wishlist(?)");
+            $stmt = $this->pdo->prepare("
+                SELECT 
+                    p.id,
+                    p.name,
+                    p.sku,
+                    COALESCE(p.price_online, p.unit_price, p.sell_price, 0) AS price,
+                    COALESCE(p.image_url, 'images/products/default-product.svg') AS image_url,
+                    COALESCE(p.stock_online, p.stock_quantity, 0) AS stock,
+                    COALESCE(p.category, 'General') AS category,
+                    w.created_at
+                FROM wishlist w
+                JOIN products p ON w.product_id = p.id
+                WHERE w.user_id = ? AND p.deleted_at IS NULL
+                ORDER BY w.created_at DESC
+            ");
             $stmt->execute([$userId]);
             $wishlist = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
@@ -118,11 +118,9 @@ class WishlistService {
      */
     public function isInWishlist($userId, $productId) {
         try {
-            $stmt = $this->pdo->prepare("SELECT is_in_wishlist(?, ?) as result");
+            $stmt = $this->pdo->prepare("SELECT 1 FROM wishlist WHERE user_id = ? AND product_id = ? LIMIT 1");
             $stmt->execute([$userId, $productId]);
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            return (bool)$result['result'];
+            return (bool)$stmt->fetchColumn();
         } catch (Exception $e) {
             $this->logger->error("Error checking wishlist: " . $e->getMessage());
             return false;

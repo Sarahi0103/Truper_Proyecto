@@ -2,7 +2,7 @@
 /**
  * Endpoint de diagnóstico para problemas de imágenes
  */
-require_once '../config/config.php';
+require_once __DIR__ . '/../../config/config.php';
 require_admin();
 
 header('Content-Type: application/json');
@@ -11,10 +11,10 @@ $diagnosis = [];
 
 // 1. Verificar directorios
 $dirs = [
-    'images' => 'public/images',
-    'products' => 'public/images/products', 
-    'gallery' => 'public/images/products/gallery',
-    'by_code' => 'public/images/products/by_code',
+    'images' => '../images',
+    'products' => '../images/products', 
+    'gallery' => '../images/products/gallery',
+    'by_code' => '../images/products/by_code',
 ];
 
 $diagnosis['directories'] = [];

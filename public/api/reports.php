@@ -85,16 +85,14 @@ try {
                     p.id,
                     p.sku,
                     p.name,
-                    p.category_id,
-                    c.name as category_name,
-                    COALESCE(p.stock_online, p.stock_quantity) as current_stock,
-                    p.price,
-                    p.cost,
-                    (COALESCE(p.stock_online, p.stock_quantity) * p.price) as total_value,
-                    p.low_stock_threshold
+                    COALESCE(p.category, 'General') as category_name,
+                    COALESCE(p.stock_online, p.stock_quantity, 0) as current_stock,
+                    COALESCE(p.price_online, p.unit_price, p.sell_price, 0) as price,
+                    COALESCE(p.sell_price, p.unit_price, 0) as cost,
+                    (COALESCE(p.stock_online, p.stock_quantity, 0) * COALESCE(p.price_online, p.unit_price, p.sell_price, 0)) as total_value,
+                    COALESCE(p.low_stock_threshold_online, p.reorder_level, 5) as low_stock_threshold
                 FROM products p
-                LEFT JOIN categories c ON p.category_id = c.id
-                WHERE p.is_online_visible = true
+                WHERE p.deleted_at IS NULL
                 ORDER BY p.name ASC
             ");
             $inventoryData = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -145,7 +143,7 @@ try {
                     st.cfdi_use,
                     st.total_amount,
                     st.tax_amount,
-                    st.subtotal,
+                    COALESCE(st.subtotal_amount, ROUND(st.total_amount / 1.16, 2)) as subtotal,
                     st.issued_date,
                     st.invoice_required
                 FROM sales_tickets st

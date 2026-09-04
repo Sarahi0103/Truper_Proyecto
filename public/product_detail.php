@@ -1,8 +1,9 @@
 <?php
-require_once '../config/config.php';
+require_once __DIR__ . '/../config/config.php';
 
 $isLogged = isset($_SESSION['user_id']);
 $isAdmin = $isLogged && (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee');
+$isOnlineMode = ($_GET['mode'] ?? '') === 'online';
 
 $product_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $source = strtolower(trim((string)($_GET['source'] ?? '')));

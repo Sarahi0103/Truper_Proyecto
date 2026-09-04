@@ -104,7 +104,9 @@ if (!function_exists('truper_run_migrations')) {
             'add_loyalty_points.sql',
             'add_supply_chain.sql',
             'add_mexican_banks.sql',
-            'add_admin_payment_accounts.sql'
+            'add_admin_payment_accounts.sql',
+            'add_shopping_carts.sql',
+            'add_sales_tickets.sql'
         ];
 
         $hashes = [];

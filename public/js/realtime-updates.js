@@ -5,7 +5,7 @@
 
 class RealTimeUpdater {
     constructor(options = {}) {
-        this.url = options.url || '/api/admin_supply?action=stock-list';
+        this.url = options.url || '/api/admin_supply.php?action=stock-list';
         this.interval = options.interval || 5000; // 5 segundos
         this.enabled = options.enabled !== false;
         this.callbacks = options.callbacks || {};
@@ -240,7 +240,7 @@ class RealTimeUpdater {
 // Inicializar para admin_supply
 if (document.querySelector('#admin-supply-table')) {
     const updater = new RealTimeUpdater({
-        url: '/api/admin_supply?action=stock-list',
+        url: '/api/admin_supply.php?action=stock-list',
         interval: 5000,
         callbacks: {
             onInitialLoad: (data) => {

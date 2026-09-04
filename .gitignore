@@ -38,6 +38,8 @@ init_tickets.php
 clean_base64_images.php
 cleanup_orphaned_images.php
 cache/
+.migrations_done
+images/.migrations_done
 
 # Scratch directory (development scripts)
 scratch/
