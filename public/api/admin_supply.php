@@ -134,25 +134,26 @@ function normalize_datetime_value($value): ?string {
     return null;
 }
 
-function normalize_bool_admin_supply($value, bool $default = false): bool {
+function normalize_bool_admin_supply($value, bool $default = false): int {
+    $defaultInt = $default ? 1 : 0;
     if ($value === null) {
-        return $default;
+        return $defaultInt;
     }
 
     if (is_bool($value)) {
-        return $value;
+        return $value ? 1 : 0;
     }
 
     if (is_int($value) || is_float($value)) {
-        return ((int)$value) !== 0;
+        return ((int)$value) !== 0 ? 1 : 0;
     }
 
     $raw = trim((string)$value);
     if ($raw === '') {
-        return $default;
+        return $defaultInt;
     }
 
-    return in_array(strtolower($raw), ['1', 'true', 't', 'yes', 'y', 'on'], true);
+    return in_array(strtolower($raw), ['1', 'true', 't', 'yes', 'y', 'on'], true) ? 1 : 0;
 }
 
 function normalize_sku_admin_supply($value): string {
@@ -483,7 +484,7 @@ function ensure_products_name_column_admin_supply($pdo): ?string {
     return null;
 }
 
-function set_marketplace_visibility_compatible($pdo, int $id, bool $isVisible): void {
+function set_marketplace_visibility_compatible($pdo, int $id, int $isVisible): void {
     if ($id <= 0) {
         throw new Exception('ID de artículo CE inválido');
     }
@@ -548,7 +549,7 @@ function set_marketplace_visibility_compatible($pdo, int $id, bool $isVisible): 
     throw new Exception('No existe columna de visibilidad (is_active o active) en marketplace_ce_products');
 }
 
-function set_product_visibility_compatible($pdo, int $id, bool $isVisible): void {
+function set_product_visibility_compatible($pdo, int $id, int $isVisible): void {
     if ($id <= 0) {
         throw new Exception('ID de producto inválido');
     }
@@ -674,7 +675,7 @@ function record_matches_normalized_sku_admin_supply($pdo, string $table, int $id
     }
 }
 
-function insert_category_and_get_id_admin_supply($pdo, string $name, int $sortOrder, bool $isActive, string $context = 'stock', string $color = ''): int {
+function insert_category_and_get_id_admin_supply($pdo, string $name, int $sortOrder, int $isActive, string $context = 'stock', string $color = ''): int {
     $name = trim((string)$name);
     if ($name === '') {
         return 0;
