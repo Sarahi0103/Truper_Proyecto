@@ -2,13 +2,14 @@ databases:
   - name: truper-db
     databaseName: truper_platform
     user: truper_admin
-    plan: basic-256mb
+    plan: starter
 
 services:
   - type: web
     name: truper-web
     env: docker
     plan: starter
+    branch: main
     dockerfilePath: ./Dockerfile
     autoDeploy: true
     healthCheckPath: /health.php
@@ -17,6 +18,7 @@ services:
         value: production
       - key: APP_DEBUG
         value: "false"
+      # Sustituir por la URL real asignada por Render tras el primer despliegue
       - key: APP_URL
         value: https://truper-web-eg3h.onrender.com
       - key: DB_HOST
