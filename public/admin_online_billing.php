@@ -14,11 +14,12 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
-$userRole = $_SESSION['role'] ?? '';
+$userRole = strtolower($_SESSION['role'] ?? '');
 $isLogged = isset($_SESSION['user_id']);
-$isAdmin = ($userRole === 'admin' || $userRole === 'employee');
+$isAdmin = in_array($userRole, ['admin', 'employee'], true);
 
 if (!$isLogged || !$isAdmin) {
+    error_log('admin_online_billing redirect: user_id=' . ($_SESSION['user_id'] ?? 'none') . ' role=' . ($_SESSION['role'] ?? 'empty'));
     header('Location: login.php?return_to=admin_online_billing.php');
     exit;
 }
