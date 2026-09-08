@@ -520,26 +520,20 @@ if (!empty($profile['birthdate'])) {
     </header>
 
     <main>
-        <div class="container" style="max-width: 600px;">
+        <div class="container" style="max-width: 700px;">
             <!-- ── Back Button ── -->
-            <div class="back-header">
+            <div class="back-header" style="margin-bottom: 1.5rem;">
                 <button onclick="history.back()" class="btn-back btn-back-dark btn-back-as-button">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M19 12H5M12 19l-7-7 7-7"/>
                     </svg>
                     Regresar
                 </button>
-                <nav class="nav-menu">
-                    <a href="index.php">Catálogo</a>
-                    <a href="marketplace_ce.php">Marketplace CE</a>
-                    <div class="nav-dropdown">
-                        <button class="nav-dropdown-btn">Mi Cuenta <span class="arrow">▼</span></button>
-                        <div class="nav-dropdown-content">
-                            <a href="dashboard.php">Dashboard</a>
-                            <a href="orders.php">Pedidos</a>
-                            <a href="wholesale.php">Mayoreo</a>
-                            <a href="account.php#historyTab">Historial</a>
-                            <a href="profile.php" class="active">Perfil</a>
+            </div>
+
+            <!-- ── Perfil Info Card ── -->
+            <div id="profileInfo" class="tab-content active">
+                <div class="card">
                     <div class="card-header">Información de Perfil</div>
                     <div class="card-body">
                         <form id="profileForm" action="api/profile.php?action=update" method="POST" data-success-scroll="#profileInfo" data-success-message="Perfil actualizado correctamente" data-success-reload="true">
