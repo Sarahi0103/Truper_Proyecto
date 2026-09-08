@@ -451,24 +451,25 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                     </div>
                 <?php endif; ?>
                 <?php if ($is_admin && !$isOnlineMode): ?>
-                    <!-- Dropdowns de Administración Separados -->
+                <!-- Dropdowns de Administración Separados -->
                 <div class="nav-dropdown">
                     <button class="nav-dropdown-btn">Admin Tienda <span class="arrow">▼</span></button>
-                    <div class="nav-dropdown-content" style="min-width: 200px;">
-                        <a href="orders.php">Ventas / Pedidos</a>
-                        <a href="order_tracking.php">Seguimiento / Logística</a>
-                        <a href="rma_manager.php">Devoluciones RMA</a>
-                        <a href="admin_online_billing.php">Facturación & Pagos SAT</a>
+                    <div class="nav-dropdown-content" style="min-width: 220px;">
+                        <a href="admin_online_orders.php">🌐 Pedidos Online</a>
+                        <a href="order_tracking.php">🚚 Seguimiento y Guías</a>
+                        <a href="admin_online_billing.php">🏛️ Facturación & Pagos SAT</a>
+                        <a href="rma_manager.php">🔄 Devoluciones RMA</a>
                     </div>
                 </div>
                 <div class="nav-dropdown">
                     <button class="nav-dropdown-btn">Admin Local <span class="arrow">▼</span></button>
-                    <div class="nav-dropdown-content" style="min-width: 200px;">
-                        <a href="cashier.php">Caja / Punto de Venta</a>
-                        <a href="b2b_approval.php">Aprobación B2B</a>
-                        <a href="tickets.php">Tickets y Cotizaciones</a>
-                        <a href="ticket_validation.php">Validación de Tickets</a>
-                        <a href="tasks.php">Tareas de Empleados</a>
+                    <div class="nav-dropdown-content" style="min-width: 220px;">
+                        <a href="ticket_validation.php">🏬 Validación Mostrador</a>
+                        <a href="tickets.php">🎫 Historial de Tickets</a>
+                        <a href="cashier.php">💵 Caja / Punto de Venta</a>
+                        <a href="orders.php">📋 Ventas / Pedidos Mostrador</a>
+                        <a href="tasks.php">👥 Tareas de Empleados</a>
+                        <a href="b2b_approval.php">🤝 Aprobación B2B</a>
                     </div>
                 </div>
                 <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
@@ -613,7 +614,7 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
     <script>
         window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8"); ?>';
     </script>
-    <script src="js/catalog.js"></script>
+    <script src="js/catalog.js?v=3.2"></script>
     <script>
         const CART_KEY = <?php echo $isOnlineMode ? "'fox_cart'" : "'truper_cart'"; ?>;
 
@@ -635,7 +636,16 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
         function getStoredCart() {
             try {
                 let items = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
-                return Array.isArray(items) ? items : [];
+                if (!Array.isArray(items)) return [];
+                const isOnline = <?php echo $isOnlineMode ? 'true' : 'false'; ?>;
+                const filtered = items.filter(item => {
+                    if (isOnline) return item.product_type !== 'catalog';
+                    return item.product_type !== 'online';
+                });
+                if (filtered.length !== items.length) {
+                    localStorage.setItem(CART_KEY, JSON.stringify(filtered));
+                }
+                return filtered;
             } catch (_) {
                 return [];
             }
@@ -839,6 +849,19 @@ if ($isLogged && db_column_exists('users', 'user_code')) {
                 function() {
                     localStorage.removeItem(CART_KEY);
                     renderCartPage();
+
+                    const csrf = window.csrfToken || (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
+                    fetch('/api/cart.php?action=clear', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': csrf
+                        },
+                        body: JSON.stringify({
+                            csrf_token: csrf,
+                            product_type: <?php echo $isOnlineMode ? "'online'" : "'catalog'"; ?>
+                        })
+                    }).catch(() => {});
                 }
             );
         });

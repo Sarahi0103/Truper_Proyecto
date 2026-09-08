@@ -49,11 +49,73 @@
 
   function getCart() {
     let cart = readJson(STORAGE_CART, []);
-    return Array.isArray(cart) ? cart : [];
+    if (!Array.isArray(cart)) return [];
+
+    // Aislar estrictamente productos de tienda local y tienda en línea
+    const expectedType = isOnlineMode ? 'online' : 'catalog';
+    let changed = false;
+    const cleanCart = cart.filter(item => {
+      if (isOnlineMode) {
+        if (item.product_type === 'catalog') {
+          changed = true;
+          return false;
+        }
+      } else {
+        if (item.product_type === 'online') {
+          changed = true;
+          return false;
+        }
+      }
+      return true;
+    }).map(item => {
+      if (!item.product_type) {
+        item.product_type = expectedType;
+        changed = true;
+      }
+      return item;
+    });
+
+    if (changed) {
+      writeJson(STORAGE_CART, cleanCart);
+    }
+    return cleanCart;
   }
 
   function setCart(items) {
-    writeJson(STORAGE_CART, items);
+    if (!Array.isArray(items)) items = [];
+    const expectedType = isOnlineMode ? 'online' : 'catalog';
+    const cleanItems = items.filter(item => {
+      if (isOnlineMode) return item.product_type !== 'catalog';
+      return item.product_type !== 'online';
+    }).map(item => ({
+      ...item,
+      product_type: item.product_type || expectedType
+    }));
+    writeJson(STORAGE_CART, cleanItems);
+  }
+
+  function clearCartData() {
+    setCart([]);
+    updateCartBadge();
+    renderCart();
+
+    if (typeof renderCartPage === 'function') {
+      try { renderCartPage(); } catch (_) {}
+    }
+
+    const csrf = window.csrfToken || (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
+    const pType = isOnlineMode ? 'online' : 'catalog';
+    fetch('/api/cart.php?action=clear', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrf
+      },
+      body: JSON.stringify({ 
+        csrf_token: csrf,
+        product_type: pType
+      })
+    }).catch(() => {});
   }
 
   function toNumber(v) {
@@ -159,10 +221,12 @@
   async function addToCart(product) {
     const cart = getCart();
     const existing = cart.find((p) => p.sku === product.sku);
+    const pType = isOnlineMode ? 'online' : 'catalog';
     
-    // Actualizar localStorage primero para respuesta inmediata
+    // 1. Actualizar localStorage y vista previa inmediatamente
     if (existing) {
       existing.quantity = toNumber(existing.quantity) + 1;
+      existing.product_type = pType;
     } else {
       cart.push({
         id: product.id,
@@ -171,78 +235,113 @@
         image_url: product.image_url || 'images/products/default-product.svg',
         unit_price: toNumber(product.unit_price || product.price || 0),
         quantity: 1,
-        product_type: 'catalog'
+        product_type: pType
       });
     }
     setCart(cart);
     updateCartBadge();
     renderCart();
 
-    // Sincronizar con servidor
+    // 2. Abrir automáticamente la vista previa del carrito (drawer) si existe
+    const drawer = document.getElementById('cartDrawer');
+    if (drawer) {
+      drawer.classList.add('open');
+    }
+
+    // 3. Notificación inmediata al usuario
+    const prodName = product.name || 'Producto';
+    notifyProductAdded(prodName);
+
+    // 4. Sincronizar con servidor en segundo plano
     try {
+      const csrf = window.csrfToken || (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
       const response = await fetch('/api/cart.php?action=add', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrf
+        },
         body: JSON.stringify({
           product_id: product.id,
-          product_type: 'catalog',
+          product_type: pType,
           quantity: 1,
           price: toNumber(product.unit_price || product.price || 0),
-          csrf_token: (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || ''
+          csrf_token: csrf
         })
       });
       const result = await response.json();
       
-      if (!result.success) {
-        console.error('Error al sincronizar con servidor:', result.message);
-        // Revertir si falló
-        const revertedCart = getCart();
-        const revertedItem = revertedCart.find((p) => p.sku === product.sku);
-        if (revertedItem) {
-          revertedItem.quantity = Math.max(1, revertedItem.quantity - 1);
-          if (revertedItem.quantity === 0) {
-            const idx = revertedCart.findIndex((p) => p.sku === product.sku);
-            if (idx > -1) revertedCart.splice(idx, 1);
+      if (result.success && result.data && result.data.cart_id) {
+        // Guardar cart_id devuelto por el servidor para sincronización futura
+        const currentCart = getCart();
+        const item = currentCart.find((p) => p.sku === product.sku);
+        if (item) {
+          item.cart_id = result.data.cart_id;
+          if (result.data.expires_at) {
+            item.expires_at = result.data.expires_at;
+          }
+          setCart(currentCart);
+        }
+      } else if (!result.success) {
+        console.warn('Aviso sincronización servidor carrito:', result.message);
+        if (result.message && !result.message.toLowerCase().includes('csrf')) {
+          if (window.TruperToast && typeof window.TruperToast.warning === 'function') {
+            window.TruperToast.warning('Atención', result.message);
           }
         }
-        setCart(revertedCart);
-        updateCartBadge();
-        renderCart();
-        
-        if (window.TruperToast && typeof window.TruperToast.error === 'function') {
-          window.TruperToast.error('Error', result.message);
-        }
-        return;
       }
     } catch (e) {
-      console.error('Error de red al agregar al carrito:', e);
+      console.warn('Aviso de red al sincronizar con servidor:', e);
     }
-
-    const prodName = product.name || 'Producto';
-    notifyProductAdded(prodName);
   }
 
   async function removeFromCart(sku) {
     const cart = getCart();
     const item = cart.find((i) => i.sku === sku);
-    
-    // Actualizar localStorage primero
-    const next = cart.filter((i) => i.sku !== sku);
-    setCart(next);
-    updateCartBadge();
-    renderCart();
+    if (!item) return;
 
-    // Sincronizar con servidor (si tenemos cart_id)
-    if (item && item.cart_id) {
-      try {
-        await fetch('/api/cart.php?action=remove', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cart_id: item.cart_id, csrf_token: (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '' })
-        });
-      } catch (e) {
-        console.error('Error al eliminar del servidor:', e);
+    const doRemove = async () => {
+      const next = cart.filter((i) => i.sku !== sku);
+      setCart(next);
+      updateCartBadge();
+      renderCart();
+
+      // Sincronizar con servidor (si tenemos cart_id)
+      if (item && item.cart_id) {
+        try {
+          const csrf = window.csrfToken || (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
+          await fetch('/api/cart.php?action=remove', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': csrf
+            },
+            body: JSON.stringify({ cart_id: item.cart_id, csrf_token: csrf })
+          });
+        } catch (e) {
+          console.error('Error al eliminar del servidor:', e);
+        }
       }
+
+      if (window.TruperToast && typeof window.TruperToast.info === 'function') {
+        window.TruperToast.info('Producto Eliminado', `"${item.name}" se eliminó del carrito.`);
+      }
+    };
+
+    if (typeof confirmDelete === 'function') {
+      confirmDelete(item.name || 'este producto', doRemove);
+    } else if (typeof showPremiumModal === 'function') {
+      showPremiumModal(
+        'Eliminar Producto',
+        `¿Deseas eliminar <strong>"${item.name}"</strong> del carrito?`,
+        '🗑️',
+        doRemove,
+        null,
+        'Eliminar',
+        'Cancelar'
+      );
+    } else {
+      doRemove();
     }
   }
 
@@ -281,12 +380,18 @@
   // Cargar carrito desde el servidor al iniciar
   async function loadCartFromServer() {
     try {
-      const response = await fetch('/api/cart.php?action=get');
+      const pType = isOnlineMode ? 'online' : 'catalog';
+      const response = await fetch(`/api/cart.php?action=get&product_type=${pType}`);
       const result = await response.json();
       
       if (result.success && result.data) {
         const data = result.data;
-        const items = data.items || [];
+        const rawItems = data.items || [];
+        // Filtrar estrictamente sólo items que coincidan con el tipo de la tienda actual
+        const items = rawItems.filter(item => {
+          const itemType = item.product_type || 'catalog';
+          return itemType === pType;
+        });
         
         const serverCart = items.map(item => ({
           id: item.product_id,
@@ -302,7 +407,7 @@
           expires_at: item.expires_at,
           available_stock: toNumber(item.available_stock || 0),
           low_stock_threshold: toNumber(item.low_stock_threshold || 5),
-          product_type: item.product_type || 'catalog'
+          product_type: pType
         }));
         
         // Si el localStorage está vacío, usar el del servidor
@@ -1182,19 +1287,6 @@
           const officialFolio = result.folio;
           drawTicketPdf('thermal', officialFolio);
 
-          const now = new Date();
-          const issueDate = now.toLocaleString('es-MX');
-          const ticketUrl = `${window.location.origin}/ticket_quote.php?folio=${encodeURIComponent(officialFolio)}&auto_pdf=1`;
-
-          let message = `TRUPER - ${typeLabel.toUpperCase()}\n`;
-          message += '===========================\n';
-          message += `Folio: ${officialFolio}\n`;
-          message += `Fecha: ${issueDate}\n`;
-          message += `Cliente: ${clientCode || 'PUBLICO'}\n`;
-          message += '---------------------------\n';
-          message += 'PRODUCTOS:\n';
-          items.forEach((item, idx) => {
-            const code = String(item.sku || '').replace(/^XLS-/i, '') || 'N/A';
           const nowStr = new Date().toLocaleString('es-MX', { hour12: false });
           let body = `🧾 *COTIZACIÓN OFICIAL TRUPER / FOX VIRTUAL*\n`;
           body += `📌 *Folio de Ticket:* ${officialFolio}\n`;
@@ -1221,6 +1313,18 @@
             : `https://wa.me/?text=${encodedMsg}`;
 
           window.open(whatsappUrl, '_blank');
+
+          // Vaciar el carrito tras enviar la cotización
+          clearCartData();
+
+          const drawer = document.getElementById('cartDrawer');
+          if (drawer) {
+            setTimeout(() => drawer.classList.remove('open'), 1000);
+          }
+
+          if (window.TruperToast && typeof window.TruperToast.success === 'function') {
+            window.TruperToast.success('Cotización Enviada', `Folio: ${officialFolio}. El carrito se ha vaciado.`);
+          }
         })
         .catch(err => {
           console.error(err);
@@ -1239,48 +1343,169 @@
       ticketBtn.addEventListener('click', () => {
         const items = getCart();
         if (items.length === 0) {
-          showAlert('El carrito está vacío', 'warning');
+          if (typeof showAlert === 'function') {
+            showAlert('El carrito está vacío. Agrega productos antes de generar una cotización.', 'warning');
+          } else {
+            alert('El carrito está vacío');
+          }
           return;
         }
 
-        const originalText = ticketBtn.innerHTML;
-        ticketBtn.disabled = true;
-        ticketBtn.innerHTML = '⌛ Guardando...';
-
         const total = items.reduce((sum, item) => sum + (toNumber(item.unit_price || 0) * toNumber(item.quantity || 0)), 0);
+        const count = items.reduce((sum, item) => sum + toNumber(item.quantity || 0), 0);
 
-        window.registerQuoteTicket(items, total)
-          .then(result => {
-            const officialFolio = result.folio;
-            drawTicketPdf('thermal', officialFolio);
-          })
-          .catch(err => {
-            console.error(err);
-            showAlert('Error: ' + err.message, 'error');
-          })
-          .finally(() => {
-            ticketBtn.disabled = false;
-            ticketBtn.innerHTML = originalText;
-          });
+        const executePrintQuote = () => {
+          const originalText = ticketBtn.innerHTML;
+          ticketBtn.disabled = true;
+          ticketBtn.innerHTML = '⌛ Generando cotización...';
+
+          window.registerQuoteTicket(items, total)
+            .then(result => {
+              const officialFolio = result.folio;
+              drawTicketPdf('thermal', officialFolio);
+
+              // Vaciar el carrito tras generar la cotización
+              clearCartData();
+
+              const drawer = document.getElementById('cartDrawer');
+              if (drawer) {
+                setTimeout(() => drawer.classList.remove('open'), 1000);
+              }
+
+              if (window.TruperToast && typeof window.TruperToast.success === 'function') {
+                window.TruperToast.success('Cotización Generada', `Folio asignado: ${officialFolio}. El carrito se ha vaciado.`);
+              }
+            })
+            .catch(err => {
+              console.error(err);
+              if (typeof showAlert === 'function') {
+                showAlert('Error al generar cotización: ' + err.message, 'error');
+              } else {
+                alert('Error: ' + err.message);
+              }
+            })
+            .finally(() => {
+              ticketBtn.disabled = false;
+              ticketBtn.innerHTML = originalText;
+            });
+        };
+
+        const modalMsg = `¿Deseas generar y descargar la cotización oficial en PDF para los <strong>${count} artículo(s)</strong> con un total de <strong>${money(total)}</strong>?`;
+
+        if (typeof showPremiumModal === 'function') {
+          showPremiumModal(
+            'Generar Cotización',
+            modalMsg,
+            '🧾',
+            executePrintQuote,
+            null,
+            'Generar Cotización',
+            'Cancelar'
+          );
+        } else if (typeof confirmAction === 'function') {
+          confirmAction(
+            'Generar Cotización',
+            `¿Deseas generar la cotización para ${count} artículo(s) por ${money(total)}?`,
+            '🧾',
+            executePrintQuote
+          );
+        } else if (confirm(`¿Deseas generar la cotización para ${count} artículo(s) por ${money(total)}?`)) {
+          executePrintQuote();
+        }
       });
     }
 
     const shareBtn = document.getElementById('shareWhatsApp');
     if (shareBtn) {
       shareBtn.addEventListener('click', () => {
+        const items = getCart();
+        if (items.length === 0) {
+          if (typeof showAlert === 'function') {
+            showAlert('El carrito está vacío. Agrega productos para cotizar por WhatsApp.', 'warning');
+          } else {
+            alert('El carrito está vacío');
+          }
+          return;
+        }
+
+        const total = items.reduce((sum, item) => sum + (toNumber(item.unit_price || 0) * toNumber(item.quantity || 0)), 0);
+        const count = items.reduce((sum, item) => sum + toNumber(item.quantity || 0), 0);
         const companyWhatsApp = shareBtn.dataset.companyWhatsapp || '';
         const clientCode = shareBtn.dataset.clientCode || 'PUBLICO';
         const typeLabel = shareBtn.dataset.typeLabel || 'COTIZACION';
-        window.shareQuoteViaWhatsApp(companyWhatsApp, clientCode, typeLabel);
+
+        const executeShareWhatsApp = () => {
+          window.shareQuoteViaWhatsApp(companyWhatsApp, clientCode, typeLabel);
+        };
+
+        const modalMsg = `¿Deseas registrar la cotización oficial para los <strong>${count} artículo(s)</strong> por un total de <strong>${money(total)}</strong> y enviarla por WhatsApp?`;
+
+        if (typeof showPremiumModal === 'function') {
+          showPremiumModal(
+            'Enviar Cotización por WhatsApp',
+            modalMsg,
+            '📱',
+            executeShareWhatsApp,
+            null,
+            'Continuar a WhatsApp',
+            'Cancelar'
+          );
+        } else if (typeof confirmAction === 'function') {
+          confirmAction(
+            'Enviar Cotización por WhatsApp',
+            `¿Deseas enviar la cotización de ${count} artículo(s) por WhatsApp?`,
+            '📱',
+            executeShareWhatsApp
+          );
+        } else if (confirm(`¿Deseas enviar la cotización de ${count} artículo(s) por WhatsApp?`)) {
+          executeShareWhatsApp();
+        }
       });
     }
 
     const clearBtn = document.getElementById('clearCart');
     if (clearBtn) {
       clearBtn.addEventListener('click', () => {
-        setCart([]);
-        updateCartBadge();
-        renderCart();
+        const items = getCart();
+        if (items.length === 0) {
+          if (typeof showAlert === 'function') {
+            showAlert('El carrito ya está vacío.', 'info');
+          }
+          return;
+        }
+
+        const count = items.reduce((sum, item) => sum + toNumber(item.quantity || 0), 0);
+
+        const executeClear = () => {
+          clearCartData();
+
+          if (window.TruperToast && typeof window.TruperToast.info === 'function') {
+            window.TruperToast.info('Carrito Vaciado', 'Se han eliminado todos los productos del carrito.');
+          }
+        };
+
+        const modalMsg = `¿Estás seguro de que deseas vaciar todo el carrito?<br><br><span style="color:#f87171;font-size:0.9rem;">Se eliminarán los <strong>${count} artículo(s)</strong> agregados. Esta acción no se puede deshacer.</span>`;
+
+        if (typeof showPremiumModal === 'function') {
+          showPremiumModal(
+            'Vaciar Carrito',
+            modalMsg,
+            '🗑️',
+            executeClear,
+            null,
+            'Sí, vaciar carrito',
+            'Cancelar'
+          );
+        } else if (typeof confirmAction === 'function') {
+          confirmAction(
+            'Vaciar Carrito',
+            '¿Estás seguro de que deseas vaciar todo el carrito? Esta acción no se puede deshacer.',
+            '🗑️',
+            executeClear
+          );
+        } else if (confirm('¿Estás seguro de que deseas vaciar todo el carrito? Esta acción no se puede deshacer.')) {
+          executeClear();
+        }
       });
     }
 

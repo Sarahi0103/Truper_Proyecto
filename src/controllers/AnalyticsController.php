@@ -346,13 +346,23 @@ class AnalyticsController {
                 SELECT
                     st.id,
                     st.folio,
+                    st.order_id,
                     st.ticket_type,
                     st.total_amount,
+                    st.payment_method,
                     st.payment_status,
                     st.issued_date,
                     st.verified_date,
                     st.pickup_status,
                     st.expiration_date,
+                    st.shipping_address_json,
+                    st.tracking_folio,
+                    st.order_status,
+                    st.notes,
+                    COALESCE(st_track.carrier, '') as carrier,
+                    COALESCE(st_track.tracking_number, '') as tracking_number,
+                    COALESCE(st_track.tracking_status, '') as tracking_status,
+                    st_track.estimated_delivery,
                     COALESCE(st.customer_name, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END, 'Mostrador') as customer_name,
                     CASE WHEN COALESCE(st.customer_name, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END, 'Mostrador') = 'Admin' THEN 'admin@truper.com' ELSE u.email END as email,
                     (SELECT COUNT(*) FROM ticket_items WHERE ticket_id = st.id) as item_count,
@@ -361,10 +371,11 @@ class AnalyticsController {
                 FROM sales_tickets st
                 LEFT JOIN users u ON st.user_id = u.id
                 LEFT JOIN users ib ON st.issued_by = ib.id
+                LEFT JOIN shipping_tracking st_track ON (st_track.order_id = st.id OR (st.order_id IS NOT NULL AND st.order_id = st_track.order_id))
                 WHERE EXTRACT(YEAR FROM st.issued_date) = ?
                 AND EXTRACT(MONTH FROM st.issued_date) = ?
                 AND COALESCE(st.customer_name, u.first_name || CASE WHEN u.last_name IS NOT NULL AND u.last_name <> '' THEN ' ' || u.last_name ELSE '' END, 'Mostrador') != 'Admin'
-                AND (u.role IS NULL OR u.role != 'guest')
+                AND (u.role IS NULL OR u.role != 'guest' OR (st.shipping_address_json IS NOT NULL AND st.shipping_address_json != '' AND st.shipping_address_json != '{}'))
                 ORDER BY st.issued_date DESC, st.folio DESC
             ");
             

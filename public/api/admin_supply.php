@@ -2515,6 +2515,23 @@ function create_product_compatible($pdo, array $payload): void {
         $values[] = normalize_bool_admin_supply($payload['show_in_pos'] ?? null, true) ? 1 : 0;
     }
 
+    if (db_column_exists('products', 'sat_code') && array_key_exists('sat_code', $payload)) {
+        $columns[] = 'sat_code';
+        $values[] = trim((string)$payload['sat_code']);
+    }
+    if (db_column_exists('products', 'sat_unit') && array_key_exists('sat_unit', $payload)) {
+        $columns[] = 'sat_unit';
+        $values[] = trim((string)$payload['sat_unit']);
+    }
+    if (db_column_exists('products', 'tax_rate') && array_key_exists('tax_rate', $payload)) {
+        $columns[] = 'tax_rate';
+        $values[] = (float)$payload['tax_rate'];
+    }
+    if (db_column_exists('products', 'is_tax_exempt') && array_key_exists('is_tax_exempt', $payload)) {
+        $columns[] = 'is_tax_exempt';
+        $values[] = normalize_bool_admin_supply($payload['is_tax_exempt'] ?? null, false) ? 1 : 0;
+    }
+
     if (db_column_exists('products', 'is_active')) {
         $columns[] = 'is_active';
         $values[] = normalize_bool_admin_supply($payload['is_active'] ?? null, true) ? 1 : 0;
@@ -2603,6 +2620,22 @@ function update_product_compatible($pdo, int $id, array $payload): void {
     if (db_column_exists('products', 'show_in_pos') && array_key_exists('show_in_pos', $payload)) {
         $sets[] = 'show_in_pos = ?';
         $values[] = normalize_bool_admin_supply($payload['show_in_pos'] ?? null, true) ? 1 : 0;
+    }
+    if (db_column_exists('products', 'sat_code') && array_key_exists('sat_code', $payload)) {
+        $sets[] = 'sat_code = ?';
+        $values[] = trim((string)$payload['sat_code']);
+    }
+    if (db_column_exists('products', 'sat_unit') && array_key_exists('sat_unit', $payload)) {
+        $sets[] = 'sat_unit = ?';
+        $values[] = trim((string)$payload['sat_unit']);
+    }
+    if (db_column_exists('products', 'tax_rate') && array_key_exists('tax_rate', $payload)) {
+        $sets[] = 'tax_rate = ?';
+        $values[] = (float)$payload['tax_rate'];
+    }
+    if (db_column_exists('products', 'is_tax_exempt') && array_key_exists('is_tax_exempt', $payload)) {
+        $sets[] = 'is_tax_exempt = ?';
+        $values[] = normalize_bool_admin_supply($payload['is_tax_exempt'] ?? null, false) ? 1 : 0;
     }
     if (db_column_exists('products', 'updated_at')) { $sets[] = 'updated_at = CURRENT_TIMESTAMP'; }
     
@@ -2990,8 +3023,12 @@ function list_stock_products_compatible($pdo, int $limit = 50, int $offset = 0, 
     $groupSelect = db_column_exists('products', 'product_group')
         ? "COALESCE(product_group, '') AS product_group"
         : "'' AS product_group";
+    $satCodeSelect = db_column_exists('products', 'sat_code') ? "COALESCE(sat_code, '27111701') AS sat_code" : "'27111701' AS sat_code";
+    $satUnitSelect = db_column_exists('products', 'sat_unit') ? "COALESCE(sat_unit, 'H87') AS sat_unit" : "'H87' AS sat_unit";
+    $taxRateSelect = db_column_exists('products', 'tax_rate') ? "COALESCE(tax_rate, 16.00) AS tax_rate" : "16.00 AS tax_rate";
+    $taxExemptSelect = db_column_exists('products', 'is_tax_exempt') ? "(CASE WHEN is_tax_exempt IS NULL THEN 0 WHEN LOWER(CAST(is_tax_exempt AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) AS is_tax_exempt" : "0 AS is_tax_exempt";
 
-    $sql = "SELECT id, {$skuSelect}, {$nameSelect}, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect}, {$netPriceSelect}, {$discountSelect}, {$pricePosSelect}, {$priceOnlineSelect}, {$showPosSelect}, {$showOnlineSelect}, {$colorSelect}, {$groupSelect} 
+    $sql = "SELECT id, {$skuSelect}, {$nameSelect}, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect}, {$netPriceSelect}, {$discountSelect}, {$pricePosSelect}, {$priceOnlineSelect}, {$showPosSelect}, {$showOnlineSelect}, {$colorSelect}, {$groupSelect}, {$satCodeSelect}, {$satUnitSelect}, {$taxRateSelect}, {$taxExemptSelect} 
             FROM products";
     
     if (!empty($whereClauses)) {
@@ -3294,7 +3331,11 @@ try {
                 'reorder_level' => max(0, $reorder),
                 'image_url' => $imageUrl,
                 'is_active' => $isVisible ? 1 : 0,
-                'variants_json' => json_encode($finalGallery, JSON_UNESCAPED_UNICODE)
+                'variants_json' => json_encode($finalGallery, JSON_UNESCAPED_UNICODE),
+                'sat_code' => sanitize($input['sat_code'] ?? '27111701'),
+                'sat_unit' => sanitize($input['sat_unit'] ?? 'H87'),
+                'tax_rate' => (float)($input['tax_rate'] ?? 16.00),
+                'is_tax_exempt' => !empty($input['is_tax_exempt']) ? 1 : 0
             ]);
 
                 // Ensure gallery directory exists for newly created products in legacy fallback flow.
@@ -3427,7 +3468,11 @@ try {
                     ? ", (CASE WHEN show_in_pos IS NULL THEN 1 WHEN LOWER(CAST(show_in_pos AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) as show_in_pos"
                     : ", 1 as show_in_pos";
 
-                $sql = "SELECT id, {$skuCol} as sku, {$nameCol} as name, category, {$priceCol} as price, CAST({$discountCol} AS NUMERIC) as discount, CAST({$finalPriceCol} AS NUMERIC) as final_price, (CASE WHEN {$activeCol} IS NULL THEN 1 WHEN LOWER(CAST({$activeCol} AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) as is_active{$selectShowInPos} FROM {$table} {$whereSql} ORDER BY {$orderSql} LIMIT {$per_page} OFFSET {$offset}";
+                $selectSat = ($table === 'products')
+                    ? ", COALESCE(sat_code, '27111701') as sat_code, COALESCE(sat_unit, 'H87') as sat_unit"
+                    : ", '27111701' as sat_code, 'H87' as sat_unit";
+
+                $sql = "SELECT id, {$skuCol} as sku, {$nameCol} as name, category, {$priceCol} as price, CAST({$discountCol} AS NUMERIC) as discount, CAST({$finalPriceCol} AS NUMERIC) as final_price, (CASE WHEN {$activeCol} IS NULL THEN 1 WHEN LOWER(CAST({$activeCol} AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) as is_active{$selectShowInPos}{$selectSat} FROM {$table} {$whereSql} ORDER BY {$orderSql} LIMIT {$per_page} OFFSET {$offset}";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute($params);
                 $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -3510,6 +3555,15 @@ try {
                     if (db_column_exists('products', 'net_price')) {
                         $sets[] = 'net_price = ?';
                         $values[] = (float)number_format($price, 2, '.', '');
+                    }
+
+                    if (db_column_exists('products', 'sat_code') && array_key_exists('sat_code', $input)) {
+                        $sets[] = 'sat_code = ?';
+                        $values[] = trim((string)$input['sat_code']);
+                    }
+                    if (db_column_exists('products', 'sat_unit') && array_key_exists('sat_unit', $input)) {
+                        $sets[] = 'sat_unit = ?';
+                        $values[] = trim((string)$input['sat_unit']);
                     }
                     
                     if (db_column_exists('products', 'updated_at')) {
@@ -3790,7 +3844,11 @@ try {
                     'image_url' => $finalImageUrl,
                     'is_active' => $isVisible,
                     'color' => sanitize($input['color'] ?? ''),
-                    'product_group' => sanitize($input['product_group'] ?? '')
+                    'product_group' => sanitize($input['product_group'] ?? ''),
+                    'sat_code' => sanitize($input['sat_code'] ?? '27111701'),
+                    'sat_unit' => sanitize($input['sat_unit'] ?? 'H87'),
+                    'tax_rate' => (float)($input['tax_rate'] ?? 16.00),
+                    'is_tax_exempt' => !empty($input['is_tax_exempt']) ? 1 : 0
                 ]);
 
                 if (!empty($finalGallery)) {
@@ -3868,7 +3926,13 @@ try {
                     'reorder_level' => max(0, $reorder),
                     'image_url' => $imageUrl,
                     'is_active' => $isVisible,
-                    'variants_json' => $variantsJson
+                    'color' => sanitize($input['color'] ?? ''),
+                    'product_group' => sanitize($input['product_group'] ?? ''),
+                    'variants_json' => $variantsJson,
+                    'sat_code' => sanitize($input['sat_code'] ?? '27111701'),
+                    'sat_unit' => sanitize($input['sat_unit'] ?? 'H87'),
+                    'tax_rate' => (float)($input['tax_rate'] ?? 16.00),
+                    'is_tax_exempt' => !empty($input['is_tax_exempt']) ? 1 : 0
                 ]);
 
                 // Ensure product gallery directory exists even if no images yet
@@ -4892,9 +4956,9 @@ try {
             $where = [];
             if ($onlyActive) $where[] = "is_active = true";
             if ($context === 'stock') {
-                $where[] = "(context = 'stock' OR context = 'both')";
+                $where[] = "(context = 'stock' OR context = 'both' OR context IS NULL)";
             } elseif ($context === 'marketplace') {
-                $where[] = "(context = 'marketplace' OR context = 'both')";
+                $where[] = "(context = 'marketplace' OR context = 'both' OR context IS NULL)";
             }
             $whereStr = !empty($where) ? " WHERE " . implode(" AND ", $where) : "";
 
@@ -4902,7 +4966,7 @@ try {
                 ? "color"
                 : "'' AS color";
 
-            $stmt = $pdo->query("SELECT id, {$nameSelect}, {$orderSelect}, {$activeSelect}, {$colorSelect}, " . (db_column_exists('product_categories', 'context') ? "context" : "'stock' AS context") . " FROM product_categories" . $whereStr . " ORDER BY " . (db_column_exists('product_categories', 'sort_order') ? 'sort_order ASC, ' : '') . "name ASC");
+            $stmt = $pdo->query("SELECT id, {$nameSelect}, {$orderSelect}, {$activeSelect}, {$colorSelect}, " . (db_column_exists('product_categories', 'context') ? "context" : "'both' AS context") . " FROM product_categories" . $whereStr . " ORDER BY " . (db_column_exists('product_categories', 'sort_order') ? 'sort_order ASC, ' : '') . "name ASC");
             $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
             foreach ($items as &$item) {
                 if (empty($item['color']) && !empty($item['name'])) {
@@ -4926,7 +4990,7 @@ try {
             $name = trim((string)($_POST['name'] ?? ($input['name'] ?? '')));
             $sortOrder = (int)($_POST['sort_order'] ?? ($input['sort_order'] ?? 0));
             $isActive = normalize_bool_admin_supply($_POST['is_active'] ?? ($input['is_active'] ?? null), true);
-            $context = sanitize($input['context'] ?? ($_POST['context'] ?? 'stock'));
+            $context = sanitize($input['context'] ?? ($_POST['context'] ?? 'both'));
 
             if ($name === '') {
                 $response = ['success' => false, 'message' => 'El nombre de la categoría es obligatorio'];
@@ -6723,7 +6787,8 @@ try {
             $perPage = 50;
             $offset = ($page - 1) * $perPage;
 
-            $whereClauses[] = "st.deleted_at IS NULL";
+            $whereClauses = ["st.deleted_at IS NULL"];
+            $params = [];
 
             $isLogged = isset($_SESSION['user_id']);
             $isUserAdmin = $isLogged && (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee');
@@ -6756,9 +6821,9 @@ try {
 
             // Filtrado por canal (Tienda Local vs Tienda en Línea)
             if ($channelFilter === 'pos') {
-                $whereClauses[] = "(st.folio LIKE 'TKT-%' OR st.folio LIKE 'POS-%' OR st.shipping_address_json IS NULL OR st.shipping_address_json = '' OR st.shipping_address_json = '{}')";
+                $whereClauses[] = "NOT (st.folio LIKE 'TCK-%' OR st.folio LIKE 'FOX-%' OR (st.shipping_address_json IS NOT NULL AND st.shipping_address_json LIKE '%\"address\":_%' AND st.shipping_address_json NOT LIKE '%\"address\":\"\"%' AND st.shipping_address_json NOT LIKE '%\"address\": \"\"%' AND st.customer_name NOT LIKE '%Cotización%'))";
             } elseif ($channelFilter === 'online') {
-                $whereClauses[] = "(st.folio LIKE 'FOX-%' OR st.folio LIKE 'ORD-%' OR (st.shipping_address_json IS NOT NULL AND st.shipping_address_json != '' AND st.shipping_address_json != '{}'))";
+                $whereClauses[] = "(st.folio LIKE 'TCK-%' OR st.folio LIKE 'FOX-%' OR (st.shipping_address_json IS NOT NULL AND st.shipping_address_json LIKE '%\"address\":_%' AND st.shipping_address_json NOT LIKE '%\"address\":\"\"%' AND st.shipping_address_json NOT LIKE '%\"address\": \"\"%' AND st.customer_name NOT LIKE '%Cotización%'))";
             }
 
             $whereSql = !empty($whereClauses) ? ' WHERE ' . implode(' AND ', $whereClauses) : '';
@@ -6768,15 +6833,23 @@ try {
             $countStmt->execute($params);
             $total = (int)$countStmt->fetchColumn();
 
-            $sql = "SELECT st.id, st.folio, st.customer_name, st.total_amount, st.issued_date,
+            $sql = "SELECT st.id, st.folio, st.order_id, st.customer_name, st.total_amount, st.issued_date,
                            COALESCE(st.order_status, 'in_preparation') AS order_status,
                            COALESCE(st.invoice_required, false) AS invoice_required,
-                           st.tracking_folio, st.shipping_address_json, st.notes,
+                           COALESCE(st.tracking_folio, tr.tracking_number) AS tracking_folio,
+                           tr.carrier,
+                           tr.estimated_delivery,
+                           st.shipping_address_json, st.notes,
                            COALESCE(u.user_code, 'PUBLICO') AS user_code,
                            COALESCE(u.customer_segment, 'menudeo') AS customer_segment,
                            COALESCE(u.phone, '') AS customer_phone
                     FROM sales_tickets st
                     LEFT JOIN users u ON st.user_id = u.id
+                    LEFT JOIN (
+                        SELECT DISTINCT ON (order_id) order_id, carrier, tracking_number, estimated_delivery 
+                        FROM shipping_tracking 
+                        ORDER BY order_id, id DESC
+                    ) tr ON (tr.order_id = st.id OR (st.order_id IS NOT NULL AND tr.order_id = st.order_id))
                     {$whereSql}
                     ORDER BY st.id DESC
                     LIMIT {$perPage} OFFSET {$offset}";
@@ -6787,9 +6860,17 @@ try {
             // Enrich each order with items, history, and channel taxonomy
             foreach ($orders as &$ord) {
                 // Determinar canal de venta (Tienda Local vs Tienda en Línea)
-                $hasShipping = !empty($ord['shipping_address_json']) && $ord['shipping_address_json'] !== '{}';
-                $isPosFolio = (strpos($ord['folio'], 'TKT-') === 0 || strpos($ord['folio'], 'POS-') === 0);
-                $ord['channel'] = ($isPosFolio || !$hasShipping) ? 'pos' : 'online';
+                $isOnlineFolio = (strpos($ord['folio'], 'TCK-') === 0 || strpos($ord['folio'], 'FOX-') === 0);
+                $hasRealAddr = false;
+                if (!empty($ord['shipping_address_json']) && $ord['shipping_address_json'] !== '{}' && $ord['shipping_address_json'] !== '[]') {
+                    $sDec = json_decode($ord['shipping_address_json'], true);
+                    if (is_array($sDec) && !empty($sDec['address']) && trim($sDec['address']) !== '') {
+                        if (strpos($ord['customer_name'] ?? '', 'Cotización') === false) {
+                            $hasRealAddr = true;
+                        }
+                    }
+                }
+                $ord['channel'] = ($isOnlineFolio || $hasRealAddr) ? 'online' : 'pos';
                 $ord['channel_label'] = $ord['channel'] === 'pos' ? '🏬 Tienda Local (Mostrador)' : '🌐 Tienda en Línea (Web)';
 
                 // Ticket items
@@ -6801,6 +6882,23 @@ try {
                     $itemStmt->execute([$ord['id']]);
                     $ord['items'] = $itemStmt->fetchAll(PDO::FETCH_ASSOC);
                 } catch (Exception $ignored) { $ord['items'] = []; }
+
+                // If ticket_items is empty and order_id exists, fetch from order_items
+                if (empty($ord['items']) && !empty($ord['order_id'])) {
+                    try {
+                        $oiStmt = $pdo->prepare(
+                            "SELECT COALESCE(p.name, p.sku, 'Producto #' || oi.product_id) as product_name,
+                                    oi.quantity, oi.unit_price, COALESCE(oi.line_total, oi.quantity * oi.unit_price) as total,
+                                    COALESCE(oi.discount_amount, 0) as discount
+                             FROM order_items oi
+                             LEFT JOIN products p ON oi.product_id = p.id
+                             WHERE oi.order_id = ?
+                             ORDER BY oi.id ASC"
+                        );
+                        $oiStmt->execute([$ord['order_id']]);
+                        $ord['items'] = $oiStmt->fetchAll(PDO::FETCH_ASSOC);
+                    } catch (Exception $ignored) {}
+                }
 
                 // Order tracking history
                 try {
@@ -6834,10 +6932,10 @@ try {
             $kpis = [
                 'total'          => (int)$pdo->query("SELECT COUNT(*) FROM sales_tickets {$kpiWhere}")->fetchColumn(),
                 'in_preparation' => (int)$pdo->query("SELECT COUNT(*) FROM sales_tickets {$kpiWhere} AND COALESCE(order_status, 'in_preparation') = 'in_preparation'")->fetchColumn(),
-                'in_transit'     => (int)$pdo->query("SELECT COUNT(*) FROM sales_tickets {$kpiWhere} AND order_status IN ('packed', 'in_transit')")->fetchColumn(),
+                'in_transit'     => (int)$pdo->query("SELECT COUNT(*) FROM sales_tickets {$kpiWhere} AND order_status IN ('packed', 'in_transit', 'shipped')")->fetchColumn(),
                 'delivered'      => (int)$pdo->query("SELECT COUNT(*) FROM sales_tickets {$kpiWhere} AND order_status = 'delivered'")->fetchColumn(),
-                'pos_count'      => (int)$pdo->query("SELECT COUNT(*) FROM sales_tickets {$kpiWhere} AND (folio LIKE 'TKT-%' OR folio LIKE 'POS-%' OR shipping_address_json IS NULL OR shipping_address_json = '' OR shipping_address_json = '{}')")->fetchColumn(),
-                'online_count'   => (int)$pdo->query("SELECT COUNT(*) FROM sales_tickets {$kpiWhere} AND (folio LIKE 'FOX-%' OR folio LIKE 'ORD-%' OR (shipping_address_json IS NOT NULL AND shipping_address_json != '' AND shipping_address_json != '{}'))")->fetchColumn()
+                'pos_count'      => (int)$pdo->query("SELECT COUNT(*) FROM sales_tickets {$kpiWhere} AND NOT (folio LIKE 'TCK-%' OR folio LIKE 'FOX-%' OR (shipping_address_json IS NOT NULL AND shipping_address_json LIKE '%\"address\":_%' AND shipping_address_json NOT LIKE '%\"address\":\"\"%' AND shipping_address_json NOT LIKE '%\"address\": \"\"%' AND customer_name NOT LIKE '%Cotización%'))")->fetchColumn(),
+                'online_count'   => (int)$pdo->query("SELECT COUNT(*) FROM sales_tickets {$kpiWhere} AND (folio LIKE 'TCK-%' OR folio LIKE 'FOX-%' OR (shipping_address_json IS NOT NULL AND shipping_address_json LIKE '%\"address\":_%' AND shipping_address_json NOT LIKE '%\"address\":\"\"%' AND shipping_address_json NOT LIKE '%\"address\": \"\"%' AND customer_name NOT LIKE '%Cotización%'))")->fetchColumn()
             ];
 
             $response = [
@@ -6868,12 +6966,28 @@ try {
                 break;
             }
 
-            $updateStmt = $pdo->prepare("UPDATE sales_tickets SET order_status = ? WHERE folio = ?");
+            $updateStmt = $pdo->prepare("UPDATE sales_tickets SET order_status = ?, updated_at = NOW() WHERE folio = ?");
             $updateStmt->execute([$nextStatus, $orderFolio]);
 
             try {
+                $pdo->prepare("UPDATE orders SET status = ?, updated_at = NOW() WHERE id = (SELECT order_id FROM sales_tickets WHERE folio = ?)")->execute([$nextStatus, $orderFolio]);
+            } catch (Exception $e) {}
+
+            try {
+                $statusNames = [
+                    'in_preparation' => 'En Preparación / Almacén',
+                    'processing' => 'En Preparación / Almacén',
+                    'packed' => 'Empacado (Etiqueta Ciega)',
+                    'shipped' => 'Enviado / En Ruta de Paquetería',
+                    'in_transit' => 'En Ruta de Entrega',
+                    'delivered' => 'Entregado al Cliente',
+                    'cancelled' => 'Cancelado',
+                    'canceled' => 'Cancelado'
+                ];
+                $friendly = $statusNames[$nextStatus] ?? $nextStatus;
+                $noteText = !empty($notes) ? $notes : "Estatus actualizado a: {$friendly}";
                 $hist = $pdo->prepare("INSERT INTO order_tracking_history (order_folio, status, notes, changed_by) VALUES (?, ?, ?, ?)");
-                $hist->execute([$orderFolio, $nextStatus, $notes, $_SESSION['name'] ?? 'Admin']);
+                $hist->execute([$orderFolio, $nextStatus, $noteText, $_SESSION['name'] ?? 'Administrador']);
             } catch (Exception $ignored) {}
 
             $response = ['success' => true, 'message' => 'Estatus de pedido actualizado correctamente'];
@@ -6884,13 +6998,16 @@ try {
     }
 } catch (Throwable $e) {
     error_log('admin_supply API error: ' . $e->getMessage());
-    $response = ['success' => false, 'message' => 'Error interno del servidor'];
-    if (($_SESSION['role'] ?? '') === 'admin' || ($_SESSION['role'] ?? '') === 'employee') {
-        $response['debug'] = [
+    $response = [
+        'success' => false, 
+        'message' => 'Error interno del servidor',
+        'debug' => [
             'action' => (string)$action,
-            'detail' => (string)$e->getMessage()
-        ];
-    }
+            'detail' => (string)$e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ]
+    ];
 }
 
 restore_error_handler();

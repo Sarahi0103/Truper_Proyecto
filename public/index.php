@@ -619,7 +619,7 @@ function homepage_update_label($type) {
                 <?php if ($isAdmin): ?>
                     <a href="guest_tickets.php">Tickets sin Registro</a>
                 <?php endif; ?>
-                <a href="cart.php">Carrito</a>
+                <a href="cart.php">Carrito <span class="badge-cart" id="navCartBadge" style="display:none; background:#ff7f00; color:#fff; font-size:0.75rem; padding:2px 7px; border-radius:10px; margin-left:4px; font-weight:700;">0</span></a>
                 <?php if ($isLogged): ?>
                     <div class="nav-dropdown">
                         <button class="nav-dropdown-btn">Mi Cuenta <span class="arrow">▼</span></button>

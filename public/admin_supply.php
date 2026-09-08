@@ -581,6 +581,49 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
             color: #ffffff !important;
             box-shadow: 0 4px 12px rgba(255, 102, 0, 0.3);
         }
+
+        /* Estilos mejorados para selectores de categorías (Stock y Marketplace) */
+        .category-panel select,
+        #newProductCategory,
+        #marketplaceCategory {
+            padding: 6px 8px !important;
+            min-height: 180px !important;
+            height: auto !important;
+            border-radius: 8px !important;
+            background: #121218 !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            color: #f1f5f9 !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+            overflow-y: auto !important;
+        }
+        .category-panel select option,
+        #newProductCategory option,
+        #marketplaceCategory option {
+            padding: 9px 12px !important;
+            margin: 3px 0 !important;
+            border-radius: 6px !important;
+            cursor: pointer !important;
+            font-size: 0.92rem !important;
+            font-weight: 500 !important;
+            color: #cbd5e1 !important;
+            background: #181824 !important;
+            transition: background 0.15s, color 0.15s, transform 0.1s !important;
+        }
+        .category-panel select option:hover,
+        #newProductCategory option:hover,
+        #marketplaceCategory option:hover {
+            background: rgba(255, 127, 0, 0.22) !important;
+            color: #fff !important;
+        }
+        .category-panel select option:checked,
+        #newProductCategory option:checked,
+        #marketplaceCategory option:checked {
+            background: linear-gradient(135deg, #ff7f00, #ea580c) !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+        }
     </style>
 </head>
 <body>
@@ -608,20 +651,22 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                 <!-- Dropdowns de Administración Separados -->
                 <div class="nav-dropdown">
                     <button class="nav-dropdown-btn">Admin Tienda <span class="arrow">▼</span></button>
-                    <div class="nav-dropdown-content" style="min-width: 200px;">
-                        <a href="orders.php">Ventas / Pedidos</a>
-                        <a href="order_tracking.php">Seguimiento / Logística</a>
-                        <a href="rma_manager.php">Devoluciones RMA</a>
+                    <div class="nav-dropdown-content" style="min-width: 220px;">
+                        <a href="admin_online_orders.php">🌐 Pedidos Online</a>
+                        <a href="order_tracking.php">🚚 Seguimiento y Guías</a>
+                        <a href="admin_online_billing.php">🏛️ Facturación & Pagos SAT</a>
+                        <a href="rma_manager.php">🔄 Devoluciones RMA</a>
                     </div>
                 </div>
                 <div class="nav-dropdown">
                     <button class="nav-dropdown-btn">Admin Local <span class="arrow">▼</span></button>
-                    <div class="nav-dropdown-content" style="min-width: 200px;">
-                        <a href="cashier.php">Caja / Punto de Venta</a>
-                        <a href="b2b_approval.php">Aprobación B2B</a>
-                        <a href="tickets.php">Tickets y Cotizaciones</a>
-                        <a href="ticket_validation.php">Validación de Tickets</a>
-                        <a href="tasks.php">Tareas de Empleados</a>
+                    <div class="nav-dropdown-content" style="min-width: 220px;">
+                        <a href="ticket_validation.php">🏬 Validación Mostrador</a>
+                        <a href="tickets.php">🎫 Historial de Tickets</a>
+                        <a href="cashier.php">💵 Caja / Punto de Venta</a>
+                        <a href="orders.php">📋 Ventas / Pedidos Mostrador</a>
+                        <a href="tasks.php">👥 Tareas de Empleados</a>
+                        <a href="b2b_approval.php">🤝 Aprobación B2B</a>
                     </div>
                 </div>
                 <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
@@ -768,8 +813,9 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                             <option value="Fontanería">Fontanería</option>
                             <option value="Cerrajería">Cerrajería</option>
                             <option value="Herrería">Herrería</option>
+                            <option value="hola5">hola5</option>
                         </select>
-                        <small class="text-muted">Usa Ctrl/Cmd para seleccionar múltiples categorías. Gestión en la pestaña Categorías.</small>
+                        <small class="text-muted">Haz clic en una o más categorías para seleccionarlas. Gestión en la pestaña Categorías.</small>
                     </div>
                 </div>
 
@@ -823,6 +869,51 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                 <div class="grid grid-3 mt-2">
                     <div class="form-group"><label>Nivel reorden</label><input id="newProductReorder" type="number" min="0" step="1" value="10"></div>
                     <div class="form-group"><label>Descuento (%)</label><input id="newProductDiscount" type="number" min="0" max="100" step="any" value="0"></div>
+                </div>
+
+                <!-- ── Apartado de Facturación y Claves SAT (CFDI 4.0) ── -->
+                <div class="form-group mt-2" style="background: rgba(34, 197, 94, 0.05); padding: 14px 16px; border-radius: 10px; border: 1px solid rgba(34, 197, 94, 0.25);">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:0.5rem;">
+                        <span style="background:rgba(34, 197, 94, 0.2); color:#22c55e; border-radius:6px; padding:3px 8px; font-weight:700; font-size:0.8rem;">SAT CFDI 4.0</span>
+                        <label style="font-weight:700; color:#22c55e; font-size: 1rem; margin:0;">📋 Datos Fiscales del Producto (Facturación Automática)</label>
+                    </div>
+                    <p class="text-muted" style="font-size:0.85rem; margin-top:0; margin-bottom:0.75rem;">
+                        Configura la Clave de Producto/Servicio del SAT y la Unidad de Medida para la emisión de facturas CFDI 4.0.
+                    </p>
+                    <div class="grid grid-3">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label style="font-weight:600;">Clave Prod/Serv SAT</label>
+                            <input id="newProductSatCode" type="text" maxlength="10" placeholder="Ej. 27111701" value="27111701">
+                            <small class="text-muted">8 dígitos (ej. 27111701 - Herramientas de mano)</small>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label style="font-weight:600;">Clave Unidad SAT</label>
+                            <select id="newProductSatUnit">
+                                <option value="H87">H87 - Pieza (Pza)</option>
+                                <option value="EA">EA - Elemento / Cada uno</option>
+                                <option value="XUN">XUN - Unidad</option>
+                                <option value="SET">SET - Juego / Kit</option>
+                                <option value="KGM">KGM - Kilogramo</option>
+                                <option value="MTR">MTR - Metro</option>
+                                <option value="LTR">LTR - Litro</option>
+                                <option value="MTK">MTK - Metro cuadrado</option>
+                                <option value="MTQ">MTQ - Metro cúbico</option>
+                                <option value="ACT">ACT - Actividad</option>
+                                <option value="E48">E48 - Unidad de servicio</option>
+                            </select>
+                            <small class="text-muted">Unidad de medida estándar SAT</small>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label style="font-weight:600;">Tasa de Impuesto / IVA</label>
+                            <select id="newProductTaxRate">
+                                <option value="16.00">IVA General 16%</option>
+                                <option value="8.00">IVA Fronterizo 8%</option>
+                                <option value="0.00">Tasa 0%</option>
+                                <option value="exempt">Exento de IVA</option>
+                            </select>
+                            <small class="text-muted">Tasa aplicada en la facturación</small>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="grid grid-2 mt-2">
@@ -1380,8 +1471,14 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                     <label>Categorías CE (selección múltiple)</label>
                     <div class="category-panel">
                         <div class="category-panel-title">Categorías para Marketplace</div>
-                        <select id="marketplaceCategory" multiple size="6"></select>
-                        <small class="text-muted">Las categorías se comparten con Stock. Gestión en la pestaña Categorías.</small>
+                        <select id="marketplaceCategory" multiple size="6">
+                            <option value="Material eléctrico">Material eléctrico</option>
+                            <option value="Fontanería">Fontanería</option>
+                            <option value="Cerrajería">Cerrajería</option>
+                            <option value="Herrería">Herrería</option>
+                            <option value="hola5">hola5</option>
+                        </select>
+                        <small class="text-muted">Haz clic en una o más categorías para seleccionarlas. Gestión en la pestaña Categorías.</small>
                     </div>
                 </div>
 
@@ -1627,15 +1724,17 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                             <tr style="border-bottom:1px solid var(--theme-border);">
                                 <th style="padding:1rem; text-align:left;">Código (SKU)</th>
                                 <th style="padding:1rem; text-align:left;">Nombre</th>
-                                <th style="padding:1rem; text-align:left; width:240px;">Categoría</th>
-                                <th style="padding:1rem; text-align:left; width:150px;">Precio Neto ($)</th>
-                                <th style="padding:1rem; text-align:center; width:130px;">Visibilidad</th>
+                                <th style="padding:1rem; text-align:left; width:200px;">Categoría</th>
+                                <th style="padding:1rem; text-align:left; width:130px;">Clave SAT</th>
+                                <th style="padding:1rem; text-align:left; width:130px;">Unidad SAT</th>
+                                <th style="padding:1rem; text-align:left; width:140px;">Precio Neto ($)</th>
+                                <th style="padding:1rem; text-align:center; width:110px;">Visibilidad</th>
                                 <th style="padding:1rem; text-align:center; width:110px;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="quickEditTableBody">
                             <tr>
-                                <td colspan="6" style="padding:2rem; text-align:center;" class="text-muted">Cargando productos para edición rápida...</td>
+                                <td colspan="8" style="padding:2rem; text-align:center;" class="text-muted">Cargando productos para edición rápida...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -2047,6 +2146,19 @@ function setCategorySelections(selectEl, categories) {
 
     Array.from(selectEl.options || []).forEach((option) => {
         option.selected = normalizedCategories.has(normalizeCategoryValue(option.value));
+    });
+}
+
+function makeCategorySelectClickable(selectEl) {
+    if (!selectEl || selectEl.dataset.clickBound === 'true') return;
+    selectEl.dataset.clickBound = 'true';
+    selectEl.addEventListener('mousedown', function (e) {
+        if (e.target && e.target.tagName === 'OPTION') {
+            e.preventDefault();
+            e.target.selected = !e.target.selected;
+            selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+            selectEl.focus();
+        }
     });
 }
 
@@ -4190,10 +4302,20 @@ function resetProductForm() {
     document.getElementById('newProductImageRef').value = 'images/products/default-product.svg';
     document.getElementById('newProductVisible').value = '1';
     if (document.getElementById('newProductGroupSelect')) document.getElementById('newProductGroupSelect').value = '';
+    if (document.getElementById('newProductSatCode')) document.getElementById('newProductSatCode').value = '27111701';
+    if (document.getElementById('newProductSatUnit')) document.getElementById('newProductSatUnit').value = 'H87';
+    if (document.getElementById('newProductTaxRate')) document.getElementById('newProductTaxRate').value = '16.00';
 
-    Array.from(document.getElementById('newProductCategory').options || []).forEach((opt) => {
-        opt.selected = false;
-    });
+    const catSel = document.getElementById('newProductCategory');
+    if (catSel) {
+        Array.from(catSel.options || []).forEach((opt) => {
+            opt.selected = false;
+        });
+        makeCategorySelectClickable(catSel);
+        if (catSel.options.length <= 4) {
+            loadProductCategories(false);
+        }
+    }
 
     const saveBtn = document.getElementById('newProductSaveButton');
     if (saveBtn) saveBtn.textContent = 'Guardar producto';
@@ -4229,6 +4351,15 @@ async function fillProductFormById(id) {
     document.getElementById('newProductReorder').value = String(item.reorder_level || 10);
     document.getElementById('newProductDiscount').value = String(item.discount_percentage || 0);
     document.getElementById('newProductDescription').value = item.description || '';
+    if (document.getElementById('newProductSatCode')) document.getElementById('newProductSatCode').value = item.sat_code || '27111701';
+    if (document.getElementById('newProductSatUnit')) document.getElementById('newProductSatUnit').value = item.sat_unit || 'H87';
+    if (document.getElementById('newProductTaxRate')) {
+        if (item.is_tax_exempt && String(item.is_tax_exempt) !== '0') {
+            document.getElementById('newProductTaxRate').value = 'exempt';
+        } else {
+            document.getElementById('newProductTaxRate').value = item.tax_rate !== undefined ? Number(item.tax_rate).toFixed(2) : '16.00';
+        }
+    }
     const imageRefSelect = document.getElementById('newProductImageRef');
     const itemImage = item.image_url || 'images/products/default-product.svg';
     if (imageRefSelect) imageRefSelect.value = itemImage;
@@ -5815,7 +5946,7 @@ async function loadProductCategories(onlyActive = true) {
 
         res.items.forEach((cat) => {
             const isCatActive = cat.is_active === true || cat.is_active === 't' || cat.is_active === '1' || Number(cat.is_active) === 1;
-            if (!isCatActive) {
+            if (onlyActive && !isCatActive) {
                 return;
             }
 
@@ -5843,6 +5974,8 @@ async function loadProductCategories(onlyActive = true) {
 
     fillSelect(categorySelect);
     fillSelect(marketplaceCategorySelect);
+    makeCategorySelectClickable(categorySelect);
+    makeCategorySelectClickable(marketplaceCategorySelect);
     fillSelect(document.getElementById('quickEditFilterCategory'), true);
     fillSelect(document.getElementById('stockCategoryFilter'), true);
 
@@ -7170,6 +7303,10 @@ async function createProductByAdmin() {
         const groupNameVal = selectedGroupOpt?.value || '';
         const groupColorVal = selectedGroupOpt?.dataset?.color || '';
 
+        const taxRateSelect = document.getElementById('newProductTaxRate')?.value || '16.00';
+        const isTaxExempt = taxRateSelect === 'exempt';
+        const taxRate = isTaxExempt ? 0 : parseFloat(taxRateSelect) || 16.00;
+
         const payload = {
             id: editId,
             sku: normalizedSku,
@@ -7188,7 +7325,11 @@ async function createProductByAdmin() {
             is_visible: Number(document.getElementById('newProductVisible')?.value || 1) === 1 ? 1 : 0,
             color: groupColorVal,
             product_group: groupNameVal,
-            allow_seed_sku: seedMode ? 1 : 0
+            allow_seed_sku: seedMode ? 1 : 0,
+            sat_code: document.getElementById('newProductSatCode')?.value?.trim() || '27111701',
+            sat_unit: document.getElementById('newProductSatUnit')?.value?.trim() || 'H87',
+            tax_rate: taxRate,
+            is_tax_exempt: isTaxExempt ? 1 : 0
         };
 
     let res = await apiCall('/admin_supply.php?action=product-save', 'POST', payload);
@@ -7256,9 +7397,16 @@ function resetMarketplaceForm() {
     if (document.getElementById('marketplaceShowInOnline')) document.getElementById('marketplaceShowInOnline').value = '1';
     if (document.getElementById('marketplacePriceOnline')) document.getElementById('marketplacePriceOnline').value = '';
     document.getElementById('marketplaceDescription').value = '';
-    Array.from(document.getElementById('marketplaceCategory')?.options || []).forEach((opt) => {
-        opt.selected = false;
-    });
+    const mktCatSel = document.getElementById('marketplaceCategory');
+    if (mktCatSel) {
+        Array.from(mktCatSel.options || []).forEach((opt) => {
+            opt.selected = false;
+        });
+        makeCategorySelectClickable(mktCatSel);
+        if (mktCatSel.options.length <= 4) {
+            loadProductCategories(false);
+        }
+    }
     const marketplaceImageRef = document.getElementById('marketplaceImageRef');
     if (marketplaceImageRef) {
         marketplaceImageRef.value = 'images/products/default-product.svg';
@@ -8220,6 +8368,57 @@ async function loadQuickEditProducts(page = 1, customPerPage = null) {
         tdCat.appendChild(select);
         tr.appendChild(tdCat);
 
+        // Clave SAT column
+        const tdSatCode = document.createElement('td');
+        tdSatCode.style.padding = '0.75rem 0.5rem';
+        const satCodeInput = document.createElement('input');
+        satCodeInput.type = 'text';
+        satCodeInput.className = 'quick-sat-code-input';
+        satCodeInput.value = item.sat_code || '27111701';
+        satCodeInput.maxLength = 10;
+        satCodeInput.placeholder = 'Clave SAT';
+        satCodeInput.style.width = '100%';
+        satCodeInput.style.background = '#111';
+        satCodeInput.style.border = '1px solid #222';
+        satCodeInput.style.color = '#fff';
+        satCodeInput.style.padding = '4px 8px';
+        satCodeInput.style.borderRadius = '6px';
+        satCodeInput.setAttribute('data-orig', item.sat_code || '27111701');
+        tdSatCode.appendChild(satCodeInput);
+        tr.appendChild(tdSatCode);
+
+        // Unidad SAT column
+        const tdSatUnit = document.createElement('td');
+        tdSatUnit.style.padding = '0.75rem 0.5rem';
+        const satUnitSelect = document.createElement('select');
+        satUnitSelect.className = 'quick-sat-unit-select';
+        satUnitSelect.style.width = '100%';
+        satUnitSelect.style.background = '#111';
+        satUnitSelect.style.border = '1px solid #222';
+        satUnitSelect.style.color = '#fff';
+        satUnitSelect.style.padding = '4px 6px';
+        satUnitSelect.style.borderRadius = '6px';
+        const satUnits = [
+            { code: 'H87', label: 'H87 - Pieza' },
+            { code: 'EA', label: 'EA - Elemento' },
+            { code: 'XUN', label: 'XUN - Unidad' },
+            { code: 'SET', label: 'SET - Juego' },
+            { code: 'KGM', label: 'KGM - Kg' },
+            { code: 'MTR', label: 'MTR - Metro' },
+            { code: 'LTR', label: 'LTR - Litro' },
+            { code: 'MTK', label: 'MTK - M2' },
+            { code: 'MTQ', label: 'MTQ - M3' },
+            { code: 'ACT', label: 'ACT - Actividad' },
+            { code: 'E48', label: 'E48 - Servicio' }
+        ];
+        const currentUnit = (item.sat_unit || 'H87').trim().toUpperCase();
+        satUnitSelect.innerHTML = satUnits.map(u => 
+            `<option value="${u.code}"${u.code === currentUnit ? ' selected' : ''}>${u.label}</option>`
+        ).join('');
+        satUnitSelect.setAttribute('data-orig', currentUnit);
+        tdSatUnit.appendChild(satUnitSelect);
+        tr.appendChild(tdSatUnit);
+
         // Price input column
         const tdPrice = document.createElement('td');
         tdPrice.style.padding = '0.75rem 1rem';
@@ -8304,19 +8503,27 @@ async function loadQuickEditProducts(page = 1, customPerPage = null) {
         saveBtn.style.borderRadius = '6px';
         saveBtn.innerHTML = '💾 Guardar';
         
-        // Bind auto-saves and manual save
-        select.onchange = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn);
-        priceInput.onchange = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn);
-        priceInput.onblur = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn);
-        saveBtn.onclick = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn);
+        // Bind auto-saves and manual save with SAT columns
+        select.onchange = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect);
+        satCodeInput.onchange = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect);
+        satCodeInput.onblur = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect);
+        satUnitSelect.onchange = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect);
+        priceInput.onchange = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect);
+        priceInput.onblur = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect);
+        saveBtn.onclick = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect);
         
         tdAction.appendChild(saveBtn);
         tr.appendChild(tdAction);
 
-        // Allow save on Enter key inside price input
+        // Allow save on Enter key inside price input and satCode input
         priceInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                saveQuickEditRow(item.id, target, select, priceInput, saveBtn);
+                saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect);
+            }
+        });
+        satCodeInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect);
             }
         });
 
@@ -8404,7 +8611,7 @@ function quickEditBatchVisibility(isVisible) {
     }
 }
 
-async function saveQuickEditRow(id, target, selectEl, priceInputEl, buttonEl) {
+async function saveQuickEditRow(id, target, selectEl, priceInputEl, buttonEl, satCodeInputEl = null, satUnitSelectEl = null) {
     if (_currentlySavingRows.has(id)) return;
     _currentlySavingRows.add(id);
 
@@ -8414,8 +8621,17 @@ async function saveQuickEditRow(id, target, selectEl, priceInputEl, buttonEl) {
     const origPrice = parseFloat(priceInputEl.getAttribute('data-orig')) || 0;
     const discountVal = parseFloat(priceInputEl.getAttribute('data-discount')) || 0;
 
+    const tr = buttonEl.closest('tr');
+    const satInput = satCodeInputEl || tr?.querySelector('.quick-sat-code-input');
+    const unitSelect = satUnitSelectEl || tr?.querySelector('.quick-sat-unit-select');
+
+    const satCode = satInput ? satInput.value.trim() : '27111701';
+    const satUnit = unitSelect ? unitSelect.value.trim() : 'H87';
+    const origSatCode = satInput ? (satInput.getAttribute('data-orig') || '') : '';
+    const origSatUnit = unitSelect ? (unitSelect.getAttribute('data-orig') || '') : '';
+
     // Skip if there are no changes
-    if (category === origCategory && price === origPrice) {
+    if (category === origCategory && price === origPrice && satCode === origSatCode && satUnit === origSatUnit) {
         _currentlySavingRows.delete(id);
         return;
     }
@@ -8434,7 +8650,9 @@ async function saveQuickEditRow(id, target, selectEl, priceInputEl, buttonEl) {
         id: id,
         target: target,
         category: category,
-        price: price
+        price: price,
+        sat_code: satCode,
+        sat_unit: satUnit
     };
 
     const res = await apiCall('/admin_supply.php?action=quick-product-save', 'POST', payload);
@@ -8449,6 +8667,8 @@ async function saveQuickEditRow(id, target, selectEl, priceInputEl, buttonEl) {
         // Update original markers
         selectEl.setAttribute('data-orig', category);
         priceInputEl.setAttribute('data-orig', price.toFixed(2));
+        if (satInput) satInput.setAttribute('data-orig', satCode);
+        if (unitSelect) unitSelect.setAttribute('data-orig', satUnit);
 
         // Update infoDiv text with updated final price
         const infoDiv = priceInputEl.closest('td')?.querySelector('.quick-price-info');
@@ -8873,6 +9093,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // Carga inmediata: solo la pestaña activa (Stock)
     loadStock(stockCurrentPage);
     loadProductImageReferences();
+    loadProductGroups();
+    makeCategorySelectClickable(document.getElementById('newProductCategory'));
+    makeCategorySelectClickable(document.getElementById('marketplaceCategory'));
     refreshCategoriesUi();
 
     // Auto-abrir pestaña solicitada por URL (?tab=orderTrackingTab, etc.)
@@ -8915,6 +9138,9 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!_mktLoaded) {
                 _mktLoaded = true;
                 loadMarketplaceCeAdmin(marketplaceCurrentPage);
+            }
+            if ((document.getElementById('marketplaceCategory')?.options.length || 0) <= 4) {
+                loadProductCategories(false);
             }
         });
     }

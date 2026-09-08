@@ -54,6 +54,16 @@ if ($action === 'get' && $method === 'GET') {
         $stockColumn = db_column_exists('products', 'stock_online') ? 'stock_online' : 'stock_quantity';
         $lowStockThreshold = db_column_exists('products', 'low_stock_threshold_online') ? 'low_stock_threshold_online' : 'low_stock_threshold';
         
+        $requestedType = $_GET['product_type'] ?? $_GET['type'] ?? null;
+        $typeCondition = '';
+        if ($requestedType) {
+            if ($requestedType === 'online') {
+                $typeCondition = " AND sc.product_type = 'online' ";
+            } else {
+                $typeCondition = " AND (sc.product_type = 'catalog' OR sc.product_type IS NULL OR sc.product_type = '') ";
+            }
+        }
+        
         if ($userId) {
             $stmt = $pdo->prepare("
                 SELECT sc.id, sc.product_id, sc.product_type, sc.quantity, sc.price, sc.created_at, sc.reservation_id, sr.expires_at,
@@ -66,7 +76,7 @@ if ($action === 'get' && $method === 'GET') {
                 FROM shopping_carts sc
                 LEFT JOIN products p ON sc.product_id = p.id
                 LEFT JOIN stock_reservations sr ON sc.reservation_id = sr.id
-                WHERE sc.user_id = ?
+                WHERE sc.user_id = ? {$typeCondition}
                 ORDER BY sc.created_at DESC
             ");
             $stmt->execute([$userId]);
@@ -82,7 +92,7 @@ if ($action === 'get' && $method === 'GET') {
                 FROM shopping_carts sc
                 LEFT JOIN products p ON sc.product_id = p.id
                 LEFT JOIN stock_reservations sr ON sc.reservation_id = sr.id
-                WHERE sc.session_id = ?
+                WHERE sc.session_id = ? {$typeCondition}
                 ORDER BY sc.created_at DESC
             ");
             $stmt->execute([$sessionId]);
@@ -325,12 +335,36 @@ if ($action === 'clear' && $method === 'POST') {
         sendResponse(false, 'Tabla de carrito no existe');
     }
 
+    $input = json_decode(file_get_contents('php://input'), true);
+    $requestedType = $input['product_type'] ?? $_GET['product_type'] ?? null;
+
     try {
+        $typeCondition = '';
+        if ($requestedType) {
+            if ($requestedType === 'online') {
+                $typeCondition = " AND product_type = 'online' ";
+            } else {
+                $typeCondition = " AND (product_type = 'catalog' OR product_type IS NULL OR product_type = '') ";
+            }
+        }
+
         if ($userId) {
-            $stmt = $pdo->prepare("DELETE FROM shopping_carts WHERE user_id = ?");
+            $stmt = $pdo->prepare("SELECT reservation_id FROM shopping_carts WHERE user_id = ? {$typeCondition} AND reservation_id IS NOT NULL");
+            $stmt->execute([$userId]);
+            $resIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            foreach ($resIds as $rId) {
+                if ($rId) $stockService->cancelReservation((int)$rId);
+            }
+            $stmt = $pdo->prepare("DELETE FROM shopping_carts WHERE user_id = ? {$typeCondition}");
             $stmt->execute([$userId]);
         } else {
-            $stmt = $pdo->prepare("DELETE FROM shopping_carts WHERE session_id = ?");
+            $stmt = $pdo->prepare("SELECT reservation_id FROM shopping_carts WHERE session_id = ? {$typeCondition} AND reservation_id IS NOT NULL");
+            $stmt->execute([$sessionId]);
+            $resIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            foreach ($resIds as $rId) {
+                if ($rId) $stockService->cancelReservation((int)$rId);
+            }
+            $stmt = $pdo->prepare("DELETE FROM shopping_carts WHERE session_id = ? {$typeCondition}");
             $stmt->execute([$sessionId]);
         }
         
@@ -350,6 +384,7 @@ if ($action === 'sync' && $method === 'POST') {
 
     $input = json_decode(file_get_contents('php://input'), true);
     $localCart = $input['cart'] ?? [];
+    $requestedType = $input['product_type'] ?? $_GET['product_type'] ?? null;
 
     if (!is_array($localCart)) {
         sendResponse(false, 'Datos inválidos');
@@ -358,12 +393,21 @@ if ($action === 'sync' && $method === 'POST') {
     try {
         $pdo->beginTransaction();
 
-        // Limpiar carrito actual
+        $typeCondition = '';
+        if ($requestedType) {
+            if ($requestedType === 'online') {
+                $typeCondition = " AND product_type = 'online' ";
+            } else {
+                $typeCondition = " AND (product_type = 'catalog' OR product_type IS NULL OR product_type = '') ";
+            }
+        }
+
+        // Limpiar carrito actual del tipo solicitado (o todo si no se especificó)
         if ($userId) {
-            $stmt = $pdo->prepare("DELETE FROM shopping_carts WHERE user_id = ?");
+            $stmt = $pdo->prepare("DELETE FROM shopping_carts WHERE user_id = ? {$typeCondition}");
             $stmt->execute([$userId]);
         } else {
-            $stmt = $pdo->prepare("DELETE FROM shopping_carts WHERE session_id = ?");
+            $stmt = $pdo->prepare("DELETE FROM shopping_carts WHERE session_id = ? {$typeCondition}");
             $stmt->execute([$sessionId]);
         }
 

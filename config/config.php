@@ -454,10 +454,7 @@ function can_role_access_path($role, $path) {
 }
 
 function resolve_post_login_redirect($requested, $role) {
-    if ((string)$role === 'admin') {
-        return '/dashboard.php';
-    }
-    $fallback = route_by_role($role);
+    $fallback = ((string)$role === 'admin') ? '/dashboard.php' : route_by_role($role);
     $requested = trim((string)$requested);
     if ($requested === '') {
         return $fallback;
@@ -584,8 +581,9 @@ function require_client() {
     }
 }
 
-function log_action($user_id, $action, $description, $ip_address) {
+function log_action($user_id, $action, $description, $ip_address = null) {
     global $pdo;
+    $ip_address = $ip_address ?: ($_SERVER['REMOTE_ADDR'] ?? '127.0.0.1');
     
     try {
         $stmt = $pdo->prepare("
@@ -832,11 +830,14 @@ function ensure_postgresql_form_schema() {
             name VARCHAR(120) NOT NULL UNIQUE,
             sort_order INTEGER NOT NULL DEFAULT 0,
             is_active BOOLEAN NOT NULL DEFAULT true,
-            context VARCHAR(20) NOT NULL DEFAULT 'stock',
+            context VARCHAR(20) NOT NULL DEFAULT 'both',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )");
-        $pdo->exec("ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS context VARCHAR(20) DEFAULT 'stock'");
+        $pdo->exec("ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS context VARCHAR(20) DEFAULT 'both'");
+        try {
+            $pdo->exec("UPDATE product_categories SET context = 'both' WHERE context = 'stock' OR context IS NULL");
+        } catch (Exception $ignored) {}
 
         $usersAlters = [
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)",

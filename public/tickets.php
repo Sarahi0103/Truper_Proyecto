@@ -128,6 +128,126 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             color: rgba(255,255,255,0.35);
             font-size: 1.1rem;
         }
+
+        /* ── Pestañas Fijas de Canal (Online vs Tienda Local) ── */
+        .channel-tabs-wrapper {
+            margin-top: 1.5rem;
+            margin-bottom: 1.25rem;
+            position: sticky;
+            top: 75px;
+            z-index: 15;
+        }
+
+        .channel-tabs-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: rgba(22, 22, 26, 0.95);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            padding: 0.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+        }
+
+        .channel-tab-btn {
+            flex: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.65rem;
+            background: transparent;
+            border: 1px solid transparent;
+            color: #9ca3af;
+            padding: 0.8rem 1.25rem;
+            font-size: 0.95rem;
+            font-weight: 700;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+        }
+
+        .channel-tab-btn:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .channel-tab-btn.active#tabChannelAll {
+            background: rgba(255, 127, 0, 0.16);
+            border-color: rgba(255, 127, 0, 0.6);
+            color: #ff9f43;
+            box-shadow: 0 4px 20px rgba(255, 127, 0, 0.15);
+        }
+
+        .channel-tab-btn.active#tabChannelOnline {
+            background: rgba(59, 130, 246, 0.16);
+            border-color: rgba(59, 130, 246, 0.6);
+            color: #60a5fa;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.2);
+        }
+
+        .channel-tab-btn.active#tabChannelLocal {
+            background: rgba(16, 185, 129, 0.16);
+            border-color: rgba(16, 185, 129, 0.6);
+            color: #34d399;
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.2);
+        }
+
+        .channel-tab-counter {
+            font-size: 0.78rem;
+            font-weight: 800;
+            padding: 2px 9px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.12);
+            color: inherit;
+            transition: all 0.2s ease;
+        }
+
+        .channel-tab-btn.active .channel-tab-counter {
+            background: currentColor;
+            color: #000;
+        }
+
+        .badge-channel-online {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.35);
+        }
+
+        .badge-channel-local {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+        }
+
+        @media (max-width: 768px) {
+            .channel-tabs-container {
+                flex-direction: column;
+                gap: 0.4rem;
+            }
+            .channel-tab-btn {
+                width: 100%;
+                padding: 0.65rem 1rem;
+            }
+            .channel-tabs-wrapper {
+                position: static;
+            }
+        }
     </style>
 </head>
 <body>
@@ -156,21 +276,22 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                 <!-- Dropdowns de Administración Separados -->
                 <div class="nav-dropdown">
                     <button class="nav-dropdown-btn">Admin Tienda <span class="arrow">▼</span></button>
-                    <div class="nav-dropdown-content" style="min-width: 200px;">
-                        <a href="orders.php">Ventas / Pedidos</a>
-                        <a href="order_tracking.php">Seguimiento / Logística</a>
-                        <a href="rma_manager.php">Devoluciones RMA</a>
-                        <a href="admin_online_billing.php">Facturación & Pagos SAT</a>
+                    <div class="nav-dropdown-content" style="min-width: 220px;">
+                        <a href="admin_online_orders.php">🌐 Pedidos Online</a>
+                        <a href="order_tracking.php">🚚 Seguimiento y Guías</a>
+                        <a href="admin_online_billing.php">🏛️ Facturación & Pagos SAT</a>
+                        <a href="rma_manager.php">🔄 Devoluciones RMA</a>
                     </div>
                 </div>
                 <div class="nav-dropdown">
-                    <button class="nav-dropdown-btn">Admin Local <span class="arrow">▼</span></button>
-                    <div class="nav-dropdown-content" style="min-width: 200px;">
-                        <a href="cashier.php">Caja / Punto de Venta</a>
-                        <a href="b2b_approval.php">Aprobación B2B</a>
-                        <a href="tickets.php">Tickets y Cotizaciones</a>
-                        <a href="ticket_validation.php">Validación de Tickets</a>
-                        <a href="tasks.php">Tareas de Empleados</a>
+                    <button class="nav-dropdown-btn active">Admin Local <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 220px;">
+                        <a href="ticket_validation.php">🏬 Validación Mostrador</a>
+                        <a href="tickets.php">🎫 Historial de Tickets</a>
+                        <a href="cashier.php">💵 Caja / Punto de Venta</a>
+                        <a href="orders.php">📋 Ventas / Pedidos Mostrador</a>
+                        <a href="tasks.php">👥 Tareas de Empleados</a>
+                        <a href="b2b_approval.php">🤝 Aprobación B2B</a>
                     </div>
                 </div>
                 <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
@@ -276,6 +397,24 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                     <div id="archivedPdfsContainer" style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
                         <p class="text-muted" style="font-style: italic;">Cargando archivos...</p>
                     </div>
+                </div>
+            </div>
+
+            <!-- Pestañas Fijas de Selección de Canal (Online vs Tienda Local) -->
+            <div class="channel-tabs-wrapper">
+                <div class="channel-tabs-container">
+                    <button type="button" class="channel-tab-btn active" id="tabChannelAll" onclick="setChannelFilter('all')" title="Ver todo el historial mensual">
+                        <span>📋 Todos</span>
+                        <span class="channel-tab-counter" id="counterAll">0</span>
+                    </button>
+                    <button type="button" class="channel-tab-btn" id="tabChannelOnline" onclick="setChannelFilter('online')" title="Filtrar pedidos de la Tienda en Línea con envío o paquetería">
+                        <span>🌐 En Línea (Envíos & Guías)</span>
+                        <span class="channel-tab-counter" id="counterOnline">0</span>
+                    </button>
+                    <button type="button" class="channel-tab-btn" id="tabChannelLocal" onclick="setChannelFilter('local')" title="Filtrar tickets de mostrador y recolección física">
+                        <span>🏬 Tienda Local (Mostrador & POS)</span>
+                        <span class="channel-tab-counter" id="counterLocal">0</span>
+                    </button>
                 </div>
             </div>
 
@@ -409,6 +548,61 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             }
         }
 
+        window.currentChannelFilter = 'all';
+
+        function isOnlineTicket(t) {
+            if (!t) return false;
+            const folioStr = String(t.folio || '');
+
+            // 1. Folios generados por checkout de Tienda en Línea (TCK- o FOX-)
+            if (folioStr.startsWith('TCK-') || folioStr.startsWith('FOX-')) {
+                return true;
+            }
+
+            // 2. Si tiene paquetería externa asignada con número de guía
+            if ((t.carrier && t.carrier.trim() !== '') || (t.tracking_number && t.tracking_number.trim() !== '') || (t.tracking_folio && t.tracking_folio.trim() !== '')) {
+                return true;
+            }
+
+            // 3. Si tiene dirección real de envío con calle especificada (no vacía)
+            if (t.shipping_address_json && t.shipping_address_json !== '{}' && t.shipping_address_json !== '[]' && t.shipping_address_json !== '""') {
+                try {
+                    const parsed = typeof t.shipping_address_json === 'string' ? JSON.parse(t.shipping_address_json) : t.shipping_address_json;
+                    if (parsed && parsed.address && parsed.address.trim() !== '') {
+                        const cust = String(t.customer_name || '');
+                        if (!cust.includes('Cotización') || t.order_id) {
+                            return true;
+                        }
+                    }
+                } catch(e) {}
+            }
+
+            // Todo lo demás (mostrador, cotizaciones presenciales, caja local) pertenece a Tienda Local
+            return false;
+        }
+
+        function setChannelFilter(channel) {
+            window.currentChannelFilter = channel;
+
+            // Actualizar botones visuales
+            document.querySelectorAll('.channel-tab-btn').forEach(btn => btn.classList.remove('active'));
+            if (channel === 'online') {
+                document.getElementById('tabChannelOnline')?.classList.add('active');
+            } else if (channel === 'local') {
+                document.getElementById('tabChannelLocal')?.classList.add('active');
+            } else {
+                document.getElementById('tabChannelAll')?.classList.add('active');
+            }
+
+            // Ocultar sección de órdenes a proveedores si estamos en pestaña online para mantener foco 100% en envíos
+            const supplierSection = document.getElementById('supplierTicketsSection');
+            if (supplierSection) {
+                supplierSection.style.display = (channel === 'online') ? 'none' : 'block';
+            }
+
+            applyAllFilters();
+        }
+
         function displayTicketHistory(data) {
             const tableBody = document.getElementById('ticketsTableBody');
             const summaryContainer = document.getElementById('ticketsSummary');
@@ -421,6 +615,25 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             const stats = data.stats || {};
 
             currentPaymentFilter = 'all';
+
+            // Actualizar contadores de las pestañas de canal
+            const visibleForCounts = tickets.filter(t => {
+                if (t.ticket_type === 'sale') {
+                    const ps = t.pickup_status || 'pending';
+                    return ps !== 'cancelled' && ps !== 'expired';
+                }
+                return true;
+            });
+            const onlineCount = visibleForCounts.filter(isOnlineTicket).length;
+            const localCount = visibleForCounts.filter(t => !isOnlineTicket(t)).length;
+            const totalCount = visibleForCounts.length;
+
+            const cAll = document.getElementById('counterAll');
+            const cOnline = document.getElementById('counterOnline');
+            const cLocal = document.getElementById('counterLocal');
+            if (cAll) cAll.textContent = totalCount;
+            if (cOnline) cOnline.textContent = onlineCount;
+            if (cLocal) cLocal.textContent = localCount;
 
             // Render stats summary cards
             if (summaryContainer) {
@@ -482,21 +695,25 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                 return true;
             });
 
-            // Actualizar contador con los visibles
+            // Actualizar contador con los visibles filtrados
             const countEl = document.getElementById('clientTicketsCount');
             if (countEl) countEl.textContent = visible.length > 0 ? `${visible.length} ticket${visible.length !== 1 ? 's' : ''}` : '';
 
             if (visible.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="8" style="padding: 2rem; text-align: center; color: var(--theme-text-muted);">No hay tickets en este período</td></tr>';
+                const emptyMsg = window.currentChannelFilter === 'online'
+                    ? 'No hay pedidos de la Tienda en Línea en este período'
+                    : (window.currentChannelFilter === 'local' ? 'No hay tickets de Tienda Local en este período' : 'No hay tickets en este período');
+                tableBody.innerHTML = `<tr><td colspan="8" style="padding: 2.5rem; text-align: center; color: var(--theme-text-muted); font-size: 0.95rem;">${emptyMsg}</td></tr>`;
                 return;
             }
 
             let html = '';
             visible.forEach(ticket => {
+                const isOnline = isOnlineTicket(ticket);
                 const pStatus = ticket.ticket_type === 'sale' ? (ticket.pickup_status || 'pending') : null;
 
                 // Pago: pendiente si no está validado, pagado si ya fue entregado
-                const isPaymentDone = pStatus === 'picked_up' || (ticket.ticket_type !== 'sale' && ticket.payment_status === 'completed');
+                const isPaymentDone = pStatus === 'picked_up' || (ticket.ticket_type !== 'sale' && ticket.payment_status === 'completed') || (isOnline && ticket.payment_status === 'completed');
                 const paymentColor = isPaymentDone ? 'var(--color-exito)' : 'var(--color-advertencia)';
                 const paymentText = isPaymentDone ? '✓ Pagado' : '⏳ Pendiente';
 
@@ -507,56 +724,101 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                     'credit': '💳 Crédito'
                 }[ticket.ticket_type] || ticket.ticket_type;
 
-                // Formatear estado de recolección física
-                let pickupBadge = '';
-                if (ticket.ticket_type === 'sale') {
-                    const pickupColor = {
-                        'pending': 'var(--color-advertencia)',
-                        'picked_up': 'var(--color-exito)',
-                        'cancelled': 'var(--color-peligro, #dc3545)',
-                        'expired': '#6c757d'
-                    }[pStatus];
-                    const pickupText = {
-                        'pending': '⏳ Pendiente',
-                        'picked_up': '✓ Entregado',
-                        'cancelled': '✗ Cancelado',
-                        'expired': '⌛ Expirado'
-                    }[pStatus];
-                    pickupBadge = `<span style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: ${pickupColor}; color: white;">${pickupText}</span>`;
+                // Insignia de canal
+                const channelBadge = isOnline
+                    ? `<span class="badge-channel-online">🌐 En Línea</span>`
+                    : `<span class="badge-channel-local">🏬 Tienda Local</span>`;
+
+                // Modalidad display y datos de paquetería / destino
+                let deliveryDetailHtml = '';
+                if (isOnline) {
+                    let carrierTag = '';
+                    if (ticket.carrier || ticket.tracking_number) {
+                        carrierTag = `<div style="margin-top:3px; font-size:0.75rem; color:#60a5fa; display:flex; align-items:center; gap:4px;">🚚 <strong>${escapeHtml(ticket.carrier || 'Paquetería')}:</strong> <span style="font-family:monospace; background:rgba(0,0,0,0.3); padding:1px 5px; border-radius:4px;">${escapeHtml(ticket.tracking_number || 'S/N')}</span></div>`;
+                    }
+                    let cityTag = '';
+                    try {
+                        const sObj = typeof ticket.shipping_address_json === 'string' ? JSON.parse(ticket.shipping_address_json) : ticket.shipping_address_json;
+                        if (sObj && (sObj.city || sObj.address)) {
+                            cityTag = `<div style="font-size:0.73rem; color:#9ca3af; margin-top:2px;">📍 ${escapeHtml((sObj.city || '') + (sObj.postalCode ? ' (' + sObj.postalCode + ')' : ''))}</div>`;
+                        }
+                    } catch(e) {}
+
+                    deliveryDetailHtml = `
+                        <div>
+                            <span style="display:inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; background: rgba(255,127,0,0.15); color: #ff7f00; border: 1px solid rgba(255,127,0,0.3);">🚚 Envío a Domicilio</span>
+                            ${carrierTag}
+                            ${cityTag}
+                        </div>
+                    `;
                 } else {
-                    pickupBadge = '<span style="color:var(--theme-text-muted);">—</span>';
+                    deliveryDetailHtml = `
+                        <div>
+                            <span style="display:inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3);">🏬 Recolección Mostrador</span>
+                        </div>
+                    `;
                 }
 
-                // Modalidad display
-                const isDelivery = (ticket.notes || '').includes('DOMICILIO') || (ticket.payment_method || '').includes('Domicilio');
-                const fulfillmentBadge = isDelivery
-                    ? '<span style="display:inline-block; margin-top:4px; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; background: rgba(255,127,0,0.15); color: #ff7f00; border: 1px solid rgba(255,127,0,0.3);">🚚 Domicilio</span>'
-                    : '<span style="display:inline-block; margin-top:4px; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3);">🏬 En Tienda</span>';
-
-                // Botones para PDF, etiqueta ciega y administración
-                let actionButton = `<div style="display:flex; gap:4px; justify-center:center; flex-wrap:wrap;">`;
-                actionButton += `<a href="/api/b2b_quote_pdf.php?folio=${escapeHtml(ticket.folio)}" target="_blank" class="btn" style="padding: 0.35rem 0.6rem; font-size: 0.75rem; text-decoration: none; border-radius: 6px; background: #1e1e24; border: 1px solid #333; color: #60a5fa; font-weight: 600;" title="Descargar PDF">📄 PDF</a>`;
-
-                if (isDelivery) {
-                    actionButton += `<a href="/api/print_blind_label.php?folio=${escapeHtml(ticket.folio)}" target="_blank" class="btn" style="padding: 0.35rem 0.6rem; font-size: 0.75rem; text-decoration: none; border-radius: 6px; background: #1c1917; border: 1px solid #444; color: #ff7f00; font-weight: 600;" title="Etiqueta Ciega 4x6''">🏷️ 4x6"</a>`;
+                // Estado de Entrega / Envío
+                let statusBadge = '';
+                if (isOnline) {
+                    const st = ticket.order_status || 'in_preparation';
+                    const stMap = {
+                        'in_preparation': { text: '⏳ En Preparación', color: 'rgba(245, 158, 11, 0.2)', border: '#f59e0b', textColor: '#fbbf24' },
+                        'shipped': { text: '🚚 En Camino', color: 'rgba(59, 130, 246, 0.2)', border: '#3b82f6', textColor: '#60a5fa' },
+                        'delivered': { text: '✓ Entregado', color: 'rgba(16, 185, 129, 0.2)', border: '#10b981', textColor: '#34d399' }
+                    };
+                    const sConf = stMap[st] || stMap['in_preparation'];
+                    statusBadge = `<span style="display: inline-block; padding: 0.25rem 0.65rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: ${sConf.color}; border: 1px solid ${sConf.border}; color: ${sConf.textColor};">${sConf.text}</span>`;
+                } else {
+                    if (ticket.ticket_type === 'sale') {
+                        const pickupColor = {
+                            'pending': 'var(--color-advertencia)',
+                            'picked_up': 'var(--color-exito)',
+                            'cancelled': 'var(--color-peligro, #dc3545)',
+                            'expired': '#6c757d'
+                        }[pStatus];
+                        const pickupText = {
+                            'pending': '⏳ Por Recoger',
+                            'picked_up': '✓ Entregado',
+                            'cancelled': '✗ Cancelado',
+                            'expired': '⌛ Expirado'
+                        }[pStatus];
+                        statusBadge = `<span style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: ${pickupColor}; color: white;">${pickupText}</span>`;
+                    } else {
+                        statusBadge = '<span style="color:var(--theme-text-muted);">—</span>';
+                    }
                 }
 
-                if (ticket.ticket_type === 'sale') {
-                    if (pStatus === 'picked_up') {
-                        actionButton += `<button onclick="deleteTicketFromHistory('${escapeHtml(ticket.folio)}')" class="btn" style="padding: 0.35rem 0.6rem; font-size: 0.75rem; border-radius: 6px; background: #dc3545; border: none; color: white; font-weight: 600; cursor: pointer;">🗑</button>`;
-                    } else if (pStatus === 'pending') {
-                        actionButton += `<a href="ticket_validation.php?folio=${escapeHtml(ticket.folio)}" class="btn" style="padding: 0.35rem 0.6rem; font-size: 0.75rem; text-decoration: none; border-radius: 6px; background: var(--color-naranja); border: none; color: white; font-weight: 600;">✓ Validar</a>`;
+                // Botones para Ticket oficial, etiqueta ciega, rastreo y validación
+                let actionButton = `<div style="display:flex; gap:4px; justify-content:center; flex-wrap:wrap;">`;
+                actionButton += `<a href="ticket_client.php?folio=${encodeURIComponent(ticket.folio)}" target="_blank" class="btn" style="padding: 0.35rem 0.55rem; font-size: 0.75rem; text-decoration: none; border-radius: 6px; background: rgba(16,185,129,0.15); border: 1px solid #10b981; color: #34d399; font-weight: 700;" title="Ver e Imprimir Ticket Oficial">🖨️ Ticket</a>`;
+
+                if (isOnline) {
+                    actionButton += `<a href="/api/print_blind_label.php?folio=${escapeHtml(ticket.folio)}" target="_blank" class="btn" style="padding: 0.35rem 0.55rem; font-size: 0.75rem; text-decoration: none; border-radius: 6px; background: #1c1917; border: 1px solid #444; color: #ff7f00; font-weight: 600;" title="Etiqueta Ciega 4x6''">🏷️ 4x6"</a>`;
+                    actionButton += `<a href="order_tracking.php?order=${encodeURIComponent(ticket.folio)}" target="_blank" class="btn" style="padding: 0.35rem 0.55rem; font-size: 0.75rem; text-decoration: none; border-radius: 6px; background: rgba(59,130,246,0.18); border: 1px solid #3b82f6; color: #93c5fd; font-weight: 600;" title="Rastrear paquete">🚚 Rastreo</a>`;
+                    actionButton += `<a href="admin_online_orders.php" class="btn" style="padding: 0.35rem 0.55rem; font-size: 0.75rem; text-decoration: none; border-radius: 6px; background: rgba(255,127,0,0.15); border: 1px solid #ff7f00; color: #ff7f00; font-weight: 600;" title="Asignar o editar guía en panel online">📦 Guía</a>`;
+                } else {
+                    if (ticket.ticket_type === 'sale') {
+                        if (pStatus === 'picked_up') {
+                            actionButton += `<button onclick="deleteTicketFromHistory('${escapeHtml(ticket.folio)}')" class="btn" style="padding: 0.35rem 0.55rem; font-size: 0.75rem; border-radius: 6px; background: #dc3545; border: none; color: white; font-weight: 600; cursor: pointer;" title="Eliminar de historial">🗑</button>`;
+                        } else if (pStatus === 'pending') {
+                            actionButton += `<a href="ticket_validation.php?folio=${escapeHtml(ticket.folio)}" class="btn" style="padding: 0.35rem 0.55rem; font-size: 0.75rem; text-decoration: none; border-radius: 6px; background: var(--color-naranja); border: none; color: white; font-weight: 600;" title="Validar entrega física">✓ Validar</a>`;
+                        }
                     }
                 }
                 actionButton += `</div>`;
 
                 html += `
-                    <tr style="border-bottom: 1px solid var(--theme-border); transition: opacity 0.3s, transform 0.3s;" data-folio="${escapeHtml(ticket.folio)}" data-fulfillment="${isDelivery ? 'delivery' : 'pickup'}" data-search="${escapeHtml((ticket.folio + ' ' + (ticket.customer_name || '') + ' ' + (ticket.email || '')).toLowerCase())}">
-                        <td style="padding: 1rem; font-family: monospace; font-weight: 700; color: var(--color-naranja);">${escapeHtml(ticket.folio)}</td>
+                    <tr style="border-bottom: 1px solid var(--theme-border); transition: opacity 0.3s, transform 0.3s;" data-folio="${escapeHtml(ticket.folio)}" data-channel="${isOnline ? 'online' : 'local'}" data-fulfillment="${isOnline ? 'delivery' : 'pickup'}" data-search="${escapeHtml((ticket.folio + ' ' + (ticket.customer_name || '') + ' ' + (ticket.email || '') + ' ' + (ticket.carrier || '') + ' ' + (ticket.tracking_number || '')).toLowerCase())}">
+                        <td style="padding: 1rem; font-family: monospace; font-weight: 700; color: var(--color-naranja);">
+                            ${escapeHtml(ticket.folio)}
+                            <div style="margin-top: 4px;">${channelBadge}</div>
+                        </td>
                         <td style="padding: 1rem;">
                             <div style="font-weight: 600;">${escapeHtml(ticket.customer_name || 'Mostrador')}</div>
                             <div style="font-size: 0.8rem; color: var(--theme-text-muted);">${escapeHtml(ticket.email || '')}</div>
-                            ${fulfillmentBadge}
+                            <div style="margin-top: 4px;">${deliveryDetailHtml}</div>
                         </td>
                         <td style="padding: 1rem;">${typeLabel}</td>
                         <td style="padding: 1rem; font-weight: 700; color: var(--color-naranja);">${formatAdminMoney(ticket.total_amount || 0)}</td>
@@ -565,7 +827,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
                                 ${paymentText}
                             </span>
                         </td>
-                        <td style="padding: 1rem;">${pickupBadge}</td>
+                        <td style="padding: 1rem;">${statusBadge}</td>
                         <td style="padding: 1rem; font-size: 0.9rem; color: var(--theme-text-muted);">
                             ${safeNewDate(ticket.issued_date).toLocaleDateString('es-MX')}
                         </td>
@@ -682,33 +944,43 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'admin', ENT_QUOTES, 'UTF-8')
             const query = document.getElementById('clientTicketSearch')?.value.toLowerCase().trim() || '';
             
             let filtered = all;
+
+            // 1. Filtro de Canal (Online vs Local vs Todos)
+            if (window.currentChannelFilter === 'online') {
+                filtered = filtered.filter(t => isOnlineTicket(t));
+            } else if (window.currentChannelFilter === 'local') {
+                filtered = filtered.filter(t => !isOnlineTicket(t));
+            }
             
-            // Text search
+            // 2. Búsqueda por texto (folio, cliente, email, paquetería, guía)
             if (query !== '') {
                 filtered = filtered.filter(t => {
                     const haystack = [
                         t.folio || '',
                         t.customer_name || '',
-                        t.email || ''
+                        t.email || '',
+                        t.carrier || '',
+                        t.tracking_number || ''
                     ].join(' ').toLowerCase();
                     return haystack.includes(query);
                 });
             }
             
-            // Payment status filter
+            // 3. Filtro de estado de pago
             if (currentPaymentFilter === 'pending') {
                 filtered = filtered.filter(t => {
+                    const isOnline = isOnlineTicket(t);
                     const pStatus = t.ticket_type === 'sale' ? (t.pickup_status || 'pending') : null;
-                    const isPaymentDone = pStatus === 'picked_up' || (t.ticket_type !== 'sale' && t.payment_status === 'completed');
+                    const isPaymentDone = pStatus === 'picked_up' || (t.ticket_type !== 'sale' && t.payment_status === 'completed') || (isOnline && t.payment_status === 'completed');
                     return !isPaymentDone;
                 });
             }
 
-            // Fulfillment filter (Envío a Domicilio vs Retiro en Tienda)
+            // 4. Modalidad de Entrega (dropdown)
             const fulFilter = document.getElementById('fulfillmentFilter')?.value || '';
             if (fulFilter !== '') {
                 filtered = filtered.filter(t => {
-                    const isDelivery = (t.notes || '').includes('DOMICILIO') || (t.payment_method || '').includes('Domicilio');
+                    const isDelivery = isOnlineTicket(t);
                     return fulFilter === 'delivery' ? isDelivery : !isDelivery;
                 });
             }

@@ -142,22 +142,23 @@ try {
                 <?php if ($isAdmin && !$isOnlineMode): ?>
                 <!-- Dropdowns de Administración Separados -->
                 <div class="nav-dropdown">
-                    <button class="nav-dropdown-btn">Admin Tienda <span class="arrow">▼</span></button>
-                    <div class="nav-dropdown-content" style="min-width: 200px;">
-                        <a href="orders.php">Ventas / Pedidos</a>
-                        <a href="order_tracking.php">Seguimiento / Logística</a>
-                        <a href="rma_manager.php">Devoluciones RMA</a>
-                        <a href="admin_online_billing.php">Facturación & Pagos SAT</a>
+                    <button class="nav-dropdown-btn active">Admin Tienda <span class="arrow">▼</span></button>
+                    <div class="nav-dropdown-content" style="min-width: 220px;">
+                        <a href="admin_online_orders.php">🌐 Pedidos Online</a>
+                        <a href="order_tracking.php" style="color: #ff7f00; font-weight: 700;">🚚 Seguimiento y Guías</a>
+                        <a href="admin_online_billing.php">🏛️ Facturación & Pagos SAT</a>
+                        <a href="rma_manager.php">🔄 Devoluciones RMA</a>
                     </div>
                 </div>
                 <div class="nav-dropdown">
                     <button class="nav-dropdown-btn">Admin Local <span class="arrow">▼</span></button>
-                    <div class="nav-dropdown-content" style="min-width: 200px;">
-                        <a href="cashier.php">Caja / Punto de Venta</a>
-                        <a href="b2b_approval.php">Aprobación B2B</a>
-                        <a href="tickets.php">Tickets y Cotizaciones</a>
-                        <a href="ticket_validation.php">Validación de Tickets</a>
-                        <a href="tasks.php">Tareas de Empleados</a>
+                    <div class="nav-dropdown-content" style="min-width: 220px;">
+                        <a href="ticket_validation.php">🏬 Validación Mostrador</a>
+                        <a href="tickets.php">🎫 Historial de Tickets</a>
+                        <a href="cashier.php">💵 Caja / Punto de Venta</a>
+                        <a href="orders.php">📋 Ventas / Pedidos Mostrador</a>
+                        <a href="tasks.php">👥 Tareas de Empleados</a>
+                        <a href="b2b_approval.php">🤝 Aprobación B2B</a>
                     </div>
                 </div>
                 <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
@@ -235,6 +236,15 @@ try {
         <!-- ══════════════════════════════════════════════════════ -->
         <!-- VISTA ADMIN / USUARIO LOGGEADO: tabla completa        -->
         <!-- ══════════════════════════════════════════════════════ -->
+        <div class="back-header" style="margin-bottom: 1.25rem;">
+            <button onclick="history.back()" class="btn-back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Regresar
+            </button>
+        </div>
+
         <div class="page-title-box">
             <div>
                 <span class="badge-header">Plataforma Logística</span>
@@ -471,9 +481,22 @@ try {
         }
 
         async function updateSingleOrderStatus(folio, nextStatus) {
+            const statusNames = {
+                'in_preparation': 'En Preparación / Almacén',
+                'packed': 'Empacado',
+                'in_transit': 'En Ruta de Entrega',
+                'delivered': 'Entregado / Confirmado',
+                'canceled': 'Cancelado',
+                'cancelled': 'Cancelado'
+            };
+            const friendly = statusNames[nextStatus] || nextStatus;
             const res = await apiCall('/admin_supply.php?action=update-order-status', 'POST', { folio: folio, status: nextStatus }, { silent: true });
             if (res && res.success) {
+                showAlert(`¡Estatus del pedido ${folio} actualizado a: ${friendly}!`, 'success');
                 loadTrackingOrders();
+                if (document.getElementById('guestFolioInput') && document.getElementById('guestFolioInput').value.trim().toUpperCase() === folio.toUpperCase()) {
+                    searchGuestOrder();
+                }
             } else {
                 showAlert(res?.message || 'Error al actualizar estatus', 'error');
             }
@@ -650,20 +673,26 @@ try {
 
                 const ord = res.orders[0];
                 const statusConfig = {
-                    'in_preparation': { label: 'En Preparación', icon: '⏳', color: '#eab308', bg: 'rgba(234,179,8,.12)', border: 'rgba(234,179,8,.3)', desc: 'Tu pedido está siendo preparado en nuestro almacén.' },
-                    'packed':         { label: 'Empacado',       icon: '📦', color: '#a78bfa', bg: 'rgba(167,139,250,.12)', border: 'rgba(167,139,250,.3)', desc: 'Tu pedido ya está empacado y listo para enviarse.' },
-                    'in_transit':     { label: 'En Ruta',        icon: '🚚', color: '#38bdf8', bg: 'rgba(56,189,248,.12)', border: 'rgba(56,189,248,.3)', desc: 'Tu pedido está en camino. Pronto llegará a tu domicilio.' },
+                    'in_preparation': { label: 'En Preparación', icon: '⏳', color: '#eab308', bg: 'rgba(234,179,8,.12)', border: 'rgba(234,179,8,.3)', desc: 'Tu pedido está siendo preparado y revisado en almacén.' },
+                    'packed':         { label: 'Empacado',       icon: '📦', color: '#a78bfa', bg: 'rgba(167,139,250,.12)', border: 'rgba(167,139,250,.3)', desc: 'Tu pedido ya está empacado con etiqueta ciega y listo para envío.' },
+                    'in_transit':     { label: 'En Ruta / Tránsito', icon: '🚚', color: '#38bdf8', bg: 'rgba(56,189,248,.12)', border: 'rgba(56,189,248,.3)', desc: 'Tu pedido está en camino a tu domicilio.' },
+                    'shipped':        { label: 'Enviado por Paquetería', icon: '🚚', color: '#38bdf8', bg: 'rgba(56,189,248,.12)', border: 'rgba(56,189,248,.3)', desc: 'Tu pedido fue despachado y se encuentra en ruta.' },
                     'delivered':      { label: 'Entregado',      icon: '✅', color: '#4ade80', bg: 'rgba(74,222,128,.12)', border: 'rgba(74,222,128,.3)', desc: '¡Tu pedido fue entregado exitosamente!' },
-                    'canceled':       { label: 'Cancelado',      icon: '❌', color: '#f87171', bg: 'rgba(248,113,113,.12)', border: 'rgba(248,113,113,.3)', desc: 'Este pedido fue cancelado. Contáctanos para más información.' }
+                    'canceled':       { label: 'Cancelado',      icon: '❌', color: '#f87171', bg: 'rgba(248,113,113,.12)', border: 'rgba(248,113,113,.3)', desc: 'Este pedido fue cancelado. Contáctanos para más información.' },
+                    'cancelled':      { label: 'Cancelado',      icon: '❌', color: '#f87171', bg: 'rgba(248,113,113,.12)', border: 'rgba(248,113,113,.3)', desc: 'Este pedido fue cancelado. Contáctanos para más información.' }
                 };
 
-                const stKey = ord.order_status || 'in_preparation';
-                const st = statusConfig[stKey] || { label: stKey, icon: '📋', color: '#888', bg: 'rgba(255,255,255,.05)', border: 'rgba(255,255,255,.1)', desc: '' };
+                const rawStatus = ord.order_status || 'in_preparation';
+                let stepKey = rawStatus;
+                if (rawStatus === 'shipped') stepKey = 'in_transit';
+                if (rawStatus === 'pending' || rawStatus === 'confirmed' || rawStatus === 'processing') stepKey = 'in_preparation';
 
-                // ── Build status timeline ────────────────────────────────
+                const st = statusConfig[rawStatus] || statusConfig[stepKey] || { label: rawStatus, icon: '📋', color: '#888', bg: 'rgba(255,255,255,.05)', border: 'rgba(255,255,255,.1)', desc: '' };
+
+                // ── Build status timeline (4 steps standard) ─────────────
                 const steps = ['in_preparation','packed','in_transit','delivered'];
-                const curIdx = steps.indexOf(stKey);
-                const isCanceled = stKey === 'canceled';
+                const curIdx = steps.indexOf(stepKey);
+                const isCanceled = rawStatus === 'canceled' || rawStatus === 'cancelled';
 
                 const timelineHTML = isCanceled ? `
                     <div style="display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.75rem;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:10px;color:#f87171;font-weight:700;">
@@ -702,7 +731,7 @@ try {
                     <div style="margin-top:1.25rem;">
                         <div style="font-size:.78rem;font-weight:700;color:#888899;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.65rem;display:flex;align-items:center;gap:.4rem;">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                            Productos del Pedido
+                            Productos del Pedido (${items.length})
                         </div>
                         <div style="background:#0d0d12;border:1px solid #1e1e2a;border-radius:10px;overflow:hidden;">
                             <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
@@ -716,7 +745,7 @@ try {
                                 </thead>
                                 <tbody>
                                     ${items.map((it,i) => `
-                                    <tr style="border-bottom:${i<items.length-1?'1px solid #181824':'none'};">
+                                     <tr style="border-bottom:${i<items.length-1?'1px solid #181824':'none'};">
                                         <td style="padding:.65rem .9rem;color:#e0e0ea;font-weight:600;">${escapeHtml(it.product_name||'Producto')}</td>
                                         <td style="padding:.65rem .9rem;text-align:center;color:#aaa;">${it.quantity||1}</td>
                                         <td style="padding:.65rem .9rem;text-align:right;color:#aaa;">$${Number(it.unit_price||0).toFixed(2)}</td>
@@ -737,18 +766,33 @@ try {
                             Dirección de Entrega
                         </div>
                         <div style="font-size:.88rem;color:#ccc;line-height:1.6;">
-                            ${[addr.street||addr.calle||addr.direccion, addr.city||addr.ciudad, addr.state||addr.estado, addr.zip||addr.cp].filter(Boolean).map(escapeHtml).join(', ')||'—'}
+                            ${[addr.street||addr.calle||addr.direccion||addr.address, addr.neighborhood||addr.colonia, addr.city||addr.ciudad, addr.state||addr.estado, addr.zip||addr.postal_code||addr.cp].filter(Boolean).map(escapeHtml).join(', ')||'—'}
                         </div>
                     </div>` : '';
 
                 // ── Build tracking folio section ─────────────────────────
+                const carrierHTML = ord.carrier ? `
+                    <div style="background:#0d0d12;border:1px solid rgba(255,127,0,0.25);border-radius:10px;padding:.8rem .9rem;">
+                        <div style="font-size:.68rem;color:#888899;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem;display:flex;align-items:center;gap:4px;">
+                            🚚 Paquetería
+                        </div>
+                        <div style="font-size:1rem;font-weight:800;color:#ff7f00;">${escapeHtml(ord.carrier)}</div>
+                    </div>` : '';
+
                 const trackingHTML = ord.tracking_folio ? `
-                    <div>
-                        <div style="font-size:.72rem;font-weight:700;color:#888899;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem;display:flex;align-items:center;gap:.35rem;">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-                            Guía de Paquetería
+                    <div style="background:#0d0d12;border:1px solid rgba(56,189,248,.25);border-radius:10px;padding:.8rem .9rem;">
+                        <div style="font-size:.68rem;color:#888899;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem;display:flex;align-items:center;gap:4px;">
+                            📦 Guía / Rastreo
                         </div>
                         <div style="font-family:monospace;font-size:.95rem;font-weight:800;color:#38bdf8;letter-spacing:.05em;">${escapeHtml(ord.tracking_folio)}</div>
+                    </div>` : '';
+
+                const deliveryHTML = ord.estimated_delivery ? `
+                    <div style="background:#0d0d12;border:1px solid rgba(34,197,94,0.25);border-radius:10px;padding:.8rem .9rem;">
+                        <div style="font-size:.68rem;color:#888899;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem;display:flex;align-items:center;gap:4px;">
+                            📅 Entrega Estimada
+                        </div>
+                        <div style="font-size:.92rem;font-weight:700;color:#4ade80;">${escapeHtml(ord.estimated_delivery.substring(0,10))}</div>
                     </div>` : '';
 
                 // ── Build history timeline ───────────────────────────────
@@ -757,19 +801,20 @@ try {
                     <div style="margin-top:1.25rem;">
                         <div style="font-size:.78rem;font-weight:700;color:#888899;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.65rem;display:flex;align-items:center;gap:.4rem;">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            Historial de Cambios
+                            Historial y Actualizaciones del Pedido
                         </div>
                         <div style="display:flex;flex-direction:column;gap:.5rem;">
                             ${history.map(h => {
                                 const hCfg = statusConfig[h.status] || { label: h.status, icon: '📋', color: '#aaa' };
-                                return `<div style="display:flex;gap:.75rem;align-items:flex-start;">
+                                return `<div style="display:flex;gap:.75rem;align-items:flex-start;background:#0f0f15;border:1px solid #1a1a24;border-radius:8px;padding:0.6rem 0.85rem;">
                                     <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,127,0,.1);border:1px solid rgba(255,127,0,.2);display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0;">${hCfg.icon}</div>
                                     <div style="flex:1;">
                                         <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap;">
                                             <span style="font-weight:700;font-size:.85rem;color:${hCfg.color};">${hCfg.label}</span>
-                                            <span style="font-size:.74rem;color:#555;">${(h.created_at||'').substring(0,16)}</span>
+                                            <span style="font-size:.74rem;color:#777;">${(h.created_at||'').substring(0,16)}</span>
                                         </div>
-                                        ${h.notes ? `<div style="font-size:.8rem;color:#888;margin-top:.15rem;font-style:italic;">"${escapeHtml(h.notes)}"</div>` : ''}
+                                        ${h.notes ? `<div style="font-size:.82rem;color:#bbb;margin-top:.2rem;">${escapeHtml(h.notes)}</div>` : ''}
+                                        ${h.changed_by ? `<div style="font-size:.72rem;color:#666;margin-top:.15rem;">Actualizado por: ${escapeHtml(h.changed_by)}</div>` : ''}
                                     </div>
                                 </div>`;
                             }).join('')}
@@ -791,7 +836,7 @@ try {
                                 </div>
                             </div>
                             <div style="text-align:right;">
-                                <div style="font-size:.68rem;color:#666;text-transform:uppercase;letter-spacing:.05em;">Folio</div>
+                                <div style="font-size:.68rem;color:#666;text-transform:uppercase;letter-spacing:.05em;">Folio de Pedido</div>
                                 <div style="font-size:.98rem;font-weight:800;color:#ff7f00;font-family:monospace;">${escapeHtml(ord.folio)}</div>
                             </div>
                         </div>
@@ -802,7 +847,7 @@ try {
                             <div>
                                 <div style="font-size:.78rem;font-weight:700;color:#888899;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.85rem;display:flex;align-items:center;gap:.4rem;">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                                    Estado del Envío
+                                    Progreso del Envío
                                 </div>
                                 ${timelineHTML}
                             </div>
@@ -825,8 +870,10 @@ try {
                                     <div style="font-size:.68rem;color:#555;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem;">Comprobante</div>
                                     <div style="font-size:.84rem;color:#ccc;font-weight:600;">${ord.invoice_required ? '🧾 Factura CFDI 4.0' : '📄 Nota de Venta'}</div>
                                 </div>
+                                ${carrierHTML}
+                                ${trackingHTML}
+                                ${deliveryHTML}
                                 ${addrHTML ? `<div style="background:#0d0d12;border:1px solid #1a1a22;border-radius:10px;padding:.8rem .9rem;grid-column:1/-1;">${addrHTML}</div>` : ''}
-                                ${trackingHTML ? `<div style="background:#0d0d12;border:1px solid rgba(56,189,248,.2);border-radius:10px;padding:.8rem .9rem;">${trackingHTML}</div>` : ''}
                             </div>
 
                             <!-- Productos -->
@@ -848,6 +895,19 @@ try {
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const initialFolio = (urlParams.get('folio') || urlParams.get('search') || '').trim();
+            if (initialFolio) {
+                const guestInput = document.getElementById('guestFolioInput');
+                if (guestInput) {
+                    guestInput.value = initialFolio;
+                    searchGuestOrder();
+                }
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput) {
+                    searchInput.value = initialFolio;
+                }
+            }
             if (document.getElementById('ordersTableBody')) {
                 loadTrackingOrders();
                 setInterval(loadTrackingOrders, 8000);

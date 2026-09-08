@@ -10,17 +10,12 @@ require_once __DIR__ . '/../src/Services/SatBillingService.php';
 require_once __DIR__ . '/../src/Services/GlobalInvoiceService.php';
 require_once __DIR__ . '/../src/Services/PaymentComplementService.php';
 
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
-
+require_login();
 $userRole = strtolower($_SESSION['role'] ?? '');
-$isLogged = isset($_SESSION['user_id']);
 $isAdmin = in_array($userRole, ['admin', 'employee'], true);
 
-if (!$isLogged || !$isAdmin) {
-    error_log('admin_online_billing redirect: user_id=' . ($_SESSION['user_id'] ?? 'none') . ' role=' . ($_SESSION['role'] ?? 'empty'));
-    header('Location: login.php?return_to=admin_online_billing.php');
+if (!$isAdmin) {
+    header('Location: dashboard.php');
     exit;
 }
 
@@ -400,21 +395,22 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
                 <!-- Dropdowns de Administración Separados -->
                 <div class="nav-dropdown">
                     <button class="nav-dropdown-btn active">Admin Tienda <span class="arrow">▼</span></button>
-                    <div class="nav-dropdown-content" style="min-width: 210px;">
-                        <a href="orders.php">Ventas / Pedidos</a>
-                        <a href="order_tracking.php">Seguimiento / Logística</a>
-                        <a href="rma_manager.php">Devoluciones RMA</a>
-                        <a href="admin_online_billing.php" class="active" style="color:#ff7f00; font-weight:700;">Facturación & Pagos SAT</a>
+                    <div class="nav-dropdown-content" style="min-width: 220px;">
+                        <a href="admin_online_orders.php">🌐 Pedidos Online</a>
+                        <a href="order_tracking.php">🚚 Seguimiento y Guías</a>
+                        <a href="admin_online_billing.php" class="active" style="color:#ff7f00; font-weight:700;">🏛️ Facturación & Pagos SAT</a>
+                        <a href="rma_manager.php">🔄 Devoluciones RMA</a>
                     </div>
                 </div>
                 <div class="nav-dropdown">
                     <button class="nav-dropdown-btn">Admin Local <span class="arrow">▼</span></button>
-                    <div class="nav-dropdown-content" style="min-width: 200px;">
-                        <a href="cashier.php">Caja / Punto de Venta</a>
-                        <a href="b2b_approval.php">Aprobación B2B</a>
-                        <a href="tickets.php">Tickets y Cotizaciones</a>
-                        <a href="ticket_validation.php">Validación de Tickets</a>
-                        <a href="tasks.php">Tareas de Empleados</a>
+                    <div class="nav-dropdown-content" style="min-width: 220px;">
+                        <a href="ticket_validation.php">🏬 Validación Mostrador</a>
+                        <a href="tickets.php">🎫 Historial de Tickets</a>
+                        <a href="cashier.php">💵 Caja / Punto de Venta</a>
+                        <a href="orders.php">📋 Ventas / Pedidos Mostrador</a>
+                        <a href="tasks.php">👥 Tareas de Empleados</a>
+                        <a href="b2b_approval.php">🤝 Aprobación B2B</a>
                     </div>
                 </div>
                 <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
@@ -752,6 +748,8 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
     <script src="js/main.js"></script>
     <script src="js/modals.js"></script>
     <script>
+        window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8"); ?>';
+
         function switchTab(tabId, btnEl) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -1166,6 +1164,12 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
                                 <label style="display: block; color: #fff; margin-bottom: 0.5rem; font-weight: 600;">RFC (opcional)</label>
                                 <input type="text" id="accountRfc" class="field-input" placeholder="RFC del titular" maxlength="13">
                             </div>
+                            <div style="margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.6rem; background: rgba(255,255,255,0.04); padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
+                                <input type="checkbox" id="accountIsPrimary" style="width: 18px; height: 18px; accent-color: #22c55e; cursor: pointer;">
+                                <label for="accountIsPrimary" style="color: #fff; font-weight: 600; cursor: pointer; margin: 0; font-size: 0.9rem;">
+                                    ⭐ Establecer como Cuenta / Tarjeta Principal (Receptora de Pagos SAT)
+                                </label>
+                            </div>
                             <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
                                 <button type="submit" class="btn-action" style="flex: 1;">Guardar</button>
                                 <button type="button" onclick="closePaymentAccountModal()" style="flex: 1; background: #2a2a36; color: #fff; border: none; padding: 0.8rem; border-radius: 8px; cursor: pointer;">Cancelar</button>
@@ -1179,10 +1183,10 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
             document.getElementById('paymentAccountForm').addEventListener('submit', savePaymentAccount);
             
             if (accountId) {
-                const account = paymentAccounts.find(a => a.id === accountId);
+                const account = paymentAccounts.find(a => Number(a.id) === Number(accountId));
                 if (account) {
-                    document.getElementById('accountName').value = account.account_name;
-                    document.getElementById('paymentGateway').value = account.payment_gateway;
+                    document.getElementById('accountName').value = account.account_name || '';
+                    document.getElementById('paymentGateway').value = account.payment_gateway || '';
                     document.getElementById('stripeAccountId').value = account.provider_account_id || '';
                     document.getElementById('mpAccountId').value = account.provider_account_id || '';
                     document.getElementById('bankName').value = account.bank_name || '';
@@ -1190,9 +1194,20 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
                     document.getElementById('last4').value = account.last_4 || '';
                     document.getElementById('accountHolder').value = account.account_holder || '';
                     document.getElementById('accountRfc').value = account.rfc || '';
+                    const isPrim = account.is_primary === true || account.is_primary === 't' || account.is_primary === 1 || Number(account.is_primary) === 1;
+                    document.getElementById('accountIsPrimary').checked = Boolean(isPrim);
                     togglePaymentGatewayFields();
                 }
+            } else {
+                if (paymentAccounts.length === 0) {
+                    const chk = document.getElementById('accountIsPrimary');
+                    if (chk) chk.checked = true;
+                }
             }
+        }
+
+        function editPaymentAccount(accountId) {
+            openPaymentAccountModal(accountId);
         }
 
         function closePaymentAccountModal() {
@@ -1213,6 +1228,8 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
             const action = accountId ? 'update_payment_account' : 'add_payment_account';
             const url = `/api/admin_payment_config.php?action=${action}${accountId ? '&account_id=' + accountId : ''}`;
             
+            const isPrimary = document.getElementById('accountIsPrimary') ? document.getElementById('accountIsPrimary').checked : false;
+
             const accountData = {
                 account_name: document.getElementById('accountName').value,
                 payment_gateway: document.getElementById('paymentGateway').value,
@@ -1221,13 +1238,17 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
                 clabe: document.getElementById('bankClabe').value,
                 last_4: document.getElementById('last4').value,
                 account_holder: document.getElementById('accountHolder').value,
-                rfc: document.getElementById('accountRfc').value
+                rfc: document.getElementById('accountRfc').value,
+                is_primary: isPrimary
             };
 
             fetch(url, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(accountData)
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': window.csrfToken
+                },
+                body: JSON.stringify({ ...accountData, csrf_token: window.csrfToken })
             })
             .then(response => response.json())
             .then(data => {
@@ -1246,7 +1267,12 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
 
         function setPrimaryAccount(accountId) {
             fetch(`/api/admin_payment_config.php?action=set_primary_account&account_id=${accountId}`, {
-                method: 'POST'
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': window.csrfToken
+                },
+                body: JSON.stringify({ csrf_token: window.csrfToken })
             })
             .then(response => response.json())
             .then(data => {
@@ -1262,7 +1288,12 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
         function deletePaymentAccount(accountId) {
             if (confirm('¿Estás seguro de eliminar esta cuenta?')) {
                 fetch(`/api/admin_payment_config.php?action=delete_payment_account&account_id=${accountId}`, {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': window.csrfToken
+                    },
+                    body: JSON.stringify({ csrf_token: window.csrfToken })
                 })
                 .then(response => response.json())
                 .then(data => {

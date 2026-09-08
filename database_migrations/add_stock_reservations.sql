@@ -25,7 +25,8 @@ CREATE INDEX IF NOT EXISTS idx_stock_reservations_session ON stock_reservations(
 CREATE INDEX IF NOT EXISTS idx_stock_reservations_user ON stock_reservations(user_id);
 
 -- Función para calcular stock disponible (considerando reservas activas)
-CREATE OR REPLACE FUNCTION get_available_stock(product_id INTEGER)
+DROP FUNCTION IF EXISTS get_available_stock(INTEGER);
+CREATE OR REPLACE FUNCTION get_available_stock(p_product_id INTEGER)
 RETURNS INTEGER AS $$
 DECLARE
     total_stock INTEGER;
@@ -34,12 +35,12 @@ BEGIN
     -- Obtener stock total del producto
     SELECT COALESCE(stock_quantity, 0) INTO total_stock
     FROM products
-    WHERE id = product_id;
+    WHERE id = p_product_id;
     
     -- Obtener cantidad reservada (solo reservas pendientes no expiradas)
     SELECT COALESCE(SUM(quantity), 0) INTO reserved_quantity
     FROM stock_reservations
-    WHERE product_id = product_id
+    WHERE product_id = p_product_id
     AND status = 'pending'
     AND expires_at > CURRENT_TIMESTAMP;
     

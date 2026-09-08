@@ -125,8 +125,8 @@ try {
             
         // ===== CUENTAS DE PAGO DEL ADMINISTRADOR =====
         case 'get_payment_accounts':
-            $stmt = $pdo->query("SELECT * FROM get_active_payment_accounts()");
-            $accounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $stmt = $pdo->query("SELECT id, account_type, account_name, payment_gateway, provider_account_id, bank_name, clabe, last_4, account_holder, rfc, is_primary, is_active FROM admin_payment_accounts WHERE is_active = true ORDER BY is_primary DESC, id ASC");
+            $accounts = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
             echo json_encode(['success' => true, 'accounts' => $accounts]);
             break;
             
@@ -134,6 +134,8 @@ try {
             require_csrf_token();
             $input = json_decode(file_get_contents('php://input'), true);
             
+            $isPrimary = !empty($input['is_primary']) && $input['is_primary'] !== 'false';
+
             $stmt = $pdo->prepare("
                 INSERT INTO admin_payment_accounts (account_type, account_name, payment_gateway, provider_account_id, 
                     bank_name, clabe, last_4, account_holder, rfc, is_primary, is_active)
@@ -141,24 +143,34 @@ try {
             ");
             
             $stmt->execute([
-                $input['payment_gateway'] === 'bank_account' ? 'bank_account' : 'payment_gateway',
-                $input['account_name'],
-                $input['payment_gateway'],
+                ($input['payment_gateway'] ?? '') === 'bank_account' ? 'bank_account' : 'payment_gateway',
+                $input['account_name'] ?? '',
+                $input['payment_gateway'] ?? '',
                 $input['provider_account_id'] ?? null,
                 $input['bank_name'] ?? null,
                 $input['clabe'] ?? null,
                 $input['last_4'] ?? null,
                 $input['account_holder'] ?? null,
                 $input['rfc'] ?? null,
-                isset($input['is_primary']) ? $input['is_primary'] : false
+                $isPrimary ? 1 : 0
             ]);
             
-            echo json_encode(['success' => true, 'account_id' => $pdo->lastInsertId()]);
+            $newId = $pdo->lastInsertId();
+            if ($isPrimary && $newId) {
+                try {
+                    $pdo->prepare("SELECT set_primary_payment_account(?)")->execute([$newId]);
+                } catch (Exception $e) {
+                    $pdo->prepare("UPDATE admin_payment_accounts SET is_primary = false WHERE id <> ?")->execute([$newId]);
+                    $pdo->prepare("UPDATE admin_payment_accounts SET is_primary = true WHERE id = ?")->execute([$newId]);
+                }
+            }
+
+            echo json_encode(['success' => true, 'account_id' => $newId]);
             break;
             
         case 'update_payment_account':
             require_csrf_token();
-            $accountId = $_GET['account_id'] ?? 0;
+            $accountId = (int)($_GET['account_id'] ?? 0);
             $input = json_decode(file_get_contents('php://input'), true);
             
             $stmt = $pdo->prepare("
@@ -169,8 +181,8 @@ try {
             ");
             
             $stmt->execute([
-                $input['account_name'],
-                $input['payment_gateway'],
+                $input['account_name'] ?? '',
+                $input['payment_gateway'] ?? '',
                 $input['provider_account_id'] ?? null,
                 $input['bank_name'] ?? null,
                 $input['clabe'] ?? null,
@@ -179,6 +191,18 @@ try {
                 $input['rfc'] ?? null,
                 $accountId
             ]);
+
+            if (isset($input['is_primary'])) {
+                $isPrimary = !empty($input['is_primary']) && $input['is_primary'] !== 'false';
+                if ($isPrimary && $accountId) {
+                    try {
+                        $pdo->prepare("SELECT set_primary_payment_account(?)")->execute([$accountId]);
+                    } catch (Exception $e) {
+                        $pdo->prepare("UPDATE admin_payment_accounts SET is_primary = false WHERE id <> ?")->execute([$accountId]);
+                        $pdo->prepare("UPDATE admin_payment_accounts SET is_primary = true WHERE id = ?")->execute([$accountId]);
+                    }
+                }
+            }
             
             echo json_encode(['success' => true]);
             break;

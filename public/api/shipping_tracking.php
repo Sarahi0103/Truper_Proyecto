@@ -120,13 +120,13 @@ try {
             
             $result = $trackingService->createTracking($trackingData);
             
-            // Actualizar estado del pedido a 'shipped'
+            // Actualizar estado del pedido a 'shipped' y registrar folio de rastreo
             if ($result['success']) {
-                $pdo->prepare("UPDATE sales_tickets SET order_status = 'shipped', updated_at = NOW() WHERE id = ?")
-                    ->execute([$trackingData['order_id']]);
+                $pdo->prepare("UPDATE sales_tickets SET order_status = 'shipped', tracking_folio = ?, updated_at = NOW() WHERE id = ? OR order_id = ?")
+                    ->execute([$trackingData['tracking_number'], $trackingData['order_id'], $trackingData['order_id']]);
                 
                 // Registrar log
-                log_action($_SESSION['user_id'], 'CREATE_TRACKING', "Tracking creado para orden {$trackingData['order_id']}: {$trackingData['tracking_number']}");
+                log_action($_SESSION['user_id'], 'CREATE_TRACKING', "Tracking creado para orden {$trackingData['order_id']}: {$trackingData['tracking_number']}", $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1');
             }
             
             echo json_encode($result);

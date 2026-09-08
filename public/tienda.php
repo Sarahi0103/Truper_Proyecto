@@ -549,7 +549,7 @@ $totalOnline = count($products);
 <script src="js/main.js?v=2.6"></script>
 <script src="js/modals.js"></script>
 <script src="js/toast-notifications.js"></script>
-<script src="js/catalog.js?v=3.1"></script>
+<script src="js/catalog.js?v=3.2"></script>
 <script src="js/mobile-optimize.js"></script>
 </body>
 </html>

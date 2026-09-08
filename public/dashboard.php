@@ -535,21 +535,22 @@ $first_name = explode(' ', $user_name)[0];
                     <!-- Dropdowns de Administración Separados -->
                 <div class="nav-dropdown">
                     <button class="nav-dropdown-btn">Admin Tienda <span class="arrow">▼</span></button>
-                    <div class="nav-dropdown-content" style="min-width: 200px;">
-                        <a href="orders.php">Ventas / Pedidos</a>
-                        <a href="order_tracking.php">Seguimiento / Logística</a>
-                        <a href="rma_manager.php">Devoluciones RMA</a>
-                        <a href="admin_online_billing.php">Facturación & Pagos SAT</a>
+                    <div class="nav-dropdown-content" style="min-width: 220px;">
+                        <a href="admin_online_orders.php">🌐 Pedidos Online</a>
+                        <a href="order_tracking.php">🚚 Seguimiento y Guías</a>
+                        <a href="admin_online_billing.php">🏛️ Facturación & Pagos SAT</a>
+                        <a href="rma_manager.php">🔄 Devoluciones RMA</a>
                     </div>
                 </div>
                 <div class="nav-dropdown">
                     <button class="nav-dropdown-btn">Admin Local <span class="arrow">▼</span></button>
-                    <div class="nav-dropdown-content" style="min-width: 200px;">
-                        <a href="cashier.php">Caja / Punto de Venta</a>
-                        <a href="b2b_approval.php">Aprobación B2B</a>
-                        <a href="tickets.php">Tickets y Cotizaciones</a>
-                        <a href="ticket_validation.php">Validación de Tickets</a>
-                        <a href="tasks.php">Tareas de Empleados</a>
+                    <div class="nav-dropdown-content" style="min-width: 220px;">
+                        <a href="ticket_validation.php">🏬 Validación Mostrador</a>
+                        <a href="tickets.php">🎫 Historial de Tickets</a>
+                        <a href="cashier.php">💵 Caja / Punto de Venta</a>
+                        <a href="orders.php">📋 Ventas / Pedidos Mostrador</a>
+                        <a href="tasks.php">👥 Tareas de Empleados</a>
+                        <a href="b2b_approval.php">🤝 Aprobación B2B</a>
                     </div>
                 </div>
                 <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
@@ -612,6 +613,7 @@ $first_name = explode(' ', $user_name)[0];
                     <span class="db-admin-bar-label">Acceso Rápido</span>
                     <div class="db-admin-links">
                         <a href="admin_supply.php?nocache=true" class="db-admin-link">Abastecimiento</a>
+                        <a href="admin_online_billing.php" class="db-admin-link" style="color:var(--theme-accent, #ff7f00); font-weight:700;">💳 Facturación & Pagos SAT</a>
                         <a href="cashier.php" class="db-admin-link">Caja Mostrador</a>
                         <a href="order_tracking.php" class="db-admin-link">Seguimiento Pedidos</a>
                         <a href="gastos.php" class="db-admin-link">Gastos</a>
@@ -757,6 +759,9 @@ $first_name = explode(' ', $user_name)[0];
                         <a href="admin_supply.php?nocache=true" class="db-action-btn" id="qa-supply">
                             <span class="db-action-icon">📦</span>Abastecimiento
                         </a>
+                        <a href="admin_online_billing.php" class="db-action-btn" id="qa-billing" style="border-color: rgba(255,127,0,0.35);">
+                            <span class="db-action-icon">💳</span>Facturación SAT
+                        </a>
                         <a href="gastos.php" class="db-action-btn" id="qa-gastos">
                             <span class="db-action-icon">💸</span>Gastos
                         </a>
@@ -803,6 +808,7 @@ $first_name = explode(' ', $user_name)[0];
                             <?php
                             $modules = [
                                 ['📦','Abastecimiento','admin_supply.php'],
+                                ['💳','Facturación SAT','admin_online_billing.php'],
                                 ['🧾','Caja','cashier.php'],
                                 ['📊','Estadísticas','analytics.php'],
                                 ['🎫','Tickets','tickets.php'],

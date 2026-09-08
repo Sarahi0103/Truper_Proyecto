@@ -21,35 +21,57 @@ class ShippingTrackingService {
      */
     public function createTracking($trackingData) {
         try {
-            $stmt = $this->pdo->prepare("
-                INSERT INTO shipping_tracking 
-                (order_id, carrier, tracking_number, shipping_date, estimated_delivery, shipping_address)
-                VALUES (?, ?, ?, ?, ?, ?)
-                RETURNING id
-            ");
-            
-            $stmt->execute([
-                $trackingData['order_id'],
-                $trackingData['carrier'],
-                $trackingData['tracking_number'],
-                $trackingData['shipping_date'] ?? null,
-                $trackingData['estimated_delivery'] ?? null,
-                json_encode($trackingData['shipping_address'] ?? [])
-            ]);
-            
-            $trackingId = $stmt->fetchColumn();
-            
-            $this->logger->info("Tracking created for order {$trackingData['order_id']}: {$trackingData['tracking_number']}");
+            // Verificar si ya existe registro de tracking para este pedido
+            $chk = $this->pdo->prepare("SELECT id FROM shipping_tracking WHERE order_id = ? LIMIT 1");
+            $chk->execute([$trackingData['order_id']]);
+            $existingId = $chk->fetchColumn();
+
+            if ($existingId) {
+                $stmt = $this->pdo->prepare("
+                    UPDATE shipping_tracking 
+                    SET carrier = ?, tracking_number = ?, shipping_date = COALESCE(?, shipping_date, CURRENT_TIMESTAMP), 
+                        estimated_delivery = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                ");
+                $stmt->execute([
+                    $trackingData['carrier'],
+                    $trackingData['tracking_number'],
+                    $trackingData['shipping_date'] ?? null,
+                    $trackingData['estimated_delivery'] ?? null,
+                    $existingId
+                ]);
+                $trackingId = $existingId;
+                $this->logger->info("Tracking updated for order {$trackingData['order_id']}: {$trackingData['tracking_number']}");
+            } else {
+                $stmt = $this->pdo->prepare("
+                    INSERT INTO shipping_tracking 
+                    (order_id, carrier, tracking_number, shipping_date, estimated_delivery, shipping_address)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    RETURNING id
+                ");
+                
+                $stmt->execute([
+                    $trackingData['order_id'],
+                    $trackingData['carrier'],
+                    $trackingData['tracking_number'],
+                    $trackingData['shipping_date'] ?? null,
+                    $trackingData['estimated_delivery'] ?? null,
+                    json_encode($trackingData['shipping_address'] ?? [])
+                ]);
+                
+                $trackingId = $stmt->fetchColumn();
+                $this->logger->info("Tracking created for order {$trackingData['order_id']}: {$trackingData['tracking_number']}");
+            }
             
             return [
                 'success' => true,
                 'tracking_id' => $trackingId
             ];
         } catch (Exception $e) {
-            $this->logger->error("Error creating tracking: " . $e->getMessage());
+            $this->logger->error("Error saving tracking: " . $e->getMessage());
             return [
                 'success' => false,
-                'error' => 'Error al crear tracking'
+                'error' => 'Error al guardar tracking: ' . $e->getMessage()
             ];
         }
     }
