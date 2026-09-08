@@ -27,7 +27,6 @@ class AppLogger {
     }
 
     private static function writeLog(string $level, string $message, array $context = []): void {
-        $logPath = self::getLogFile();
         $configuredLevel = getenv('LOG_LEVEL') ?: 'info';
 
         // Check level priority
@@ -48,13 +47,17 @@ class AppLogger {
             'ip_address' => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'
         ];
 
-        // Format as JSON and write to file
+        // Format as JSON
         $json = json_encode($logEntry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
-        file_put_contents($logPath, $json, FILE_APPEND | LOCK_EX);
 
-        // En entornos Render/serverless, tambien escribir a error_log para que aparezca en el dashboard
-        if (getenv('RENDER') === 'true' || getenv('LOG_TO_ERROR_LOG') === 'true') {
-            error_log($json, 0);
+        // Intentar escribir al archivo de log (silenciar errores de permisos)
+        // En Render el filesystem puede ser de solo lectura en algunas rutas
+        $logPath = self::getLogFile();
+        $written = @file_put_contents($logPath, $json, FILE_APPEND | LOCK_EX);
+
+        // Si no se pudo escribir al archivo O estamos en Render, usar error_log (visible en el dashboard de Render)
+        if ($written === false || getenv('RENDER') === 'true' || getenv('LOG_TO_ERROR_LOG') === 'true') {
+            error_log('[' . strtoupper($level) . '] ' . $message . (!empty($context) ? ' ' . json_encode($context, JSON_UNESCAPED_UNICODE) : ''));
         }
     }
 
