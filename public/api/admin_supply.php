@@ -752,11 +752,14 @@ function ensure_product_categories_runtime_admin_supply($pdo): void {
             name VARCHAR(120) NOT NULL UNIQUE,
             sort_order INTEGER NOT NULL DEFAULT 0,
             is_active BOOLEAN NOT NULL DEFAULT true,
-            context VARCHAR(20) NOT NULL DEFAULT 'stock',
+            context VARCHAR(20) NOT NULL DEFAULT 'both',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )");
-        $pdo->exec("ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS context VARCHAR(20) DEFAULT 'stock'");
+        $pdo->exec("ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS context VARCHAR(20) DEFAULT 'both'");
+        try {
+            $pdo->exec("UPDATE product_categories SET context = 'both' WHERE context = 'stock' OR context IS NULL");
+        } catch (Exception $ignored) {}
         $created = true;
     } catch (Exception $ignored) {
     }
