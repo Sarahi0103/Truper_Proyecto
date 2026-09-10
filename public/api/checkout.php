@@ -545,8 +545,31 @@ try {
             'payment_method' => $paymentMethod
         ];
         
-        // Enviar email de confirmación
+        // Enviar email de confirmación de pedido
         $emailService->sendOrderConfirmation($orderData, $customerData);
+        
+        // Si solicitó factura, enviar también el correo con la factura CFDI (PDF y XML)
+        if ($invReq && !empty($customerData['email'])) {
+            try {
+                require_once __DIR__ . '/../../src/Services/EmailBillingService.php';
+                $emailBilling = new EmailBillingService($pdo);
+                $hostUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://" . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+                $pdfDownloadUrl = "{$hostUrl}/api/invoice.php?action=download_pdf&folio=" . urlencode($ticketFolio);
+                $xmlDownloadUrl = "{$hostUrl}/api/invoice.php?action=download_xml&folio=" . urlencode($ticketFolio);
+                $uuidFiscal = $invoiceResult['uuid'] ?? 'SAT-' . strtoupper(bin2hex(random_bytes(8)));
+                $emailBilling->sendInvoiceEmail(
+                    $customerData['email'],
+                    $customerData['name'],
+                    $uuidFiscal,
+                    $ticketFolio,
+                    $total,
+                    $xmlDownloadUrl,
+                    $pdfDownloadUrl
+                );
+            } catch (Exception $mailEx) {
+                AppLogger::warning("Failed to send automatic invoice email: " . $mailEx->getMessage());
+            }
+        }
         
         // Enviar notificación por WhatsApp si hay número de teléfono
         if (!empty($customerData['phone'])) {

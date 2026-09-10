@@ -3,12 +3,45 @@
  * Módulo de Conciliación y Exportación Contable Mensual (para la Contadora)
  * Truper Platform - Fase 6
  */
-require_once '../config/config.php';
+require_once __DIR__ . '/../config/config.php';
 require_admin();
 
 $year = (int)($_GET['year'] ?? date('Y'));
 $month = (int)($_GET['month'] ?? date('m'));
 $exportFormat = $_GET['format'] ?? '';
+
+// Auto-heal missing columns in sales_tickets
+try {
+    if (!db_column_exists('sales_tickets', 'invoice_required')) {
+        @$pdo->exec("ALTER TABLE sales_tickets ADD COLUMN IF NOT EXISTS invoice_required INTEGER DEFAULT 0");
+    }
+    if (!db_column_exists('sales_tickets', 'uuid_fiscal')) {
+        @$pdo->exec("ALTER TABLE sales_tickets ADD COLUMN IF NOT EXISTS uuid_fiscal VARCHAR(100)");
+    }
+    if (!db_column_exists('sales_tickets', 'pasarela_commission')) {
+        @$pdo->exec("ALTER TABLE sales_tickets ADD COLUMN IF NOT EXISTS pasarela_commission NUMERIC(10,2) DEFAULT 0.00");
+    }
+    if (!db_column_exists('sales_tickets', 'order_status')) {
+        @$pdo->exec("ALTER TABLE sales_tickets ADD COLUMN IF NOT EXISTS order_status VARCHAR(50) DEFAULT 'in_preparation'");
+    }
+    if (!db_column_exists('sales_tickets', 'deleted_at')) {
+        @$pdo->exec("ALTER TABLE sales_tickets ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL");
+    }
+} catch (Exception $e) {}
+
+$hasInvReq = db_column_exists('sales_tickets', 'invoice_required');
+$hasUuid = db_column_exists('sales_tickets', 'uuid_fiscal');
+$hasCommission = db_column_exists('sales_tickets', 'pasarela_commission');
+$hasOrderStatus = db_column_exists('sales_tickets', 'order_status');
+$hasDeletedAt = db_column_exists('sales_tickets', 'deleted_at');
+$hasIssuedDate = db_column_exists('sales_tickets', 'issued_date');
+
+$dateCol = $hasIssuedDate ? "st.issued_date" : "st.created_at";
+$uuidCol = $hasUuid ? "COALESCE(st.uuid_fiscal, 'VENTA-GENERAL-SIN-TIMBRE')" : "'VENTA-GENERAL-SIN-TIMBRE'";
+$tipoCol = $hasInvReq ? "CASE WHEN CAST(st.invoice_required AS TEXT) IN ('1','t','true') THEN 'Factura CFDI 4.0' ELSE 'Nota de Venta' END" : "'Nota de Venta'";
+$commCol = $hasCommission ? "COALESCE(st.pasarela_commission, 0.00)" : "0.00";
+$orderStatusCol = $hasOrderStatus ? "COALESCE(st.order_status, st.status, 'in_preparation')" : "COALESCE(st.status, 'in_preparation')";
+$delWhere = $hasDeletedAt ? "AND st.deleted_at IS NULL" : "";
 
 // Generate CSV export for contadora
 if ($exportFormat === 'csv') {
@@ -37,19 +70,19 @@ if ($exportFormat === 'csv') {
     ]);
 
     $sql = "
-        SELECT st.folio, st.issued_date, COALESCE(st.uuid_fiscal, 'VENTA-GENERAL-SIN-TIMBRE') AS uuid_fiscal,
-               CASE WHEN st.invoice_required THEN 'Factura CFDI 4.0' ELSE 'Nota de Venta' END AS tipo_comprobante,
+        SELECT st.folio, {$dateCol} AS issued_date, {$uuidCol} AS uuid_fiscal,
+               {$tipoCol} AS tipo_comprobante,
                COALESCE(u.rfc, 'XAXX010101000') AS rfc_cliente,
                st.customer_name,
                st.total_amount,
                st.payment_method,
-               COALESCE(st.pasarela_commission, 0.00) AS pasarela_commission,
-               COALESCE(st.order_status, 'in_preparation') AS order_status
+               {$commCol} AS pasarela_commission,
+               {$orderStatusCol} AS order_status
         FROM sales_tickets st
         LEFT JOIN users u ON st.user_id = u.id
-        WHERE st.deleted_at IS NULL
-          AND EXTRACT(YEAR FROM st.issued_date) = ?
-          AND EXTRACT(MONTH FROM st.issued_date) = ?
+        WHERE EXTRACT(YEAR FROM {$dateCol}) = ?
+          AND EXTRACT(MONTH FROM {$dateCol}) = ?
+          {$delWhere}
         ORDER BY st.id ASC
     ";
 
@@ -84,19 +117,19 @@ if ($exportFormat === 'csv') {
 
 // Fetch preview data for UI
 $sqlPreview = "
-    SELECT st.folio, st.issued_date, COALESCE(st.uuid_fiscal, 'PENDIENTE-GLOBAL') AS uuid_fiscal,
-           CASE WHEN st.invoice_required THEN 'CFDI 4.0' ELSE 'Nota Venta' END AS tipo_comprobante,
+    SELECT st.folio, {$dateCol} AS issued_date, {$uuidCol} AS uuid_fiscal,
+           {$tipoCol} AS tipo_comprobante,
            COALESCE(u.rfc, 'XAXX010101000') AS rfc_cliente,
            st.customer_name,
            st.total_amount,
            st.payment_method,
-           COALESCE(st.pasarela_commission, 0.00) AS pasarela_commission,
-           COALESCE(st.order_status, 'in_preparation') AS order_status
+           {$commCol} AS pasarela_commission,
+           {$orderStatusCol} AS order_status
     FROM sales_tickets st
     LEFT JOIN users u ON st.user_id = u.id
-    WHERE st.deleted_at IS NULL
-      AND EXTRACT(YEAR FROM st.issued_date) = ?
-      AND EXTRACT(MONTH FROM st.issued_date) = ?
+    WHERE EXTRACT(YEAR FROM {$dateCol}) = ?
+      AND EXTRACT(MONTH FROM {$dateCol}) = ?
+      {$delWhere}
     ORDER BY st.id DESC
 ";
 

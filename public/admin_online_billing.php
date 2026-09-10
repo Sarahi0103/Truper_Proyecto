@@ -364,6 +364,333 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
             background: #ef4444;
             color: #fff;
         }
+
+        /* ── Sandbox Styles ──────────────────────────────────────────────────── */
+        .sandbox-banner {
+            background: linear-gradient(135deg, rgba(234,179,8,0.12), rgba(234,179,8,0.04));
+            border: 1.5px solid rgba(234,179,8,0.55);
+            border-radius: 14px;
+            padding: 1.1rem 1.5rem;
+            margin-bottom: 1.75rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            animation: sandboxPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes sandboxPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(234,179,8,0.0); }
+            50% { box-shadow: 0 0 20px 4px rgba(234,179,8,0.12); }
+        }
+
+        .sandbox-banner-icon {
+            font-size: 2rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        .sandbox-banner-text strong {
+            color: #eab308;
+            font-size: 1rem;
+            font-weight: 800;
+            display: block;
+            margin-bottom: 0.2rem;
+        }
+
+        .sandbox-banner-text span {
+            color: #888899;
+            font-size: 0.84rem;
+            line-height: 1.5;
+        }
+
+        .sandbox-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.75rem;
+        }
+
+        .sandbox-kpi {
+            background: #0e0e14;
+            border: 1px solid rgba(234,179,8,0.2);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            text-align: center;
+        }
+
+        .sandbox-kpi .val {
+            font-size: 1.7rem;
+            font-weight: 800;
+            color: #eab308;
+            display: block;
+        }
+
+        .sandbox-kpi .lbl {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #666677;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-top: 0.25rem;
+            display: block;
+        }
+
+        .badge-sandbox {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            background: rgba(234,179,8,0.15);
+            color: #eab308;
+            border: 1px solid rgba(234,179,8,0.4);
+            letter-spacing: 0.04em;
+            vertical-align: middle;
+            margin-left: 4px;
+        }
+
+        .sandbox-form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.1rem;
+        }
+
+        .sale-type-selector {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .sale-type-btn {
+            flex: 1;
+            padding: 0.85rem 1rem;
+            border-radius: 10px;
+            border: 2px solid #22222a;
+            background: #14141a;
+            color: #888899;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .sale-type-btn.active {
+            border-color: #eab308;
+            background: rgba(234,179,8,0.1);
+            color: #eab308;
+        }
+
+        .btn-sandbox {
+            background: linear-gradient(135deg, #eab308, #ca8a04);
+            color: #0b0b0e;
+            border: none;
+            padding: 0.85rem 1.75rem;
+            border-radius: 8px;
+            font-weight: 800;
+            cursor: pointer;
+            font-size: 0.92rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 15px rgba(234,179,8,0.3);
+            transition: all 0.2s ease;
+        }
+
+        .btn-sandbox:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 22px rgba(234,179,8,0.45);
+        }
+
+        .btn-sandbox-danger {
+            background: rgba(239,68,68,0.12);
+            color: #ef4444;
+            border: 1px solid rgba(239,68,68,0.35);
+            padding: 0.65rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-sandbox-danger:hover {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        /* Client preview card */
+        .client-preview-card {
+            background: linear-gradient(135deg, #0f1117, #0a0c12);
+            border: 1px solid rgba(255,127,0,0.2);
+            border-radius: 14px;
+            overflow: hidden;
+            margin-top: 1.5rem;
+        }
+
+        .client-preview-header {
+            background: linear-gradient(90deg, rgba(255,127,0,0.12), transparent);
+            border-bottom: 1px solid rgba(255,127,0,0.15);
+            padding: 0.85rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #ff7f00;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .client-preview-body {
+            padding: 1.25rem;
+        }
+
+        .checkout-invoice-block {
+            background: #111118;
+            border: 1px solid #22222a;
+            border-radius: 10px;
+            padding: 1.25rem;
+        }
+
+        .checkout-invoice-block h4 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #fff;
+            margin: 0 0 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .checkout-field {
+            margin-bottom: 0.85rem;
+        }
+
+        .checkout-field label {
+            display: block;
+            font-size: 0.78rem;
+            color: #666677;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.3rem;
+        }
+
+        .checkout-field-value {
+            background: #0e0e15;
+            border: 1px solid #2a2a36;
+            border-radius: 7px;
+            padding: 0.6rem 0.9rem;
+            font-size: 0.88rem;
+            color: #e2e8f0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Botón Visualizar (Azul) */
+        .btn-view-invoice {
+            background: rgba(37,99,235,0.18);
+            border: 1px solid rgba(59,130,246,0.5);
+            color: #60a5fa;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-view-invoice:hover {
+            background: #2563eb;
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+        /* Botón Cancelar (Amarillo / Ámbar) */
+        .btn-cancel-invoice,
+        .btn-cancel-sat,
+        .sandbox-cancel-btn {
+            background: rgba(245,158,11,0.16);
+            color: #fbbf24;
+            border: 1px solid rgba(245,158,11,0.45);
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-cancel-invoice:hover,
+        .btn-cancel-sat:hover,
+        .sandbox-cancel-btn:hover {
+            background: #d97706;
+            color: #fff;
+            border-color: #d97706;
+            transform: translateY(-1px);
+        }
+
+        /* Botón Borrar / Eliminar (Rojo Intenso) */
+        .btn-delete-invoice {
+            background: rgba(239,68,68,0.16);
+            color: #f87171;
+            border: 1px solid rgba(239,68,68,0.5);
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-delete-invoice:hover {
+            background: #dc2626;
+            color: #fff;
+            border-color: #dc2626;
+            transform: translateY(-1px);
+        }
+
+        .sandbox-download-btn {
+            background: #ff7f00;
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+        }
+
+        .sandbox-download-btn:hover {
+            background: #e06d00;
+            transform: translateY(-1px);
+        }
+
+        .sandbox-xml-btn {
+            background: #1e293b;
+            border: 1px solid #475569;
+            color: #cbd5e1;
+            padding: 5px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+        }
+
+        .sandbox-xml-btn:hover {
+            background: #334155;
+            color: #fff;
+        }
     </style>
 </head>
 <body class="catalog-minimal">
@@ -463,17 +790,18 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
             <button class="tab-btn" onclick="switchTab('monitorTab', this)">Monitor de Facturas y Cancelaciones</button>
             <button class="tab-btn" onclick="switchTab('globalInvoiceTab', this)">Factura Global</button>
             <button class="tab-btn" onclick="switchTab('backupTab', this)">Respaldos BD & CSD SAT</button>
+            <button class="tab-btn" id="sandboxTabBtn" onclick="switchTab('sandboxTab', this)" style="border-color: rgba(234,179,8,0.45); color: #eab308;">Sandbox de Pruebas</button>
         </div>
 
         <!-- Tab 1: Pasarelas de Cobro -->
         <div id="gatewayTab" class="tab-content active">
             <div class="glass-card">
                 <h3 class="card-header-title">Vinculación de Tarjetas y Cuentas de Cobro en Línea</h3>
-                <form id="gatewayForm" onsubmit="saveConfig(event)">
+                <form id="gatewayForm" autocomplete="off" onsubmit="saveConfig(event)">
                     <div class="form-grid">
                         <div class="form-group-full">
                             <label class="field-label">Entorno de Procesamiento de Pagos</label>
-                            <select id="payment_environment" class="field-select">
+                            <select id="payment_environment" class="field-select" autocomplete="off">
                                 <option value="production" selected>Entorno de Producción / En Vivo (Cobros Reales)</option>
                                 <option value="sandbox">Entorno de Verificación Técnica / Sandbox</option>
                             </select>
@@ -483,35 +811,35 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
                         <!-- Mercado Pago -->
                         <div>
                             <label class="field-label">Mercado Pago — Public Key</label>
-                            <input type="text" id="mercadopago_public_key" class="field-input" placeholder="APP_USR-xxxx-xxxx-xxxx">
+                            <input type="text" id="mercadopago_public_key" class="field-input" placeholder="APP_USR-xxxx-xxxx-xxxx" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
                         </div>
                         <div>
                             <label class="field-label">Mercado Pago — Access Token</label>
-                            <input type="password" id="mercadopago_access_token" class="field-input" placeholder="APP_USR-xxxx-xxxx-xxxx">
+                            <input type="password" id="mercadopago_access_token" class="field-input" placeholder="APP_USR-xxxx-xxxx-xxxx" autocomplete="new-password">
                         </div>
 
                         <!-- Stripe -->
                         <div>
                             <label class="field-label">Stripe — Publishable Key</label>
-                            <input type="text" id="stripe_public_key" class="field-input" placeholder="pk_live_xxxx...">
+                            <input type="text" id="stripe_public_key" class="field-input" placeholder="pk_live_xxxx..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
                         </div>
                         <div>
                             <label class="field-label">Stripe — Secret Key</label>
-                            <input type="password" id="stripe_secret_key" class="field-input" placeholder="sk_live_xxxx...">
+                            <input type="password" id="stripe_secret_key" class="field-input" placeholder="sk_live_xxxx..." autocomplete="new-password">
                         </div>
 
                         <!-- Depósitos / Transferencias SPEI -->
                         <div>
                             <label class="field-label">Banco Emisor para SPEI</label>
-                            <input type="text" id="bank_name" class="field-input" placeholder="Ej: BBVA Bancomer">
+                            <input type="text" id="bank_name" class="field-input" placeholder="Ej: BBVA Bancomer" autocomplete="off">
                         </div>
                         <div>
                             <label class="field-label">CLABE Interbancaria de la Sucursal</label>
-                            <input type="text" id="bank_clabe" class="field-input" placeholder="18 dígitos (Ej: 012180001234567890)" maxlength="18">
+                            <input type="text" id="bank_clabe" class="field-input" placeholder="18 dígitos (Ej: 012180001234567890)" maxlength="18" autocomplete="off">
                         </div>
                         <div class="form-group-full">
                             <label class="field-label">Titular de la Cuenta Bancaria</label>
-                            <input type="text" id="bank_account_holder" class="field-input" placeholder="Razón Social o Nombre exacto en la cuenta">
+                            <input type="text" id="bank_account_holder" class="field-input" placeholder="Razón Social o Nombre exacto en la cuenta" autocomplete="off">
                         </div>
                     </div>
                     <div style="margin-top: 1.75rem; text-align: right;">
@@ -522,7 +850,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
 
             <!-- Sección de Cuentas de Pago del Administrador -->
             <div class="glass-card" style="margin-top: 2rem;">
-                <h3 class="card-header-title">💳 Cuentas y Tarjetas para Recibir Pagos</h3>
+                <h3 class="card-header-title">Cuentas y Tarjetas para Recibir Pagos</h3>
                 <p style="color: #888; margin-bottom: 1.5rem;">Configura las cuentas bancarias y tarjetas donde recibirás los pagos de tus clientes a través de Stripe y Mercado Pago.</p>
                 
                 <div id="paymentAccountsList" style="margin-bottom: 2rem;">
@@ -537,26 +865,26 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
         <div id="satConfigTab" class="tab-content">
             <div class="glass-card">
                 <h3 class="card-header-title">Configuración de Emisor Fiscal SAT (CFDI 4.0)</h3>
-                <form id="satConfigForm" onsubmit="saveConfig(event)">
+                <form id="satConfigForm" autocomplete="off" onsubmit="saveConfig(event)">
                     <div class="form-grid">
                         <div class="form-group-full">
                             <label class="field-label">Facturapi API Key (PAC Timbrado SAT)</label>
-                            <input type="password" id="facturapi_api_key" class="field-input" placeholder="sk_live_xxxx...">
+                            <input type="password" id="facturapi_api_key" class="field-input" placeholder="sk_live_xxxx..." autocomplete="new-password">
                             <p class="field-help">Facturapi gestiona la firma electrónica del SAT, timbrado en vivo, generación de XML/PDF y cancelaciones formales.</p>
                         </div>
 
                         <div>
                             <label class="field-label">RFC de la Sucursal / Empresa *</label>
-                            <input type="text" id="company_rfc" class="field-input" placeholder="Ej: FFO880326XXX" style="text-transform: uppercase;">
+                            <input type="text" id="company_rfc" class="field-input" placeholder="Ej: FFO880326XXX" style="text-transform: uppercase;" autocomplete="off">
                         </div>
                         <div>
                             <label class="field-label">Razón Social Exacta (sin Régimen Capital)</label>
-                            <input type="text" id="company_tax_name" class="field-input" placeholder="Ej: FERRETERIA FOX Y TRUPER">
+                            <input type="text" id="company_tax_name" class="field-input" placeholder="Ej: FERRETERIA FOX Y TRUPER" autocomplete="off">
                         </div>
 
                         <div>
                             <label class="field-label">Régimen Fiscal (SAT) *</label>
-                            <select id="company_tax_regime" class="field-select">
+                            <select id="company_tax_regime" class="field-select" autocomplete="off">
                                 <?php 
                                     $regimes = SatCatalogs::getTaxRegimes();
                                     foreach ($regimes as $code => $label):
@@ -568,7 +896,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
 
                         <div>
                             <label class="field-label">Código Postal Domicilio Fiscal *</label>
-                            <input type="text" id="company_zip_code" class="field-input" placeholder="Ej: 44100" maxlength="5">
+                            <input type="text" id="company_zip_code" class="field-input" placeholder="Ej: 44100" maxlength="5" autocomplete="off">
                         </div>
 
                         <div class="form-group-full">
@@ -743,6 +1071,276 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
                 </div>
             </div>
         </div>
+
+        <!-- ══════════════════════════════════════════════════════════════════ -->
+        <!-- Tab 7: Sandbox de Pruebas de Facturación                          -->
+        <!-- ══════════════════════════════════════════════════════════════════ -->
+        <div id="sandboxTab" class="tab-content">
+
+            <!-- Banner de advertencia sandbox -->
+            <div class="sandbox-banner">
+                <div class="sandbox-banner-icon" style="font-size:1.5rem;color:#eab308;">&#9888;</div>
+                <div class="sandbox-banner-text">
+                    <strong>MODO SANDBOX — Entorno de Pruebas de Facturacion</strong>
+                    <span>Las facturas generadas aqui <strong>no se timbran ante el SAT</strong> ni afectan datos reales.
+                    Usalo para simular el flujo completo (tienda online y mostrador local) y verificar como aparecerian las facturas en el Monitor y la Factura Global.</span>
+                </div>
+            </div>
+
+            <!-- KPIs Sandbox -->
+            <div class="sandbox-kpi-grid">
+                <div class="sandbox-kpi">
+                    <span class="val" id="sbxKpiTotal">0</span>
+                    <span class="lbl">Facturas Simuladas</span>
+                </div>
+                <div class="sandbox-kpi">
+                    <span class="val" id="sbxKpiStamped" style="color:#3b82f6;">0</span>
+                    <span class="lbl">Con UUID CFDI (Test)</span>
+                </div>
+                <div class="sandbox-kpi">
+                    <span class="val" id="sbxKpiCancelled" style="color:#ef4444;">0</span>
+                    <span class="lbl">Canceladas (Test)</span>
+                </div>
+                <div class="sandbox-kpi">
+                    <span class="val" id="sbxKpiPublic" style="color:#888899;">0</span>
+                    <span class="lbl">Público General</span>
+                </div>
+                <div class="sandbox-kpi">
+                    <span class="val" id="sbxKpiMonto" style="color:#22c55e;">$0</span>
+                    <span class="lbl">Monto Simulado</span>
+                </div>
+            </div>
+
+            <!-- Usuarios sandbox disponibles -->
+            <div class="glass-card" style="margin-bottom:1.5rem;">
+                <h3 class="card-header-title">Clientes de Prueba (Sandbox)</h3>
+                <p style="color:#666677;font-size:0.84rem;margin-bottom:1.25rem;">Estos clientes existen solo en el simulador. Sus datos fiscales se usan para generar las facturas de prueba. No pueden iniciar sesion en la tienda.</p>
+                <div id="sbxUserCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0.85rem;">
+                    <div style="color:#888899;padding:1rem;">Cargando clientes sandbox...</div>
+                </div>
+            </div>
+
+            <!-- Formulario de generacion de venta de prueba -->
+            <div class="glass-card">
+                <h3 class="card-header-title">Generador de Venta / Factura de Prueba</h3>
+
+                <!-- Selector de tipo de venta -->
+                <label class="field-label" style="margin-bottom:0.6rem;">Tipo de Venta a Simular</label>
+                <div class="sale-type-selector">
+                    <button type="button" class="sale-type-btn active" id="sbxTypeBtnOnline" onclick="sbxSetSaleType('online')">
+                        Tienda Online
+                    </button>
+                    <button type="button" class="sale-type-btn" id="sbxTypeBtnLocal" onclick="sbxSetSaleType('local')">
+                        Venta Mostrador Local
+                    </button>
+                </div>
+
+                <form id="sandboxForm" onsubmit="sbxGenerateInvoice(event)">
+                    <div class="sandbox-form-grid">
+                        <!-- Selector de cliente sandbox -->
+                        <div class="form-group-full" style="grid-column:1/-1;">
+                            <label class="field-label">Cliente de Prueba *</label>
+                            <select id="sbxClientSelect" class="field-select" onchange="sbxOnClientChange()" required>
+                                <option value="">-- Selecciona un cliente sandbox --</option>
+                            </select>
+                            <input type="hidden" id="sbxClientId" value="">
+                            <!-- Info del cliente seleccionado -->
+                            <div id="sbxClientInfo" style="display:none;margin-top:0.75rem;padding:0.85rem 1rem;background:#0e0e14;border:1px solid rgba(234,179,8,0.2);border-radius:8px;font-size:0.84rem;">
+                                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.5rem;">
+                                    <div><span style="color:#666677;font-weight:700;">RFC:</span> <span id="sbxInfoRfc" style="color:#eab308;font-family:monospace;"></span></div>
+                                    <div><span style="color:#666677;font-weight:700;">Regimen:</span> <span id="sbxInfoRegimen" style="color:#e2e8f0;"></span></div>
+                                    <div><span style="color:#666677;font-weight:700;">CP Fiscal:</span> <span id="sbxInfoCp" style="color:#e2e8f0;"></span></div>
+                                    <div><span style="color:#666677;font-weight:700;">Email:</span> <span id="sbxInfoEmail" style="color:#888899;"></span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Producto -->
+                        <div>
+                            <label class="field-label">Producto / Descripcion *</label>
+                            <input type="text" id="sbxProductName" class="field-input" placeholder="Ej: Taladro Truper 1/2&quot;" value="Taladro Percutor Truper 1/2&quot;" required>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+                            <div>
+                                <label class="field-label">Cantidad</label>
+                                <input type="number" id="sbxProductQty" class="field-input" min="1" value="1">
+                            </div>
+                            <div>
+                                <label class="field-label">Precio Unitario ($)</label>
+                                <input type="number" id="sbxProductPrice" class="field-input" min="0.01" step="0.01" value="850.00">
+                            </div>
+                        </div>
+
+                        <!-- Metodo de Pago -->
+                        <div>
+                            <label class="field-label">Metodo de Pago Simulado</label>
+                            <select id="sbxPaymentMethod" class="field-select">
+                                <option value="sandbox_card">Tarjeta de Credito / Debito</option>
+                                <option value="sandbox_spei">SPEI / Transferencia Bancaria</option>
+                                <option value="sandbox_cash">Efectivo (Mostrador)</option>
+                                <option value="sandbox_mercadopago">Mercado Pago</option>
+                            </select>
+                        </div>
+
+                        <!-- Requiere Factura? -->
+                        <div style="display:flex; align-items:center; gap:0.75rem; background:rgba(255,255,255,0.03); border:1px solid #22222a; border-radius:8px; padding:0.85rem 1rem;">
+                            <input type="checkbox" id="sbxRequiresInvoice" style="width:18px;height:18px;accent-color:#ff7f00;cursor:pointer;" onchange="sbxToggleInvoiceFields()">
+                            <label for="sbxRequiresInvoice" style="color:#fff;font-weight:700;cursor:pointer;margin:0;">
+                                El cliente requiere Factura Fiscal (CFDI 4.0)
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Datos fiscales (visibles solo cuando requiere factura) -->
+                    <div id="sbxFiscalFields" style="display:none; margin-top:1.25rem; padding:1.25rem; background:#0e0e14; border-radius:10px; border:1px solid rgba(255,127,0,0.2);">
+                        <div class="field-label" style="color:#ff7f00; margin-bottom:1rem;">Datos Fiscales del Cliente (CFDI 4.0)</div>
+                        <div class="sandbox-form-grid">
+                            <div>
+                                <label class="field-label">RFC del Receptor *</label>
+                                <input type="text" id="sbxTaxRfc" class="field-input" placeholder="Ej: GAPE800101HXX" style="text-transform:uppercase;" maxlength="13">
+                            </div>
+                            <div>
+                                <label class="field-label">Nombre / Razón Social Fiscal *</label>
+                                <input type="text" id="sbxTaxName" class="field-input" placeholder="Nombre exacto ante el SAT">
+                            </div>
+                            <div>
+                                <label class="field-label">CP Domicilio Fiscal *</label>
+                                <input type="text" id="sbxTaxZip" class="field-input" placeholder="44100" maxlength="5">
+                            </div>
+                            <div>
+                                <label class="field-label">Régimen Fiscal del Receptor</label>
+                                <select id="sbxTaxRegime" class="field-select">
+                                    <option value="616">616 — Sin Obligaciones Fiscales (Persona Física)</option>
+                                    <option value="601">601 — General de Ley Personas Morales</option>
+                                    <option value="612">612 — Personas Físicas con Actividades Empresariales</option>
+                                    <option value="626">626 — Régimen Simplificado de Confianza (RESICO)</option>
+                                    <option value="621">621 — Incorporación Fiscal</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Totales en tiempo real -->
+                    <div id="sbxTotalsPreview" style="margin-top:1.25rem; background:#0a0a10; border:1px solid #22222a; border-radius:10px; padding:1rem 1.25rem; display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; text-align:center;">
+                        <div>
+                            <div style="font-size:0.75rem;color:#666677;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Subtotal</div>
+                            <div id="sbxPreviewSubtotal" style="font-size:1.25rem;font-weight:800;color:#fff;">$850.00</div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.75rem;color:#666677;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">IVA 16%</div>
+                            <div id="sbxPreviewIva" style="font-size:1.25rem;font-weight:800;color:#888899;">$136.00</div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.75rem;color:#666677;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Total</div>
+                            <div id="sbxPreviewTotal" style="font-size:1.35rem;font-weight:800;color:#eab308;">$986.00</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:1.5rem; display:flex; gap:0.75rem; flex-wrap:wrap;">
+                        <button type="submit" class="btn-sandbox">Generar Factura de Prueba</button>
+                        <button type="button" class="btn-sandbox" style="background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 15px rgba(59,130,246,.3);" onclick="sbxGenerateGlobal()">Simular Factura Global Diaria</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Vista previa del cliente en tienda / checkout -->
+            <div class="glass-card">
+                <h3 class="card-header-title">Vista del Cliente — Como ve la factura en la Tienda</h3>
+                <p style="color:#666677; font-size:0.85rem; margin-bottom:1.25rem;">
+                    Así es como el cliente verá el formulario de facturación al finalizar su compra en la tienda online o al solicitar ticket en el mostrador.
+                </p>
+
+                <div style="max-width:560px; margin:0 auto;">
+                    <!-- Checkout invoice request block (replica visual) -->
+                    <div class="checkout-invoice-block">
+                        <h4>Datos para Factura Electronica (CFDI 4.0)</h4>
+                        <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:1rem; padding:0.6rem 0.85rem; background:rgba(255,127,0,0.06); border-radius:6px; border:1px solid rgba(255,127,0,0.15);">
+                            <input type="checkbox" id="sbxPreviewCheckbox" style="width:16px;height:16px;accent-color:#ff7f00;" onchange="sbxTogglePreviewFields()">
+                            <label for="sbxPreviewCheckbox" style="font-size:0.87rem;color:#fff;font-weight:600;cursor:pointer;margin:0;">Requiero Factura Fiscal</label>
+                        </div>
+                        <div id="sbxPreviewInvoiceForm" style="display:none;">
+                            <div class="checkout-field">
+                                <label>RFC del Receptor</label>
+                                <div class="checkout-field-value" id="sbxPreviewRfcDisplay">GAPE800101HXX</div>
+                            </div>
+                            <div class="checkout-field">
+                                <label>Nombre / Razón Social</label>
+                                <div class="checkout-field-value" id="sbxPreviewNameDisplay">JUAN GARCIA PEREZ</div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+                                <div class="checkout-field">
+                                    <label>CP Domicilio Fiscal</label>
+                                    <div class="checkout-field-value" id="sbxPreviewZipDisplay">44100</div>
+                                </div>
+                                <div class="checkout-field">
+                                    <label>Régimen Fiscal</label>
+                                    <div class="checkout-field-value">616 — Sin Obligaciones</div>
+                                </div>
+                            </div>
+                            <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:0.75rem;margin-top:0.75rem;font-size:0.82rem;color:#22c55e;">
+                                ✅ Datos validados contra catálogo SAT. La factura CFDI 4.0 se enviará a <span id="sbxPreviewEmailDisplay">sandbox@test.com</span> al confirmar el pago.
+                            </div>
+                        </div>
+                        <div id="sbxPreviewPublicMsg" style="font-size:0.83rem;color:#888899;padding:0.75rem;background:#0e0e14;border-radius:7px;border:1px solid #1c1c26;">
+                            ℹ️ Si no solicitas factura, tu venta se incluirá en la <strong>Factura Global del Mes</strong> (Público en General – RFC: XAXX010101000).
+                        </div>
+                    </div>
+
+                    <!-- Resumen de order simulado -->
+                    <div style="margin-top:1rem; background:#0e0e14; border:1px solid #1c1c26; border-radius:10px; padding:1rem 1.25rem;">
+                        <div style="font-size:0.78rem;font-weight:700;color:#666677;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.75rem;">Resumen de la Orden</div>
+                        <div id="sbxOrderPreviewRow" style="display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0;border-bottom:1px solid #1c1c26;">
+                            <span style="font-size:0.88rem;color:#e2e8f0;">Taladro Percutor Truper 1/2" × 1</span>
+                            <span style="font-size:0.88rem;font-weight:700;color:#fff;">$850.00</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;padding:0.4rem 0;">
+                            <span style="font-size:0.82rem;color:#666677;">IVA (16%)</span>
+                            <span style="font-size:0.82rem;color:#888899;">$136.00</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-top:1px solid #22222a;margin-top:0.25rem;">
+                            <span style="font-size:0.95rem;font-weight:800;color:#fff;">Total</span>
+                            <span id="sbxOrderPreviewTotal" style="font-size:0.95rem;font-weight:800;color:#ff7f00;">$986.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de facturas sandbox generadas -->
+            <div class="glass-card">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.25rem;">
+                    <div>
+                        <h3 class="card-header-title" style="margin:0;border:none;padding:0;">Facturas de Prueba Generadas</h3>
+                        <p class="field-help" style="margin-top:0.25rem;">Todas las facturas sandbox aparecen tambien en el Monitor de Facturas con badge <strong style="color:#eab308;">[SANDBOX]</strong>.</p>
+                    </div>
+                    <div style="display:flex;gap:0.5rem;">
+                        <button onclick="sbxLoadInvoices()" class="btn-action" style="padding:0.55rem 1rem;font-size:0.82rem;">Actualizar</button>
+                        <button onclick="sbxClearSandbox()" class="btn-sandbox-danger">Limpiar Sandbox</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Folio</th>
+                                <th>Tipo</th>
+                                <th>Cliente</th>
+                                <th>Producto</th>
+                                <th>Total</th>
+                                <th>UUID (Test)</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sbxTableBody">
+                            <tr>
+                                <td colspan="8" style="text-align:center;padding:2rem;color:#888899;">Cargando facturas de prueba...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
     </main>
 
     <script src="js/main.js"></script>
@@ -750,11 +1348,28 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
     <script>
         window.csrfToken = '<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8"); ?>';
 
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         function switchTab(tabId, btnEl) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            
+
+            // Sandbox tab keeps its own active border color
             btnEl.classList.add('active');
+            if (tabId === 'sandboxTab') {
+                btnEl.style.borderColor = '#eab308';
+                btnEl.style.color = '#eab308';
+                btnEl.style.background = 'rgba(234,179,8,0.14)';
+                btnEl.style.boxShadow = '0 4px 15px rgba(234,179,8,0.25)';
+            }
             document.getElementById(tabId).classList.add('active');
 
             if (tabId === 'monitorTab') {
@@ -763,6 +1378,9 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
                 loadBackupsList();
             } else if (tabId === 'globalInvoiceTab') {
                 loadGlobalInvoices();
+            } else if (tabId === 'sandboxTab') {
+                sbxLoadSandboxUsers();
+                sbxLoadInvoices();
             }
         }
 
@@ -977,29 +1595,51 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
                     else if (ord.requires_invoice && ord.sat_uuid) activeSat++;
                     else publicGeneral++;
 
-                    const isCancelled = ord.status === 'cancelled';
+                    const isCancelled   = ord.status === 'cancelled';
+                    const isSandbox     = String(ord.order_number).startsWith('SBX-');
                     const payBadgeClass = ord.payment_status === 'paid' ? 'badge-paid' : (isCancelled ? 'badge-cancelled' : 'badge-pending');
                     const satBadgeClass = isCancelled ? 'badge-cancelled' : (ord.requires_invoice ? 'badge-stamped' : 'badge-pending');
 
+                    const viewUrl = isSandbox
+                        ? `api/sandbox_billing_api.php?action=download_pdf&order_id=${ord.id}`
+                        : `/api/invoice.php?action=download_pdf&order_id=${ord.id}&folio=${encodeURIComponent(ord.order_number)}`;
+
+                    let actionsHtml = `<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">`;
+                    actionsHtml += `<a href="${viewUrl}" target="_blank" class="btn-view-invoice" title="Visualizar Factura / Comprobante">Visualizar</a>`;
+
+                    if (isSandbox) {
+                        if (!isCancelled) {
+                            actionsHtml += `<button class="sandbox-cancel-btn" onclick="sbxCancelFromMonitor(${ord.id}, '${escapeHtml(ord.order_number)}')">Cancelar</button>`;
+                        } else {
+                            actionsHtml += `<span style="font-size:0.75rem;color:#eab308;font-weight:700;">Cancelada (Test)</span>`;
+                        }
+                    } else {
+                        if (!isCancelled) {
+                            actionsHtml += `<button class="btn-cancel-sat" onclick="openSatCancelModal(${ord.id}, '${escapeHtml(ord.order_number)}')">Cancelar SAT</button>`;
+                        } else {
+                            actionsHtml += `<span style="font-size:0.75rem;color:#ef4444;font-weight:700;">Motivo ${escapeHtml(ord.sat_cancellation_reason || '03')}</span>`;
+                        }
+                    }
+
+                    actionsHtml += `<button class="btn-delete-invoice" onclick="deleteInvoiceFromMonitor(${ord.id}, '${escapeHtml(ord.order_number)}')" title="Borrar registro permanentemente">Borrar</button>`;
+                    actionsHtml += `</div>`;
+
                     return `
-                        <tr>
-                            <td style="font-family: monospace; font-weight: 700; color: #ff7f00;">${ord.order_number}</td>
-                            <td>${ord.client_name}</td>
+                        <tr style="${isSandbox ? 'background:rgba(234,179,8,0.03);' : ''}">
+                            <td style="font-family: monospace; font-weight: 700; color: ${isSandbox ? '#eab308' : '#ff7f00'};">
+                                ${escapeHtml(ord.order_number)}
+                                ${isSandbox ? '<span class="badge-sandbox">SANDBOX</span>' : ''}
+                            </td>
+                            <td>${escapeHtml(ord.client_name)}</td>
                             <td style="font-weight: 700; color: #fff;">$${Number(ord.total_amount || 0).toFixed(2)}</td>
-                            <td><span class="badge-status ${payBadgeClass}">${ord.payment_status || 'Pendiente'}</span></td>
+                            <td><span class="badge-status ${payBadgeClass}">${escapeHtml(ord.payment_status || 'Pendiente')}</span></td>
                             <td>
-                                <strong>${ord.tax_rfc || 'Público General'}</strong><br>
-                                <span style="font-size: 0.78rem; color: #888899;">${ord.tax_name || 'Venta de Mostrador'}</span>
+                                <strong>${escapeHtml(ord.tax_rfc || 'Público General')}</strong><br>
+                                <span style="font-size: 0.78rem; color: #888899;">${escapeHtml(ord.tax_name || 'Venta de Mostrador')}</span>
                             </td>
-                            <td style="font-family: monospace; font-size: 0.78rem; color: #cbd5e1;">${ord.sat_uuid || 'Sin Timbrar (Público General)'}</td>
+                            <td style="font-family: monospace; font-size: 0.78rem; color: #cbd5e1;">${escapeHtml(ord.sat_uuid || 'Sin Timbrar (Público General)')}</td>
                             <td><span class="badge-status ${satBadgeClass}">${isCancelled ? 'Cancelada SAT' : (ord.requires_invoice ? 'CFDI 4.0 Activo' : 'Factura Global')}</span></td>
-                            <td>
-                                ${!isCancelled ? `
-                                    <button class="btn-cancel-sat" onclick="openSatCancelModal(${ord.id}, '${ord.order_number}')">Cancelar SAT</button>
-                                ` : `
-                                    <span style="font-size: 0.78rem; color: #ef4444; font-weight: 700;">Motivo ${ord.sat_cancellation_reason || '03'}</span>
-                                `}
-                            </td>
+                            <td>${actionsHtml}</td>
                         </tr>
                     `;
                 }).join('');
@@ -1013,6 +1653,42 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
                 console.error(e);
                 tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #ef4444;">Error de conexión con el servidor.</td></tr>`;
             }
+        }
+
+        function deleteInvoiceFromMonitor(orderId, orderNumber) {
+            confirmAction(
+                'Eliminar Registro de Facturación',
+                `<p>¿Deseas eliminar permanentemente el registro <strong>${escapeHtml(orderNumber)}</strong>?</p>
+                 <p style="color:#ef4444;font-size:0.85rem;">Esta acción eliminará la orden del monitor y de la base de datos.</p>`,
+                '',
+                async function() {
+                    try {
+                        const res = await fetch('api/admin_online_billing_api.php?action=delete_invoice', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': window.csrfToken
+                            },
+                            body: JSON.stringify({
+                                order_id: orderId,
+                                csrf_token: window.csrfToken
+                            })
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            showAlert(data.message || 'Registro eliminado correctamente.', 'success');
+                            loadInvoices();
+                            if (typeof sbxLoadInvoices === 'function') {
+                                sbxLoadInvoices();
+                            }
+                        } else {
+                            showAlert('Error: ' + (data.message || 'No se pudo eliminar'), 'error');
+                        }
+                    } catch(e) {
+                        showAlert('Error de conexión al eliminar el registro.', 'error');
+                    }
+                }
+            );
         }
 
         function openSatCancelModal(orderId, orderNumber) {
@@ -1062,6 +1738,414 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
         document.addEventListener('DOMContentLoaded', () => {
             loadConfig();
             loadPaymentAccounts();
+        });
+
+        // ═══════════════════════════════════════════════════════════════════
+        // SANDBOX DE PRUEBAS — JavaScript completo
+        // ═══════════════════════════════════════════════════════════════════
+
+        let sbxSaleType = 'online';
+        let sbxUsers    = [];  // cache de usuarios sandbox
+
+        /** Carga los usuarios sandbox desde la BD y popula el selector */
+        async function sbxLoadSandboxUsers() {
+            try {
+                const res  = await fetch('api/sandbox_billing_api.php?action=get_sandbox_users');
+                const data = await res.json();
+                if (!data.success) return;
+
+                sbxUsers = data.users || [];
+
+                // Poblar el <select> del formulario
+                const sel = document.getElementById('sbxClientSelect');
+                if (sel) {
+                    sel.innerHTML = '<option value="">-- Selecciona un cliente sandbox --</option>';
+                    sbxUsers.forEach(u => {
+                        const opt = document.createElement('option');
+                        opt.value = u.client_id;
+                        opt.dataset.rfc    = u.rfc   || '';
+                        opt.dataset.name   = (u.first_name + ' ' + u.last_name).trim();
+                        opt.dataset.email  = u.email  || '';
+                        opt.dataset.regime = u.tax_regime || '616';
+                        opt.dataset.zip    = u.zip_code_fiscal || '';
+                        opt.dataset.code   = u.user_code || '';
+                        opt.textContent = `${u.user_code} — ${u.first_name} ${u.last_name} (${u.rfc || 'Sin RFC'})`;
+                        sel.appendChild(opt);
+                    });
+                }
+
+                // Renderizar tarjetas de clientes sandbox
+                const regLabels = { '616':'Sin Obligaciones (PF)', '601':'Ley Personas Morales', '612':'Act.Empresariales', '626':'RESICO', '621':'Incorp.Fiscal' };
+                const container = document.getElementById('sbxUserCards');
+                if (container && sbxUsers.length > 0) {
+                    container.innerHTML = sbxUsers.map(u => `
+                        <div style="background:#0e0e14;border:1px solid rgba(234,179,8,0.18);border-radius:10px;padding:1rem;
+                                    cursor:pointer;transition:all .2s;" 
+                             onclick="sbxSelectUserFromCard(${u.client_id})"
+                             onmouseover="this.style.borderColor='rgba(234,179,8,0.6)';this.style.background='rgba(234,179,8,0.06)'"
+                             onmouseout="this.style.borderColor='rgba(234,179,8,0.18)';this.style.background='#0e0e14'">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                                <span style="font-size:0.72rem;font-weight:700;color:#666677;text-transform:uppercase;letter-spacing:.05em;">${escapeHtml(u.user_code)}</span>
+                                <span class="badge-sandbox">${u.tax_regime || '616'}</span>
+                            </div>
+                            <div style="font-weight:700;color:#fff;margin-bottom:0.25rem;">${escapeHtml(u.first_name + ' ' + u.last_name)}</div>
+                            <div style="font-family:monospace;font-size:0.82rem;color:#eab308;margin-bottom:0.25rem;">${escapeHtml(u.rfc || 'XAXX010101000')}</div>
+                            <div style="font-size:0.75rem;color:#666677;">${regLabels[u.tax_regime] || u.tax_regime} &mdash; CP ${u.zip_code_fiscal || '00000'}</div>
+                            <div style="margin-top:0.6rem;">
+                                <span style="font-size:0.72rem;background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.25);padding:2px 8px;border-radius:20px;">Usar este cliente &rsaquo;</span>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch(e) {
+                console.error('Error cargando usuarios sandbox:', e);
+            }
+        }
+
+        /** Selecciona un cliente desde la tarjeta (click) */
+        function sbxSelectUserFromCard(clientId) {
+            const sel = document.getElementById('sbxClientSelect');
+            if (sel) {
+                sel.value = clientId;
+                sbxOnClientChange();
+                // Scroll al formulario
+                const form = document.getElementById('sandboxForm');
+                if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        /** Se dispara al cambiar el selector de cliente: auto-llena los datos fiscales */
+        function sbxOnClientChange() {
+            const sel = document.getElementById('sbxClientSelect');
+            const opt = sel ? sel.options[sel.selectedIndex] : null;
+            const infoBox = document.getElementById('sbxClientInfo');
+
+            if (!opt || !opt.value) {
+                document.getElementById('sbxClientId').value = '';
+                if (infoBox) infoBox.style.display = 'none';
+                return;
+            }
+
+            document.getElementById('sbxClientId').value = opt.value;
+
+            // Mostrar datos fiscales del cliente seleccionado
+            if (infoBox) {
+                document.getElementById('sbxInfoRfc').textContent    = opt.dataset.rfc    || 'N/A';
+                document.getElementById('sbxInfoRegimen').textContent = opt.dataset.regime || 'N/A';
+                document.getElementById('sbxInfoCp').textContent     = opt.dataset.zip    || 'N/A';
+                document.getElementById('sbxInfoEmail').textContent  = opt.dataset.email  || 'N/A';
+                infoBox.style.display = 'block';
+            }
+
+            // Sincronizar con la vista previa del checkout
+            const rfcEl = document.getElementById('sbxPreviewRfcDisplay');
+            if (rfcEl) rfcEl.textContent  = opt.dataset.rfc  || 'RFC';
+            const nmEl = document.getElementById('sbxPreviewNameDisplay');
+            if (nmEl) nmEl.textContent   = opt.dataset.name || 'Nombre';
+            const zpEl = document.getElementById('sbxPreviewZipDisplay');
+            if (zpEl) zpEl.textContent   = opt.dataset.zip  || 'CP';
+            const emEl = document.getElementById('sbxPreviewEmailDisplay');
+            if (emEl) emEl.textContent   = opt.dataset.email || 'Email';
+        }
+
+        /** Cambia el tipo de venta en el formulario sandbox */
+        function sbxSetSaleType(type) {
+            sbxSaleType = type;
+            document.getElementById('sbxTypeBtnOnline').classList.toggle('active', type === 'online');
+            document.getElementById('sbxTypeBtnLocal').classList.toggle('active', type === 'local');
+            // Ajustar metodo de pago por defecto
+            const pm = document.getElementById('sbxPaymentMethod');
+            if (type === 'local') {
+                pm.value = 'sandbox_cash';
+            } else {
+                pm.value = pm.value === 'sandbox_cash' ? 'sandbox_card' : pm.value;
+            }
+        }
+
+        /** Muestra / oculta campos de RFC según checkbox */
+        function sbxToggleInvoiceFields() {
+            const checked = document.getElementById('sbxRequiresInvoice').checked;
+            document.getElementById('sbxFiscalFields').style.display = checked ? 'block' : 'none';
+            sbxUpdateTotals();
+        }
+
+        /** Actualiza preview de totales en tiempo real */
+        function sbxUpdateTotals() {
+            const qty   = parseFloat(document.getElementById('sbxProductQty').value)  || 1;
+            const price = parseFloat(document.getElementById('sbxProductPrice').value) || 0;
+            const sub   = qty * price;
+            const iva   = sub * 0.16;
+            const total = sub + iva;
+            document.getElementById('sbxPreviewSubtotal').textContent = '$' + sub.toFixed(2);
+            document.getElementById('sbxPreviewIva').textContent      = '$' + iva.toFixed(2);
+            document.getElementById('sbxPreviewTotal').textContent     = '$' + total.toFixed(2);
+            // Actualizar resumen de orden
+            const pname = document.getElementById('sbxProductName').value || 'Producto';
+            document.getElementById('sbxOrderPreviewRow').innerHTML =
+                `<span style="font-size:0.88rem;color:#e2e8f0;">${escapeHtml(pname)} × ${qty}</span>
+                 <span style="font-size:0.88rem;font-weight:700;color:#fff;">$${sub.toFixed(2)}</span>`;
+            document.getElementById('sbxOrderPreviewTotal').textContent = '$' + total.toFixed(2);
+        }
+
+        /** Controla la vista previa del checkout del cliente */
+        function sbxTogglePreviewFields() {
+            const chk = document.getElementById('sbxPreviewCheckbox').checked;
+            document.getElementById('sbxPreviewInvoiceForm').style.display = chk ? 'block' : 'none';
+            document.getElementById('sbxPreviewPublicMsg').style.display   = chk ? 'none'  : 'block';
+            if (chk) {
+                // Sincronizar datos del formulario
+                document.getElementById('sbxPreviewRfcDisplay').textContent  =
+                    document.getElementById('sbxTaxRfc').value  || 'GAPE800101HXX';
+                document.getElementById('sbxPreviewNameDisplay').textContent =
+                    document.getElementById('sbxTaxName').value || 'JUAN GARCIA PEREZ';
+                document.getElementById('sbxPreviewZipDisplay').textContent  =
+                    document.getElementById('sbxTaxZip').value  || '44100';
+                document.getElementById('sbxPreviewEmailDisplay').textContent =
+                    document.getElementById('sbxClientEmail').value || 'sandbox@test.com';
+            }
+        }
+
+        /** Genera una factura / venta de prueba */
+        async function sbxGenerateInvoice(event) {
+            event.preventDefault();
+            const requiresInv = document.getElementById('sbxRequiresInvoice').checked;
+            const clientId    = parseInt(document.getElementById('sbxClientId').value);
+
+            if (!clientId) {
+                showAlert('Selecciona un cliente de prueba antes de generar la factura.', 'error');
+                return;
+            }
+
+            const payload = {
+                client_id:        clientId,
+                product_name:     document.getElementById('sbxProductName').value,
+                product_qty:      parseInt(document.getElementById('sbxProductQty').value) || 1,
+                product_price:    parseFloat(document.getElementById('sbxProductPrice').value) || 0,
+                payment_gateway:  document.getElementById('sbxPaymentMethod').value,
+                sale_type:        sbxSaleType,
+                requires_invoice: requiresInv,
+            };
+
+            const btn = event.target.querySelector('button[type="submit"]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Generando...'; }
+
+            try {
+                const res  = await fetch('api/sandbox_billing_api.php?action=generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                let data;
+                try { data = await res.json(); } catch(parseErr) {
+                    showAlert('El servidor devolvio una respuesta invalida. Revisa los logs.', 'error');
+                    return;
+                }
+
+                if (data.success) {
+                    const folio  = data.order_number || '';
+                    const client = data.client_name  || '';
+                    const uuid   = data.sat_uuid     || '';
+
+                    if (data.order_id) {
+                        // En el entorno real y en el sandbox, se descarga/abre automaticamente la factura
+                        window.open('api/sandbox_billing_api.php?action=download_pdf&order_id=' + encodeURIComponent(data.order_id), '_blank');
+                    }
+
+                    const msg = data.requires_invoice
+                        ? 'Factura CFDI simulada ' + folio + ' generada y descargada. Cliente: ' + client + ' | UUID: ' + uuid
+                        : 'Venta Publico General simulada ' + folio + ' generada. Cliente: ' + client;
+                    showAlert(msg, 'success');
+                    sbxLoadInvoices();
+                } else {
+                    showAlert('Error: ' + (data.message || 'No se pudo generar'), 'error');
+                }
+            } catch (e) {
+                console.error('Sandbox generate error:', e);
+                showAlert('Error al conectar con la API del sandbox.', 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = 'Generar Factura de Prueba'; }
+            }
+        }
+
+        /** Carga y renderiza la tabla de facturas sandbox */
+        async function sbxLoadInvoices() {
+            var tbody = document.getElementById('sbxTableBody');
+            if (!tbody) { console.warn('sbxTableBody not found'); return; }
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:#888899;">Cargando...</td></tr>';
+
+            var res, data;
+            try {
+                res  = await fetch('api/sandbox_billing_api.php?action=list');
+                data = await res.json();
+            } catch(err) {
+                console.error('sbxLoadInvoices fetch error:', err);
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#ef4444;padding:2rem;">Error de red: ' + escapeHtml(String(err.message || err)) + '</td></tr>';
+                return;
+            }
+
+            if (!data.success) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#ef4444;padding:2rem;">' + escapeHtml(data.message || 'Error desconocido') + '</td></tr>';
+                return;
+            }
+
+            // KPIs
+            var k = data.kpis || {};
+            var el;
+            el = document.getElementById('sbxKpiTotal');     if (el) el.textContent = k.total      || 0;
+            el = document.getElementById('sbxKpiStamped');   if (el) el.textContent = k.stamped    || 0;
+            el = document.getElementById('sbxKpiCancelled'); if (el) el.textContent = k.cancelled  || 0;
+            el = document.getElementById('sbxKpiPublic');    if (el) el.textContent = k.public_gen || 0;
+            el = document.getElementById('sbxKpiMonto');     if (el) el.textContent = '$' + (parseFloat(k.total_mxn) || 0).toFixed(2);
+
+            var orders = Array.isArray(data.orders) ? data.orders : [];
+            if (orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:#888899;">No hay facturas de prueba. Usa el formulario para comenzar.</td></tr>';
+                return;
+            }
+
+            var payMap = { 'sandbox_card':'Tarjeta','sandbox_spei':'SPEI','sandbox_cash':'Efectivo','sandbox_mercadopago':'Mercado Pago' };
+            var html = '';
+            for (var i = 0; i < orders.length; i++) {
+                var o = orders[i];
+                var cancelled = (o.status === 'cancelled');
+                var hasUuid   = (o.sat_uuid && !cancelled);
+                var sale      = (o.sale_type === 'local') ? 'Mostrador' : 'Online';
+                var pay       = payMap[o.payment_gateway] || (o.payment_gateway || '-');
+                var uuid      = o.sat_uuid ? '<span style="color:#3b82f6;font-family:monospace;">' + escapeHtml(o.sat_uuid) + '</span>' : '<span style="color:#666677;">Pub. General</span>';
+                var st        = cancelled ? '<span class="badge-status badge-cancelled">Cancelada</span>' : hasUuid ? '<span class="badge-status badge-stamped">CFDI Simulado</span>' : '<span class="badge-status badge-pending">Fac. Global</span>';
+
+                var act = '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">';
+                if (cancelled) {
+                    act += '<a href="api/sandbox_billing_api.php?action=download_pdf&order_id=' + o.id + '" target="_blank" class="sandbox-download-btn" style="background:#475569;" title="Ver Comprobante Cancelado">PDF</a>';
+                    act += '<span style="color:#ef4444;font-size:0.75rem;font-weight:700;">Cancelada</span>';
+                } else if (hasUuid) {
+                    act += '<a href="api/sandbox_billing_api.php?action=download_pdf&order_id=' + o.id + '" target="_blank" class="sandbox-download-btn" title="Descargar Factura PDF (CFDI 4.0)">Descargar PDF</a>';
+                    act += '<a href="api/sandbox_billing_api.php?action=download_xml&order_id=' + o.id + '" target="_blank" class="sandbox-xml-btn" title="Descargar Factura XML SAT (CFDI 4.0)">XML</a>';
+                    act += '<button class="sandbox-cancel-btn" onclick="sbxCancelInvoice(' + o.id + ',\'' + escapeHtml(o.order_number || '') + '\')">Cancelar</button>';
+                } else {
+                    act += '<a href="api/sandbox_billing_api.php?action=download_pdf&order_id=' + o.id + '" target="_blank" class="sandbox-download-btn" style="background:#3b82f6;" title="Descargar Ticket/Nota de Venta">Descargar PDF</a>';
+                    act += '<button class="sandbox-cancel-btn" onclick="sbxCancelInvoice(' + o.id + ',\'' + escapeHtml(o.order_number || '') + '\')">Cancelar</button>';
+                }
+                act += '<button class="btn-delete-invoice" onclick="deleteInvoiceFromMonitor(' + o.id + ',\'' + escapeHtml(o.order_number || '') + '\')" title="Borrar registro de prueba">Borrar</button>';
+                act += '</div>';
+
+                html += '<tr style="' + (cancelled ? 'opacity:0.55;' : '') + '">' +
+                    '<td style="font-family:monospace;font-weight:700;color:#eab308;">' + escapeHtml(o.order_number || '') + ' <span class="badge-sandbox">TEST</span></td>' +
+                    '<td>' + sale + '</td>' +
+                    '<td><strong>' + escapeHtml(o.client_name || '') + '</strong><br><span style="font-size:0.75rem;color:#666677;">' + escapeHtml(o.client_email || '') + '</span></td>' +
+                    '<td>' + escapeHtml(o.product_name || '-') + '<br><span style="font-size:0.75rem;color:#666677;">x' + (o.product_qty||1) + ' &mdash; ' + escapeHtml(pay) + '</span></td>' +
+                    '<td style="font-weight:700;color:#eab308;">$' + Number(o.total_amount||0).toFixed(2) + '</td>' +
+                    '<td style="font-size:0.72rem;">' + uuid + '</td>' +
+                    '<td>' + st + '</td>' +
+                    '<td>' + act + '</td>' +
+                    '</tr>';
+            }
+            tbody.innerHTML = html;
+        }
+
+
+        /** Cancela una factura sandbox desde la tabla del sandbox */
+        async function sbxCancelInvoice(orderId, orderNumber) {
+            confirmAction(
+                'Cancelar Factura Sandbox',
+                `<p>¿Cancelar la factura de prueba <strong>${orderNumber}</strong>?</p>
+                 <p style="color:#888899;font-size:0.85rem;">Esta acción no tiene efecto fiscal real. Solo marca el registro como cancelado en la BD sandbox.</p>`,
+                '',
+                async function() {
+                    try {
+                        const res = await fetch('api/sandbox_billing_api.php?action=cancel', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ order_id: orderId, sat_reason: '03' }),
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            showAlert(data.message, 'success');
+                            sbxLoadInvoices();
+                        } else {
+                            showAlert('Error: ' + (data.message || 'No se pudo cancelar'), 'error');
+                        }
+                    } catch (e) {
+                        showAlert('Error de conexión.', 'error');
+                    }
+                }
+            );
+        }
+
+        /** Cancela una factura sandbox desde el Monitor de Facturas */
+        async function sbxCancelFromMonitor(orderId, orderNumber) {
+            try {
+                const res = await fetch('api/sandbox_billing_api.php?action=cancel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order_id: orderId, sat_reason: '03' }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showAlert('Factura sandbox cancelada (sin efecto SAT real).', 'success');
+                    loadInvoices();
+                } else {
+                    showAlert('Error: ' + (data.message || ''), 'error');
+                }
+            } catch (e) {
+                showAlert('Error de conexión.', 'error');
+            }
+        }
+
+        /** Limpia todas las facturas sandbox */
+        async function sbxClearSandbox() {
+            confirmAction(
+                '🗑️ Limpiar Sandbox',
+                `<p>¿Eliminar <strong>todas</strong> las facturas de prueba (SBX-*)?</p>
+                 <p style="color:#888899;font-size:0.85rem;">Solo se borran registros sandbox. Los datos reales no se afectan.</p>`,
+                '',
+                async function() {
+                    try {
+                        const res  = await fetch('api/sandbox_billing_api.php?action=clear', { method: 'POST' });
+                        const data = await res.json();
+                        if (data.success) {
+                            showAlert(data.message, 'success');
+                            sbxLoadInvoices();
+                        } else {
+                            showAlert('Error: ' + (data.message || ''), 'error');
+                        }
+                    } catch (e) {
+                        showAlert('Error de conexión.', 'error');
+                    }
+                }
+            );
+        }
+
+        /** Genera una factura global sandbox para el día actual */
+        async function sbxGenerateGlobal() {
+            showAlert('Generando Factura Global de prueba para hoy...', 'info');
+            try {
+                const res  = await fetch('api/sandbox_billing_api.php?action=generate_global', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    if (data.invoice) {
+                        showAlert(
+                            `✅ Factura Global Sandbox generada — UUID: <strong>${data.invoice.uuid}</strong> · ${data.invoice.sales_count} ventas · $${data.invoice.total.toFixed(2)}`,
+                            'success'
+                        );
+                    } else {
+                        showAlert(data.message || 'No hay ventas sandbox de Público General hoy.', 'info');
+                    }
+                } else {
+                    showAlert('Error: ' + (data.message || ''), 'error');
+                }
+            } catch (e) {
+                showAlert('Error de conexión.', 'error');
+            }
+        }
+
+        // Actualizar totales en tiempo real al cambiar cantidad/precio
+        document.addEventListener('DOMContentLoaded', () => {
+            const qtyInput   = document.getElementById('sbxProductQty');
+            const priceInput = document.getElementById('sbxProductPrice');
+            if (qtyInput)   qtyInput.addEventListener('input',   sbxUpdateTotals);
+            if (priceInput) priceInput.addEventListener('input', sbxUpdateTotals);
+            sbxUpdateTotals();
         });
 
         // ===== GESTIÓN DE CUENTAS DE PAGO DEL ADMINISTRADOR =====

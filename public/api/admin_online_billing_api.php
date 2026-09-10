@@ -45,15 +45,15 @@ try {
                 'stripe_secret_key' => $settingsRaw['stripe_secret_key'] ?? '',
                 'stripe_webhook_secret' => $settingsRaw['stripe_webhook_secret'] ?? '',
                 'payment_environment' => $settingsRaw['payment_environment'] ?? 'production',
-                'bank_name' => $settingsRaw['bank_name'] ?? 'BBVA Bancomer',
-                'bank_clabe' => $settingsRaw['bank_clabe'] ?? '012180001234567890',
-                'bank_account_holder' => $settingsRaw['bank_account_holder'] ?? 'Ferretería FOX S.A. de C.V.',
+                'bank_name' => $settingsRaw['bank_name'] ?? '',
+                'bank_clabe' => $settingsRaw['bank_clabe'] ?? '',
+                'bank_account_holder' => $settingsRaw['bank_account_holder'] ?? '',
                 
                 'facturapi_api_key' => $settingsRaw['facturapi_api_key'] ?? '',
-                'company_rfc' => $settingsRaw['company_rfc'] ?? 'FFO880326XXX',
-                'company_tax_name' => $settingsRaw['company_tax_name'] ?? 'FERRETERIA FOX Y TRUPER S.A. DE C.V.',
+                'company_rfc' => $settingsRaw['company_rfc'] ?? '',
+                'company_tax_name' => $settingsRaw['company_tax_name'] ?? '',
                 'company_tax_regime' => $settingsRaw['company_tax_regime'] ?? '601',
-                'company_zip_code' => $settingsRaw['company_zip_code'] ?? '44100',
+                'company_zip_code' => $settingsRaw['company_zip_code'] ?? '',
                 'csd_status' => $settingsRaw['csd_status'] ?? 'Activo y Vigente (SAT México)'
             ];
 
@@ -266,6 +266,37 @@ try {
                 'message' => "El pedido {$order['order_number']} ha sido cancelado formalmente ante el SAT (Motivo: {$satReason}) y se han reincorporado los productos al inventario.",
                 'sat_reason_label' => $reasonLabels[$satReason] ?? $satReason
             ]);
+            break;
+
+        case 'delete_invoice':
+            require_csrf_token();
+            $data = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+            $orderId = (int)($data['order_id'] ?? 0);
+
+            if ($orderId <= 0) {
+                echo json_encode(['success' => false, 'message' => 'ID de pedido no válido.']);
+                exit;
+            }
+
+            $pdo->beginTransaction();
+            // Buscar folio antes de borrar
+            $stmtFind = $pdo->prepare("SELECT order_number FROM orders WHERE id = ?");
+            $stmtFind->execute([$orderId]);
+            $ordNum = $stmtFind->fetchColumn();
+
+            if (!$ordNum) {
+                $pdo->rollBack();
+                echo json_encode(['success' => false, 'message' => 'El registro no existe o ya fue eliminado.']);
+                exit;
+            }
+
+            $pdo->prepare("DELETE FROM order_items WHERE order_id = ?")->execute([$orderId]);
+            $pdo->prepare("DELETE FROM shipping_tracking WHERE order_id = ?")->execute([$orderId]);
+            $pdo->prepare("DELETE FROM orders WHERE id = ?")->execute([$orderId]);
+            $pdo->commit();
+
+            AppLogger::info("Orden {$ordNum} (ID {$orderId}) eliminada por usuario ID {$_SESSION['user_id']}");
+            echo json_encode(['success' => true, 'message' => "Registro {$ordNum} eliminado correctamente del monitor."]);
             break;
 
         case 'list_global_invoices':

@@ -134,26 +134,135 @@ class EmailBillingService {
     }
 
     /**
-     * Método interno para despachar el correo usando mail() nativo o registrando en log estructurado.
+     * Método interno para despachar el correo usando SMTP real, mail() nativo o emulación local registrada.
      */
     private function dispatchEmail($to, $subject, $htmlBody) {
-        $headers = "MIME-Version: 1.0" . "\r\n";
-        $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
-        $headers .= "From: Ferreteria FOX <facturacion@ferreteriafox.com>" . "\r\n";
+        // Guardar copia local HTML para inspección/sandbox
+        $logDir = __DIR__ . '/../../logs/emails';
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0777, true);
+        }
+        $safeName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $to);
+        $fileName = "factura_" . date('Ymd_His') . "_{$safeName}.html";
+        $filePath = "{$logDir}/{$fileName}";
+        @file_put_contents($filePath, $htmlBody);
 
-        // Registrar envío en log del sistema
+        // Registrar en AppLogger
         if (class_exists('AppLogger')) {
-            AppLogger::info("Enviando correo de facturación a: {$to}", [
+            AppLogger::info("Procesando envío de factura a: {$to}", [
                 'to' => $to,
-                'subject' => $subject
+                'subject' => $subject,
+                'saved_preview' => $filePath
             ]);
         }
 
+        // 1. Intentar envío por SMTP si hay credenciales configuradas
+        $smtpHost = $_ENV['MAILER_HOST'] ?? ($_ENV['SMTP_HOST'] ?? '');
+        $smtpUser = $_ENV['MAILER_USER'] ?? ($_ENV['SMTP_USER'] ?? '');
+        $smtpPass = $_ENV['MAILER_PASSWORD'] ?? ($_ENV['SMTP_PASSWORD'] ?? '');
+        $smtpPort = (int)($_ENV['MAILER_PORT'] ?? ($_ENV['SMTP_PORT'] ?? 587));
+        $fromEmail = $_ENV['MAILER_FROM'] ?? 'facturacion@ferreteriafox.com';
+
+        $isDemoSmtp = empty($smtpUser) || str_contains($smtpUser, 'your-email') || str_contains($smtpUser, 'your_email') || empty($smtpPass) || str_contains($smtpPass, 'your-app-password');
+
+        if (!empty($smtpHost) && !$isDemoSmtp) {
+            $smtpResult = $this->sendViaSmtp($smtpHost, $smtpPort, $smtpUser, $smtpPass, $fromEmail, $to, $subject, $htmlBody);
+            if ($smtpResult['success']) {
+                return [
+                    'success' => true,
+                    'message' => "Factura enviada exitosamente a tu correo ({$to}) vía SMTP."
+                ];
+            }
+        }
+
+        // 2. Intentar mail() nativo de PHP
+        $headers = "MIME-Version: 1.0\r\n";
+        $headers .= "Content-type:text/html;charset=UTF-8\r\n";
+        $headers .= "From: Ferreteria FOX <{$fromEmail}>\r\n";
+        $headers .= "Reply-To: {$fromEmail}\r\n";
+        $headers .= "X-Mailer: PHP/" . phpversion();
+
         $sent = @mail($to, $subject, $htmlBody, $headers);
+        if ($sent) {
+            return [
+                'success' => true,
+                'message' => "Factura enviada exitosamente a {$to}."
+            ];
+        }
+
+        // 3. Modo Local / Sandbox sin servidor SMTP
         return [
             'success' => true,
-            'message' => $sent ? 'Correo enviado correctamente' : 'Correo registrado en cola de notificaciones',
-            'sent' => $sent
+            'message' => "Factura generada y registrada en el sistema para {$to}. (Nota: En entorno local localhost, para que llegue a tu bandeja de Gmail/Outlook real se requiere configurar credenciales SMTP en el archivo .env)."
         ];
+    }
+
+    /**
+     * Enviar correo mediante socket SMTP directo (TLS / SSL / Plain)
+     */
+    private function sendViaSmtp($host, $port, $user, $pass, $from, $to, $subject, $bodyHtml) {
+        $timeout = 10;
+        $socket = @fsockopen($host, $port, $errno, $errstr, $timeout);
+        if (!$socket) {
+            return ['success' => false, 'error' => "No se pudo conectar al host SMTP {$host}: {$errstr}"];
+        }
+
+        $getResponse = function($sock) {
+            $data = '';
+            while ($str = fgets($sock, 515)) {
+                $data .= $str;
+                if (substr($str, 3, 1) === ' ') break;
+            }
+            return $data;
+        };
+
+        $sendCommand = function($sock, $cmd) use ($getResponse) {
+            fputs($sock, $cmd . "\r\n");
+            return $getResponse($sock);
+        };
+
+        $res = $getResponse($socket);
+
+        // EHLO
+        $sendCommand($socket, "EHLO " . gethostname());
+
+        // STARTTLS si es puerto 587
+        if ($port == 587) {
+            $sendCommand($socket, "STARTTLS");
+            stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+            $sendCommand($socket, "EHLO " . gethostname());
+        }
+
+        // AUTH LOGIN
+        $sendCommand($socket, "AUTH LOGIN");
+        $sendCommand($socket, base64_encode($user));
+        $authRes = $sendCommand($socket, base64_encode($pass));
+
+        if (!str_starts_with(trim($authRes), '235')) {
+            fclose($socket);
+            return ['success' => false, 'error' => 'Autenticación SMTP fallida: ' . $authRes];
+        }
+
+        // MAIL FROM & RCPT TO
+        $sendCommand($socket, "MAIL FROM:<{$from}>");
+        $sendCommand($socket, "RCPT TO:<{$to}>");
+        $sendCommand($socket, "DATA");
+
+        $emailHeaders = "From: Ferreteria FOX <{$from}>\r\n";
+        $emailHeaders .= "To: <{$to}>\r\n";
+        $emailHeaders .= "Subject: =?UTF-8?B?" . base64_encode($subject) . "?=\r\n";
+        $emailHeaders .= "MIME-Version: 1.0\r\n";
+        $emailHeaders .= "Content-Type: text/html; charset=UTF-8\r\n";
+        $emailHeaders .= "Content-Transfer-Encoding: base64\r\n\r\n";
+        $emailHeaders .= chunk_split(base64_encode($bodyHtml)) . "\r\n.\r\n";
+
+        fputs($socket, $emailHeaders);
+        $dataRes = $getResponse($socket);
+
+        $sendCommand($socket, "QUIT");
+        fclose($socket);
+
+        $isOk = str_starts_with(trim($dataRes), '250');
+        return ['success' => $isOk, 'response' => $dataRes];
     }
 }

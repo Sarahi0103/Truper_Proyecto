@@ -1,7 +1,7 @@
 <?php
 /**
  * API de Administración de Pedidos en Línea
- * Maneja operaciones CRUD para pedidos online (sales_tickets)
+ * Maneja operaciones CRUD para pedidos online (sales_tickets) con auto-recuperación de esquema
  */
 
 require_once __DIR__ . '/../../config/config.php';
@@ -21,6 +21,66 @@ if (!in_array($userRole, ['admin', 'employee'])) {
 $action = $_GET['action'] ?? '';
 $method = $_SERVER['REQUEST_METHOD'];
 
+// Auto-verificar y auto-crear tablas y columnas necesarias
+try {
+    // 1. Asegurar tabla shipping_tracking
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS shipping_tracking (
+            id SERIAL PRIMARY KEY,
+            order_id INTEGER,
+            carrier VARCHAR(50),
+            tracking_number VARCHAR(100),
+            status VARCHAR(50) DEFAULT 'pending',
+            shipped_date TIMESTAMP,
+            estimated_delivery TIMESTAMP,
+            actual_delivery TIMESTAMP,
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+
+    // 2. Asegurar columnas en sales_tickets si la tabla existe
+    $stExists = (bool) $pdo->query("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'sales_tickets')")->fetchColumn();
+    if ($stExists) {
+        if (!db_column_exists('sales_tickets', 'order_status')) {
+            @$pdo->exec("ALTER TABLE sales_tickets ADD COLUMN IF NOT EXISTS order_status VARCHAR(50) DEFAULT 'pending'");
+        }
+        if (!db_column_exists('sales_tickets', 'payment_status')) {
+            @$pdo->exec("ALTER TABLE sales_tickets ADD COLUMN IF NOT EXISTS payment_status VARCHAR(50) DEFAULT 'pending'");
+        }
+        if (!db_column_exists('sales_tickets', 'shipping_address_json')) {
+            @$pdo->exec("ALTER TABLE sales_tickets ADD COLUMN IF NOT EXISTS shipping_address_json TEXT");
+        }
+        if (!db_column_exists('sales_tickets', 'tracking_folio')) {
+            @$pdo->exec("ALTER TABLE sales_tickets ADD COLUMN IF NOT EXISTS tracking_folio VARCHAR(100)");
+        }
+        if (!db_column_exists('sales_tickets', 'invoice_required')) {
+            @$pdo->exec("ALTER TABLE sales_tickets ADD COLUMN IF NOT EXISTS invoice_required INTEGER DEFAULT 0");
+        }
+        if (!db_column_exists('sales_tickets', 'cfdi_use')) {
+            @$pdo->exec("ALTER TABLE sales_tickets ADD COLUMN IF NOT EXISTS cfdi_use VARCHAR(50)");
+        }
+        if (!db_column_exists('sales_tickets', 'tax_regime_selected')) {
+            @$pdo->exec("ALTER TABLE sales_tickets ADD COLUMN IF NOT EXISTS tax_regime_selected VARCHAR(100)");
+        }
+    }
+
+    // 3. Asegurar tabla order_tracking_history
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS order_tracking_history (
+            id SERIAL PRIMARY KEY,
+            order_folio VARCHAR(100) NOT NULL,
+            status VARCHAR(50) NOT NULL,
+            notes TEXT,
+            changed_by VARCHAR(100),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+} catch (Exception $e) {
+    // Si falla DDL por permisos, continuar defensivamente
+}
+
 try {
     switch ($action) {
         case 'list':
@@ -29,10 +89,6 @@ try {
             $dateFilter = $_GET['date'] ?? '';
             $searchFilter = $_GET['search'] ?? '';
             
-            // Exclusivo de pedidos de Tienda en Línea:
-            // 1. Folios generados por checkout web (TCK- o FOX-)
-            // 2. O pedidos con paquetería externa asignada
-            // 3. O pedidos con dirección de envío a domicilio válida (calle real)
             $where = "WHERE (
                 st.folio LIKE 'TCK-%' 
                 OR st.folio LIKE 'FOX-%' 
@@ -46,29 +102,32 @@ try {
             $params = [];
             
             if ($statusFilter) {
-                $where .= " AND order_status = ?";
+                $where .= " AND COALESCE(st.order_status, st.status, 'pending') = ?";
                 $params[] = $statusFilter;
             }
             
             if ($dateFilter) {
-                $where .= " AND DATE(issued_date) = ?";
+                $where .= " AND DATE(COALESCE(st.issued_date, st.created_at)) = ?";
                 $params[] = $dateFilter;
             }
             
             if ($searchFilter) {
-                $where .= " AND (folio ILIKE ? OR customer_name ILIKE ?)";
+                $where .= " AND (st.folio ILIKE ? OR st.customer_name ILIKE ?)";
                 $params[] = "%{$searchFilter}%";
                 $params[] = "%{$searchFilter}%";
             }
             
             $stmt = $pdo->prepare("
-                SELECT st.id, st.folio, st.customer_name, st.total_amount, st.issued_date, st.order_status, 
-                       st.payment_status, st.shipping_address_json, st.created_at,
+                SELECT st.id, st.folio, st.customer_name, st.total_amount, 
+                       COALESCE(st.issued_date, st.created_at) as issued_date, 
+                       COALESCE(st.order_status, st.status, 'pending') as order_status, 
+                       COALESCE(st.payment_status, 'pending') as payment_status, 
+                       st.shipping_address_json, st.created_at,
                        tr.carrier, tr.tracking_number, tr.estimated_delivery
                 FROM sales_tickets st
-                LEFT JOIN shipping_tracking tr ON tr.order_id = st.id
+                LEFT JOIN shipping_tracking tr ON (tr.order_id = st.id OR (st.order_id IS NOT NULL AND tr.order_id = st.order_id))
                 {$where}
-                ORDER BY st.issued_date DESC
+                ORDER BY COALESCE(st.issued_date, st.created_at) DESC
                 LIMIT 100
             ");
             $stmt->execute($params);
@@ -83,22 +142,24 @@ try {
             ];
             
             foreach ($orders as $order) {
-                $orderDate = new DateTime($order['issued_date']);
+                $rawDate = $order['issued_date'] ?? $order['created_at'] ?? 'now';
+                $orderDate = new DateTime($rawDate);
                 $today = new DateTime();
                 
                 if ($orderDate->format('Y-m-d') === $today->format('Y-m-d')) {
                     $stats['today_count']++;
                 }
                 
-                if ($order['order_status'] === 'pending') {
+                $ordStatus = $order['order_status'] ?? 'pending';
+                if ($ordStatus === 'pending') {
                     $stats['pending_count']++;
                 }
                 
                 if ($orderDate->format('Y-m') === $today->format('Y-m')) {
-                    $stats['month_sales'] += (float)$order['total_amount'];
+                    $stats['month_sales'] += (float)($order['total_amount'] ?? 0);
                 }
                 
-                if (in_array($order['order_status'], ['confirmed', 'processing', 'shipped'])) {
+                if (in_array($ordStatus, ['confirmed', 'in_preparation', 'processing', 'packed', 'shipped', 'in_transit'])) {
                     $stats['to_deliver']++;
                 }
             }
@@ -122,11 +183,12 @@ try {
             
             $stmt = $pdo->prepare("
                 SELECT st.*, 
-                       tr.carrier, tr.tracking_number, tr.estimated_delivery, tr.shipping_date,
+                       tr.carrier, tr.tracking_number, tr.estimated_delivery, 
+                       COALESCE(tr.shipped_date, tr.created_at) as shipping_date,
                        COALESCE(u.email, '') as user_email,
                        COALESCE(u.phone, '') as user_phone
                 FROM sales_tickets st
-                LEFT JOIN shipping_tracking tr ON tr.order_id = st.id
+                LEFT JOIN shipping_tracking tr ON (tr.order_id = st.id OR (st.order_id IS NOT NULL AND tr.order_id = st.order_id))
                 LEFT JOIN users u ON st.user_id = u.id
                 WHERE (:id > 0 AND st.id = :id) OR (:folio <> '' AND st.folio = :folio)
                 LIMIT 1
@@ -140,26 +202,31 @@ try {
             }
             
             // Cargar items de ticket_items
-            $stmtItems = $pdo->prepare("
-                SELECT ti.quantity, ti.unit_price, COALESCE(ti.total, ti.quantity * ti.unit_price) as line_total,
-                       ti.product_name, COALESCE(p.sku, 'PROD-' || ti.product_id) as sku, p.image_url
-                FROM ticket_items ti
-                LEFT JOIN products p ON ti.product_id = p.id
-                WHERE ti.ticket_id = ?
-                ORDER BY ti.id ASC
-            ");
-            $stmtItems->execute([$order['id']]);
-            $items = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
+            $items = [];
+            try {
+                $stmtItems = $pdo->prepare("
+                    SELECT ti.quantity, ti.unit_price, COALESCE(ti.total, ti.quantity * ti.unit_price) as line_total,
+                           ti.product_name, COALESCE(p.sku, 'PROD-' || ti.product_id) as sku, p.image_url
+                    FROM ticket_items ti
+                    LEFT JOIN products p ON ti.product_id = p.id
+                    WHERE ti.ticket_id = ?
+                    ORDER BY ti.id ASC
+                ");
+                $stmtItems->execute([$order['id']]);
+                $items = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
+            } catch (Exception $tiEx) {}
             
             if (empty($items) && !empty($order['order_id'])) {
-                $stmtOrderItems = $pdo->prepare("
-                    SELECT oi.quantity, oi.unit_price, oi.line_total, p.name as product_name, p.sku, p.image_url
-                    FROM order_items oi
-                    JOIN products p ON oi.product_id = p.id
-                    WHERE oi.order_id = ?
-                ");
-                $stmtOrderItems->execute([$order['order_id']]);
-                $items = $stmtOrderItems->fetchAll(PDO::FETCH_ASSOC);
+                try {
+                    $stmtOrderItems = $pdo->prepare("
+                        SELECT oi.quantity, oi.unit_price, oi.line_total, p.name as product_name, p.sku, p.image_url
+                        FROM order_items oi
+                        JOIN products p ON oi.product_id = p.id
+                        WHERE oi.order_id = ?
+                    ");
+                    $stmtOrderItems->execute([$order['order_id']]);
+                    $items = $stmtOrderItems->fetchAll(PDO::FETCH_ASSOC);
+                } catch (Exception $oiEx) {}
             }
             
             $order['items'] = $items;
@@ -176,8 +243,8 @@ try {
             require_csrf_token();
             
             $input = json_decode(file_get_contents('php://input'), true);
-            $orderId = $input['order_id'] ?? 0;
-            $status = $input['status'] ?? '';
+            $orderId = (int)($input['order_id'] ?? 0);
+            $status = trim((string)($input['status'] ?? ''));
             
             $allowedStatuses = ['pending', 'confirmed', 'in_preparation', 'processing', 'packed', 'shipped', 'in_transit', 'delivered', 'cancelled', 'canceled'];
             
@@ -233,8 +300,8 @@ try {
             require_csrf_token();
             
             $input = json_decode(file_get_contents('php://input'), true);
-            $orderId = $input['order_id'] ?? 0;
-            $paymentStatus = $input['payment_status'] ?? '';
+            $orderId = (int)($input['order_id'] ?? 0);
+            $paymentStatus = trim((string)($input['payment_status'] ?? ''));
             
             $allowedPaymentStatuses = ['pending', 'paid', 'failed', 'refunded'];
             
@@ -263,11 +330,10 @@ try {
             require_csrf_token();
             
             $input = json_decode(file_get_contents('php://input'), true);
-            $orderId = $input['order_id'] ?? 0;
-            $reason = $input['reason'] ?? '';
+            $orderId = (int)($input['order_id'] ?? 0);
+            $reason = trim((string)($input['reason'] ?? ''));
             
-            // Verificar que el pedido no esté ya completado
-            $stmt = $pdo->prepare("SELECT order_status FROM sales_tickets WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT COALESCE(order_status, status, 'pending') as order_status FROM sales_tickets WHERE id = ?");
             $stmt->execute([$orderId]);
             $order = $stmt->fetch();
             
@@ -276,12 +342,11 @@ try {
                 exit;
             }
             
-            if (in_array($order['order_status'], ['delivered', 'cancelled'])) {
+            if (in_array($order['order_status'], ['delivered', 'cancelled', 'canceled'])) {
                 echo json_encode(['success' => false, 'message' => 'No se puede cancelar este pedido']);
                 exit;
             }
             
-            // Cancelar reservas de stock si existen
             try {
                 $stmt = $pdo->prepare("
                     UPDATE stock_reservations 
@@ -289,11 +354,8 @@ try {
                     WHERE order_id = ? AND status = 'pending'
                 ");
                 $stmt->execute([$orderId]);
-            } catch (Exception $e) {
-                // Si la tabla no existe, continuar
-            }
+            } catch (Exception $e) {}
             
-            // Actualizar estado del pedido
             $stmt = $pdo->prepare("
                 UPDATE sales_tickets 
                 SET order_status = 'cancelled', 
@@ -318,9 +380,9 @@ try {
             require_csrf_token();
             
             $input = json_decode(file_get_contents('php://input'), true);
-            $orderId = $input['order_id'] ?? 0;
-            $carrier = $input['carrier'] ?? '';
-            $trackingNumber = $input['tracking_number'] ?? '';
+            $orderId = (int)($input['order_id'] ?? 0);
+            $carrier = trim((string)($input['carrier'] ?? ''));
+            $trackingNumber = trim((string)($input['tracking_number'] ?? ''));
             
             if (!$orderId || !$carrier || !$trackingNumber) {
                 echo json_encode(['success' => false, 'message' => 'Faltan datos requeridos']);
@@ -340,7 +402,6 @@ try {
             $result = $trackingService->createTracking($trackingData);
 
             if ($result['success'] ?? false) {
-                // Actualizar estado del pedido a 'shipped' y sincronizar tracking_folio
                 $pdo->prepare("UPDATE sales_tickets SET order_status = 'shipped', tracking_folio = ?, updated_at = NOW() WHERE id = ?")
                     ->execute([$trackingNumber, $orderId]);
 
@@ -364,5 +425,8 @@ try {
     }
 } catch (Exception $e) {
     AppLogger::error("Admin Online Orders API error: " . $e->getMessage());
-    echo json_encode(['success' => false, 'message' => 'Error del servidor']);
+    echo json_encode([
+        'success' => false, 
+        'message' => 'Error al cargar pedidos: ' . $e->getMessage()
+    ]);
 }

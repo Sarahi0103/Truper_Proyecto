@@ -18,9 +18,15 @@ try {
 
     $groupSelect = db_column_exists('products', 'product_group') ? "COALESCE(product_group,'') AS product_group" : "'' AS product_group";
     $colorSelect = db_column_exists('products', 'color')         ? "COALESCE(color,'') AS color"                : "'' AS color";
-    $priceSelect = db_column_exists('products', 'price_online')
-        ? "COALESCE(NULLIF(price_online,0), unit_price, 0)"
-        : "COALESCE(unit_price, 0)";
+    $hasPriceOnline = db_column_exists('products', 'price_online');
+    $hasSellPrice = db_column_exists('products', 'sell_price');
+    
+    $priceParts = [];
+    if ($hasPriceOnline) $priceParts[] = "NULLIF(price_online, 0)";
+    $priceParts[] = "NULLIF(unit_price, 0)";
+    if ($hasSellPrice) $priceParts[] = "NULLIF(sell_price, 0)";
+    $priceParts[] = "0";
+    $priceSelect = "COALESCE(" . implode(", ", $priceParts) . ")";
 
     $stmt = $pdo->prepare(
         "SELECT id, name, sku, {$priceSelect} AS unit_price,
