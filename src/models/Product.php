@@ -70,12 +70,24 @@ class Product {
         return $stmt->fetch();
     }
 
-    public function search($term) {
+    public function search($term, $channel = 'all') {
         $search = "%$term%";
+        $channelCond = "";
+        $priceExpr = "unit_price";
+        if ($channel === 'pos') {
+            $channelCond = "AND (CASE WHEN show_in_pos IS NULL THEN 1 WHEN LOWER(CAST(show_in_pos AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
+            $priceExpr = "COALESCE(NULLIF(price_pos, 0), unit_price, sell_price, 0)";
+        } elseif ($channel === 'online') {
+            $channelCond = "AND (CASE WHEN show_in_online IS NULL THEN 1 WHEN LOWER(CAST(show_in_online AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
+            $priceExpr = "COALESCE(NULLIF(price_online, 0), unit_price, sell_price, 0)";
+        } else {
+            $priceExpr = "COALESCE(NULLIF(price_online, 0), NULLIF(price_pos, 0), unit_price, sell_price, 0)";
+        }
+
         $stmt = $this->pdo->prepare("
-            SELECT * FROM {$this->table} 
+            SELECT {$this->table}.*, {$priceExpr} AS unit_price FROM {$this->table} 
             WHERE is_active = true 
-            AND (CASE WHEN show_in_pos IS NULL THEN 1 WHEN LOWER(CAST(show_in_pos AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1
+            {$channelCond}
             AND NOT EXISTS (
                 SELECT 1 FROM product_categories pc 
                 WHERE LOWER(pc.name) = LOWER({$this->table}.category) 
@@ -123,11 +135,23 @@ class Product {
         return $stmt->execute($values);
     }
 
-    public function getByCategory($category) {
+    public function getByCategory($category, $channel = 'all') {
+        $channelCond = "";
+        $priceExpr = "unit_price";
+        if ($channel === 'pos') {
+            $channelCond = "AND (CASE WHEN show_in_pos IS NULL THEN 1 WHEN LOWER(CAST(show_in_pos AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
+            $priceExpr = "COALESCE(NULLIF(price_pos, 0), unit_price, sell_price, 0)";
+        } elseif ($channel === 'online') {
+            $channelCond = "AND (CASE WHEN show_in_online IS NULL THEN 1 WHEN LOWER(CAST(show_in_online AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
+            $priceExpr = "COALESCE(NULLIF(price_online, 0), unit_price, sell_price, 0)";
+        } else {
+            $priceExpr = "COALESCE(NULLIF(price_online, 0), NULLIF(price_pos, 0), unit_price, sell_price, 0)";
+        }
+
         $stmt = $this->pdo->prepare("
-            SELECT * FROM {$this->table} 
+            SELECT {$this->table}.*, {$priceExpr} AS unit_price FROM {$this->table} 
             WHERE category = ? AND is_active = true 
-            AND (CASE WHEN show_in_pos IS NULL THEN 1 WHEN LOWER(CAST(show_in_pos AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1
+            {$channelCond}
             AND NOT EXISTS (
                 SELECT 1 FROM product_categories pc 
                 WHERE LOWER(pc.name) = LOWER({$this->table}.category) 

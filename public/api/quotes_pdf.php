@@ -19,7 +19,7 @@ $stmt = $pdo->prepare("
     SELECT st.*, u.first_name, u.last_name, u.email, u.phone
     FROM sales_tickets st
     LEFT JOIN users u ON st.user_id = u.id
-    WHERE (st.ticket_number = ? OR st.id = ?)
+    WHERE (st.folio = ? OR st.id = ?)
     LIMIT 1
 ");
 $stmt->execute([$quoteFolio, $ticketId]);
@@ -31,10 +31,11 @@ if (!$quote) {
 
 // Obtener items
 $stmtItems = $pdo->prepare("
-    SELECT sti.*, p.name AS product_name, p.sku AS product_sku, p.image_url
-    FROM sales_ticket_items sti
-    LEFT JOIN products p ON sti.product_id = p.id
-    WHERE sti.sales_ticket_id = ?
+    SELECT ti.*, COALESCE(ti.product_name, p.name) AS product_name, p.sku AS product_sku, p.image_url,
+           COALESCE(ti.total, ti.unit_price * ti.quantity) AS subtotal
+    FROM ticket_items ti
+    LEFT JOIN products p ON ti.product_id = p.id
+    WHERE ti.ticket_id = ?
 ");
 $stmtItems->execute([$quote['id']]);
 $items = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
@@ -69,7 +70,7 @@ if (isset($_GET['format']) && $_GET['format'] === 'json') {
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Cotización Formal - <?= htmlspecialchars($quote['ticket_number']) ?></title>
+    <title>Cotización Formal - <?= htmlspecialchars($quote['folio']) ?></title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; }
@@ -113,7 +114,7 @@ if (isset($_GET['format']) && $_GET['format'] === 'json') {
         </div>
         <div class="quote-info">
             <div class="quote-badge">COTIZACIÓN FORMAL</div>
-            <p><strong>Folio:</strong> <?= htmlspecialchars($quote['ticket_number']) ?></p>
+            <p><strong>Folio:</strong> <?= htmlspecialchars($quote['folio']) ?></p>
             <p><strong>Fecha:</strong> <?= date('d/m/Y', strtotime($quote['created_at'])) ?></p>
             <p><strong>Vigencia hasta:</strong> <?= htmlspecialchars($validUntil) ?></p>
         </div>
@@ -122,7 +123,11 @@ if (isset($_GET['format']) && $_GET['format'] === 'json') {
     <div class="meta-grid">
         <div>
             <h4>Datos del Cliente</h4>
-            <p><strong>Nombre / Razón Social:</strong> <?= htmlspecialchars(($quote['first_name'] ?? 'Cliente') . ' ' . ($quote['last_name'] ?? 'Invitado')) ?></p>
+            <?php 
+                $clientFullName = trim(($quote['first_name'] ?? '') . ' ' . ($quote['last_name'] ?? ''));
+                $displayClient = !empty($quote['customer_name']) ? $quote['customer_name'] : ($clientFullName ?: 'Público en General');
+            ?>
+            <p><strong>Nombre / Razón Social:</strong> <?= htmlspecialchars($displayClient) ?></p>
             <p><strong>Teléfono:</strong> <?= htmlspecialchars($quote['phone'] ?? 'No especificado') ?></p>
             <p><strong>Correo:</strong> <?= htmlspecialchars($quote['email'] ?? 'No especificado') ?></p>
         </div>
@@ -184,7 +189,7 @@ if (isset($_GET['format']) && $_GET['format'] === 'json') {
     <div class="action-bar">
         <button class="btn btn-primary" onclick="window.print();">🖨️ Imprimir / Guardar en PDF</button>
         <?php 
-            $waMsg = urlencode("Hola Ferretería Fox, deseo confirmar mi pedido con Folio de Cotización: " . $quote['ticket_number'] . " por un total de $" . number_format($total, 2) . " MXN.");
+            $waMsg = urlencode("Hola Ferretería Fox, deseo confirmar mi pedido con Folio de Cotización: " . $quote['folio'] . " por un total de $" . number_format($total, 2) . " MXN.");
             $waUrl = "https://wa.me/523312482297?text=" . $waMsg;
         ?>
         <a class="btn btn-whatsapp" href="<?= $waUrl ?>" target="_blank">📱 Enviar a WhatsApp</a>

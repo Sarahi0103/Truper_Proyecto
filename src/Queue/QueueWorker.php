@@ -6,6 +6,9 @@
  */
 
 require_once __DIR__ . '/QueueSystem.php';
+if (!class_exists('AppLogger') && file_exists(__DIR__ . '/../utils/AppLogger.php')) {
+    require_once __DIR__ . '/../utils/AppLogger.php';
+}
 
 class QueueWorker {
     private $pdo;

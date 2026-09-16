@@ -313,14 +313,28 @@ function formatDate(dateString) {
 }
 
 /**
- * Validar formulario
+ * Validar formulario usando el motor FormValidator unificado
  */
 function validateForm(formId) {
-    const form = document.getElementById(formId);
+    const form = typeof formId === 'string' ? document.getElementById(formId) : formId;
     if (!form) return false;
     
+    if (window.FormValidator && typeof window.FormValidator.validateForm === 'function') {
+        return window.FormValidator.validateForm(form);
+    }
     return form.checkValidity();
 }
+
+// Carga asíncrona segura de FormValidator si no está presente en el DOM
+(function ensureFormValidatorLoaded() {
+    if (typeof window.FormValidator === 'undefined') {
+        const s = document.createElement('script');
+        s.src = 'js/form-validator.js?v=1.0';
+        s.async = true;
+        document.head.appendChild(s);
+    }
+})();
+
 
 /**
  * Cargar datos del usuario desde sesión

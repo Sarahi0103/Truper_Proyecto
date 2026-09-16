@@ -841,6 +841,26 @@ try {
                             </div>
                         </div>
 
+                        <!-- Barra de Acciones y Descarga de Ticket -->
+                        <div style="background:rgba(255,127,0,0.06);border-bottom:1px solid rgba(255,127,0,0.18);padding:.85rem 1.25rem;display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;">
+                            <div style="font-size:0.88rem;color:#e0e0ea;display:flex;align-items:center;gap:8px;">
+                                <span style="font-size:1.2rem;">🎟️</span> <strong>Comprobante Oficial:</strong> Puedes descargar o imprimir el ticket de tu pedido.
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                                <a href="/ticket_client.php?folio=${encodeURIComponent(ord.folio)}&auto_pdf=1" target="_blank" style="background:linear-gradient(135deg,#ff8f00,#e05c00);color:#fff;padding:8px 18px;border-radius:20px;font-weight:800;font-size:0.86rem;text-decoration:none;display:inline-flex;align-items:center;gap:6px;box-shadow:0 3px 14px rgba(255,127,0,0.38);transition:all .2s;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    Descargar Ticket (PDF)
+                                </a>
+                                <a href="/ticket_client.php?folio=${encodeURIComponent(ord.folio)}" target="_blank" style="background:#14141e;border:1px solid rgba(255,255,255,0.18);color:#e0e0ea;padding:8px 14px;border-radius:20px;font-weight:700;font-size:0.82rem;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+                                    🖨️ Ver / Imprimir
+                                </a>
+                                ${ord.invoice_required ? `
+                                <a href="/api/invoice.php?action=download_pdf&folio=${encodeURIComponent(ord.folio)}" target="_blank" style="background:#2563eb;color:#fff;padding:8px 14px;border-radius:20px;font-weight:700;font-size:0.82rem;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+                                    📕 Factura SAT
+                                </a>` : ''}
+                            </div>
+                        </div>
+
                         <div style="padding:1.25rem;display:flex;flex-direction:column;gap:1.1rem;">
 
                             <!-- Timeline de estatus -->
@@ -868,7 +888,10 @@ try {
                                 </div>
                                 <div style="background:#0d0d12;border:1px solid #1a1a22;border-radius:10px;padding:.8rem .9rem;">
                                     <div style="font-size:.68rem;color:#555;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem;">Comprobante</div>
-                                    <div style="font-size:.84rem;color:#ccc;font-weight:600;">${ord.invoice_required ? '🧾 Factura CFDI 4.0' : '📄 Nota de Venta'}</div>
+                                    <div style="font-size:.84rem;color:#ccc;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:6px;">
+                                        <span>${ord.invoice_required ? '🧾 Factura CFDI 4.0' : '📄 Nota de Venta'}</span>
+                                        <a href="/ticket_client.php?folio=${encodeURIComponent(ord.folio)}&auto_pdf=1" target="_blank" style="color:#ff7f00;font-size:0.75rem;font-weight:800;text-decoration:none;" title="Descargar Ticket PDF">Descargar ⬇️</a>
+                                    </div>
                                 </div>
                                 ${carrierHTML}
                                 ${trackingHTML}
@@ -902,6 +925,14 @@ try {
                 if (guestInput) {
                     guestInput.value = initialFolio;
                     searchGuestOrder();
+                    if (urlParams.get('download') === '1' || urlParams.get('auto_pdf') === '1') {
+                        setTimeout(() => {
+                            const frame = document.createElement('iframe');
+                            frame.style.display = 'none';
+                            frame.src = `/ticket_client.php?folio=${encodeURIComponent(initialFolio)}&auto_pdf=1`;
+                            document.body.appendChild(frame);
+                        }, 800);
+                    }
                 }
                 const searchInput = document.getElementById('searchInput');
                 if (searchInput) {

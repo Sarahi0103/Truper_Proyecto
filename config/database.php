@@ -267,6 +267,7 @@ try { $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS show_in_pos BOOL
 
 try { $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS net_price DECIMAL(12,2)"); } catch (Exception $ignored) {}
 try { $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS discount_percentage DECIMAL(5,2) DEFAULT 0"); } catch (Exception $ignored) {}
+try { $pdo->exec("ALTER TABLE marketplace_ce_products ADD COLUMN IF NOT EXISTS price_wholesale DECIMAL(10,2)"); } catch (Exception $ignored) {}
 
 try { $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS customer_segment VARCHAR(50) DEFAULT 'menudeo'"); } catch (Exception $ignored) {}
 try { $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS rfc VARCHAR(20)"); } catch (Exception $ignored) {}

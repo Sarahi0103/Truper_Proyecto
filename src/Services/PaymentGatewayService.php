@@ -177,38 +177,71 @@ class PaymentGatewayService {
      * Confirmar pago (llamado desde webhooks)
      */
     public function confirmPayment($paymentId, $gateway, $orderId) {
+        $ownsTx = !$this->pdo->inTransaction();
         try {
-            $this->pdo->beginTransaction();
-            
-            // Actualizar estado del pago
-            $stmt = $this->pdo->prepare("
-                UPDATE payments 
-                SET payment_status = 'completed',
-                    transaction_id = ?,
-                    processed_at = NOW()
-                WHERE order_id = ? AND payment_method = ?
-                ORDER BY id DESC LIMIT 1
-            ");
-            $stmt->execute([$paymentId, $orderId, $gateway]);
+            if ($ownsTx) {
+                $this->pdo->beginTransaction();
+            }
             
             // Actualizar estado de la orden
-            $stmt = $this->pdo->prepare("
+            $stmtOrder = $this->pdo->prepare("
                 UPDATE orders 
                 SET payment_status = 'paid',
                     status = 'confirmed',
+                    payment_gateway = ?,
+                    payment_transaction_id = ?,
+                    payment_amount = total_amount,
+                    balance = 0,
                     updated_at = NOW()
                 WHERE id = ?
             ");
-            $stmt->execute([$orderId]);
+            $stmtOrder->execute([$gateway, $paymentId, $orderId]);
             
-            $this->pdo->commit();
+            if ($stmtOrder->rowCount() === 0) {
+                throw new Exception("Orden ID {$orderId} no encontrada para confirmar pago");
+            }
             
-            $this->logger->info("Pago confirmado: {$paymentId} para orden {$orderId} via {$gateway}");
+            // Actualizar o registrar en tabla payments
+            $stmtPay = $this->pdo->prepare("
+                UPDATE payments 
+                SET reference_number = ?,
+                    payment_date = NOW(),
+                    payment_method = ?
+                WHERE id = (
+                    SELECT id FROM payments 
+                    WHERE order_id = ?
+                    ORDER BY id DESC LIMIT 1
+                )
+            ");
+            $stmtPay->execute([$paymentId, $gateway, $orderId]);
+            
+            if ($stmtPay->rowCount() === 0) {
+                $totStmt = $this->pdo->prepare("SELECT total_amount FROM orders WHERE id = ?");
+                $totStmt->execute([$orderId]);
+                $tot = (float)$totStmt->fetchColumn();
+                $insPay = $this->pdo->prepare("
+                    INSERT INTO payments (order_id, amount, payment_method, reference_number, payment_date, notes)
+                    VALUES (?, ?, ?, ?, NOW(), ?)
+                ");
+                $insPay->execute([$orderId, $tot, $gateway, $paymentId, "Pago confirmado vía {$gateway}"]);
+            }
+            
+            if ($ownsTx) {
+                $this->pdo->commit();
+            }
+            
+            if ($this->logger && method_exists($this->logger, 'info')) {
+                $this->logger->info("Pago confirmado: {$paymentId} para orden {$orderId} via {$gateway}");
+            }
             
             return ['success' => true];
         } catch (Exception $e) {
-            $this->pdo->rollBack();
-            $this->logger->error("Error confirmando pago: " . $e->getMessage());
+            if ($ownsTx && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            if ($this->logger && method_exists($this->logger, 'error')) {
+                $this->logger->error("Error confirmando pago: " . $e->getMessage());
+            }
             throw $e;
         }
     }
@@ -217,64 +250,81 @@ class PaymentGatewayService {
      * Procesar reembolso
      */
     public function processRefund($orderId, $amount = null) {
+        $ownsTx = !$this->pdo->inTransaction();
         try {
-            $this->pdo->beginTransaction();
-            
-            // Obtener información del pago
-            $stmt = $this->pdo->prepare("
-                SELECT transaction_id, payment_method, amount 
-                FROM payments 
-                WHERE order_id = ? AND payment_status = 'completed'
-                ORDER BY id DESC LIMIT 1
-            ");
-            $stmt->execute([$orderId]);
-            $payment = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if (!$payment) {
-                throw new Exception('No se encontró pago completado para esta orden');
+            if ($ownsTx) {
+                $this->pdo->beginTransaction();
             }
             
-            $refundAmount = $amount ?? $payment['amount'];
+            // Obtener información de la orden y pago
+            $stmt = $this->pdo->prepare("
+                SELECT o.payment_transaction_id, o.payment_gateway, o.total_amount, o.payment_amount,
+                       p.reference_number, p.payment_method, p.amount
+                FROM orders o
+                LEFT JOIN payments p ON p.order_id = o.id
+                WHERE o.id = ?
+                ORDER BY p.id DESC LIMIT 1
+            ");
+            $stmt->execute([$orderId]);
+            $info = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$info) {
+                throw new Exception('No se encontró la orden para procesar el reembolso');
+            }
+            
+            $txnId = !empty($info['payment_transaction_id']) ? $info['payment_transaction_id'] : ($info['reference_number'] ?? '');
+            $gateway = !empty($info['payment_gateway']) ? $info['payment_gateway'] : ($info['payment_method'] ?? 'card');
+            $refundAmount = $amount !== null ? (float)$amount : (float)($info['payment_amount'] ?: ($info['total_amount'] ?: ($info['amount'] ?? 0)));
             
             // Procesar reembolso según gateway
-            if ($payment['payment_method'] === 'card' && $payment['transaction_id']) {
+            if ($gateway === 'card' && !empty($txnId)) {
                 // Reembolso Stripe
                 if ($this->stripe) {
                     $this->stripe->refunds->create([
-                        'payment_intent' => $payment['transaction_id'],
+                        'payment_intent' => $txnId,
                         'amount' => round($refundAmount * 100)
                     ]);
                 }
             }
             
-            // Actualizar estado del pago
-            $stmt = $this->pdo->prepare("
-                UPDATE payments 
-                SET payment_status = 'refunded',
-                    refund_amount = COALESCE(refund_amount, 0) + ?,
-                    refunded_at = NOW()
-                WHERE order_id = ? AND payment_status = 'completed'
-                ORDER BY id DESC LIMIT 1
-            ");
-            $stmt->execute([$refundAmount, $orderId]);
-            
             // Actualizar estado de la orden
-            $stmt = $this->pdo->prepare("
+            $stmtOrder = $this->pdo->prepare("
                 UPDATE orders 
                 SET payment_status = 'refunded',
+                    notes = COALESCE(notes, '') || ' | Reembolso: $' || ?,
                     updated_at = NOW()
                 WHERE id = ?
             ");
-            $stmt->execute([$orderId]);
+            $stmtOrder->execute([number_format($refundAmount, 2, '.', ''), $orderId]);
             
-            $this->pdo->commit();
+            // Actualizar notas del pago si existe
+            $stmtPay = $this->pdo->prepare("
+                UPDATE payments 
+                SET notes = COALESCE(notes, '') || ' | Reembolsado: $' || ?
+                WHERE id = (
+                    SELECT id FROM payments 
+                    WHERE order_id = ?
+                    ORDER BY id DESC LIMIT 1
+                )
+            ");
+            $stmtPay->execute([number_format($refundAmount, 2, '.', ''), $orderId]);
             
-            $this->logger->info("Reembolso procesado: {$refundAmount} para orden {$orderId}");
+            if ($ownsTx) {
+                $this->pdo->commit();
+            }
+            
+            if ($this->logger && method_exists($this->logger, 'info')) {
+                $this->logger->info("Reembolso procesado: {$refundAmount} para orden {$orderId}");
+            }
             
             return ['success' => true, 'amount' => $refundAmount];
         } catch (Exception $e) {
-            $this->pdo->rollBack();
-            $this->logger->error("Error procesando reembolso: " . $e->getMessage());
+            if ($ownsTx && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            if ($this->logger && method_exists($this->logger, 'error')) {
+                $this->logger->error("Error procesando reembolso: " . $e->getMessage());
+            }
             throw $e;
         }
     }

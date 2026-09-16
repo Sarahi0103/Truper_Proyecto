@@ -51,6 +51,72 @@ try {
         }
     }
 
+    // Sanitización y Validación estricta con SecurityValidator
+    $emailValid = SecurityValidator::validateEmail($input['email']);
+    if (!$emailValid) {
+        throw new Exception("El correo electrónico '{$input['email']}' no es válido");
+    }
+    $input['email'] = $emailValid;
+
+    $phoneValid = SecurityValidator::validatePhone($input['phone']);
+    if (!$phoneValid) {
+        throw new Exception("El teléfono debe contener 10 dígitos numéricos");
+    }
+    $input['phone'] = $phoneValid;
+
+    $postalCodeValid = SecurityValidator::validatePostalCode($input['postalCode']);
+    if (!$postalCodeValid) {
+        throw new Exception("El código postal debe contener 5 dígitos numéricos");
+    }
+    $input['postalCode'] = $postalCodeValid;
+
+    $input['firstName'] = SecurityValidator::sanitizeText($input['firstName'], 60);
+    $input['lastName'] = SecurityValidator::sanitizeText($input['lastName'], 60);
+    $input['address'] = SecurityValidator::sanitizeText($input['address'], 250);
+    $input['city'] = SecurityValidator::sanitizeText($input['city'], 80);
+    $input['street'] = SecurityValidator::sanitizeText($input['street'] ?? '', 120);
+    $input['numExt'] = SecurityValidator::sanitizeAlphaNum($input['numExt'] ?? '', 20);
+    $input['numInt'] = SecurityValidator::sanitizeAlphaNum($input['numInt'] ?? '', 20);
+    $input['colonia'] = SecurityValidator::sanitizeText($input['colonia'] ?? '', 100);
+    $input['deliveryNotes'] = SecurityValidator::sanitizeText($input['deliveryNotes'] ?? '', 300);
+    $input['orderNotes'] = SecurityValidator::sanitizeText($input['orderNotes'] ?? '', 300);
+
+    // Validación fiscal si requireInvoice está activo
+    $requireInvoice = filter_var($input['requireInvoice'] ?? false, FILTER_VALIDATE_BOOLEAN);
+    if ($requireInvoice) {
+        $rfcValid = SecurityValidator::validateRFC($input['rfc'] ?? '');
+        if (!$rfcValid) {
+            throw new Exception("El RFC ingresado no tiene un formato válido para timbrado fiscal SAT (12 o 13 caracteres)");
+        }
+        $input['rfc'] = $rfcValid;
+        $input['taxName'] = SecurityValidator::sanitizeText($input['taxName'] ?? '', 150);
+        if (mb_strlen($input['taxName']) < 3) {
+            throw new Exception("La razón social o nombre fiscal es obligatoria para la factura");
+        }
+        $zipFiscalValid = SecurityValidator::validatePostalCode($input['zipCodeFiscal'] ?? '');
+        if (!$zipFiscalValid) {
+            throw new Exception("El código postal del domicilio fiscal debe tener 5 dígitos");
+        }
+        $input['zipCodeFiscal'] = $zipFiscalValid;
+        $input['taxRegime'] = SecurityValidator::sanitizeAlphaNum($input['taxRegime'] ?? '601', 10);
+        $input['cfdiUse'] = SecurityValidator::sanitizeAlphaNum($input['cfdiUse'] ?? 'G03', 10);
+    }
+
+    // Validación de tarjeta si el método de pago es tarjeta
+    if (($input['paymentMethod'] ?? 'card') === 'card') {
+        $cardHolder = SecurityValidator::sanitizeText($input['cardHolder'] ?? '', 80);
+        if (mb_strlen($cardHolder) < 3) {
+            throw new Exception("El nombre del titular de la tarjeta es obligatorio");
+        }
+        $input['cardHolder'] = strtoupper($cardHolder);
+        $cardLast4 = SecurityValidator::sanitizeDigits($input['cardLast4'] ?? '');
+        if (strlen($cardLast4) !== 4) {
+            throw new Exception("Los últimos 4 dígitos de la tarjeta son requeridos");
+        }
+        $input['cardLast4'] = $cardLast4;
+        $input['cardBrand'] = SecurityValidator::sanitizeAlphaNum($input['cardBrand'] ?? 'Tarjeta Bancaria', 30);
+    }
+
     $cartItems = $input['cartItems'];
     if (!is_array($cartItems) || count($cartItems) === 0) {
         throw new Exception('El carrito está vacío');

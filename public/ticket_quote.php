@@ -1,5 +1,5 @@
 <?php
-require_once '../config/config.php';
+require_once __DIR__ . '/../config/config.php';
 
 $quoteId = (int)($_GET['quote_id'] ?? 0);
 $folio = trim((string)($_GET['folio'] ?? 'COT-000000'));
@@ -66,7 +66,7 @@ if ($quoteId > 0) {
             $client = !empty($rowSt['user_code']) ? (string)$rowSt['user_code'] : (!empty($rowSt['customer_name']) ? (string)$rowSt['customer_name'] : 'PUBLICO');
             
             // Get items
-            $stmtStItems = $pdo->prepare("SELECT product_name AS name, quantity, unit_price AS price, product_id FROM ticket_items WHERE ticket_id = ?");
+            $stmtStItems = $pdo->prepare("SELECT ti.product_name AS name, ti.quantity, ti.unit_price AS price, ti.product_id, p.sku FROM ticket_items ti LEFT JOIN products p ON ti.product_id = p.id WHERE ti.ticket_id = ?");
             $stmtStItems->execute([$rowSt['id']]);
             $rawItems = $stmtStItems->fetchAll(PDO::FETCH_ASSOC) ?: [];
             $items = array_map(function($i) {
@@ -74,13 +74,23 @@ if ($quoteId > 0) {
                     'name' => $i['name'],
                     'quantity' => (int)$i['quantity'],
                     'price' => (float)$i['price'],
-                    'product_id' => $i['product_id']
+                    'product_id' => $i['product_id'],
+                    'sku' => $i['sku'] ?? ''
                 ];
             }, $rawItems);
         }
     } catch (Exception $ignored) {
         // Keep fallback data from URL.
     }
+}
+
+// Recalcular total si no se especificó o viene en 0 y hay items
+if ($total <= 0 && !empty($items)) {
+    $computedTotal = 0;
+    foreach ($items as $it) {
+        $computedTotal += (int)($it['quantity'] ?? 1) * (float)($it['price'] ?? ($it['unit_price'] ?? 0));
+    }
+    $total = $computedTotal;
 }
 
 function ticket_quote_number($value) {
@@ -219,7 +229,8 @@ if (file_exists($logoPath)) {
         |
         <a href="https://wa.me/523312482297?text=<?php echo urlencode('Hola Ferretería FOX, adjunto mi cotización/ticket folio: ' . $folio); ?>" target="_blank" style="color: #25D366; font-weight: 700;">📱 WhatsApp</a>
     </div>
-    <h1>FERRETERÍA FOX - TICKET</h1>
+    <div class="ticket">
+        <h1>FERRETERÍA FOX - TICKET</h1>
     <div class="row"><strong>Folio:</strong> <?php echo htmlspecialchars($folio, ENT_QUOTES, 'UTF-8'); ?></div>
     <div class="row"><strong>Fecha:</strong> <?php echo htmlspecialchars($issuedAt, ENT_QUOTES, 'UTF-8'); ?></div>
     <div class="row"><strong>Cliente:</strong> <?php echo htmlspecialchars($client, ENT_QUOTES, 'UTF-8'); ?></div>
@@ -290,7 +301,7 @@ function downloadTicketPdf() {
 
     // Logo on top-left
     if (logoBase64) {
-        doc.addImage(logoBase64, 'JPEG', 6, y, 12, 14);
+        doc.addImage(logoBase64, 'PNG', 6, y, 12, 14);
     }
 
     // Header text beside logo

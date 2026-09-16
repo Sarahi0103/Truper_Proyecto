@@ -9,6 +9,7 @@ require_once __DIR__ . '/init_dirs.php';
 // ===== SEGURIDAD PRIMERA =====
 require_once __DIR__ . '/security.php';
 require_once __DIR__ . '/category_colors.php';
+require_once __DIR__ . '/../src/utils/AppLogger.php';
 
 $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
     || (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443);
@@ -990,10 +991,16 @@ function ensure_postgresql_form_schema() {
             "ALTER TABLE orders ADD COLUMN IF NOT EXISTS sat_pdf_url TEXT",
             "ALTER TABLE orders ADD COLUMN IF NOT EXISTS sat_cancellation_reason VARCHAR(10)",
             "ALTER TABLE orders ADD COLUMN IF NOT EXISTS sat_cancellation_status VARCHAR(30)",
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS sat_status VARCHAR(30) DEFAULT 'none'",
             "ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_gateway VARCHAR(50)",
             "ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_transaction_id VARCHAR(100)",
             "ALTER TABLE orders ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
-            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+            "ALTER TABLE payments ADD COLUMN IF NOT EXISTS transaction_id VARCHAR(100)",
+            "ALTER TABLE payments ADD COLUMN IF NOT EXISTS payment_status VARCHAR(30) DEFAULT 'completed'",
+            "ALTER TABLE payments ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'completed'",
+            "ALTER TABLE shipping_tracking ADD COLUMN IF NOT EXISTS shipping_date TIMESTAMP",
+            "ALTER TABLE shipping_tracking ADD COLUMN IF NOT EXISTS shipped_date TIMESTAMP"
         ];
 
         foreach (array_merge($usersAlters, $productAlters, $clientAlters, $wholesaleAlters, $orderAlters) as $sql) {

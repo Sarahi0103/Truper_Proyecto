@@ -31,6 +31,7 @@ try {
             carrier VARCHAR(50),
             tracking_number VARCHAR(100),
             status VARCHAR(50) DEFAULT 'pending',
+            shipping_date TIMESTAMP,
             shipped_date TIMESTAMP,
             estimated_delivery TIMESTAMP,
             actual_delivery TIMESTAMP,
@@ -39,6 +40,8 @@ try {
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ");
+    @$pdo->exec("ALTER TABLE shipping_tracking ADD COLUMN IF NOT EXISTS shipping_date TIMESTAMP");
+    @$pdo->exec("ALTER TABLE shipping_tracking ADD COLUMN IF NOT EXISTS shipped_date TIMESTAMP");
 
     // 2. Asegurar columnas en sales_tickets si la tabla existe
     $stExists = (bool) $pdo->query("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'sales_tickets')")->fetchColumn();
@@ -184,7 +187,7 @@ try {
             $stmt = $pdo->prepare("
                 SELECT st.*, 
                        tr.carrier, tr.tracking_number, tr.estimated_delivery, 
-                       COALESCE(tr.shipped_date, tr.created_at) as shipping_date,
+                       COALESCE(tr.shipping_date, tr.shipped_date, tr.created_at) as shipping_date,
                        COALESCE(u.email, '') as user_email,
                        COALESCE(u.phone, '') as user_phone
                 FROM sales_tickets st

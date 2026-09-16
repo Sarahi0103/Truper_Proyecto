@@ -387,6 +387,8 @@ require_admin();
         </div>
     </div>
     
+    <script src="<?php echo asset_url('js/main.js'); ?>"></script>
+    <script src="<?php echo asset_url('js/form-validator.js'); ?>"></script>
     <script src="<?php echo asset_url('js/catalog.js'); ?>"></script>
     <script>
         // Cargar bancos

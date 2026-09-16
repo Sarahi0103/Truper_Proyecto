@@ -11,10 +11,17 @@ require_once __DIR__ . '/../../src/Services/PaymentGatewayService.php';
 
 header('Content-Type: application/json');
 
-// Obtener el access token de configuración
-$stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'mercadopago_access_token' LIMIT 1");
-$stmt->execute();
-$accessToken = $stmt->fetchColumn();
+// Obtener el access token de configuración o entorno
+$accessToken = null;
+try {
+    $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'mercadopago_access_token' LIMIT 1");
+    $stmt->execute();
+    $accessToken = $stmt->fetchColumn() ?: null;
+} catch (Exception $e) {}
+
+if (!$accessToken) {
+    $accessToken = getenv('MERCADOPAGO_ACCESS_TOKEN') ?: ($_ENV['MERCADOPAGO_ACCESS_TOKEN'] ?? null);
+}
 
 if (!$accessToken) {
     http_response_code(500);
@@ -40,6 +47,12 @@ if ($data['type'] === 'payment') {
     $paymentId = $data['data']['id'];
     
     try {
+        if (!class_exists('\\MercadoPago\\SDK')) {
+            http_response_code(503);
+            echo json_encode(['error' => 'Mercado Pago SDK no disponible']);
+            exit;
+        }
+
         // Consultar el estado del pago en Mercado Pago
         \MercadoPago\SDK::setAccessToken($accessToken);
         $payment = \MercadoPago\Payment::find_by_id($paymentId);

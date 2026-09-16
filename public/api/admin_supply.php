@@ -2509,6 +2509,10 @@ function create_product_compatible($pdo, array $payload): void {
         $columns[] = 'price_pos';
         $values[] = (float)($payload['price_pos'] ?? 0);
     }
+    if (db_column_exists('products', 'price_wholesale') && array_key_exists('price_wholesale', $payload)) {
+        $columns[] = 'price_wholesale';
+        $values[] = (float)($payload['price_wholesale'] ?? 0);
+    }
     if (db_column_exists('products', 'show_in_online') && array_key_exists('show_in_online', $payload)) {
         $columns[] = 'show_in_online';
         $values[] = normalize_bool_admin_supply($payload['show_in_online'] ?? null, true) ? 1 : 0;
@@ -2615,6 +2619,10 @@ function update_product_compatible($pdo, int $id, array $payload): void {
     if (db_column_exists('products', 'price_pos') && array_key_exists('price_pos', $payload)) {
         $sets[] = 'price_pos = ?';
         $values[] = (float)($payload['price_pos'] ?? 0);
+    }
+    if (db_column_exists('products', 'price_wholesale') && array_key_exists('price_wholesale', $payload)) {
+        $sets[] = 'price_wholesale = ?';
+        $values[] = (float)($payload['price_wholesale'] ?? 0);
     }
     if (db_column_exists('products', 'show_in_online') && array_key_exists('show_in_online', $payload)) {
         $sets[] = 'show_in_online = ?';
@@ -3017,6 +3025,7 @@ function list_stock_products_compatible($pdo, int $limit = 50, int $offset = 0, 
 
     $pricePosSelect = db_column_exists('products', 'price_pos') ? "COALESCE(price_pos, 0) AS price_pos" : "0 AS price_pos";
     $priceOnlineSelect = db_column_exists('products', 'price_online') ? "COALESCE(price_online, 0) AS price_online" : "0 AS price_online";
+    $priceWholesaleSelect = db_column_exists('products', 'price_wholesale') ? "COALESCE(price_wholesale, 0) AS price_wholesale" : "0 AS price_wholesale";
     $showPosSelect = db_column_exists('products', 'show_in_pos') ? "(CASE WHEN show_in_pos IS NULL THEN 1 WHEN LOWER(CAST(show_in_pos AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) AS show_in_pos" : "1 AS show_in_pos";
     $showOnlineSelect = db_column_exists('products', 'show_in_online') ? "(CASE WHEN show_in_online IS NULL THEN 1 WHEN LOWER(CAST(show_in_online AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) AS show_in_online" : "1 AS show_in_online";
 
@@ -3031,7 +3040,7 @@ function list_stock_products_compatible($pdo, int $limit = 50, int $offset = 0, 
     $taxRateSelect = db_column_exists('products', 'tax_rate') ? "COALESCE(tax_rate, 16.00) AS tax_rate" : "16.00 AS tax_rate";
     $taxExemptSelect = db_column_exists('products', 'is_tax_exempt') ? "(CASE WHEN is_tax_exempt IS NULL THEN 0 WHEN LOWER(CAST(is_tax_exempt AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) AS is_tax_exempt" : "0 AS is_tax_exempt";
 
-    $sql = "SELECT id, {$skuSelect}, {$nameSelect}, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect}, {$netPriceSelect}, {$discountSelect}, {$pricePosSelect}, {$priceOnlineSelect}, {$showPosSelect}, {$showOnlineSelect}, {$colorSelect}, {$groupSelect}, {$satCodeSelect}, {$satUnitSelect}, {$taxRateSelect}, {$taxExemptSelect} 
+    $sql = "SELECT id, {$skuSelect}, {$nameSelect}, {$descriptionSelect}, {$categorySelect}, {$stockSelect}, {$reorderSelect}, {$priceSelect}, {$imageSelect}, {$isActiveSelect}, {$netPriceSelect}, {$discountSelect}, {$pricePosSelect}, {$priceOnlineSelect}, {$priceWholesaleSelect}, {$showPosSelect}, {$showOnlineSelect}, {$colorSelect}, {$groupSelect}, {$satCodeSelect}, {$satUnitSelect}, {$taxRateSelect}, {$taxExemptSelect} 
             FROM products";
     
     if (!empty($whereClauses)) {
@@ -3384,6 +3393,8 @@ try {
             } catch (Throwable $e) {
                 error_log('auto_sync_stock_after_change (create) failed: ' . $e->getMessage());
             }
+            break;
+
         case 'quick-products-list':
             if ($method !== 'GET') {
                 $response = ['success' => false, 'message' => 'Metodo no permitido'];
@@ -3400,7 +3411,13 @@ try {
             // Check columns
             $skuCol = sku_column_for_table_admin_supply($table) ?: 'sku';
             $nameCol = ($target === 'marketplace') ? 'name' : (ensure_products_name_column_admin_supply($pdo) ?: 'name');
-            $priceCol = db_column_exists($table, 'net_price') ? 'net_price' : (db_column_exists($table, 'unit_price') ? 'unit_price' : 'sell_price');
+            if ($target === 'online' && db_column_exists($table, 'price_online')) {
+                $priceCol = "COALESCE(NULLIF(price_online, 0), net_price, unit_price, 0)";
+            } elseif ($target === 'pos' && db_column_exists($table, 'price_pos')) {
+                $priceCol = "COALESCE(NULLIF(price_pos, 0), net_price, unit_price, 0)";
+            } else {
+                $priceCol = db_column_exists($table, 'net_price') ? 'net_price' : (db_column_exists($table, 'unit_price') ? 'unit_price' : 'sell_price');
+            }
             
             $discountCol = db_column_exists($table, 'discount_percentage') ? 'discount_percentage' : '0';
             $finalPriceCol = db_column_exists($table, 'unit_price') ? 'unit_price' : (db_column_exists($table, 'sell_price') ? 'sell_price' : '0');
@@ -3411,7 +3428,7 @@ try {
             if ($target === 'pos' && db_column_exists($table, 'show_in_pos')) {
                 $whereClauses[] = '(show_in_pos = true OR show_in_pos = 1 OR show_in_pos IS NULL)';
             } elseif ($target === 'online' && db_column_exists($table, 'show_in_online')) {
-                $whereClauses[] = '(show_in_online = true OR show_in_online = 1)';
+                $whereClauses[] = '(show_in_online = true OR show_in_online = 1 OR show_in_online IS NULL)';
             }
 
             if ($search !== '') {
@@ -3475,7 +3492,11 @@ try {
                     ? ", COALESCE(sat_code, '27111701') as sat_code, COALESCE(sat_unit, 'H87') as sat_unit"
                     : ", '27111701' as sat_code, 'H87' as sat_unit";
 
-                $sql = "SELECT id, {$skuCol} as sku, {$nameCol} as name, category, {$priceCol} as price, CAST({$discountCol} AS NUMERIC) as discount, CAST({$finalPriceCol} AS NUMERIC) as final_price, (CASE WHEN {$activeCol} IS NULL THEN 1 WHEN LOWER(CAST({$activeCol} AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) as is_active{$selectShowInPos}{$selectSat} FROM {$table} {$whereSql} ORDER BY {$orderSql} LIMIT {$per_page} OFFSET {$offset}";
+                $selectWholesale = db_column_exists($table, 'price_wholesale')
+                    ? ", CAST(COALESCE(price_wholesale, 0) AS NUMERIC) as price_wholesale"
+                    : ", 0 as price_wholesale";
+
+                $sql = "SELECT id, {$skuCol} as sku, {$nameCol} as name, category, {$priceCol} as price, CAST({$discountCol} AS NUMERIC) as discount, CAST({$finalPriceCol} AS NUMERIC) as final_price, (CASE WHEN {$activeCol} IS NULL THEN 1 WHEN LOWER(CAST({$activeCol} AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) as is_active{$selectShowInPos}{$selectSat}{$selectWholesale} FROM {$table} {$whereSql} ORDER BY {$orderSql} LIMIT {$per_page} OFFSET {$offset}";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute($params);
                 $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -3524,8 +3545,17 @@ try {
                     $discount = (float)($check->fetchColumn() ?: 0);
                     $finalPrice = $price * (1 - $discount / 100);
 
-                    $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET category = ?, net_price = ?, unit_price = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?');
-                    $stmt->execute([$category, $price, $finalPrice, $id]);
+                    $mkSets = ['category = ?', 'net_price = ?', 'unit_price = ?', 'updated_at = CURRENT_TIMESTAMP'];
+                    $mkValues = [$category, $price, $finalPrice];
+                    if (db_column_exists('marketplace_ce_products', 'price_wholesale') && array_key_exists('price_wholesale', $input)) {
+                        $mkSets[] = 'price_wholesale = ?';
+                        $whVal = (float)($input['price_wholesale'] ?? 0);
+                        $mkValues[] = $whVal > 0 ? $whVal : null;
+                    }
+                    $mkValues[] = $id;
+
+                    $stmt = $pdo->prepare('UPDATE marketplace_ce_products SET ' . implode(', ', $mkSets) . ' WHERE id = ?');
+                    $stmt->execute($mkValues);
                     
                     $response = [
                         'success' => true, 
@@ -3558,6 +3588,18 @@ try {
                     if (db_column_exists('products', 'net_price')) {
                         $sets[] = 'net_price = ?';
                         $values[] = (float)number_format($price, 2, '.', '');
+                    }
+                    if ($target === 'online' && db_column_exists('products', 'price_online')) {
+                        $sets[] = 'price_online = ?';
+                        $values[] = (float)$price;
+                    } elseif ($target === 'pos' && db_column_exists('products', 'price_pos')) {
+                        $sets[] = 'price_pos = ?';
+                        $values[] = (float)$price;
+                    }
+                    if (db_column_exists('products', 'price_wholesale') && array_key_exists('price_wholesale', $input)) {
+                        $sets[] = 'price_wholesale = ?';
+                        $whVal = (float)($input['price_wholesale'] ?? 0);
+                        $values[] = $whVal > 0 ? $whVal : 0;
                     }
 
                     if (db_column_exists('products', 'sat_code') && array_key_exists('sat_code', $input)) {
@@ -3739,6 +3781,7 @@ try {
             $price = (float)($input['price'] ?? 0);
             $pricePos = (float)($input['price_pos'] ?? 0);
             $priceOnline = (float)($input['price_online'] ?? 0);
+            $priceWholesale = (float)($input['price_wholesale'] ?? 0);
             $showInPos = isset($input['show_in_pos']) ? !empty($input['show_in_pos']) : true;
             $showInOnline = isset($input['show_in_online']) ? !empty($input['show_in_online']) : true;
             $stockQty = (int)($input['stock_quantity'] ?? 50);
@@ -3838,6 +3881,7 @@ try {
                     'price' => $price,
                     'price_pos' => $pricePos,
                     'price_online' => $priceOnline,
+                    'price_wholesale' => $priceWholesale,
                     'show_in_pos' => $showInPos ? 1 : 0,
                     'show_in_online' => $showInOnline ? 1 : 0,
                     'discount_percentage' => $discount,
@@ -3922,6 +3966,7 @@ try {
                     'price' => $price,
                     'price_pos' => $pricePos,
                     'price_online' => $priceOnline,
+                    'price_wholesale' => $priceWholesale,
                     'show_in_pos' => $showInPos ? 1 : 0,
                     'show_in_online' => $showInOnline ? 1 : 0,
                     'discount_percentage' => $discount,
@@ -5413,6 +5458,7 @@ try {
             $selectUpdatedAt = db_column_exists('marketplace_ce_products', 'updated_at') ? 'updated_at' : 'NULL AS updated_at';
             $selectShowInOnline = db_column_exists('marketplace_ce_products', 'show_in_online') ? 'COALESCE(show_in_online, true) AS show_in_online' : '1 AS show_in_online';
             $selectPriceOnline = db_column_exists('marketplace_ce_products', 'price_online') ? 'price_online' : 'NULL AS price_online';
+            $selectPriceWholesale = db_column_exists('marketplace_ce_products', 'price_wholesale') ? 'price_wholesale' : 'NULL AS price_wholesale';
             $orderExpr = db_column_exists('marketplace_ce_products', 'created_at') ? 'created_at DESC' : 'id DESC';
 
             $page = max(1, (int)($_GET['page'] ?? 1));
@@ -5476,7 +5522,7 @@ try {
             $countStmt->execute($params);
             $total = $countStmt ? (int)$countStmt->fetchColumn() : 0;
 
-            $sql = 'SELECT id, ' . $selectSku . ', ' . $selectName . ', ' . $selectCategory . ', ' . $selectDescription . ', ' . $selectCondition . ', ' . $selectPrice . ', ' . $selectNetPrice . ', ' . $selectDiscount . ', ' . $selectStock . ', ' . $selectImage . ', ' . $selectActive . ', ' . $selectCreatedAt . ', ' . $selectUpdatedAt . ', ' . $selectShowInOnline . ', ' . $selectPriceOnline .
+            $sql = 'SELECT id, ' . $selectSku . ', ' . $selectName . ', ' . $selectCategory . ', ' . $selectDescription . ', ' . $selectCondition . ', ' . $selectPrice . ', ' . $selectNetPrice . ', ' . $selectDiscount . ', ' . $selectStock . ', ' . $selectImage . ', ' . $selectActive . ', ' . $selectCreatedAt . ', ' . $selectUpdatedAt . ', ' . $selectShowInOnline . ', ' . $selectPriceOnline . ', ' . $selectPriceWholesale .
                 ' FROM marketplace_ce_products' . $whereSql . ' ORDER BY ' . $orderExpr . ' LIMIT ' . (int)$perPage . ' OFFSET ' . (int)$offset;
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
@@ -5576,6 +5622,8 @@ try {
             $showInOnline = isset($_POST['show_in_online']) ? !empty($_POST['show_in_online']) : (isset($input['show_in_online']) ? !empty($input['show_in_online']) : true);
             $priceOnlineInput = isset($_POST['price_online']) ? trim((string)$_POST['price_online']) : (isset($input['price_online']) ? trim((string)$input['price_online']) : '');
             $priceOnline = $priceOnlineInput !== '' ? (float)$priceOnlineInput : null;
+            $priceWholesaleInput = isset($_POST['price_wholesale']) ? trim((string)$_POST['price_wholesale']) : (isset($input['price_wholesale']) ? trim((string)$input['price_wholesale']) : '');
+            $priceWholesale = $priceWholesaleInput !== '' ? (float)$priceWholesaleInput : null;
             $discount = (float)($_POST['discount_percentage'] ?? ($input['discount_percentage'] ?? 0));
             $basePrice = $unitPrice;
             $finalPrice = $basePrice * (1 - $discount / 100);
@@ -5661,6 +5709,7 @@ try {
                 
                 if (db_column_exists('marketplace_ce_products', 'show_in_online')) { $sets[] = 'show_in_online = ?'; $values[] = $showInOnline ? 1 : 0; }
                 if (db_column_exists('marketplace_ce_products', 'price_online')) { $sets[] = 'price_online = ?'; $values[] = $priceOnline; }
+                if (db_column_exists('marketplace_ce_products', 'price_wholesale')) { $sets[] = 'price_wholesale = ?'; $values[] = $priceWholesale; }
                 
                 if ($mkUpdatedByCol !== null) { $sets[] = $mkUpdatedByCol . ' = ?'; $values[] = (int)($_SESSION['user_id'] ?? 0); }
                 if ($mkUpdatedAtCol !== null) { $sets[] = $mkUpdatedAtCol . ' = CURRENT_TIMESTAMP'; }
@@ -5704,6 +5753,7 @@ try {
                 
                 if (db_column_exists('marketplace_ce_products', 'show_in_online')) { $columns[] = 'show_in_online'; $placeholders[] = '?'; $values[] = $showInOnline ? 1 : 0; }
                 if (db_column_exists('marketplace_ce_products', 'price_online')) { $columns[] = 'price_online'; $placeholders[] = '?'; $values[] = $priceOnline; }
+                if (db_column_exists('marketplace_ce_products', 'price_wholesale')) { $columns[] = 'price_wholesale'; $placeholders[] = '?'; $values[] = $priceWholesale; }
 
                 if ($mkImageCol !== null) { $columns[] = $mkImageCol; $placeholders[] = '?'; $values[] = $imageUrl; }
                 if ($mkCreatedByCol !== null) { $columns[] = $mkCreatedByCol; $placeholders[] = '?'; $values[] = (int)($_SESSION['user_id'] ?? 0); }

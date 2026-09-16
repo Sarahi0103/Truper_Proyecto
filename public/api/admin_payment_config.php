@@ -114,10 +114,28 @@ try {
             $input = json_decode(file_get_contents('php://input'), true);
             
             // Validar RFC
-            if (empty($input['company_rfc']) || !preg_match('/^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$/', $input['company_rfc'])) {
-                echo json_encode(['success' => false, 'message' => 'RFC inválido']);
+            $rfcValid = SecurityValidator::validateRFC($input['company_rfc'] ?? '');
+            if (!$rfcValid) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'RFC inválido para el SAT (12 o 13 caracteres)']);
                 exit;
             }
+            $input['company_rfc'] = $rfcValid;
+
+            if (!empty($input['company_zip_code'])) {
+                $zipValid = SecurityValidator::validatePostalCode($input['company_zip_code']);
+                if (!$zipValid) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'message' => 'El código postal fiscal debe contener 5 dígitos']);
+                    exit;
+                }
+                $input['company_zip_code'] = $zipValid;
+            }
+
+            $input['company_tax_name'] = SecurityValidator::sanitizeText($input['company_tax_name'] ?? '', 150);
+            $input['company_email'] = SecurityValidator::validateEmail($input['company_email'] ?? '') ?: null;
+            $input['company_phone'] = SecurityValidator::sanitizeDigits($input['company_phone'] ?? '');
+            $input['company_address'] = SecurityValidator::sanitizeText($input['company_address'] ?? '', 250);
             
             $result = $bankService->updateSatFiscalConfig($input);
             echo json_encode($result);
@@ -134,6 +152,53 @@ try {
             require_csrf_token();
             $input = json_decode(file_get_contents('php://input'), true);
             
+            $accountName = SecurityValidator::sanitizeText($input['account_name'] ?? '', 100);
+            if (empty($accountName) || mb_strlen($accountName) < 3) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'El nombre de la cuenta es obligatorio (mínimo 3 caracteres)']);
+                exit;
+            }
+
+            $allowedGateways = ['stripe', 'mercadopago', 'bank_account'];
+            $gateway = SecurityValidator::sanitizeAlphaNum($input['payment_gateway'] ?? '');
+            if (!in_array($gateway, $allowedGateways)) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Pasarela de pago no válida']);
+                exit;
+            }
+
+            $clabe = SecurityValidator::sanitizeDigits($input['clabe'] ?? '');
+            if (!empty($clabe)) {
+                $clabeCheck = SecurityValidator::validateClabe($clabe);
+                if (!$clabeCheck['valid']) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'message' => $clabeCheck['message']]);
+                    exit;
+                }
+            }
+
+            $last4 = SecurityValidator::sanitizeDigits($input['last_4'] ?? '');
+            if (!empty($last4) && strlen($last4) !== 4) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Los últimos 4 dígitos deben contener exactamente 4 números']);
+                exit;
+            }
+
+            $rfc = SecurityValidator::sanitizeAlphaNum($input['rfc'] ?? '');
+            if (!empty($rfc)) {
+                $rfcValid = SecurityValidator::validateRFC($rfc);
+                if (!$rfcValid) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'message' => 'El RFC no tiene un formato válido']);
+                    exit;
+                }
+                $rfc = $rfcValid;
+            }
+
+            $bankName = SecurityValidator::sanitizeText($input['bank_name'] ?? '', 80);
+            $accountHolder = SecurityValidator::sanitizeText($input['account_holder'] ?? '', 100);
+            $providerAccountId = SecurityValidator::sanitizeText($input['provider_account_id'] ?? '', 120);
+
             $isPrimary = !empty($input['is_primary']) && $input['is_primary'] !== 'false';
 
             $stmt = $pdo->prepare("
@@ -143,15 +208,15 @@ try {
             ");
             
             $stmt->execute([
-                ($input['payment_gateway'] ?? '') === 'bank_account' ? 'bank_account' : 'payment_gateway',
-                $input['account_name'] ?? '',
-                $input['payment_gateway'] ?? '',
-                $input['provider_account_id'] ?? null,
-                $input['bank_name'] ?? null,
-                $input['clabe'] ?? null,
-                $input['last_4'] ?? null,
-                $input['account_holder'] ?? null,
-                $input['rfc'] ?? null,
+                $gateway === 'bank_account' ? 'bank_account' : 'payment_gateway',
+                $accountName,
+                $gateway,
+                $providerAccountId ?: null,
+                $bankName ?: null,
+                $clabe ?: null,
+                $last4 ?: null,
+                $accountHolder ?: null,
+                $rfc ?: null,
                 $isPrimary ? 1 : 0
             ]);
             
@@ -172,6 +237,53 @@ try {
             require_csrf_token();
             $accountId = (int)($_GET['account_id'] ?? 0);
             $input = json_decode(file_get_contents('php://input'), true);
+
+            $accountName = SecurityValidator::sanitizeText($input['account_name'] ?? '', 100);
+            if (empty($accountName) || mb_strlen($accountName) < 3) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'El nombre de la cuenta es obligatorio (mínimo 3 caracteres)']);
+                exit;
+            }
+
+            $allowedGateways = ['stripe', 'mercadopago', 'bank_account'];
+            $gateway = SecurityValidator::sanitizeAlphaNum($input['payment_gateway'] ?? '');
+            if (!in_array($gateway, $allowedGateways)) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Pasarela de pago no válida']);
+                exit;
+            }
+
+            $clabe = SecurityValidator::sanitizeDigits($input['clabe'] ?? '');
+            if (!empty($clabe)) {
+                $clabeCheck = SecurityValidator::validateClabe($clabe);
+                if (!$clabeCheck['valid']) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'message' => $clabeCheck['message']]);
+                    exit;
+                }
+            }
+
+            $last4 = SecurityValidator::sanitizeDigits($input['last_4'] ?? '');
+            if (!empty($last4) && strlen($last4) !== 4) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Los últimos 4 dígitos deben contener exactamente 4 números']);
+                exit;
+            }
+
+            $rfc = SecurityValidator::sanitizeAlphaNum($input['rfc'] ?? '');
+            if (!empty($rfc)) {
+                $rfcValid = SecurityValidator::validateRFC($rfc);
+                if (!$rfcValid) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'message' => 'El RFC no tiene un formato válido']);
+                    exit;
+                }
+                $rfc = $rfcValid;
+            }
+
+            $bankName = SecurityValidator::sanitizeText($input['bank_name'] ?? '', 80);
+            $accountHolder = SecurityValidator::sanitizeText($input['account_holder'] ?? '', 100);
+            $providerAccountId = SecurityValidator::sanitizeText($input['provider_account_id'] ?? '', 120);
             
             $stmt = $pdo->prepare("
                 UPDATE admin_payment_accounts 
@@ -181,14 +293,14 @@ try {
             ");
             
             $stmt->execute([
-                $input['account_name'] ?? '',
-                $input['payment_gateway'] ?? '',
-                $input['provider_account_id'] ?? null,
-                $input['bank_name'] ?? null,
-                $input['clabe'] ?? null,
-                $input['last_4'] ?? null,
-                $input['account_holder'] ?? null,
-                $input['rfc'] ?? null,
+                $accountName,
+                $gateway,
+                $providerAccountId ?: null,
+                $bankName ?: null,
+                $clabe ?: null,
+                $last4 ?: null,
+                $accountHolder ?: null,
+                $rfc ?: null,
                 $accountId
             ]);
 

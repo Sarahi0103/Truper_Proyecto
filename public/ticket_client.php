@@ -158,8 +158,12 @@ if (file_exists($logoPath)) {
 ?>
 <!DOCTYPE html>
 <html lang="es">
-<head>
     <script src="/js/jspdf.umd.min.js"></script>
+    <script>
+        if (!window.jspdf && !window.jsPDF) {
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>');
+        }
+    </script>
     <link rel="icon" type="image/png" href="/truper_logo2.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -501,12 +505,13 @@ function money(value) {
 }
 
 function downloadClientTicketPdf() {
-    if (!window.jspdf || !window.jspdf.jsPDF) {
+    const jsPdfClass = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : (window.jsPDF || null);
+    if (!jsPdfClass) {
         window.print();
         return;
     }
 
-    const { jsPDF } = window.jspdf;
+    const jsPDF = jsPdfClass;
     const logoBase64 = <?php echo json_encode($logoBase64); ?>;
     const items = Array.isArray(ticketData.items) ? ticketData.items : [];
     

@@ -88,6 +88,21 @@ if ($trackingData) {
             <h1 class="hero-title">Pedido Confirmado y Registrado</h1>
             <p class="hero-subtitle">Hemos recibido tu compra y la validación de pago en tiempo real. Tu mercancía está siendo procesada en almacén.</p>
             <div class="folio-pill">Folio Único: <?php echo htmlspecialchars($order['folio']); ?></div>
+            
+            <!-- Botones Destacados de Descarga de Ticket -->
+            <div style="margin-top: 1.5rem; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+                <a href="/ticket_client.php?folio=<?php echo urlencode($order['folio']); ?>&auto_pdf=1" target="_blank" id="btnHeroDownloadTicket" style="background: linear-gradient(135deg, #ff7f00, #e05c00); color: #fff; padding: 12px 26px; border-radius: 30px; font-weight: 800; font-size: 1rem; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 6px 22px rgba(255, 127, 0, 0.45); transition: transform 0.2s;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    🎟️ Descargar Ticket de Compra (PDF)
+                </a>
+                <a href="/ticket_client.php?folio=<?php echo urlencode($order['folio']); ?>" target="_blank" style="background: #181820; border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 12px 20px; border-radius: 30px; font-weight: 700; font-size: 0.95rem; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                    🖨️ Ver / Imprimir Ticket
+                </a>
+            </div>
+            <div id="autoDownloadNotice" style="margin-top: 0.9rem; font-size: 0.85rem; color: #4ade80; display: inline-flex; align-items: center; gap: 6px;">
+                <span>⚡ Tu ticket se está descargando automáticamente...</span>
+            </div>
         </div>
 
         <!-- Timeline Stepper -->
@@ -135,9 +150,13 @@ if ($trackingData) {
                     <strong>Fecha de Emisión:</strong> <?php echo substr((string)$order['issued_date'], 0, 16); ?><br>
                     
                     <div style="margin-top:1rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
-                        <a href="/api/invoice.php?action=download_pdf&folio=<?php echo urlencode($order['folio']); ?>" target="_blank" style="padding:6px 12px; background:#ff7f00; color:#fff; border-radius:6px; font-weight:700; font-size:0.8rem; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">📕 Factura PDF</a>
-                        <a href="/api/invoice.php?action=download_xml&folio=<?php echo urlencode($order['folio']); ?>" target="_blank" style="padding:6px 12px; background:#222; border:1px solid #444; color:#fff; border-radius:6px; font-weight:600; font-size:0.8rem; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">📄 XML SAT</a>
-                        <button onclick="promptSendInvoiceEmail('<?php echo htmlspecialchars($order['folio']); ?>')" style="padding:6px 12px; background:#2563eb; color:#fff; border:none; border-radius:6px; font-weight:600; font-size:0.8rem; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">✉️ Enviar a Correo</button>
+                        <a href="/ticket_client.php?folio=<?php echo urlencode($order['folio']); ?>&auto_pdf=1" target="_blank" style="padding:7px 14px; background:linear-gradient(135deg, #ff7f00, #ff5500); color:#fff; border-radius:6px; font-weight:800; font-size:0.84rem; text-decoration:none; display:inline-flex; align-items:center; gap:5px; box-shadow: 0 3px 10px rgba(255,127,0,0.3);">🎟️ Ticket PDF</a>
+                        <a href="/ticket_client.php?folio=<?php echo urlencode($order['folio']); ?>" target="_blank" style="padding:7px 12px; background:#1e1e28; border:1px solid #333345; color:#fff; border-radius:6px; font-weight:600; font-size:0.84rem; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">🖨️ Ver Ticket</a>
+                        <?php if ($order['invoice_required']): ?>
+                        <a href="/api/invoice.php?action=download_pdf&folio=<?php echo urlencode($order['folio']); ?>" target="_blank" style="padding:7px 12px; background:#2563eb; color:#fff; border-radius:6px; font-weight:700; font-size:0.84rem; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">📕 Factura PDF</a>
+                        <a href="/api/invoice.php?action=download_xml&folio=<?php echo urlencode($order['folio']); ?>" target="_blank" style="padding:7px 12px; background:#222; border:1px solid #444; color:#fff; border-radius:6px; font-weight:600; font-size:0.84rem; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">📄 XML SAT</a>
+                        <button onclick="promptSendInvoiceEmail('<?php echo htmlspecialchars($order['folio']); ?>')" style="padding:7px 12px; background:#334155; color:#fff; border:none; border-radius:6px; font-weight:600; font-size:0.84rem; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">✉️ Enviar a Correo</button>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -199,6 +218,23 @@ if ($trackingData) {
             });
         });
     }
+
+    // Auto-descarga suave del ticket en PDF al cargar la confirmación
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            const frame = document.createElement('iframe');
+            frame.style.display = 'none';
+            frame.src = '/ticket_client.php?folio=<?php echo urlencode($order['folio']); ?>&auto_pdf=1';
+            document.body.appendChild(frame);
+        }, 600);
+
+        setTimeout(() => {
+            const notice = document.getElementById('autoDownloadNotice');
+            if (notice) {
+                notice.innerHTML = '<span style="color:#94a3b8;">✅ ¿Necesitas otra copia? Usa el botón naranja de arriba.</span>';
+            }
+        }, 4500);
+    });
     </script>
 </body>
 </html>

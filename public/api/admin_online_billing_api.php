@@ -71,6 +71,37 @@ try {
                 'company_zip_code', 'csd_status'
             ];
 
+            // Validaciones específicas
+            if (!empty($data['company_rfc'])) {
+                $validRfc = SecurityValidator::validateRFC($data['company_rfc']);
+                if (!$validRfc) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'message' => 'El RFC de la empresa no tiene un formato válido para el SAT']);
+                    exit;
+                }
+                $data['company_rfc'] = $validRfc;
+            }
+
+            if (!empty($data['company_zip_code'])) {
+                $validZip = SecurityValidator::validatePostalCode($data['company_zip_code']);
+                if (!$validZip) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'message' => 'El código postal fiscal debe contener 5 dígitos numéricos']);
+                    exit;
+                }
+                $data['company_zip_code'] = $validZip;
+            }
+
+            if (!empty($data['bank_clabe'])) {
+                $validClabe = SecurityValidator::validateClabe($data['bank_clabe']);
+                if (!$validClabe['valid']) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'message' => $validClabe['message']]);
+                    exit;
+                }
+                $data['bank_clabe'] = $validClabe['clabe'];
+            }
+
             $stmtSave = $pdo->prepare("
                 INSERT INTO system_settings (setting_key, setting_value, updated_at)
                 VALUES (?, ?, NOW())
@@ -80,7 +111,7 @@ try {
             $savedCount = 0;
             foreach ($fieldsAllowed as $field) {
                 if (isset($data[$field])) {
-                    $val = trim((string)$data[$field]);
+                    $val = SecurityValidator::sanitizeText($data[$field]);
                     $stmtSave->execute([$field, $val]);
                     $savedCount++;
                 }

@@ -840,7 +840,7 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
 
                 <!-- ── Precios y Canales Diferenciados ── -->
                 <div class="form-group mt-2" style="background: rgba(255,127,0,0.06); padding: 14px 16px; border-radius: 10px; border: 1px solid rgba(255,127,0,0.25);">
-                    <label style="font-weight:700; color:var(--theme-accent, #ff7f00); font-size: 1rem;">⚙️ Configuración por Canal de Venta (Local vs En Línea)</label>
+                    <label style="font-weight:700; color:var(--theme-accent, #ff7f00); font-size: 1rem;">⚙️ Configuración por Canal de Venta (Local vs En Línea) & Precios</label>
                     <div class="grid grid-3 mt-2">
                         <div class="form-group" style="margin-bottom:0;">
                             <label style="color:#ff8800; font-weight:700;">🏪 Precio Ferretería Local ($)</label>
@@ -853,15 +853,20 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                             <small class="text-muted">Si es 0, usa el Precio Base.</small>
                         </div>
                         <div class="form-group" style="margin-bottom:0;">
-                            <label style="color:#ffffff; font-weight:700;">Publicar en Canales:</label>
-                            <div style="display:flex; flex-direction:column; gap:6px; margin-top:4px;">
-                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.9rem; color:#eee;">
-                                    <input type="checkbox" id="newProductShowPos" checked> 🏪 Ferretería Local (Caja/POS)
-                                </label>
-                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.9rem; color:#eee;">
-                                    <input type="checkbox" id="newProductShowOnline" checked> 🌐 Tienda en Línea (Web)
-                                </label>
-                            </div>
+                            <label style="color:#a855f7; font-weight:700;">💼 Precio por Mayoreo ($)</label>
+                            <input id="newProductPriceWholesale" type="number" min="0" step="any" value="0" placeholder="Ej. 90.00">
+                            <small class="text-muted">Si es 0, usa el Precio Base.</small>
+                        </div>
+                    </div>
+                    <div class="mt-2" style="border-top:1px solid rgba(255,255,255,0.08); padding-top:10px;">
+                        <label style="color:#ffffff; font-weight:700; font-size:0.9rem;">Publicar en Canales:</label>
+                        <div style="display:flex; gap:20px; margin-top:4px; flex-wrap:wrap;">
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.9rem; color:#eee;">
+                                <input type="checkbox" id="newProductShowPos" checked> 🏪 Ferretería Local (Caja/POS)
+                            </label>
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.9rem; color:#eee;">
+                                <input type="checkbox" id="newProductShowOnline" checked> 🌐 Tienda en Línea (Web)
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -1487,10 +1492,11 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                     <div class="form-group"><label>Descuento (%)</label><input id="marketplaceDiscount" type="number" min="0" max="100" step="any" value="0"></div>
                     <div class="form-group"><label>Stock</label><input id="marketplaceStock" type="number" min="0" step="1" value="1"></div>
                 </div>
-                <div class="grid grid-3">
+                <div class="grid grid-4">
                     <div class="form-group"><label>Visibilidad Local</label><select id="marketplaceActive"><option value="1">✅ Visible en Local</option><option value="0">🔒 Oculto</option></select></div>
                     <div class="form-group"><label>Visibilidad en Línea</label><select id="marketplaceShowInOnline"><option value="1">🌐 Visible en Tienda en Línea</option><option value="0">🔒 Oculto</option></select></div>
-                    <div class="form-group"><label>Precio Online (Vacío para usar precio base)</label><input id="marketplacePriceOnline" type="number" min="0" step="any" placeholder="Precio en línea"></div>
+                    <div class="form-group"><label>Precio Online (Vacío = precio base)</label><input id="marketplacePriceOnline" type="number" min="0" step="any" placeholder="Precio en línea"></div>
+                    <div class="form-group"><label style="color:#a855f7; font-weight:700;">💼 Precio Mayoreo (Vacío = precio base)</label><input id="marketplacePriceWholesale" type="number" min="0" step="any" placeholder="Precio mayoreo"></div>
                 </div>
 
                 <div class="form-group"><label>Descripción</label><textarea id="marketplaceDescription" rows="4" maxlength="1800"></textarea></div>
@@ -1724,17 +1730,18 @@ $user_name = htmlspecialchars($_SESSION['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8
                             <tr style="border-bottom:1px solid var(--theme-border);">
                                 <th style="padding:1rem; text-align:left;">Código (SKU)</th>
                                 <th style="padding:1rem; text-align:left;">Nombre</th>
-                                <th style="padding:1rem; text-align:left; width:200px;">Categoría</th>
-                                <th style="padding:1rem; text-align:left; width:130px;">Clave SAT</th>
-                                <th style="padding:1rem; text-align:left; width:130px;">Unidad SAT</th>
-                                <th style="padding:1rem; text-align:left; width:140px;">Precio Neto ($)</th>
+                                <th style="padding:1rem; text-align:left; width:180px;">Categoría</th>
+                                <th style="padding:1rem; text-align:left; width:120px;">Clave SAT</th>
+                                <th style="padding:1rem; text-align:left; width:120px;">Unidad SAT</th>
+                                <th style="padding:1rem; text-align:left; width:130px;">Precio Neto ($)</th>
+                                <th style="padding:1rem; text-align:left; width:130px; color:#a855f7;">Precio Mayoreo ($)</th>
                                 <th style="padding:1rem; text-align:center; width:110px;">Visibilidad</th>
                                 <th style="padding:1rem; text-align:center; width:110px;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="quickEditTableBody">
                             <tr>
-                                <td colspan="8" style="padding:2rem; text-align:center;" class="text-muted">Cargando productos para edición rápida...</td>
+                                <td colspan="9" style="padding:2rem; text-align:center;" class="text-muted">Cargando productos para edición rápida...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -1897,6 +1904,8 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
     const description = String(item.description || 'Descripción pendiente');
     const imageUrl = String(item.image_url || 'images/products/default-product.svg');
     const unitPrice = Number(item.unit_price || 0);
+    const pricePos = Number(item.price_pos || 0);
+    const priceOnline = Number(item.price_online || 0);
     const stock = Math.max(0, Number(item.stock_quantity || 0));
     const reorder = Math.max(0, Number(item.reorder_level || 10));
     const condition = mode === 'marketplace' ? String(item.condition_label || 'Seminuevo') : 'Modelo Estandar';
@@ -1905,6 +1914,13 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
     const activeChannel = window.currentAdminChannelMode || 'pos';
     let isChannelActive = true;
     let channelLabel = 'Ferretería Local';
+
+    let displayPrice = unitPrice;
+    if (activeChannel === 'online') {
+        displayPrice = priceOnline > 0 ? priceOnline : unitPrice;
+    } else if (activeChannel === 'pos') {
+        displayPrice = pricePos > 0 ? pricePos : unitPrice;
+    }
 
     if (mode === 'marketplace') {
         channelLabel = 'Marketplace CE';
@@ -1969,9 +1985,10 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
                 <div style="margin-top:4px;"><span class="badge ${stateBadgeClass}">Estado: ${stateLabel}</span></div>
                 ${(() => {
                     const discount = Number(item.discount_percentage || 0);
-                    const netPrice = Number(item.net_price || unitPrice);
+                    const netPrice = Number(item.net_price || displayPrice);
+                    let priceHtml = '';
                     if (discount > 0) {
-                        return `
+                        priceHtml = `
                             <div style="display:flex; flex-direction:column; gap:2px; margin-top:4px;">
                                 <div style="display:flex; align-items:center; gap:6px;">
                                     <span style="text-decoration:line-through; color:rgba(255,255,255,0.4); font-size:0.8rem;">
@@ -1982,13 +1999,26 @@ function renderAdminProductCard(item, mode = 'stock', withActions = true) {
                                     </span>
                                 </div>
                                 <div class="catalog-price" style="font-size:1.05rem; font-weight:bold; color:#fff; margin:0;">
-                                    ${formatAdminMoney(unitPrice)}
+                                    ${formatAdminMoney(displayPrice)}
                                 </div>
                             </div>
                         `;
                     } else {
-                        return `<div class="catalog-price">${formatAdminMoney(unitPrice)}</div>`;
+                        priceHtml = `<div class="catalog-price">${formatAdminMoney(displayPrice)}</div>`;
                     }
+
+                    const channelBadges = (mode !== 'marketplace') ? `
+                        <div style="display:flex; gap:6px; flex-wrap:wrap; font-size:0.75rem; margin-top:5px;">
+                            <span title="Precio en Ferretería Local (Caja/POS)" style="color:#ff8800; background:rgba(255,136,0,0.12); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,136,0,0.25); font-weight:600;">
+                                🏪 Local: ${formatAdminMoney(pricePos > 0 ? pricePos : unitPrice)}
+                            </span>
+                            <span title="Precio en Tienda en Línea (Web)" style="color:#00d2ff; background:rgba(0,210,255,0.12); padding:2px 6px; border-radius:4px; border:1px solid rgba(0,210,255,0.25); font-weight:600;">
+                                🌐 Web: ${formatAdminMoney(priceOnline > 0 ? priceOnline : unitPrice)}
+                            </span>
+                        </div>
+                    ` : '';
+
+                    return priceHtml + channelBadges;
                 })()}
                 ${withActions ? `<div class="product-actions">${actions}</div>` : '<div class="text-muted" style="font-size:12px;margin-top:8px;">Vista previa del diseño en portada.</div>'}
                 ${inactive ? '<div class="text-muted" style="font-size:12px;margin-top:6px;">Producto oculto/desactivado.</div>' : ''}
@@ -4293,6 +4323,7 @@ function resetProductForm() {
     document.getElementById('newProductPrice').value = '0';
     if (document.getElementById('newProductPricePos')) document.getElementById('newProductPricePos').value = '0';
     if (document.getElementById('newProductPriceOnline')) document.getElementById('newProductPriceOnline').value = '0';
+    if (document.getElementById('newProductPriceWholesale')) document.getElementById('newProductPriceWholesale').value = '0';
     if (document.getElementById('newProductShowPos')) document.getElementById('newProductShowPos').checked = true;
     if (document.getElementById('newProductShowOnline')) document.getElementById('newProductShowOnline').checked = true;
     document.getElementById('newProductStock').value = '50';
@@ -4345,8 +4376,12 @@ async function fillProductFormById(id) {
     document.getElementById('newProductPrice').value = String(item.net_price || item.unit_price || 0);
     if (document.getElementById('newProductPricePos')) document.getElementById('newProductPricePos').value = String(item.price_pos || 0);
     if (document.getElementById('newProductPriceOnline')) document.getElementById('newProductPriceOnline').value = String(item.price_online || 0);
+    if (document.getElementById('newProductPriceWholesale')) document.getElementById('newProductPriceWholesale').value = String(item.price_wholesale || 0);
     if (document.getElementById('newProductShowPos')) document.getElementById('newProductShowPos').checked = item.show_in_pos !== undefined ? Boolean(Number(item.show_in_pos)) : true;
     if (document.getElementById('newProductShowOnline')) document.getElementById('newProductShowOnline').checked = item.show_in_online !== undefined ? Boolean(Number(item.show_in_online)) : true;
+    if (document.getElementById('newProductVisible')) {
+        document.getElementById('newProductVisible').value = (Number(item.is_active) === 0 || item.is_active === false || item.is_active === 'f' || item.is_active === 'false') ? '0' : '1';
+    }
     document.getElementById('newProductStock').value = String(item.stock_quantity || 0);
     document.getElementById('newProductReorder').value = String(item.reorder_level || 10);
     document.getElementById('newProductDiscount').value = String(item.discount_percentage || 0);
@@ -7316,6 +7351,7 @@ async function createProductByAdmin() {
             price: price,
             price_pos: Number(document.getElementById('newProductPricePos')?.value || 0),
             price_online: Number(document.getElementById('newProductPriceOnline')?.value || 0),
+            price_wholesale: Number(document.getElementById('newProductPriceWholesale')?.value || 0),
             show_in_pos: document.getElementById('newProductShowPos')?.checked ? 1 : 0,
             show_in_online: document.getElementById('newProductShowOnline')?.checked ? 1 : 0,
             discount_percentage: parseFloat(document.getElementById('newProductDiscount')?.value || 0),
@@ -7361,11 +7397,24 @@ async function createProductByAdmin() {
         name: (res.product && res.product.name) ? res.product.name : productName,
         category: payload.category,
         description: payload.description,
-        unit_price: price,
+        unit_price: (payload.discount_percentage > 0) ? (price * (1 - payload.discount_percentage / 100)) : price,
+        net_price: price,
+        discount_percentage: payload.discount_percentage,
+        price_pos: payload.price_pos,
+        price_online: payload.price_online,
+        price_wholesale: payload.price_wholesale,
+        show_in_pos: payload.show_in_pos,
+        show_in_online: payload.show_in_online,
         stock_quantity: stock,
         reorder_level: reorder,
         image_url: payload.image_url,
         is_active: payload.is_visible,
+        color: payload.color,
+        product_group: payload.product_group,
+        sat_code: payload.sat_code,
+        sat_unit: payload.sat_unit,
+        tax_rate: payload.tax_rate,
+        is_tax_exempt: payload.is_tax_exempt,
         variants_json: getGalleryState('stock')?.images || []
     };
     upsertStockCache(optimisticProduct);
@@ -7396,6 +7445,7 @@ function resetMarketplaceForm() {
     document.getElementById('marketplaceActive').value = '0';
     if (document.getElementById('marketplaceShowInOnline')) document.getElementById('marketplaceShowInOnline').value = '1';
     if (document.getElementById('marketplacePriceOnline')) document.getElementById('marketplacePriceOnline').value = '';
+    if (document.getElementById('marketplacePriceWholesale')) document.getElementById('marketplacePriceWholesale').value = '';
     document.getElementById('marketplaceDescription').value = '';
     const mktCatSel = document.getElementById('marketplaceCategory');
     if (mktCatSel) {
@@ -7440,6 +7490,9 @@ async function fillMarketplaceForm(item) {
     }
     if (document.getElementById('marketplacePriceOnline')) {
         document.getElementById('marketplacePriceOnline').value = (item.price_online !== null && item.price_online !== undefined) ? parseFloat(item.price_online) : '';
+    }
+    if (document.getElementById('marketplacePriceWholesale')) {
+        document.getElementById('marketplacePriceWholesale').value = (item.price_wholesale !== null && item.price_wholesale !== undefined && Number(item.price_wholesale) > 0) ? parseFloat(item.price_wholesale) : '';
     }
     document.getElementById('marketplaceDescription').value = item.description || '';
     const marketplaceImages = document.getElementById('marketplaceImages');
@@ -7786,6 +7839,7 @@ async function saveMarketplaceCeByAdmin() {
         is_active: document.getElementById('marketplaceActive')?.value === '1' ? 1 : 0,
         show_in_online: document.getElementById('marketplaceShowInOnline')?.value === '1' ? 1 : 0,
         price_online: document.getElementById('marketplacePriceOnline')?.value?.trim() !== '' ? parseFloat(document.getElementById('marketplacePriceOnline').value) : null,
+        price_wholesale: document.getElementById('marketplacePriceWholesale')?.value?.trim() !== '' ? parseFloat(document.getElementById('marketplacePriceWholesale').value) : null,
         description: document.getElementById('marketplaceDescription')?.value?.trim() || '',
         image_url: document.getElementById('marketplaceImageRef')?.value || 'images/products/default-product.svg'
     };
@@ -7812,6 +7866,7 @@ async function saveMarketplaceCeByAdmin() {
         unit_price: payload.unit_price,
         stock_quantity: payload.stock_quantity,
         is_active: payload.is_active,
+        price_wholesale: payload.price_wholesale,
         description: payload.description,
         image_url: payload.image_url,
         variants_json: getGalleryState('marketplace')?.images || []
@@ -8270,7 +8325,7 @@ async function loadQuickEditProducts(page = 1, customPerPage = null) {
 
     tableBody.innerHTML = `
         <tr>
-            <td colspan="6" style="padding:2rem; text-align:center;" class="text-muted">
+            <td colspan="9" style="padding:2rem; text-align:center;" class="text-muted">
                 Cargando productos...
             </td>
         </tr>
@@ -8289,7 +8344,7 @@ async function loadQuickEditProducts(page = 1, customPerPage = null) {
     if (!res || !res.success || !Array.isArray(res.items)) {
         tableBody.innerHTML = `
             <tr>
-                <td colspan="6" style="padding:2rem; text-align:center; color:var(--theme-accent, #ff7f00);">
+                <td colspan="9" style="padding:2rem; text-align:center; color:var(--theme-accent, #ff7f00);">
                     No fue posible obtener la lista de productos.
                 </td>
             </tr>
@@ -8300,7 +8355,7 @@ async function loadQuickEditProducts(page = 1, customPerPage = null) {
     if (res.items.length === 0) {
         tableBody.innerHTML = `
             <tr>
-                <td colspan="6" style="padding:2rem; text-align:center;" class="text-muted">
+                <td colspan="9" style="padding:2rem; text-align:center;" class="text-muted">
                     No se encontraron productos con los filtros seleccionados.
                 </td>
             </tr>
@@ -8460,6 +8515,54 @@ async function loadQuickEditProducts(page = 1, customPerPage = null) {
         tdPrice.appendChild(infoDiv);
         tr.appendChild(tdPrice);
 
+        // Wholesale Price column
+        const tdWholesale = document.createElement('td');
+        tdWholesale.style.padding = '0.75rem 1rem';
+
+        const wholesaleInput = document.createElement('input');
+        wholesaleInput.type = 'number';
+        wholesaleInput.className = 'quick-wholesale-input';
+        const wholesaleVal = (item.price_wholesale !== null && item.price_wholesale !== undefined && item.price_wholesale !== '') 
+            ? Number(item.price_wholesale) || 0 
+            : 0;
+        wholesaleInput.value = wholesaleVal > 0 ? wholesaleVal.toFixed(2) : '0';
+        wholesaleInput.step = '0.01';
+        wholesaleInput.min = '0';
+        wholesaleInput.placeholder = 'Base';
+        wholesaleInput.title = 'Si es 0 o vacío, usa el Precio Base';
+        wholesaleInput.style.width = '100%';
+        wholesaleInput.style.background = '#111';
+        wholesaleInput.style.border = '1px solid #3b2063';
+        wholesaleInput.style.color = '#c084fc';
+        wholesaleInput.style.padding = '4px 8px';
+        wholesaleInput.style.borderRadius = '6px';
+        wholesaleInput.style.textAlign = 'right';
+        wholesaleInput.setAttribute('data-orig', wholesaleVal > 0 ? wholesaleVal.toFixed(2) : '0');
+
+        tdWholesale.appendChild(wholesaleInput);
+
+        const wholesaleInfoDiv = document.createElement('div');
+        wholesaleInfoDiv.className = 'quick-wholesale-info';
+        wholesaleInfoDiv.style.fontSize = '0.75rem';
+        wholesaleInfoDiv.style.marginTop = '2px';
+        wholesaleInfoDiv.style.textAlign = 'right';
+        wholesaleInfoDiv.style.color = wholesaleVal > 0 ? '#c084fc' : 'rgba(192, 132, 252, 0.6)';
+        wholesaleInfoDiv.innerHTML = wholesaleVal > 0 ? 'Mayoreo activo' : 'Usa precio base';
+        tdWholesale.appendChild(wholesaleInfoDiv);
+
+        wholesaleInput.addEventListener('input', () => {
+            const val = parseFloat(wholesaleInput.value) || 0;
+            if (val > 0) {
+                wholesaleInfoDiv.innerHTML = 'Mayoreo activo';
+                wholesaleInfoDiv.style.color = '#c084fc';
+            } else {
+                wholesaleInfoDiv.innerHTML = 'Usa precio base';
+                wholesaleInfoDiv.style.color = 'rgba(192, 132, 252, 0.6)';
+            }
+        });
+
+        tr.appendChild(tdWholesale);
+
         // Visibilidad column
         const tdVis = document.createElement('td');
         tdVis.style.padding = '0.75rem 1rem';
@@ -8503,27 +8606,34 @@ async function loadQuickEditProducts(page = 1, customPerPage = null) {
         saveBtn.style.borderRadius = '6px';
         saveBtn.innerHTML = '💾 Guardar';
         
-        // Bind auto-saves and manual save with SAT columns
-        select.onchange = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect);
-        satCodeInput.onchange = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect);
-        satCodeInput.onblur = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect);
-        satUnitSelect.onchange = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect);
-        priceInput.onchange = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect);
-        priceInput.onblur = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect);
-        saveBtn.onclick = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect);
+        // Bind auto-saves and manual save with SAT and Wholesale columns
+        select.onchange = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect, wholesaleInput);
+        satCodeInput.onchange = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect, wholesaleInput);
+        satCodeInput.onblur = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect, wholesaleInput);
+        satUnitSelect.onchange = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect, wholesaleInput);
+        priceInput.onchange = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect, wholesaleInput);
+        priceInput.onblur = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect, wholesaleInput);
+        wholesaleInput.onchange = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect, wholesaleInput);
+        wholesaleInput.onblur = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect, wholesaleInput);
+        saveBtn.onclick = () => saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect, wholesaleInput);
         
         tdAction.appendChild(saveBtn);
         tr.appendChild(tdAction);
 
-        // Allow save on Enter key inside price input and satCode input
+        // Allow save on Enter key inside price input, satCode input, and wholesale input
         priceInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect);
+                saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect, wholesaleInput);
             }
         });
         satCodeInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect);
+                saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect, wholesaleInput);
+            }
+        });
+        wholesaleInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                saveQuickEditRow(item.id, target, select, priceInput, saveBtn, satCodeInput, satUnitSelect, wholesaleInput);
             }
         });
 
@@ -8611,7 +8721,7 @@ function quickEditBatchVisibility(isVisible) {
     }
 }
 
-async function saveQuickEditRow(id, target, selectEl, priceInputEl, buttonEl, satCodeInputEl = null, satUnitSelectEl = null) {
+async function saveQuickEditRow(id, target, selectEl, priceInputEl, buttonEl, satCodeInputEl = null, satUnitSelectEl = null, wholesaleInputEl = null) {
     if (_currentlySavingRows.has(id)) return;
     _currentlySavingRows.add(id);
 
@@ -8624,19 +8734,23 @@ async function saveQuickEditRow(id, target, selectEl, priceInputEl, buttonEl, sa
     const tr = buttonEl.closest('tr');
     const satInput = satCodeInputEl || tr?.querySelector('.quick-sat-code-input');
     const unitSelect = satUnitSelectEl || tr?.querySelector('.quick-sat-unit-select');
+    const wholesaleInput = wholesaleInputEl || tr?.querySelector('.quick-wholesale-input');
 
     const satCode = satInput ? satInput.value.trim() : '27111701';
     const satUnit = unitSelect ? unitSelect.value.trim() : 'H87';
     const origSatCode = satInput ? (satInput.getAttribute('data-orig') || '') : '';
     const origSatUnit = unitSelect ? (unitSelect.getAttribute('data-orig') || '') : '';
 
+    const wholesalePrice = wholesaleInput ? (parseFloat(wholesaleInput.value) || 0) : 0;
+    const origWholesalePrice = wholesaleInput ? (parseFloat(wholesaleInput.getAttribute('data-orig')) || 0) : 0;
+
     // Skip if there are no changes
-    if (category === origCategory && price === origPrice && satCode === origSatCode && satUnit === origSatUnit) {
+    if (category === origCategory && price === origPrice && satCode === origSatCode && satUnit === origSatUnit && wholesalePrice === origWholesalePrice) {
         _currentlySavingRows.delete(id);
         return;
     }
 
-    if (price < 0) {
+    if (price < 0 || wholesalePrice < 0) {
         showAlert('El precio no puede ser menor a 0', 'warning');
         _currentlySavingRows.delete(id);
         return;
@@ -8651,6 +8765,7 @@ async function saveQuickEditRow(id, target, selectEl, priceInputEl, buttonEl, sa
         target: target,
         category: category,
         price: price,
+        price_wholesale: wholesalePrice,
         sat_code: satCode,
         sat_unit: satUnit
     };
@@ -8667,6 +8782,7 @@ async function saveQuickEditRow(id, target, selectEl, priceInputEl, buttonEl, sa
         // Update original markers
         selectEl.setAttribute('data-orig', category);
         priceInputEl.setAttribute('data-orig', price.toFixed(2));
+        if (wholesaleInput) wholesaleInput.setAttribute('data-orig', wholesalePrice > 0 ? wholesalePrice.toFixed(2) : '0');
         if (satInput) satInput.setAttribute('data-orig', satCode);
         if (unitSelect) unitSelect.setAttribute('data-orig', satUnit);
 

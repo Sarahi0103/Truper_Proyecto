@@ -30,15 +30,23 @@ require_once __DIR__ . '/../config/image_cache.php';
 
 $products = [];
 try {
+    $isOnlineMode = ($_GET['mode'] ?? '') === 'online';
     $visibilityWhere = '';
-    if (db_column_exists('products', 'show_in_pos')) {
+    if ($isOnlineMode && db_column_exists('products', 'show_in_online')) {
+        $visibilityWhere = " WHERE (CASE WHEN show_in_online IS NULL THEN (CASE WHEN is_active IS NULL THEN 1 WHEN LOWER(CAST(is_active AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) WHEN LOWER(CAST(show_in_online AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
+        $priceSelect = db_column_exists('products', 'price_online') ? "COALESCE(NULLIF(price_online, 0), unit_price, sell_price, 0)" : "COALESCE(unit_price, sell_price, 0)";
+    } elseif (db_column_exists('products', 'show_in_pos')) {
         $visibilityWhere = " WHERE (CASE WHEN show_in_pos IS NULL THEN (CASE WHEN is_active IS NULL THEN 1 WHEN LOWER(CAST(is_active AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) WHEN LOWER(CAST(show_in_pos AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
+        $priceSelect = db_column_exists('products', 'price_pos') ? "COALESCE(NULLIF(price_pos, 0), unit_price, sell_price, 0)" : "COALESCE(unit_price, sell_price, 0)";
     } elseif (db_column_exists('products', 'is_active')) {
         $visibilityWhere = " WHERE (CASE WHEN is_active IS NULL THEN 1 WHEN LOWER(CAST(is_active AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
+        $priceSelect = "COALESCE(unit_price, sell_price, 0)";
     } elseif (db_column_exists('products', 'active')) {
         $visibilityWhere = " WHERE active = 1";
+        $priceSelect = "COALESCE(unit_price, sell_price, 0)";
     } else {
         $visibilityWhere = " WHERE 1 = 1";
+        $priceSelect = "COALESCE(unit_price, sell_price, 0)";
     }
     $visibilityWhere .= " AND NOT EXISTS (
         SELECT 1 FROM product_categories pc 
@@ -49,7 +57,7 @@ try {
     $groupSelect = db_column_exists('products', 'product_group') ? "COALESCE(product_group, '') AS product_group" : "'' AS product_group";
     $colorSelect = db_column_exists('products', 'color') ? "COALESCE(color, '') AS color" : "'' AS color";
 
-    $stmt = $pdo->prepare("SELECT id, name, sku, COALESCE(unit_price, sell_price, 0) AS unit_price, COALESCE(net_price, unit_price, sell_price, 0) AS net_price, COALESCE(discount_percentage, 0) AS discount_percentage, category, description, technical_specs, stock_quantity, image_url, variants_json, {$groupSelect}, {$colorSelect} FROM products" . $visibilityWhere . " ORDER BY name LIMIT 5000");
+    $stmt = $pdo->prepare("SELECT id, name, sku, {$priceSelect} AS unit_price, COALESCE(net_price, unit_price, sell_price, 0) AS net_price, COALESCE(discount_percentage, 0) AS discount_percentage, category, description, technical_specs, stock_quantity, image_url, variants_json, {$groupSelect}, {$colorSelect} FROM products" . $visibilityWhere . " ORDER BY name LIMIT 5000");
     $stmt->execute();
     $products = $stmt->fetchAll();
 } catch (Exception $e) {

@@ -766,9 +766,14 @@ if ($isLogged) {
                     <div class="form-section">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 1.25rem;">
                             <div class="form-section-title" style="margin-bottom: 0;">💳 Tarjeta de Crédito o Débito</div>
-                            <span style="background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.3); color: #22c55e; padding: 4px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
-                                🔒 Transacción Segura SSL 256-bit
-                            </span>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <button type="button" onclick="fillTestCard()" style="background: rgba(255, 127, 0, 0.15); border: 1px solid #ff7f00; color: #ff9f43; padding: 4px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s;" title="Llenar con tarjeta de prueba válida">
+                                    ⚡ Tarjeta de prueba
+                                </button>
+                                <span style="background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.3); color: #22c55e; padding: 4px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
+                                    🔒 Transacción Segura SSL 256-bit
+                                </span>
+                            </div>
                         </div>
 
                         <input type="hidden" name="paymentMethod" value="card">
@@ -939,6 +944,7 @@ if ($isLogged) {
         <p>&copy; 2026 Ferretería FOX</p>
     </footer>
 
+    <script src="js/form-validator.js?v=1.0"></script>
     <script src="js/main.js?v=2.6"></script>
     <script src="js/modals.js"></script>
     <script src="js/leaflet.js"></script>
@@ -955,6 +961,14 @@ if ($isLogged) {
             let cart = [];
             try {
                 cart = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+                if (!Array.isArray(cart) || cart.length === 0) {
+                    const altKey = CART_KEY === 'fox_cart' ? 'truper_cart' : 'fox_cart';
+                    const altCart = JSON.parse(localStorage.getItem(altKey) || '[]');
+                    if (Array.isArray(altCart) && altCart.length > 0) {
+                        cart = altCart;
+                        localStorage.setItem(CART_KEY, JSON.stringify(cart));
+                    }
+                }
             } catch (_) {
                 cart = [];
             }
@@ -1290,6 +1304,34 @@ if ($isLogged) {
             return fullAddr;
         }
 
+        window.fillTestCard = function() {
+            const holder = document.getElementById('cardHolder');
+            const num = document.getElementById('cardNumber');
+            const exp = document.getElementById('cardExpiry');
+            const cvv = document.getElementById('cardCvv');
+            if (holder) {
+                holder.value = 'JUAN CARLOS PEREZ';
+                holder.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            if (num) {
+                num.value = '4242 4242 4242 4242';
+                num.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            if (exp) {
+                exp.value = '12/28';
+                exp.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            if (cvv) {
+                cvv.value = '123';
+                cvv.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            const terms = document.getElementById('termsAccepted');
+            if (terms) terms.checked = true;
+            if (typeof showAlert === 'function') {
+                showAlert('Datos de tarjeta de prueba ingresados.', 'success');
+            }
+        };
+
         // Event listeners
         document.querySelectorAll('input[name="shippingMethod"]').forEach(input => {
             input.addEventListener('change', () => {
@@ -1301,20 +1343,56 @@ if ($isLogged) {
         document.getElementById('checkoutForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            const form = document.getElementById('checkoutForm');
             const submitBtn = document.getElementById('submitBtn');
             const formMessage = document.getElementById('formMessage');
 
-            // Validar términos
-            if (!document.getElementById('termsAccepted').checked) {
-                formMessage.innerHTML = '<div class="error-message">❌ Debes aceptar los términos y condiciones</div>';
+            // 1. Validación unificada con FormValidator para contacto y domicilio
+            if (window.FormValidator && !window.FormValidator.validateForm(form)) {
+                formMessage.innerHTML = '<div class="error-message">⚠️ Por favor completa o corrige los campos marcados en rojo antes de continuar.</div>';
+                if (typeof showAlert === 'function') {
+                    showAlert('Por favor corrige los campos marcados en rojo.', 'warning');
+                }
                 return;
             }
 
-            // Validar campos de tarjeta
-            const cardHolderVal = document.getElementById('cardHolder')?.value?.trim();
-            const cardNumberRaw = document.getElementById('cardNumber')?.value?.replace(/\D/g, '') || '';
-            const cardExpiryVal = document.getElementById('cardExpiry')?.value?.trim();
-            const cardCvvVal = document.getElementById('cardCvv')?.value?.trim();
+            // 2. Validación de factura fiscal si se solicitó
+            const requireInvoice = document.getElementById('requireInvoice')?.checked || false;
+            if (requireInvoice) {
+                const rfcInput = document.getElementById('rfc');
+                const taxNameInput = document.getElementById('taxName');
+                const taxRegimeInput = document.getElementById('taxRegime');
+                const zipFiscalInput = document.getElementById('zipCodeFiscal');
+
+                if (window.FormValidator) {
+                    let fiscalOk = true;
+                    if (!window.FormValidator.validateField(rfcInput).valid) fiscalOk = false;
+                    if (!window.FormValidator.validateField(taxNameInput).valid) fiscalOk = false;
+                    if (!window.FormValidator.validateField(taxRegimeInput).valid) fiscalOk = false;
+                    if (!window.FormValidator.validateField(zipFiscalInput).valid) fiscalOk = false;
+                    if (!fiscalOk) {
+                        formMessage.innerHTML = '<div class="error-message">⚠️ Verifica los datos fiscales requeridos para el CFDI 4.0.</div>';
+                        if (typeof showAlert === 'function') {
+                            showAlert('Verifica los datos fiscales requeridos para el CFDI 4.0.', 'warning');
+                        }
+                        return;
+                    }
+                }
+            }
+
+            // 3. Validar términos y condiciones
+            if (!document.getElementById('termsAccepted').checked) {
+                formMessage.innerHTML = '<div class="error-message">❌ Debes aceptar los términos y condiciones de compra</div>';
+                if (typeof showAlert === 'function') showAlert('Debes aceptar los términos y condiciones', 'warning');
+                document.getElementById('termsAccepted').focus();
+                return;
+            }
+
+            // 4. Validar campos de tarjeta
+            const cardHolderVal = (document.getElementById('cardHolder')?.value || '').trim();
+            const cardNumberRaw = (document.getElementById('cardNumber')?.value || '').replace(/\D/g, '');
+            const cardExpiryVal = (document.getElementById('cardExpiry')?.value || '').trim();
+            const cardCvvVal = (document.getElementById('cardCvv')?.value || '').trim();
             const cardBrandInfo = detectCardBrand(cardNumberRaw);
 
             if (!cardHolderVal || cardHolderVal.length < 3) {
@@ -1336,7 +1414,17 @@ if ($isLogged) {
                 return;
             }
 
-            if (cardCvvVal.length < 3) {
+            const expParts = cardExpiryVal.split('/');
+            const expMonth = parseInt(expParts[0], 10);
+            const expYear = 2000 + parseInt(expParts[1], 10);
+            const today = new Date();
+            if (expYear < today.getFullYear() || (expYear === today.getFullYear() && expMonth < (today.getMonth() + 1))) {
+                formMessage.innerHTML = '<div class="error-message">❌ La tarjeta ingresada se encuentra vencida</div>';
+                document.getElementById('cardExpiry')?.focus();
+                return;
+            }
+
+            if (cardCvvVal.length < 3 || cardCvvVal.length > 4) {
                 formMessage.innerHTML = '<div class="error-message">❌ Ingresa el código de seguridad CVV (3 o 4 dígitos)</div>';
                 document.getElementById('cardCvv')?.focus();
                 return;
@@ -1345,37 +1433,39 @@ if ($isLogged) {
             // Sincronizar dirección antes de enviar
             const fullAddress = syncFullAddress();
 
-            // Get form data
-            const formData = new FormData(document.getElementById('checkoutForm'));
+            // Obtener y sanitizar datos del formulario
+            const sanitize = window.FormValidator ? window.FormValidator.sanitize : (val, type) => String(val || '').trim();
+            const formData = new FormData(form);
+
             const data = {
                 csrf_token: window.csrfToken,
-                firstName: formData.get('firstName'),
-                lastName: formData.get('lastName'),
-                email: formData.get('email'),
-                phone: formData.get('phone'),
-                address: fullAddress,
-                street: document.getElementById('street')?.value?.trim() || '',
-                numExt: document.getElementById('numExt')?.value?.trim() || '',
-                numInt: document.getElementById('numInt')?.value?.trim() || '',
-                colonia: document.getElementById('colonia')?.value?.trim() || '',
-                city: formData.get('city'),
-                postalCode: formData.get('postalCode'),
-                deliveryNotes: formData.get('deliveryNotes'),
-                shippingMethod: formData.get('shippingMethod'),
-                promoCode: formData.get('promoCode'),
-                orderNotes: formData.get('orderNotes'),
+                firstName: sanitize(formData.get('firstName'), 'text'),
+                lastName: sanitize(formData.get('lastName'), 'text'),
+                email: sanitize(formData.get('email'), 'text'),
+                phone: sanitize(formData.get('phone'), 'phone'),
+                address: sanitize(fullAddress, 'text'),
+                street: sanitize(document.getElementById('street')?.value, 'text'),
+                numExt: sanitize(document.getElementById('numExt')?.value, 'alphanumeric'),
+                numInt: sanitize(document.getElementById('numInt')?.value, 'alphanumeric'),
+                colonia: sanitize(document.getElementById('colonia')?.value, 'text'),
+                city: sanitize(formData.get('city'), 'text'),
+                postalCode: sanitize(formData.get('postalCode'), 'postal_code'),
+                deliveryNotes: sanitize(formData.get('deliveryNotes'), 'text'),
+                shippingMethod: sanitize(formData.get('shippingMethod'), 'alphanumeric'),
+                promoCode: sanitize(formData.get('promoCode'), 'alphanumeric'),
+                orderNotes: sanitize(formData.get('orderNotes'), 'text'),
                 paymentMethod: 'card',
                 cardType: currentCardType,
-                cardHolder: cardHolderVal,
+                cardHolder: sanitize(cardHolderVal, 'text').toUpperCase(),
                 cardBrand: cardBrandInfo.name,
                 cardLast4: cardNumberRaw.slice(-4),
                 cardInstallments: currentCardType === 'debit' ? '1' : (formData.get('cardInstallments') || '1'),
-                requireInvoice: document.getElementById('requireInvoice')?.checked || false,
-                rfc: formData.get('rfc') || '',
-                taxName: formData.get('taxName') || '',
-                taxRegime: formData.get('taxRegime') || '',
-                zipCodeFiscal: formData.get('zipCodeFiscal') || '',
-                cfdiUse: formData.get('cfdiUse') || 'G03',
+                requireInvoice: requireInvoice,
+                rfc: requireInvoice ? sanitize(formData.get('rfc'), 'rfc') : '',
+                taxName: requireInvoice ? sanitize(formData.get('taxName'), 'text') : '',
+                taxRegime: requireInvoice ? sanitize(formData.get('taxRegime'), 'alphanumeric') : '',
+                zipCodeFiscal: requireInvoice ? sanitize(formData.get('zipCodeFiscal'), 'postal_code') : '',
+                cfdiUse: requireInvoice ? (formData.get('cfdiUse') || 'G03') : 'G03',
                 cartItems: JSON.parse(localStorage.getItem(CART_KEY) || '[]')
             };
 

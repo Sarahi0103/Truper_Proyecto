@@ -167,16 +167,27 @@ try {
                 break;
             }
 
+            $channel = sanitize($_GET['channel'] ?? ($_GET['mode'] ?? 'all'));
             $include_inactive_categories = isset($_GET['include_inactive_categories']) || isset($_GET['all']);
             if ($include_inactive_categories) {
                 $search = "%$term%";
-                // La búsqueda en modo POS/caja usa filtro show_in_pos y precio de POS si existe
-                $searchPriceExpr = db_column_exists('products', 'price_pos')
-                    ? "COALESCE(NULLIF(price_pos,0), unit_price, sell_price, 0)"
-                    : "COALESCE(unit_price, sell_price, 0)";
+                if ($channel === 'online') {
+                    $searchPriceExpr = db_column_exists('products', 'price_online')
+                        ? "COALESCE(NULLIF(price_online,0), unit_price, sell_price, 0)"
+                        : "COALESCE(unit_price, sell_price, 0)";
+                    $channelFilter = "AND (CASE WHEN show_in_online IS NULL THEN 1 WHEN LOWER(CAST(show_in_online AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
+                } elseif ($channel === 'pos') {
+                    $searchPriceExpr = db_column_exists('products', 'price_pos')
+                        ? "COALESCE(NULLIF(price_pos,0), unit_price, sell_price, 0)"
+                        : "COALESCE(unit_price, sell_price, 0)";
+                    $channelFilter = "AND (CASE WHEN show_in_pos IS NULL THEN 1 WHEN LOWER(CAST(show_in_pos AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1";
+                } else {
+                    $searchPriceExpr = "COALESCE(NULLIF(price_online,0), NULLIF(price_pos,0), unit_price, sell_price, 0)";
+                    $channelFilter = "";
+                }
                 $queries = [
-                    ["SELECT id, name, sku, {$searchPriceExpr} AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE is_active = true AND (CASE WHEN show_in_pos IS NULL THEN 1 WHEN LOWER(CAST(show_in_pos AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1 AND (name ILIKE ? OR sku ILIKE ? OR barcode ILIKE ?) ORDER BY name LIMIT 200", [$search, $search, $search]],
-                    ["SELECT id, name, sku, COALESCE(sell_price, unit_price, 0) AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE CAST(active AS text) IN ('1', 'true', 't') AND (CASE WHEN show_in_pos IS NULL THEN 1 WHEN LOWER(CAST(show_in_pos AS TEXT)) IN ('1','t','true') THEN 1 ELSE 0 END) = 1 AND (name ILIKE ? OR sku ILIKE ? OR barcode ILIKE ?) ORDER BY name LIMIT 200", [$search, $search, $search]]
+                    ["SELECT id, name, sku, {$searchPriceExpr} AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE is_active = true {$channelFilter} AND (name ILIKE ? OR sku ILIKE ? OR barcode ILIKE ?) ORDER BY name LIMIT 200", [$search, $search, $search]],
+                    ["SELECT id, name, sku, {$searchPriceExpr} AS unit_price, category, COALESCE(image_url, 'images/products/default-product.svg') AS image_url FROM products WHERE CAST(active AS text) IN ('1', 'true', 't') {$channelFilter} AND (name ILIKE ? OR sku ILIKE ? OR barcode ILIKE ?) ORDER BY name LIMIT 200", [$search, $search, $search]]
                 ];
                 $products = [];
                 foreach ($queries as $qSpec) {
@@ -190,7 +201,7 @@ try {
                     } catch (Exception $e) {}
                 }
             } else {
-                $products = $productModel->search($term);
+                $products = $productModel->search($term, $channel);
             }
 
             if (is_array($products)) {

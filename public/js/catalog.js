@@ -1120,7 +1120,8 @@
         return;
       }
 
-      fetch(`/api/search_autocomplete.php?q=${encodeURIComponent(query)}&limit=8`)
+      const activeChannel = isOnlineMode ? 'online' : 'pos';
+      fetch(`/api/search_autocomplete.php?q=${encodeURIComponent(query)}&limit=8&channel=${activeChannel}`)
         .then(res => res.json())
         .then(data => {
           if (data.success) {
@@ -1544,8 +1545,9 @@
         return;
       }
       
+      const activeChannel = isOnlineMode ? 'online' : 'pos';
       debounceTimer = setTimeout(() => {
-        fetch(`/api/search.php?action=autocomplete&q=${encodeURIComponent(query)}`)
+        fetch(`/api/search.php?action=autocomplete&q=${encodeURIComponent(query)}&channel=${activeChannel}`)
           .then(response => response.json())
           .then(data => {
             if (data.success && data.results && data.results.length > 0) {
@@ -1553,7 +1555,7 @@
                 <div class="suggestion-item" data-product-id="${product.id}">
                   <img src="${product.image_url || '/img/no-image.png'}" alt="${product.name}" style="width:40px;height:40px;object-fit:cover;border-radius:4px;">
                   <div>
-                    <div style="font-weight:700;color:#fff;">${product.name}</div>
+                    <div class="suggestion-title" style="font-weight:700;color:#fff;">${product.name}</div>
                     <div style="font-size:0.85rem;color:#888;">SKU: ${product.sku} | $${parseFloat(product.price).toFixed(2)}</div>
                   </div>
                 </div>
@@ -1581,11 +1583,15 @@
       const item = e.target.closest('.suggestion-item');
       if (item) {
         const productId = item.dataset.productId;
-        searchInput.value = item.querySelector('.font-weight-700').textContent;
+        const titleEl = item.querySelector('.suggestion-title') || item.querySelector('div > div > div');
+        searchInput.value = titleEl ? titleEl.textContent.trim() : '';
         suggestionsBox.style.display = 'none';
         // Filtrar por el producto seleccionado
-        filteredProducts = allProducts.filter(p => p.id == productId);
-        renderProducts();
+        filteredProducts = allProducts.filter(p => Number(p.id) === Number(productId));
+        currentPage = 1;
+        if (typeof renderList === 'function') {
+          renderList();
+        }
       }
     });
   }

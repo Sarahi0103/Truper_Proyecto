@@ -11,10 +11,17 @@ require_once __DIR__ . '/../../src/Services/PaymentGatewayService.php';
 
 header('Content-Type: application/json');
 
-// Obtener el webhook secret de configuración
-$stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'stripe_webhook_secret' LIMIT 1");
-$stmt->execute();
-$webhookSecret = $stmt->fetchColumn();
+// Obtener el webhook secret de configuración o entorno
+$webhookSecret = null;
+try {
+    $stmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'stripe_webhook_secret' LIMIT 1");
+    $stmt->execute();
+    $webhookSecret = $stmt->fetchColumn() ?: null;
+} catch (Exception $e) {}
+
+if (!$webhookSecret) {
+    $webhookSecret = getenv('STRIPE_WEBHOOK_SECRET') ?: ($_ENV['STRIPE_WEBHOOK_SECRET'] ?? null);
+}
 
 if (!$webhookSecret) {
     http_response_code(500);
@@ -29,6 +36,12 @@ $sigHeader = $_SERVER['HTTP_STRIPE_SIGNATURE'] ?? '';
 if (!$sigHeader) {
     http_response_code(400);
     echo json_encode(['error' => 'Firma de webhook no proporcionada']);
+    exit;
+}
+
+if (!class_exists('\\Stripe\\Webhook')) {
+    http_response_code(503);
+    echo json_encode(['error' => 'Stripe SDK no disponible']);
     exit;
 }
 

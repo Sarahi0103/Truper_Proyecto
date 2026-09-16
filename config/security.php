@@ -130,10 +130,217 @@ class SecurityValidator {
     
     public static function validatePhone($phone) {
         $digits = preg_replace('/\D+/', '', (string)$phone);
-        if (strlen($digits) < 10) {
+        // Teléfono en México: 10 dígitos (o con prefijo 52 / +52)
+        if (strlen($digits) === 12 && substr($digits, 0, 2) === '52') {
+            $digits = substr($digits, 2);
+        }
+        if (strlen($digits) !== 10) {
             return false;
         }
         return $digits;
+    }
+
+    /**
+     * Valida formato oficial de RFC mexicano (SAT)
+     */
+    public static function validateRFC($rfc) {
+        $rfc = strtoupper(trim((string)$rfc));
+        if ($rfc === 'XAXX010101000' || $rfc === 'XEXX010101000') {
+            return $rfc;
+        }
+        // Persona Moral (12 caracteres) o Persona Física (13 caracteres)
+        $pattern = '/^[A-Z&Ñ]{3,4}[0-9]{2}(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])[A-Z0-9]{3}$/';
+        if (!preg_match($pattern, $rfc)) {
+            return false;
+        }
+        return $rfc;
+    }
+
+    /**
+     * Valida CLABE interbancaria mexicana (18 dígitos y dígito verificador ABM/Banxico)
+     */
+    public static function validateClabe($clabe) {
+        $clabe = trim((string)$clabe);
+        if (!preg_match('/^\d{18}$/', $clabe)) {
+            return ['valid' => false, 'message' => 'La CLABE debe contener exactamente 18 dígitos numéricos'];
+        }
+
+        $weights = [3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7, 1, 3, 7];
+        $sum = 0;
+        for ($i = 0; $i < 17; $i++) {
+            $sum += ((int)$clabe[$i] * $weights[$i]) % 10;
+        }
+        $expectedCheckDigit = (10 - ($sum % 10)) % 10;
+        $actualCheckDigit = (int)$clabe[17];
+
+        if ($expectedCheckDigit !== $actualCheckDigit) {
+            return ['valid' => false, 'message' => 'Dígito de control de CLABE incorrecto'];
+        }
+
+        return ['valid' => true, 'clabe' => $clabe];
+    }
+
+    /**
+     * Valida código postal mexicano (5 dígitos)
+     */
+    public static function validatePostalCode($cp) {
+        $cp = trim((string)$cp);
+        if (!preg_match('/^\d{5}$/', $cp)) {
+            return false;
+        }
+        return $cp;
+    }
+
+    /**
+     * Valida datos de tarjeta bancaria (Luhn, vencimiento futuro, CVV)
+     */
+    public static function validateCard($number, $expiry = null, $cvv = null, $holder = null) {
+        $cleanNumber = preg_replace('/\D+/', '', (string)$number);
+        if (strlen($cleanNumber) < 13 || strlen($cleanNumber) > 19) {
+            return ['valid' => false, 'message' => 'El número de tarjeta debe tener entre 13 y 19 dígitos'];
+        }
+
+        // Algoritmo de Luhn (mod 10)
+        $sum = 0;
+        $alt = false;
+        for ($i = strlen($cleanNumber) - 1; $i >= 0; $i--) {
+            $n = (int)$cleanNumber[$i];
+            if ($alt) {
+                $n *= 2;
+                if ($n > 9) {
+                    $n -= 9;
+                }
+            }
+            $sum += $n;
+            $alt = !$alt;
+        }
+        if ($sum % 10 !== 0) {
+            return ['valid' => false, 'message' => 'Número de tarjeta inválido (falla verificación Luhn)'];
+        }
+
+        // Validar expiración si se suministró
+        if ($expiry !== null) {
+            $expiry = trim((string)$expiry);
+            if (!preg_match('/^(0[1-9]|1[0-2])\/(\d{2}|\d{4})$/', $expiry, $m)) {
+                return ['valid' => false, 'message' => 'Formato de vencimiento inválido. Usa MM/AA'];
+            }
+            $month = (int)$m[1];
+            $year = (int)$m[2];
+            if ($year < 100) {
+                $year += 2000;
+            }
+            $currentYear = (int)date('Y');
+            $currentMonth = (int)date('n');
+            if ($year < $currentYear || ($year === $currentYear && $month < $currentMonth)) {
+                return ['valid' => false, 'message' => 'La tarjeta ha expirado'];
+            }
+        }
+
+        // Validar CVV si se suministró
+        if ($cvv !== null) {
+            $cleanCvv = trim((string)$cvv);
+            if (!preg_match('/^\d{3,4}$/', $cleanCvv)) {
+                return ['valid' => false, 'message' => 'El código de seguridad CVV debe tener 3 o 4 dígitos'];
+            }
+        }
+
+        // Validar titular si se suministró
+        if ($holder !== null) {
+            $cleanHolder = trim((string)$holder);
+            if (mb_strlen($cleanHolder) < 3 || mb_strlen($cleanHolder) > 70) {
+                return ['valid' => false, 'message' => 'Nombre de titular de tarjeta inválido'];
+            }
+        }
+
+        return ['valid' => true, 'last4' => substr($cleanNumber, -4)];
+    }
+
+    /**
+     * Sanitiza texto general eliminando tags HTML, caracteres de control y exceso de espacios
+     */
+    public static function sanitizeText($input, $maxLength = null) {
+        if ($input === null) return '';
+        $clean = trim((string)$input);
+        // Eliminar caracteres nulos y de control excepto saltos de línea y tabuladores estándar
+        $clean = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $clean);
+        // Stripear tags HTML
+        $clean = strip_tags($clean);
+        // Normalizar comillas y caracteres sin romper acentos
+        $clean = htmlspecialchars($clean, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        // Decodificar para guardado seguro en base de datos parametrizada
+        $clean = html_entity_decode($clean, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        
+        if ($maxLength !== null && $maxLength > 0) {
+            $clean = mb_substr($clean, 0, $maxLength);
+        }
+        return $clean;
+    }
+
+    /**
+     * Extrae únicamente dígitos numéricos
+     */
+    public static function sanitizeDigits($input) {
+        return preg_replace('/\D+/', '', (string)$input);
+    }
+
+    /**
+     * Permite caracteres alfanuméricos, espacios, guiones y puntos
+     */
+    public static function sanitizeAlphaNum($input, $maxLength = null) {
+        $clean = trim((string)$input);
+        $clean = preg_replace('/[^\p{L}\p{N}\s\-_.]/u', '', $clean);
+        if ($maxLength !== null && $maxLength > 0) {
+            $clean = mb_substr($clean, 0, $maxLength);
+        }
+        return $clean;
+    }
+
+    /**
+     * Sanitiza un arreglo asociativo con reglas definidas
+     */
+    public static function sanitizeArray(array $data, array $rules) {
+        $cleaned = [];
+        foreach ($rules as $field => $type) {
+            $raw = $data[$field] ?? null;
+            if ($raw === null) {
+                $cleaned[$field] = null;
+                continue;
+            }
+            switch ($type) {
+                case 'email':
+                    $cleaned[$field] = self::validateEmail($raw) ?: '';
+                    break;
+                case 'phone':
+                    $cleaned[$field] = self::validatePhone($raw) ?: '';
+                    break;
+                case 'digits':
+                    $cleaned[$field] = self::sanitizeDigits($raw);
+                    break;
+                case 'postal_code':
+                    $cleaned[$field] = self::validatePostalCode($raw) ?: '';
+                    break;
+                case 'rfc':
+                    $cleaned[$field] = self::validateRFC($raw) ?: '';
+                    break;
+                case 'int':
+                    $cleaned[$field] = (int)$raw;
+                    break;
+                case 'float':
+                    $cleaned[$field] = (float)$raw;
+                    break;
+                case 'bool':
+                    $cleaned[$field] = filter_var($raw, FILTER_VALIDATE_BOOLEAN);
+                    break;
+                case 'alphanumeric':
+                    $cleaned[$field] = self::sanitizeAlphaNum($raw);
+                    break;
+                case 'text':
+                default:
+                    $cleaned[$field] = self::sanitizeText($raw);
+                    break;
+            }
+        }
+        return $cleaned;
     }
 }
 

@@ -1343,6 +1343,7 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
         </div>
     </main>
 
+    <script src="js/form-validator.js?v=1.0"></script>
     <script src="js/main.js"></script>
     <script src="js/modals.js"></script>
     <script>
@@ -1529,28 +1530,42 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
 
         async function saveConfig(event) {
             event.preventDefault();
-            const configPayload = {
-                payment_environment: document.getElementById('payment_environment').value,
-                mercadopago_public_key: document.getElementById('mercadopago_public_key').value,
-                mercadopago_access_token: document.getElementById('mercadopago_access_token').value,
-                stripe_public_key: document.getElementById('stripe_public_key').value,
-                stripe_secret_key: document.getElementById('stripe_secret_key').value,
-                bank_name: document.getElementById('bank_name').value,
-                bank_clabe: document.getElementById('bank_clabe').value,
-                bank_account_holder: document.getElementById('bank_account_holder').value,
+            const form = event.target;
 
-                facturapi_api_key: document.getElementById('facturapi_api_key').value,
-                company_rfc: document.getElementById('company_rfc').value,
-                company_tax_name: document.getElementById('company_tax_name').value,
-                company_tax_regime: document.getElementById('company_tax_regime').value,
-                company_zip_code: document.getElementById('company_zip_code').value,
-                csd_status: document.getElementById('csd_status').value
+            // Validación de campos del formulario activo
+            if (window.FormValidator && !window.FormValidator.validateForm(form)) {
+                showAlert('Por favor corrige los campos señalados antes de guardar.', 'warning');
+                return;
+            }
+
+            const sanitize = window.FormValidator ? window.FormValidator.sanitize : (val) => String(val || '').trim();
+
+            const configPayload = {
+                csrf_token: window.csrfToken,
+                payment_environment: sanitize(document.getElementById('payment_environment')?.value, 'alphanumeric'),
+                mercadopago_public_key: sanitize(document.getElementById('mercadopago_public_key')?.value, 'text'),
+                mercadopago_access_token: sanitize(document.getElementById('mercadopago_access_token')?.value, 'text'),
+                stripe_public_key: sanitize(document.getElementById('stripe_public_key')?.value, 'text'),
+                stripe_secret_key: sanitize(document.getElementById('stripe_secret_key')?.value, 'text'),
+                bank_name: sanitize(document.getElementById('bank_name')?.value, 'text'),
+                bank_clabe: sanitize(document.getElementById('bank_clabe')?.value, 'clabe'),
+                bank_account_holder: sanitize(document.getElementById('bank_account_holder')?.value, 'text'),
+
+                facturapi_api_key: sanitize(document.getElementById('facturapi_api_key')?.value, 'text'),
+                company_rfc: sanitize(document.getElementById('company_rfc')?.value, 'rfc'),
+                company_tax_name: sanitize(document.getElementById('company_tax_name')?.value, 'text'),
+                company_tax_regime: sanitize(document.getElementById('company_tax_regime')?.value, 'alphanumeric'),
+                company_zip_code: sanitize(document.getElementById('company_zip_code')?.value, 'postal_code'),
+                csd_status: sanitize(document.getElementById('csd_status')?.value, 'text')
             };
 
             try {
                 const res = await fetch('api/admin_online_billing_api.php?action=save_config', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': window.csrfToken
+                    },
                     body: JSON.stringify(configPayload)
                 });
                 const data = await res.json();
@@ -2308,6 +2323,51 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
 
         function savePaymentAccount(e) {
             e.preventDefault();
+            const form = document.getElementById('paymentAccountForm');
+            if (window.FormValidator && !window.FormValidator.validateForm(form)) {
+                return;
+            }
+
+            const sanitize = window.FormValidator ? window.FormValidator.sanitize : (val) => String(val || '').trim();
+            const accountName = sanitize(document.getElementById('accountName')?.value, 'text');
+            const gateway = sanitize(document.getElementById('paymentGateway')?.value, 'alphanumeric');
+
+            if (!accountName || accountName.length < 3) {
+                showAlert('El nombre de la cuenta debe tener al menos 3 caracteres', 'warning');
+                return;
+            }
+
+            if (!gateway) {
+                showAlert('Selecciona una pasarela de pago o cuenta bancaria', 'warning');
+                return;
+            }
+
+            const bankName = sanitize(document.getElementById('bankName')?.value, 'text');
+            const clabe = sanitize(document.getElementById('bankClabe')?.value, 'clabe');
+            const last4 = sanitize(document.getElementById('last4')?.value, 'last4');
+            const accountHolder = sanitize(document.getElementById('accountHolder')?.value, 'text');
+            const rfc = sanitize(document.getElementById('accountRfc')?.value, 'rfc');
+
+            if (gateway === 'bank_account') {
+                if (!bankName) {
+                    showAlert('Ingresa el nombre del banco', 'warning');
+                    return;
+                }
+                if (clabe && clabe.length !== 18) {
+                    showAlert('La CLABE interbancaria debe tener exactamente 18 dígitos', 'warning');
+                    return;
+                }
+                if (last4 && last4.length !== 4) {
+                    showAlert('Los últimos 4 dígitos deben contener exactamente 4 números', 'warning');
+                    return;
+                }
+            }
+
+            if (rfc && !/^[A-Z&Ñ]{3,4}[0-9]{2}(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])[A-Z0-9]{3}$/.test(rfc)) {
+                showAlert('El RFC ingresado no tiene un formato válido', 'warning');
+                return;
+            }
+
             const accountId = document.getElementById('paymentAccountId').value;
             const action = accountId ? 'update_payment_account' : 'add_payment_account';
             const url = `/api/admin_payment_config.php?action=${action}${accountId ? '&account_id=' + accountId : ''}`;
@@ -2315,14 +2375,14 @@ $user_role = htmlspecialchars($_SESSION['role'] ?? 'ADMIN');
             const isPrimary = document.getElementById('accountIsPrimary') ? document.getElementById('accountIsPrimary').checked : false;
 
             const accountData = {
-                account_name: document.getElementById('accountName').value,
-                payment_gateway: document.getElementById('paymentGateway').value,
-                provider_account_id: document.getElementById('stripeAccountId').value || document.getElementById('mpAccountId').value,
-                bank_name: document.getElementById('bankName').value,
-                clabe: document.getElementById('bankClabe').value,
-                last_4: document.getElementById('last4').value,
-                account_holder: document.getElementById('accountHolder').value,
-                rfc: document.getElementById('accountRfc').value,
+                account_name: accountName,
+                payment_gateway: gateway,
+                provider_account_id: sanitize(document.getElementById('stripeAccountId')?.value || document.getElementById('mpAccountId')?.value, 'text'),
+                bank_name: bankName,
+                clabe: clabe,
+                last_4: last4,
+                account_holder: accountHolder,
+                rfc: rfc,
                 is_primary: isPrimary
             };
 

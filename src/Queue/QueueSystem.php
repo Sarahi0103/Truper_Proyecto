@@ -114,16 +114,26 @@ class QueueSystem {
     }
 
     /**
-     * Marca trabajo como fallido
+     * Marca trabajo como fallido o programa reintento si no ha superado max_attempts
      */
     public function markAsFailed($jobId, $errorMessage = null) {
         try {
             $stmt = $this->pdo->prepare("
                 UPDATE {$this->table}
-                SET status = 'failed',
-                    attempts = attempts + 1,
+                SET attempts = attempts + 1,
                     error_message = ?,
-                    completed_at = NOW()
+                    status = CASE 
+                        WHEN attempts + 1 < max_attempts THEN 'pending'
+                        ELSE 'failed'
+                    END,
+                    started_at = CASE 
+                        WHEN attempts + 1 < max_attempts THEN NULL
+                        ELSE started_at
+                    END,
+                    completed_at = CASE 
+                        WHEN attempts + 1 >= max_attempts THEN NOW()
+                        ELSE NULL
+                    END
                 WHERE id = ?
             ");
             return $stmt->execute([$errorMessage, $jobId]);
@@ -254,12 +264,13 @@ class QueueSystem {
      */
     public function cleanup($daysOld = 7) {
         try {
+            $days = max(1, (int)$daysOld);
             $stmt = $this->pdo->prepare("
                 DELETE FROM {$this->table}
                 WHERE status IN ('completed', 'failed')
-                AND completed_at < NOW() - INTERVAL '{$daysOld} days'
+                AND completed_at < NOW() - (? || ' days')::INTERVAL
             ");
-            return $stmt->execute();
+            return $stmt->execute([$days]);
         } catch (Exception $e) {
             error_log("Error cleaning up queue: " . $e->getMessage());
             return false;

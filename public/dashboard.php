@@ -1081,16 +1081,14 @@ $first_name = explode(' ', $user_name)[0];
         let dashboardStartDate = null;
         let dashboardEndDate = null;
 
-        function applyDateFilters() {
+        function applyDateFilters(start = null, end = null) {
             const startInput = document.getElementById('dashStartDate');
             const endInput = document.getElementById('dashEndDate');
             
-            if (startInput && endInput) {
-                dashboardStartDate = startInput.value;
-                dashboardEndDate = endInput.value;
-                loadDashboardHistory();
-                loadRecentOrders();
-            }
+            dashboardStartDate = start || (startInput ? startInput.value : null);
+            dashboardEndDate = end || (endInput ? endInput.value : null);
+            loadDashboardHistory();
+            loadRecentOrders();
         }
 
         /* ── Dashboard Export ── */
@@ -1104,10 +1102,18 @@ $first_name = explode(' ', $user_name)[0];
                 if (response && response.success && response.file_url) {
                     window.open(response.file_url, '_blank');
                 } else {
-                    showAlert('Error al exportar datos: ' + (response?.message || 'Error desconocido'), 'error');
+                    if (typeof showAlert === 'function') {
+                        showAlert('Error al exportar datos: ' + (response?.message || 'Error desconocido'), 'error');
+                    } else {
+                        console.warn('Error al exportar datos:', response?.message);
+                    }
                 }
             } catch (e) {
-                showAlert('Error al exportar datos: ' + e.message, 'error');
+                if (typeof showAlert === 'function') {
+                    showAlert('Error al exportar datos: ' + e.message, 'error');
+                } else {
+                    console.error('Error al exportar datos:', e);
+                }
             }
         }
 
@@ -1116,7 +1122,12 @@ $first_name = explode(' ', $user_name)[0];
             const box = document.getElementById('recentOrders');
             if (!box) return;
 
-            const response = await apiCall('/orders.php?action=list&limit=6');
+            let url = '/orders.php?action=list&limit=6';
+            if (dashboardStartDate && dashboardEndDate) {
+                url += `&start_date=${encodeURIComponent(dashboardStartDate)}&end_date=${encodeURIComponent(dashboardEndDate)}`;
+            }
+
+            const response = await apiCall(url);
             if (!response || !response.success || !Array.isArray(response.orders) || response.orders.length === 0) {
                 box.innerHTML = `<div class="db-activity-empty">
                     <div class="db-activity-empty-icon">📭</div>
@@ -1167,11 +1178,11 @@ $first_name = explode(' ', $user_name)[0];
                 }
 
                 const rows = response.products.slice(0, 6);
-                box.innerHTML = rows.map((product, i) => {
+                box.innerHTML = rows.map(product => {
                     const price = Number(product.unit_price || 0);
                     const fmt   = '$' + price.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     return `<div class="db-product-row">
-                        <div class="db-product-rank">${i + 1}</div>
+                        <div class="db-product-rank">#</div>
                         <div class="db-product-info" style="flex:1; min-width:0;">
                             <div class="db-product-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${product.name || 'Producto'}</div>
                             <div class="db-product-sku">${product.sku || '—'}</div>
@@ -1193,7 +1204,11 @@ $first_name = explode(' ', $user_name)[0];
             if (!box) return;
 
             try {
-                const res = await apiCall('/client_account.php?action=history');
+                let url = '/client_account.php?action=history';
+                if (dashboardStartDate && dashboardEndDate) {
+                    url += `&start_date=${encodeURIComponent(dashboardStartDate)}&end_date=${encodeURIComponent(dashboardEndDate)}`;
+                }
+                const res = await apiCall(url);
                 if (!res || !res.success || !res.items || res.items.length === 0) {
                     box.innerHTML = `<div class="db-activity-empty">
                         <div class="db-activity-empty-icon">📭</div>

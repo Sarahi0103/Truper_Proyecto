@@ -11,14 +11,21 @@ $product = null;
 
 if ($product_id > 0) {
     try {
+        $productPriceExpr = $isOnlineMode 
+            ? (db_column_exists('products', 'price_online') ? "COALESCE(NULLIF(price_online, 0), unit_price, 0)" : "unit_price")
+            : (db_column_exists('products', 'price_pos') ? "COALESCE(NULLIF(price_pos, 0), unit_price, 0)" : "unit_price");
+        $mktPriceExpr = ($isOnlineMode && db_column_exists('marketplace_ce_products', 'price_online'))
+            ? "COALESCE(NULLIF(price_online, 0), unit_price, 0)"
+            : "unit_price";
+
         $queries = [];
         if ($source === 'ce') {
-            $queries[] = "SELECT id, sku, name, description, unit_price, COALESCE(net_price, unit_price, 0) AS net_price, COALESCE(discount_percentage, 0) AS discount_percentage, category, stock_quantity, NULL::text AS technical_specs, image_url, variants_json FROM marketplace_ce_products WHERE id = ? AND is_active = true AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(marketplace_ce_products.category) AND pc.is_active = false) LIMIT 1";
+            $queries[] = "SELECT id, sku, name, description, {$mktPriceExpr} AS unit_price, COALESCE(net_price, unit_price, 0) AS net_price, COALESCE(discount_percentage, 0) AS discount_percentage, category, stock_quantity, NULL::text AS technical_specs, image_url, variants_json FROM marketplace_ce_products WHERE id = ? AND is_active = true AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(marketplace_ce_products.category) AND pc.is_active = false) LIMIT 1";
         } elseif ($source === 'product') {
-            $queries[] = "SELECT id, sku, name, description, unit_price, COALESCE(net_price, unit_price, 0) AS net_price, COALESCE(discount_percentage, 0) AS discount_percentage, category, stock_quantity, technical_specs, image_url, variants_json FROM products WHERE id = ? AND is_active = true AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(products.category) AND pc.is_active = false) LIMIT 1";
+            $queries[] = "SELECT id, sku, name, description, {$productPriceExpr} AS unit_price, COALESCE(net_price, unit_price, 0) AS net_price, COALESCE(discount_percentage, 0) AS discount_percentage, category, stock_quantity, technical_specs, image_url, variants_json FROM products WHERE id = ? AND is_active = true AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(products.category) AND pc.is_active = false) LIMIT 1";
         } else {
-            $queries[] = "SELECT id, sku, name, description, unit_price, COALESCE(net_price, unit_price, 0) AS net_price, COALESCE(discount_percentage, 0) AS discount_percentage, category, stock_quantity, technical_specs, image_url, variants_json FROM products WHERE id = ? AND is_active = true AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(products.category) AND pc.is_active = false) LIMIT 1";
-            $queries[] = "SELECT id, sku, name, description, unit_price, COALESCE(net_price, unit_price, 0) AS net_price, COALESCE(discount_percentage, 0) AS discount_percentage, category, stock_quantity, NULL::text AS technical_specs, image_url, variants_json FROM marketplace_ce_products WHERE id = ? AND is_active = true AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(marketplace_ce_products.category) AND pc.is_active = false) LIMIT 1";
+            $queries[] = "SELECT id, sku, name, description, {$productPriceExpr} AS unit_price, COALESCE(net_price, unit_price, 0) AS net_price, COALESCE(discount_percentage, 0) AS discount_percentage, category, stock_quantity, technical_specs, image_url, variants_json FROM products WHERE id = ? AND is_active = true AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(products.category) AND pc.is_active = false) LIMIT 1";
+            $queries[] = "SELECT id, sku, name, description, {$mktPriceExpr} AS unit_price, COALESCE(net_price, unit_price, 0) AS net_price, COALESCE(discount_percentage, 0) AS discount_percentage, category, stock_quantity, NULL::text AS technical_specs, image_url, variants_json FROM marketplace_ce_products WHERE id = ? AND is_active = true AND NOT EXISTS (SELECT 1 FROM product_categories pc WHERE LOWER(pc.name) = LOWER(marketplace_ce_products.category) AND pc.is_active = false) LIMIT 1";
         }
 
         foreach ($queries as $sql) {
